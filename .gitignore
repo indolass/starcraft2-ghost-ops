@@ -1,0 +1,12 @@
+# Blizzard-derived or machine-local artefacts never go into git
+tmp/
+build/
+dist/
+*.SC2Map
+*.SC2Mod
+*.SC2Campaign
+*.SC2Save
+__pycache__/
+*.pyc
+.claude/
+debug.log

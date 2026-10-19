@@ -1,0 +1,8 @@
+    <CUnit id="Nova">
+        <AbilArray index="7" Link="GhostHoldFire"/>
+        <AbilArray index="8" Link="GhostWeaponsFree"/>
+        <CardLayouts index="0">
+            <LayoutButtons index="12" Face="GhostHoldFire" Type="AbilCmd" AbilCmd="GhostHoldFire,Execute" Row="1" Column="2"/>
+            <LayoutButtons index="13" Face="WeaponsFree" Type="AbilCmd" AbilCmd="GhostWeaponsFree,Execute" Row="1" Column="3"/>
+        </CardLayouts>
+    </CUnit>

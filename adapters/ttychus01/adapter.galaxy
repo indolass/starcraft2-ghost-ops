@@ -1,0 +1,19 @@
+//==================================================================================================
+// GhostOps adapter: Smash and Grab (TTychus01). All mission specific knowledge lives here.
+// Player 1 is the human player (the other players are the Zerg, the Protoss factions and the
+// relic owner; none of them is covered). The mission calls GhostOps_OnMissionStart() right after
+// it has started gt_StartGame, i.e. after the intro sequence (see adapter.json for the anchor).
+// The squad appears at the start camera target of the mission, next to the player's base.
+//==================================================================================================
+void GhostOps_OnMissionStart () {
+    unit lv_operative;
+
+    GhostOps_Init();
+    GhostOps_SetPlayerCovered(1, true);
+    lv_operative = GhostOps_SpawnOperatives(1, CameraInfoGetTarget(CameraInfoFromId(26)));
+    if (lv_operative != null) {
+        UnitSelect(lv_operative, 1, true);
+    }
+
+    GhostOps_Start();
+}

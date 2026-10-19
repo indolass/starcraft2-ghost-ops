@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "mission": "traynor02",
+  "title": "The Outlaws",
+  "source_map_file": "TRaynor02.SC2Map",
+  "output_map_file": "GhostOps_TRaynor02.SC2Map",
+  "script_member": "MapScript.galaxy",
+  "adapter_source": "adapters/traynor02/adapter.galaxy",
+  "config": "config/traynor02.poc.json",
+  "start_hook": {
+    "function": "gt_IntroSequence_Func",
+    "after": "TriggerExecute(gt_StartGame, true, false);",
+    "call": "GhostOps_OnMissionStart();"
+  },
+  "required_markers": ["gt_StartGame", "gt_IntroSequence_Func", "CameraInfoFromId(1117)", "void InitLibs"]
+}

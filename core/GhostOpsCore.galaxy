@@ -1,0 +1,341 @@
+//==================================================================================================
+// GhostOps Core (MIT). Mission independent: no mission names, player numbers or unit ids of
+// a particular map. Mission adapters register covered players and call GhostOps_Start().
+// Configuration values (go_cfg*) are set by the generated GhostOps_ApplyConfig().
+//
+// SquadManager: go_operatives is the registry of operatives. Everything that treats the regular
+//   army differently from operatives asks GhostOps_IsOperative(), never a unit type name.
+// BaseSupport (default): regular non-structure units of covered players get Blizzard's hidden
+//   behavior DamageDealtDouble (x2) or DamageDealtMega (x3). Nothing else about them changes, so
+//   the enemy AI keeps attacking them. Each unit gets the behavior at most once.
+// Experimental: invulnerable allies (the old protection model). Off by default and refused by
+//   the build together with a damage multiplier above 1.
+//==================================================================================================
+
+//--------------------------------------------------------------------------------------------------
+// State
+//--------------------------------------------------------------------------------------------------
+bool go_initialized;
+int go_cfgDamageMultiplier;
+bool go_cfgInvulnerableAllies;
+int go_cfgSquadSize;
+string[6] go_cfgSquadType;
+bool go_cfgStartHoldFire;
+bool go_cfgGhostPermanentCloak;
+bool go_cfgGhostStartCloaked;
+trigger go_startStateTrigger;
+bool[16] go_playerCovered;
+unitgroup go_operatives;
+unitgroup go_supported;
+unitgroup go_protected;
+string go_supportBehavior;
+trigger go_scanTrigger;
+
+void GhostOps_ApplyConfig ();
+
+//--------------------------------------------------------------------------------------------------
+// Setup
+//--------------------------------------------------------------------------------------------------
+string GhostOps_BehaviorFor (int lp_multiplier) {
+    if (lp_multiplier == 2) {
+        return "DamageDealtDouble";
+    }
+
+    if (lp_multiplier == 3) {
+        return "DamageDealtMega";
+    }
+
+    return "";
+}
+
+void GhostOps_Init () {
+    int i;
+
+    if (go_initialized) {
+        return;
+    }
+
+    go_initialized = true;
+    go_operatives = UnitGroupEmpty();
+    go_supported = UnitGroupEmpty();
+    go_protected = UnitGroupEmpty();
+    i = 0;
+    while (i < 16) {
+        go_playerCovered[i] = false;
+        i += 1;
+    }
+
+    GhostOps_ApplyConfig();
+    // The two models are never combined; the build refuses it, this guards a hand-edited script.
+    if ((go_cfgDamageMultiplier > 1) && go_cfgInvulnerableAllies) {
+        go_cfgInvulnerableAllies = false;
+    }
+
+    go_supportBehavior = GhostOps_BehaviorFor(go_cfgDamageMultiplier);
+}
+
+void GhostOps_SetPlayerCovered (int lp_player, bool lp_covered) {
+    if ((lp_player < 0) || (lp_player > 15)) {
+        return;
+    }
+
+    go_playerCovered[lp_player] = lp_covered;
+}
+
+//--------------------------------------------------------------------------------------------------
+// SquadManager (registry of operatives)
+//--------------------------------------------------------------------------------------------------
+void GhostOps_RegisterOperative (unit lp_unit) {
+    if (lp_unit == null) {
+        return;
+    }
+
+    UnitGroupAdd(go_operatives, lp_unit);
+}
+
+bool GhostOps_IsOperative (unit lp_unit) {
+    return UnitGroupHasUnit(go_operatives, lp_unit);
+}
+
+//--------------------------------------------------------------------------------------------------
+// BaseSupport: damage multiplier for the regular army
+//--------------------------------------------------------------------------------------------------
+void GhostOps_SupportUnit (unit lp_unit) {
+    if (lp_unit == null) {
+        return;
+    }
+
+    if (go_supportBehavior == "") {
+        return;
+    }
+
+    if (GhostOps_IsOperative(lp_unit)) {
+        return;
+    }
+
+    if (UnitGroupHasUnit(go_supported, lp_unit)) {
+        return;
+    }
+
+    UnitBehaviorAdd(lp_unit, go_supportBehavior, lp_unit, 1);
+    UnitGroupAdd(go_supported, lp_unit);
+}
+
+// Removes the behavior from every unit that received it.
+void GhostOps_ClearSupport () {
+    int lv_i;
+    unit lv_unit;
+
+    lv_i = UnitGroupCount(go_supported, c_unitCountAll);
+    while (lv_i >= 1) {
+        lv_unit = UnitGroupUnit(go_supported, lv_i);
+        if (lv_unit != null) {
+            UnitBehaviorRemove(lv_unit, go_supportBehavior, 1);
+        }
+
+        lv_i -= 1;
+    }
+
+    UnitGroupClear(go_supported);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Experimental: invulnerable allies (old model, off by default)
+//--------------------------------------------------------------------------------------------------
+void GhostOps_ShieldUnit (unit lp_unit) {
+    if (lp_unit == null) {
+        return;
+    }
+
+    if (GhostOps_IsOperative(lp_unit)) {
+        return;
+    }
+
+    if (UnitGroupHasUnit(go_protected, lp_unit)) {
+        return;
+    }
+
+    // Units the mission made invulnerable itself are left alone and never released by us.
+    if (UnitTestState(lp_unit, c_unitStateInvulnerable)) {
+        return;
+    }
+
+    UnitSetState(lp_unit, c_unitStateInvulnerable, true);
+    UnitGroupAdd(go_protected, lp_unit);
+}
+
+void GhostOps_ReleaseShield () {
+    int lv_i;
+    unit lv_unit;
+
+    lv_i = UnitGroupCount(go_protected, c_unitCountAll);
+    while (lv_i >= 1) {
+        lv_unit = UnitGroupUnit(go_protected, lv_i);
+        if (lv_unit != null) {
+            UnitSetState(lv_unit, c_unitStateInvulnerable, false);
+        }
+
+        lv_i -= 1;
+    }
+
+    UnitGroupClear(go_protected);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Scanning (also covers units that appear later: reinforcements, trained and rescued units)
+//--------------------------------------------------------------------------------------------------
+void GhostOps_ScanPlayer (int lp_player) {
+    unitgroup lv_group;
+    int lv_count;
+    int lv_i;
+
+    // Structures are not buffed automatically (bunkers would double the bonus together with the
+    // marines inside); they are only considered by the experimental shield.
+    if (go_supportBehavior != "") {
+        lv_group = UnitGroup(null, lp_player, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterStructure) | (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32)) | (1 << (c_targetFilterHidden - 32))), 0);
+        lv_count = UnitGroupCount(lv_group, c_unitCountAll);
+        lv_i = 1;
+        while (lv_i <= lv_count) {
+            GhostOps_SupportUnit(UnitGroupUnit(lv_group, lv_i));
+            lv_i += 1;
+        }
+    }
+
+    if (go_cfgInvulnerableAllies) {
+        lv_group = UnitGroup(null, lp_player, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32)) | (1 << (c_targetFilterHidden - 32))), 0);
+        lv_count = UnitGroupCount(lv_group, c_unitCountAll);
+        lv_i = 1;
+        while (lv_i <= lv_count) {
+            GhostOps_ShieldUnit(UnitGroupUnit(lv_group, lv_i));
+            lv_i += 1;
+        }
+    }
+}
+
+void GhostOps_ScanAll () {
+    int lv_p;
+
+    lv_p = 0;
+    while (lv_p < 16) {
+        if (go_playerCovered[lv_p]) {
+            GhostOps_ScanPlayer(lv_p);
+        }
+
+        lv_p += 1;
+    }
+}
+
+bool GhostOps_ScanTick (bool lp_testConds, bool lp_runActions) {
+    if (!lp_runActions) {
+        return true;
+    }
+
+    GhostOps_ScanAll();
+    return true;
+}
+
+// Entry point for a future menu: 1 = original damage, 2 = double, 3 = triple.
+void GhostOps_SetDamageMultiplier (int lp_multiplier) {
+    if ((lp_multiplier < 1) || (lp_multiplier > 3)) {
+        return;
+    }
+
+    GhostOps_ClearSupport();
+    go_cfgDamageMultiplier = lp_multiplier;
+    go_supportBehavior = GhostOps_BehaviorFor(lp_multiplier);
+    GhostOps_ScanAll();
+}
+
+// Starts the periodic scan.
+void GhostOps_Start () {
+    go_scanTrigger = TriggerCreate("GhostOps_ScanTick");
+    TriggerAddEventTimePeriodic(go_scanTrigger, 1.0, c_timeGame);
+    GhostOps_ScanAll();
+}
+
+//--------------------------------------------------------------------------------------------------
+// Operatives
+//--------------------------------------------------------------------------------------------------
+// Standard Ghosts need the campaign upgrade PersonalCloaking before GhostCloak can be used; the
+// Crius Suit upgrade PermanentCloakGhost (Blizzard's own) makes their cloak free of energy cost.
+// Both are player level: any other Ghost of the same player is affected as well.
+void GhostOps_GrantGhostTech (int lp_player) {
+    TechTreeUpgradeAddLevel(lp_player, "PersonalCloaking", 1);
+    if (go_cfgGhostPermanentCloak) {
+        TechTreeUpgradeAddLevel(lp_player, "PermanentCloakGhost", 1);
+    }
+}
+
+bool GhostOps_SquadHasGhost () {
+    int lv_i;
+
+    lv_i = 0;
+    while (lv_i < go_cfgSquadSize) {
+        if (go_cfgSquadType[lv_i] == "Ghost") {
+            return true;
+        }
+
+        lv_i += 1;
+    }
+
+    return false;
+}
+
+// Start state of every operative (a moment after creation so that upgrades are in effect):
+// hold fire for all of them, cloak on for standard Ghosts. Only Blizzard's own abilities are used.
+bool GhostOps_StartStateTick (bool lp_testConds, bool lp_runActions) {
+    int lv_i;
+    int lv_count;
+    unit lv_unit;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    lv_count = UnitGroupCount(go_operatives, c_unitCountAll);
+    lv_i = 1;
+    while (lv_i <= lv_count) {
+        lv_unit = UnitGroupUnit(go_operatives, lv_i);
+        if (lv_unit != null) {
+            if (go_cfgStartHoldFire) {
+                UnitIssueOrder(lv_unit, Order(AbilityCommand("GhostHoldFire", 0)), c_orderQueueAddToEnd);
+            }
+
+            if (go_cfgGhostStartCloaked && (UnitGetType(lv_unit) == "Ghost")) {
+                UnitIssueOrder(lv_unit, Order(AbilityCommand("GhostCloak", 0)), c_orderQueueAddToEnd);
+            }
+        }
+
+        lv_i += 1;
+    }
+
+    return true;
+}
+
+// Creates the configured squad for a player and returns the first operative. Existing units of the
+// player are never replaced or retyped: the operatives are added on top. Every operative is
+// registered before the first BaseSupport scan, so none of them receives the army bonus.
+unit GhostOps_SpawnOperatives (int lp_player, point lp_origin) {
+    int lv_i;
+    unit lv_first;
+
+    lv_first = null;
+    if (GhostOps_SquadHasGhost()) {
+        GhostOps_GrantGhostTech(lp_player);
+    }
+
+    lv_i = 0;
+    while (lv_i < go_cfgSquadSize) {
+        UnitCreate(1, go_cfgSquadType[lv_i], 0, lp_player, PointWithOffset(lp_origin, 2.0 * lv_i, 0.0), 270.0);
+        GhostOps_RegisterOperative(UnitLastCreated());
+        if (lv_first == null) {
+            lv_first = UnitLastCreated();
+        }
+
+        lv_i += 1;
+    }
+
+    go_startStateTrigger = TriggerCreate("GhostOps_StartStateTick");
+    TriggerAddEventTimeElapsed(go_startStateTrigger, 0.5, c_timeGame);
+    return lv_first;
+}

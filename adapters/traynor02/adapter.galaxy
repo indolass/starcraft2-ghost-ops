@@ -1,0 +1,17 @@
+//==================================================================================================
+// GhostOps adapter: The Outlaws (TRaynor02). All mission specific knowledge lives here.
+// Player 1 is the human player. The mission calls GhostOps_OnMissionStart() right after it
+// has started gt_StartGame, i.e. after the intro sequence (see adapter.json for the anchor).
+//==================================================================================================
+void GhostOps_OnMissionStart () {
+    unit lv_operative;
+
+    GhostOps_Init();
+    GhostOps_SetPlayerCovered(1, true);
+    lv_operative = GhostOps_SpawnOperatives(1, CameraInfoGetTarget(CameraInfoFromId(1117)));
+    if (lv_operative != null) {
+        UnitSelect(lv_operative, 1, true);
+    }
+
+    GhostOps_Start();
+}

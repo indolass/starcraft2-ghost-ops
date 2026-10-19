@@ -1,0 +1,26 @@
+{
+  "schema_version": 3,
+  "mission": "traynor02",
+  "operatives": {
+    "squad": [
+      "Nova",
+      "Ghost",
+      "Ghost"
+    ],
+    "start_hold_fire": true,
+    "ghost_permanent_cloak": true,
+    "ghost_start_cloaked": true
+  },
+  "base_support": {
+    "damage_multiplier": 3
+  },
+  "experimental": {
+    "invulnerable_allies": false
+  },
+  "scenario": {
+    "waves": "original",
+    "timers": "original",
+    "victory": "original"
+  },
+  "nukes_granted": 0
+}

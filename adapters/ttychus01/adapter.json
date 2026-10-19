@@ -1,0 +1,21 @@
+{
+  "schema_version": 1,
+  "mission": "ttychus01",
+  "title": "Smash and Grab",
+  "source_map_file": "TTychus01.SC2Map",
+  "output_map_file": "GhostOps_TTychus01.SC2Map",
+  "script_member": "MapScript.galaxy",
+  "adapter_source": "adapters/ttychus01/adapter.galaxy",
+  "config": "config/ttychus01.json",
+  "start_hook": {
+    "function": "gt_IntroSequence_Func",
+    "after": "TriggerExecute(gt_StartGame, true, false);",
+    "call": "GhostOps_OnMissionStart();"
+  },
+  "required_markers": [
+    "gt_StartGame",
+    "gt_IntroSequence_Func",
+    "CameraInfoFromId(26)",
+    "void InitLibs"
+  ]
+}
