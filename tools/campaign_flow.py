@@ -173,6 +173,10 @@ class CampaignFlow:
         args = _args(mission, preset, plan_path)
         if self.backend.sc2_running():
             return False, 'StarCraft II уже запущена. Закройте игру самостоятельно и повторите: запускатель её не закрывает.', op_id
+        # the journal of the PREVIOUS launch is read first: a victory proposal that was not confirmed yet must never be lost with the archived Bank file
+        pending = self.after_exit()
+        if pending['proposals']:
+            return False, 'есть результат карты, ожидающий подтверждения: сначала примите его (окно «Кампания»)', op_id
         rc = self.backend.prepare(args, 'existing', progress)
         if rc != 0:
             return False, 'не удалось подготовить карту операции (код %s); заказ остался оплаченным, повтор не спишет его снова' % rc, op_id

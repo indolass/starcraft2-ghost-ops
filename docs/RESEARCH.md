@@ -270,3 +270,10 @@ Side effect to know: every run of a map from `Maps\GhostOps` (and every load) re
 - Two missiles (both Ghosts may aim): the first launch re-arms the academy for free (state 8, ready 1.1 s later), a second launch ends the chain (`launches` = 2, `nukes` 0), a third
   order is refused; a second Ghost cannot aim while the first one holds the only armed missile. The launch counter is the flight effect, never the click.
 - Known limits found: the TRaynor03 dev run needs about two minutes to compile and load; `UnitCreate` of the Ghost Academy moves to the nearest valid place (see the log).
+- Real runs of the TRaynor03 probe build (2026-10-20): (a) the original timer reached 00:00 after 20 game minutes (mission time about 1207 s: the timer starts a few seconds after the mission), with 7 of 8 targets dead the gate blocked the
+  original victory, the mission went on for about 6 game minutes and ended with ONE victory when the last target died; (b) all targets dead before the timer: no victory until the timer, then one victory; (c) two runs without any command
+  (no mining, no repair, Ghosts uncontrolled) lost at 7:20-7:30 ("all your structures are destroyed") - an unattended base does not hold the first waves; (d) the post-timer wave handler counted ALL enemy units (170+, idle armies of the three Zerg bases) in a radius of
+  60 around the base and therefore never sent a wave; with a radius of 32 it sends one (arrival not measured); (e) garrison zone: a Zergling next to a garrison Marine keeps 35/35 life for 5 s with the zone moved away and dies
+  inside the real zone (damage x4); (f) the bunkers of the map are EMPTY at the start; (g) a real plan build (`--plan`) puts the ordered numbers into the map and the journal START row carries the operation id and the data hash.
+- Real campaign chain (`tools/ce0_campaign_e2e.py`, own campaign file): TRaynor02 -> proposal (start 100, mined 225, remainder 325) -> accepted once -> order of 8 marines (320) charged once -> unique TRaynor03 map
+  `GhostOps_TRaynor03_standard_dev__OP0002.SC2Map` built and started -> `continue_operation` started the same set without a rebuild and without a second charge.

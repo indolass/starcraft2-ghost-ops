@@ -179,6 +179,16 @@ void GhostOps_Tac_CaptureGarrison () {
     GhostOps_Tac_Log("garrison " + IntToString(UnitGroupCount(go_tacGarrison, c_unitCountAll)));
 }
 
+// A Marine that is not found by the region search at the start (it stands in a bunker, cargo) joins the garrison here.
+void GhostOps_Tac_AddGarrison (unit lp_unit) {
+    if ((lp_unit == null) || UnitGroupHasUnit(go_tacGarrison, lp_unit)) {
+        return;
+    }
+
+    UnitGroupAdd(go_tacGarrison, lp_unit);
+    UnitBehaviorAdd(lp_unit, "GhostOpsGarrisonDamage", lp_unit, 1);
+}
+
 void GhostOps_Tac_MakeTrained (unit lp_unit, string lp_source) {
     if (lp_unit == null) {
         return;

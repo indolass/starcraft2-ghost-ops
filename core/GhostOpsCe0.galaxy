@@ -22,6 +22,7 @@ trigger go_c0SaveTrig;
 trigger go_c0SavedTrig;
 trigger go_c0LoadTrig;
 trigger go_c0TickTrig;
+trigger go_c0GodTrig;
 int go_c0Marker;               // a gameplay-like counter that lives ONLY in the game state (saved / loaded with it)
 
 void GhostOps_Ce0_Apply ();
@@ -168,6 +169,29 @@ void GhostOps_Ce0_OnDefeat () {
     GhostOps_Ce0_Write("j", "DEFEAT " + GhostOps_Ce0_Resources());
 }
 
+// DEV ONLY: every unit of the player is healed to its maximum once a second (a base that keeps standing without a human, for the real-timer observation run)
+bool GhostOps_Ce0_GodTick (bool lp_test, bool lp_run) {
+    unitgroup lv_g;
+    int lv_n;
+    int lv_i;
+    unit lv_u;
+
+    if (!lp_run) {
+        return true;
+    }
+
+    lv_g = UnitGroup(null, 1, RegionEntireMap(), GhostOps_Ce0_Live(), 0);
+    lv_n = UnitGroupCount(lv_g, c_unitCountAll);
+    lv_i = 1;
+    while (lv_i <= lv_n) {
+        lv_u = UnitGroupUnit(lv_g, lv_i);
+        UnitSetPropertyFixed(lv_u, c_unitPropLife, UnitGetPropertyFixed(lv_u, c_unitPropLifeMax, c_unitPropCurrent));
+        lv_i += 1;
+    }
+
+    return true;
+}
+
 bool GhostOps_Ce0_ChatFunc (bool lp_test, bool lp_run) {
     string lv_t;
     string lv_cmd;
@@ -273,6 +297,11 @@ bool GhostOps_Ce0_ChatFunc (bool lp_test, bool lp_run) {
         }
 
         GhostOps_Ce0_Write("j", "TRAIN ordered " + lv_a);
+    }
+    else if (lv_cmd == "god") {
+        go_c0GodTrig = TriggerCreate("GhostOps_Ce0_GodTick");
+        TriggerAddEventTimePeriodic(go_c0GodTrig, 1.0, c_timeGame);
+        GhostOps_Ce0_Write("j", "GOD mode on (dev only: the units of the player are healed every second)");
     }
     else if (lv_cmd == "rnd") {
         // the random numbers after a load: the engine state is part of the save?

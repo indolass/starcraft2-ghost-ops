@@ -91,7 +91,7 @@ def make_window_class(ctk, pal):
                              anchor='w').grid(row=1 + i * 4, column=0, sticky='ew', padx=16, pady=(8, 0))
                 ctk.CTkLabel(f, text='\n'.join(lines), font=(FONT, 12), text_color=TEXT, anchor='w', justify='left', wraplength=730).grid(row=2 + i * 4, column=0, sticky='ew', padx=16)
                 self.button(f, 'Принять этот результат', lambda pp=p: self.accept(pp), primary=True).grid(row=3 + i * 4, column=0, sticky='w', padx=16, pady=(6, 4))
-            ctk.CTkLabel(f, text='Остаток в кампанию попадает один раз. Результат можно отложить: он останется в журнале карты до следующего запуска той же операции.',
+            ctk.CTkLabel(f, text='Остаток в кампанию попадает один раз. Пока результат не принят, новые запуски операций недоступны (журнал карты не теряется).',
                          font=(FONT, 11), text_color=MUTED, anchor='w', justify='left', wraplength=730).grid(row=2 + len(self.pending) * 4, column=0, sticky='ew', padx=16, pady=(0, 10))
 
         def _op_buttons(self, f, row, mission, preset):

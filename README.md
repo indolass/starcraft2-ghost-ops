@@ -10,7 +10,7 @@ squad of Nova + two standard Ghosts + two Medics (free permanent cloak, hold fir
 hold fire / weapons free for everybody), BaseSupport army bonus, a Hard-difficulty check message,
 missions *The Outlaws* (tactical variant, experiment), *Smash and Grab* and (candidate for the game check) *Liberation Day* with three named Ghost Ops variants (easy / hard / extreme experiment, see below). A mission registry and the `MissionPressure` design
 are in ROADMAP.md / docs; no time-pressure change is implemented yet.
-Nothing else is implemented.
+Added 2026-10-20 (experiments): the campaign link and *Zero Hour* (TRaynor03), see "The first three missions and the campaign link" below. Other missions are not implemented.
 
 ## How it works
 

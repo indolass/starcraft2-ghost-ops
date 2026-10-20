@@ -17,6 +17,7 @@ void GhostOps_OnMissionStart () {
     GhostOps_ZH_Start();
     GhostOps_Tac_Start();
     if (go_zhEnabled) {
+        GhostOps_ZH_CaptureBunkerCargo();
         GhostOps_SpawnOperatives(1, Point(go_zhGhostX, go_zhGhostY));
         GhostOps_Tac_OnGhostsDelivered(GhostOps_SquadUnit(0), GhostOps_SquadUnit(1));
     }

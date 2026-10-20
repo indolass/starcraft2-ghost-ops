@@ -214,6 +214,48 @@ void GhostOps_ZH_ApplyOrder () {
     GhostOps_ZH_Log("order applied: marines " + IntToString(UnitGroupCount(UnitGroup("Marine", 1, RegionEntireMap(), GhostOps_ZH_Live(), 0), c_unitCountAlive)) + " bunkers " + IntToString(UnitGroupCount(UnitGroup("Bunker", 1, RegionEntireMap(), GhostOps_ZH_Live(), 0), c_unitCountAlive)) + " turrets " + IntToString(UnitGroupCount(UnitGroup("MissileTurret", 1, RegionEntireMap(), GhostOps_ZH_Live(), 0), c_unitCountAlive)) + " scvs " + IntToString(UnitGroupCount(UnitGroup("SCV", 1, RegionEntireMap(), GhostOps_ZH_Live(), 0), c_unitCountAlive)));
 }
 
+// The Marines that stand inside the four stock bunkers (cargo) are garrison too: the tactical module's region search at the start does not find them.
+void GhostOps_ZH_CaptureBunkerCargo () {
+    int lv_i;
+    int lv_ids;
+    int lv_n;
+    int lv_k;
+    unitgroup lv_c;
+
+    lv_i = 0;
+    while (lv_i < 4) {
+        if (lv_i == 0) {
+            lv_ids = 4;
+        }
+        else if (lv_i == 1) {
+            lv_ids = 13;
+        }
+        else if (lv_i == 2) {
+            lv_ids = 291;
+        }
+        else {
+            lv_ids = 298;
+        }
+
+        if (UnitIsAlive(UnitFromId(lv_ids))) {
+            lv_c = UnitCargoGroup(UnitFromId(lv_ids));
+            lv_n = UnitGroupCount(lv_c, c_unitCountAll);
+            lv_k = 1;
+            while (lv_k <= lv_n) {
+                if (UnitGetType(UnitGroupUnit(lv_c, lv_k)) == "Marine") {
+                    GhostOps_Tac_AddGarrison(UnitGroupUnit(lv_c, lv_k));
+                }
+
+                lv_k += 1;
+            }
+
+            GhostOps_ZH_Log("bunker " + IntToString(lv_ids) + " holds " + IntToString(lv_n) + " units (garrison)");
+        }
+
+        lv_i += 1;
+    }
+}
+
 //--------------------------------------------------------------------------------------------------
 // Production lock (roadmap 7.2): no new troops, buildings, upgrades or add-ons during the mission; the existing SCVs mine and repair.
 // Everything a unit type of the player can produce is forbidden (derived from the game's own tech tree, scanned every second). The Ghost Academy is NOT locked:
@@ -435,9 +477,10 @@ void GhostOps_ZH_PostWave () {
     int lv_side;
     int lv_active;
 
-    lv_active = UnitGroupCount(UnitGroup(null, 2, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterStructure), (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive);
-    lv_active += UnitGroupCount(UnitGroup(null, 3, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterStructure), (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive);
-    lv_active += UnitGroupCount(UnitGroup(null, 4, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterStructure), (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive);
+    // "active" = enemy fighters near our base (the idle armies at their own bases do not count)
+    lv_active = UnitGroupCount(UnitGroup(null, 2, RegionCircle(Point(go_tacZoneX, go_tacZoneY), 32.0), UnitFilter(0, 0, (1 << c_targetFilterStructure), (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive);
+    lv_active += UnitGroupCount(UnitGroup(null, 3, RegionCircle(Point(go_tacZoneX, go_tacZoneY), 32.0), UnitFilter(0, 0, (1 << c_targetFilterStructure), (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive);
+    lv_active += UnitGroupCount(UnitGroup(null, 4, RegionCircle(Point(go_tacZoneX, go_tacZoneY), 32.0), UnitFilter(0, 0, (1 << c_targetFilterStructure), (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive);
     if (lv_active > go_zhPostMaxActive) {
         GhostOps_ZH_Log("post wave skipped: active enemy units " + IntToString(lv_active));
         return;

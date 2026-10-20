@@ -124,6 +124,18 @@ class Flow(unittest.TestCase):
         self.assertFalse(got['fresh'])
         self.assertEqual(got['proposals'], [])
 
+    def test_an_unconfirmed_result_blocks_new_launches_and_is_never_lost(self):
+        ok, _, op = self.flow.start_new('traynor02', 'tactical')
+        write_bank(os.path.join(self.tmp, 'GhostOpsCampaign.SC2Bank'), [r % {'op': op} for r in ROWS])
+        n = len(self.fake.started)
+        ok, msg, _ = self.flow.restart_operation(op)
+        self.assertFalse(ok)
+        self.assertIn('ожидающий подтверждения', msg)
+        self.assertEqual(len(self.fake.started), n)
+        self.assertTrue(os.path.exists(os.path.join(self.tmp, 'GhostOpsCampaign.SC2Bank')))  # not archived
+        self.flow.accept(self.flow.after_exit()['proposals'][0])
+        self.assertEqual(self.flow.stock()['minerals'], 1500)
+
 
 if __name__ == '__main__':
     unittest.main()
