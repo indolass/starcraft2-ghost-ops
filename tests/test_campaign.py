@@ -1,12 +1,12 @@
-"""CE-0: fault-injection tests of the isolated campaign accounting prototype (tools/ce0_campaign_proto.py).
-They prove the contract's requirements on the PROTOTYPE only; no playable profile and no launcher code uses it."""
+"""Fault-injection tests of the launcher-side campaign accounting (tools/campaign.py; first written as the CE-0 prototype).
+They prove the contract requirements of docs/MISSION_SETTINGS_AND_CAMPAIGN_ECONOMY.md 7 and 14 for the campaign accounting module."""
 import os
 import sys
 import tempfile
 import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'tools'))
-import ce0_campaign_proto as cp  # noqa: E402
+import campaign as cp  # noqa: E402
 
 H = 'abc123'
 
@@ -125,6 +125,52 @@ class CampaignProto(unittest.TestCase):
         recs, props = cp.parse_journal(rows)
         self.assertEqual([r['kind'] for r in recs], ['START', 'LOADED'])
         self.assertEqual((props[0]['result_id'], props[0]['minerals'], props[0]['gas']), ('A1-555', 300, 40))
+
+
+REAL_ROWS = ['1|1.81|A938366144|START op=OP1 mission=traynor02 hash=abc123 startMin=100 startGas=0',
+             '2|120.06|A938366144|RESULT op=OP1 mission=traynor02 hash=abc123 id=A938366144-891813522 outcome=victory min=210 gas=0 startMin=100 startGas=0 minedMin=110 minedGas=0 foundMin=0 foundGas=0 time=120',
+             '3|120.06|A938366144|RESULT op=OP1 mission=traynor02 hash=abc123 id=A938366144-891813522 outcome=victory min=210 gas=0 startMin=100 startGas=0 minedMin=110 minedGas=0 foundMin=0 foundGas=0 time=120']
+
+
+class Production(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        self.path = fresh(self.tmp)
+
+    def test_real_rows_parse_dedupe_and_report(self):
+        recs, props = cp.parse_journal(REAL_ROWS)
+        self.assertEqual(len(props), 1)  # the map writes the proposal to both sections
+        rep = cp.report(props[0])
+        self.assertEqual(rep['minerals'], {'start': 100, 'mined': 110, 'found': 0, 'net_other_derived': 0, 'remainder': 210})
+        self.assertIn('передано в кампанию 210', cp.report_lines(rep)[0])
+
+    def test_continue_intent_ignores_the_process_own_start_and_fresh_restarts(self):
+        cp.plan_and_pay(self.path, 'OP1', 'traynor02', 'tactical', {}, {}, 'abc123')
+        cp.observe(self.path, cp.parse_journal(REAL_ROWS[:1])[0])
+        new = [{'kind': 'START', 'op': 'OP1', 'attempt': 'B2', 'hash': 'abc123'}]
+        s, held = cp.observe(self.path, new, intent='continue')  # the player loads an old save: the process's own START is not an attempt
+        self.assertEqual(list(s['operations']['OP1']['attempts']), ['A938366144'])
+        self.assertEqual(len(held), 1)
+        s, _ = cp.observe(self.path, new, intent='fresh')  # a fresh launch: a full restart
+        self.assertEqual({k: v['state'] for k, v in s['operations']['OP1']['attempts'].items()}, {'A938366144': 'abandoned', 'B2': 'live'})
+
+    def test_insufficient_stock_is_shown_not_papered_over(self):
+        with self.assertRaises(cp.Rejected) as e:
+            cp.plan_and_pay(self.path, 'OP2', 'traynor03', 'standard', {'minerals': 9000, 'gas': 0}, {}, 'h')
+        self.assertIn('missing 4000 minerals', str(e.exception))
+        self.assertEqual(cp.load(self.path)['stock'], {'minerals': 5000, 'gas': 2000})
+
+    def test_collect_ignores_a_stale_bank_file(self):
+        import time
+        bank = os.path.join(self.tmp, 'GhostOpsCampaign.SC2Bank')
+        rows = ''.join('<Key name="e%d"><Value string="%s"/></Key>' % (i, r) for i, r in enumerate(REAL_ROWS, 1))
+        open(bank, 'w', encoding='utf-8').write('<Bank version="1"><Section name="j">%s</Section></Bank>' % rows)
+        cp.plan_and_pay(self.path, 'OP1', 'traynor02', 'tactical', {}, {}, 'abc123')
+        got = cp.collect(self.path, 'OP1', time.time() + 100, bank=bank)  # the process was launched after the file was written
+        self.assertFalse(got['fresh'])
+        got = cp.collect(self.path, 'OP1', time.time() - 100, bank=bank)
+        self.assertTrue(got['fresh'])
+        self.assertEqual(len(got['proposals']), 1)
 
 
 if __name__ == '__main__':

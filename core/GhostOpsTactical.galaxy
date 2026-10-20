@@ -33,6 +33,13 @@ fixed go_tacStoryAlertLen;
 fixed go_tacStorySwannLen;
 fixed go_tacStoryArrivalLen;
 fixed go_tacStoryGhostLen;
+fixed go_tacStoryRaynorDelay;
+fixed go_tacStoryRaynorLen;
+int go_tacNukeCount;           // successful irreversible launches allowed (TRaynor02: 1, TRaynor03: 2)
+int go_tacLaunches;            // irreversible launches so far (saved with the game)
+bool go_tacBothAim;            // both Ghosts may aim the strike (TRaynor03); otherwise only the Spotter
+bool go_tacSpotterDefeat;      // the Spotter's death before the launch ends the mission (TRaynor02)
+bool go_tacRaynorSaid;         // Raynor's explanation is said once (saved with the game)
 bool go_tacGhostSaid;          // the Ghost arrival line is said once (saved with the game)
 bool go_tacMarkers;
 unit go_tacSpotter;
@@ -415,19 +422,19 @@ bool GhostOps_Tac_NukeTick (bool lp_testConds, bool lp_runActions) {
         return true;
     }
 
-    if ((((go_tacState >= 1) && (go_tacState <= 3)) || (go_tacState == 7)) && !GhostOps_Tac_Alive(go_tacAcademy)) {
+    if ((((go_tacState >= 1) && (go_tacState <= 3)) || (go_tacState == 7) || (go_tacState == 8)) && !GhostOps_Tac_Alive(go_tacAcademy)) {
         go_tacState = 6;
         GhostOps_Tac_Log("academy lost");
         GhostOps_Tac_Say("Param/Value/GhostOpsTac_AcademyLost");
         return true;
     }
 
-    if ((go_tacState == 1) || (go_tacState == 7)) {
+    if ((go_tacState == 1) || (go_tacState == 7) || (go_tacState == 8)) {
         if (TechTreeUnitCount(1, "Nuke", c_techCountCompleteOnly) >= 1) {
             // the missile exists: nobody may arm a second one (the ability itself stays enabled on the academy,
             // the stock strike needs it)
             TechTreeAbilityAllow(1, AbilityCommand("ArmSiloWithNuke", 0), false);
-            if (go_tacState == 1) {
+            if ((go_tacState == 1) || (go_tacState == 8)) {
                 GhostOps_Tac_Say("Param/Value/GhostOpsTac_NukeReady");
             }
             else {
@@ -472,7 +479,7 @@ bool GhostOps_Tac_AbilTick (bool lp_testConds, bool lp_runActions) {
         return true;
     }
 
-    if (lv_unit != go_tacSpotter) {
+    if (!go_tacBothAim && (lv_unit != go_tacSpotter)) {
         UnitIssueOrder(lv_unit, Order(AbilityCommand("stop", 0)), c_orderQueueReplace);
         return true;
     }
@@ -512,13 +519,26 @@ bool GhostOps_Tac_EffectTick (bool lp_testConds, bool lp_runActions) {
         return true;
     }
 
-    if ((lv_effect == "GhostOpsNukeFlight") && (go_tacState < 4)) {
-        go_tacState = 4;
-        if (GhostOps_Tac_Alive(go_tacSpotter)) {
-            UnitAbilityEnable(go_tacSpotter, "TacNukeStrike", false);
-        }
-
+    if ((lv_effect == "GhostOpsNukeFlight") && ((go_tacState < 4) || (go_tacState == 7) || (go_tacState == 8))) {
+        go_tacLaunches += 1;
         GhostOps_Tac_Say("Param/Value/GhostOpsTac_Launched");
+        if (go_tacLaunches < go_tacNukeCount) {
+            // another missile is allowed: it is armed for free (state 8), the launch counter - not the click - limits the operation
+            go_tacState = 8;
+            go_tacArmTries = 0;
+            TechTreeAbilityAllow(1, AbilityCommand("ArmSiloWithNuke", 0), true);
+            GhostOps_Tac_ArmNuke();
+        }
+        else {
+            go_tacState = 4;
+            if (GhostOps_Tac_Alive(go_tacSpotter)) {
+                UnitAbilityEnable(go_tacSpotter, "TacNukeStrike", false);
+            }
+
+            if (go_tacBothAim && GhostOps_Tac_Alive(go_tacOperative)) {
+                UnitAbilityEnable(go_tacOperative, "TacNukeStrike", false);
+            }
+        }
     }
 
     if ((lv_effect == "NukeDamage") && (go_tacState == 4)) {
@@ -565,13 +585,25 @@ void GhostOps_Tac_OnGhostsDelivered (unit lp_spotter, unit lp_operative) {
 
     go_tacSpotter = lp_spotter;
     go_tacOperative = lp_operative;
-    UnitAbilityEnable(go_tacOperative, "TacNukeStrike", false);
-    UnitSetInfoText(go_tacSpotter, StringExternal("Param/Value/GhostOpsTac_RoleSpotter"), StringExternal("Param/Value/GhostOpsTac_InfoSpotter"), StringExternal("Param/Value/GhostOpsTac_InfoSpotter"));
-    UnitSetState(go_tacSpotter, c_unitStateTooltipable, true);
-    UnitSetInfoText(go_tacOperative, StringExternal("Param/Value/GhostOpsTac_RoleOperative"), StringExternal("Param/Value/GhostOpsTac_InfoOperative"), StringExternal("Param/Value/GhostOpsTac_InfoOperative"));
-    UnitSetState(go_tacOperative, c_unitStateTooltipable, true);
-    go_tacSpotterDiedTrig = TriggerCreate("GhostOps_Tac_SpotterDiedTick");
-    TriggerAddEventUnitDied(go_tacSpotterDiedTrig, UnitRefFromUnit(go_tacSpotter));
+    if (go_tacBothAim) {
+        UnitSetInfoText(go_tacSpotter, StringExternal("Param/Value/GhostOpsTac_RoleGhost"), StringExternal("Param/Value/GhostOpsTac_InfoGhost"), StringExternal("Param/Value/GhostOpsTac_InfoGhost"));
+        UnitSetState(go_tacSpotter, c_unitStateTooltipable, true);
+        UnitSetInfoText(go_tacOperative, StringExternal("Param/Value/GhostOpsTac_RoleGhost"), StringExternal("Param/Value/GhostOpsTac_InfoGhost"), StringExternal("Param/Value/GhostOpsTac_InfoGhost"));
+        UnitSetState(go_tacOperative, c_unitStateTooltipable, true);
+    }
+    else {
+        UnitAbilityEnable(go_tacOperative, "TacNukeStrike", false);
+        UnitSetInfoText(go_tacSpotter, StringExternal("Param/Value/GhostOpsTac_RoleSpotter"), StringExternal("Param/Value/GhostOpsTac_InfoSpotter"), StringExternal("Param/Value/GhostOpsTac_InfoSpotter"));
+        UnitSetState(go_tacSpotter, c_unitStateTooltipable, true);
+        UnitSetInfoText(go_tacOperative, StringExternal("Param/Value/GhostOpsTac_RoleOperative"), StringExternal("Param/Value/GhostOpsTac_InfoOperative"), StringExternal("Param/Value/GhostOpsTac_InfoOperative"));
+        UnitSetState(go_tacOperative, c_unitStateTooltipable, true);
+    }
+
+    if (go_tacSpotterDefeat) {
+        go_tacSpotterDiedTrig = TriggerCreate("GhostOps_Tac_SpotterDiedTick");
+        TriggerAddEventUnitDied(go_tacSpotterDiedTrig, UnitRefFromUnit(go_tacSpotter));
+    }
+
     GhostOps_Tac_Log("ghosts delivered (in the transport)");
     GhostOps_TacTest_Delivered();
 }

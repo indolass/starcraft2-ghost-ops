@@ -86,7 +86,7 @@ def cmd_start(a):
     mons = monitors.list_monitors()
     mon, second = monitors.test_monitor(mons)
     x, y, w, h = monitors.test_window_rect(mon, a.width, a.height)
-    args = argparse.Namespace(mission=a.mission, preset=a.preset, source=None, multiplier=None, diag=False, print_only=False, start=True)
+    args = argparse.Namespace(mission=a.mission, preset=a.preset, source=None, multiplier=None, diag=False, print_only=False, start=True, plan=a.plan)
     if not a.no_prepare:
         rc = build.prepare(args)
         if rc != 0:
@@ -111,7 +111,7 @@ def cmd_start(a):
                       '-ProcessId', str(pid), '-Seconds', str(a.mute_seconds)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     win = test_launch.place_window(pid, (x, y, w, h))
     st = {'pid': pid, 'mission': a.mission, 'preset': name, 'started': t0, 'map': dest, 'second_monitor': second,
-          'window': win and win['rect'], 'command': command}
+          'window': win and win['rect'], 'command': command, 'operation': adapter.get('_op')}
     save_state(st)
     print('test game pid %d on %s (%s); window %s' % (pid, mon.device, 'second monitor' if second else 'PRIMARY: no second monitor', win and win['rect']))
     return 0
@@ -187,6 +187,8 @@ def cmd_stop(a):
     if not a.keep_map:
         time.sleep(2)
         adapter = build.load_adapter(st['mission'])
+        if st.get('operation'):
+            adapter['_op'] = st['operation']
         build.uninstall_key(build.key_for(adapter, st['preset']), 'dev map')
     return 0
 
@@ -202,6 +204,7 @@ def main(argv=None):
     s.add_argument('--keep-bank', action='store_true')
     s.add_argument('--save', help='start by opening this .SC2Save instead of the map')
     s.add_argument('--no-prepare', action='store_true', help='do not build / install (the installed map file stays exactly as it is)')
+    s.add_argument('--plan', help='an operation plan JSON (builds the unique map file of that operation)')
     s.add_argument('--mute-seconds', type=int, default=3000)
     s.set_defaults(f=cmd_start)
     s = sub.add_parser('cmd')

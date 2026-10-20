@@ -114,8 +114,11 @@ bool GhostOps_Scene_AlertMsg (bool lp_testConds, bool lp_runActions) {
     GhostOps_Tac_Log("scene: alert message on screen");
     GhostOps_Tac_Log("scene: clip lengths " + FixedToString(SoundLengthSync(SoundLink("GhostOpsAdjutantAlert", 0)), 2) + " " + FixedToString(SoundLengthSync(SoundLink("GhostOpsSwannHelp", 0)), 2) + " " + FixedToString(SoundLengthSync(SoundLink("GhostOpsGhostReady", 0)), 2));
     GhostOps_Scene_VoiceBegin();
+    // the clip says "Alert." (its subtitle is exactly that); the explanation is a separate message of the same speaker, one second later
+    GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsTac_AlertTitle"), StringExternal("Param/Value/GhostOpsTac_AlertClip"));
+    TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("AdjutantPortrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", SoundLink("GhostOpsAdjutantAlert", 0), null, null, 1.0, c_transmissionDurationSet, true);
     GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsTac_AlertTitle"), StringExternal("Param/Value/GhostOpsTac_AlertText"));
-    TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("AdjutantPortrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", SoundLink("GhostOpsAdjutantAlert", 0), null, null, go_tacStoryAlertLen, c_transmissionDurationSet, true);
+    TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("AdjutantPortrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", null, null, null, go_tacStoryAlertLen, c_transmissionDurationSet, true);
     go_scBusy = false;
     if (go_tacScStage == 1) {
         go_tacScStage = 2;
@@ -125,6 +128,21 @@ bool GhostOps_Scene_AlertMsg (bool lp_testConds, bool lp_runActions) {
 
     GhostOps_Scene_VoiceEnd();
     GhostOps_Tac_Log("scene: alert message finished (the pause before Swann starts now)");
+    TriggerQueueExit();
+    return true;
+}
+
+// Raynor's explanation (portrait and text, no new audio): queued behind the original talk, inside the pause before Swann; said once.
+bool GhostOps_Scene_RaynorMsg (bool lp_testConds, bool lp_runActions) {
+    if (!lp_runActions) {
+        return true;
+    }
+
+    TriggerQueueEnter();
+    GhostOps_Tac_Log("scene: Raynor message on screen");
+    GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsTac_RaynorName"), StringExternal("Param/Value/GhostOpsTac_RaynorText"));
+    TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("RaynorCommanderPortrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", null, null, null, go_tacStoryRaynorLen, c_transmissionDurationSet, true);
+    GhostOps_Tac_Log("scene: Raynor message finished");
     TriggerQueueExit();
     return true;
 }
@@ -145,6 +163,8 @@ bool GhostOps_Scene_SwannMsg (bool lp_testConds, bool lp_runActions) {
     GhostOps_Scene_VoiceBegin();
     GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsTac_SwannName"), StringExternal("Param/Value/GhostOpsTac_SwannText"));
     TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("SwannPortrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", SoundLink("GhostOpsSwannHelp", 0), null, null, go_tacStorySwannLen, c_transmissionDurationSet, true);
+    GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsTac_SwannName"), StringExternal("Param/Value/GhostOpsTac_SwannExplain"));
+    TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("SwannPortrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", null, null, null, go_tacStoryArrivalLen, c_transmissionDurationSet, true);
     GhostOps_Scene_VoiceEnd();
     GhostOps_Tac_Log("scene: Swann message finished");
     TriggerQueueExit();
@@ -162,6 +182,8 @@ bool GhostOps_Scene_GhostMsg (bool lp_testConds, bool lp_runActions) {
     GhostOps_Scene_VoiceBegin();
     GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsTac_GhostName"), StringExternal("Param/Value/GhostOpsTac_GhostText"));
     TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("GhostPortrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", SoundLink("GhostOpsGhostReady", 0), null, null, go_tacStoryGhostLen, c_transmissionDurationSet, true);
+    GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsTac_GhostName"), StringExternal("Param/Value/GhostOpsTac_GhostExplain"));
+    TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("GhostPortrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", null, null, null, go_tacStoryGhostLen, c_transmissionDurationSet, true);
     GhostOps_Scene_VoiceEnd();
     GhostOps_Tac_Log("scene: Ghost line finished");
     TriggerQueueExit();
@@ -224,6 +246,11 @@ bool GhostOps_Scene_Tick (bool lp_testConds, bool lp_runActions) {
         }
     }
     else if (go_tacScStage == 2) {
+        if (!go_tacRaynorSaid && ((lv_now - go_tacScT) >= go_tacStoryRaynorDelay)) {
+            go_tacRaynorSaid = true;
+            TriggerExecute(TriggerCreate("GhostOps_Scene_RaynorMsg"), true, false);
+        }
+
         if ((lv_now - go_tacScT) >= go_tacStorySecond) {
             go_tacScStage = 8;
             go_tacScT = lv_now;

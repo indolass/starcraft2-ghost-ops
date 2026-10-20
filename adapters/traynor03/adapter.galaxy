@@ -1,0 +1,27 @@
+//==================================================================================================
+// GhostOps adapter: Zero Hour (TRaynor03). All mission specific knowledge lives here.
+// Player 1 is the human player. gt_IntroSequence_Func (the only way into the playable part) calls GhostOps_OnMissionStart() right after it has started
+// gt_StartGame (adapter.json); GhostOps_ClaimStart() makes the start happen exactly once.
+// Order of the start (it matters): the ORDER is applied first (unordered Marines / Bunkers / Turrets are removed, extra SCVs created), then the tactical module captures
+// the garrison (the Marines that are left), then the two Ghosts appear next to the Command Center and are handed to the tactical module (both may aim,
+// two missiles in total, no defeat from their death). Everything else of the original mission (waves, rescue groups, timer, objectives) is untouched.
+//==================================================================================================
+void GhostOps_OnMissionStart () {
+    if (!GhostOps_ClaimStart()) {
+        return;
+    }
+
+    GhostOps_ApplyTacticalConfig();
+    GhostOps_Init();
+    GhostOps_SetPlayerCovered(1, true);
+    GhostOps_ZH_Start();
+    GhostOps_Tac_Start();
+    if (go_zhEnabled) {
+        GhostOps_SpawnOperatives(1, Point(go_zhGhostX, go_zhGhostY));
+        GhostOps_Tac_OnGhostsDelivered(GhostOps_SquadUnit(0), GhostOps_SquadUnit(1));
+    }
+
+    GhostOps_Start();
+    GhostOps_ReportProfile();
+    GhostOps_ReportDifficulty(1);
+}

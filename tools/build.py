@@ -46,7 +46,7 @@ GHOST_ABIL_INDEX = {'TacNukeStrike': 5, 'EMP': 7}
 TAC_TEXT_PREFIX = 'Param/Value/GhostOpsTac_'
 TAC_TEXT_KEYS = ('ZoneLeft', 'RoleSpotter', 'RoleOperative', 'InfoSpotter', 'InfoOperative', 'NukeReady', 'Aiming', 'AimCancelled', 'Launched',
                  'SpotterLost', 'SpotterLostAfter', 'AcademyLost', 'AlertTitle', 'AlertText', 'SwannName', 'SwannText', 'GhostName', 'GhostText', 'ArrivalText',
-                 'ObjectiveTitle', 'ObjectiveText', 'Tip1Title', 'Tip1Text', 'Tip2Title', 'Tip2Text', 'Tip3Title', 'Tip3Text', 'Tip4Title', 'Tip4Text')
+                 'ObjectiveTitle', 'ObjectiveText', 'Tip1Title', 'Tip1Text', 'Tip2Title', 'Tip2Text', 'Tip3Title', 'Tip3Text', 'Tip4Title', 'Tip4Text', 'AlertClip', 'RaynorName', 'RaynorText', 'SwannExplain', 'GhostExplain', 'RoleGhost', 'InfoGhost')
 # AbilArray indexes of the Ghost Academy in the merged campaign data (Liberty mod + Liberty campaign):
 # BuildInProgress 0, que5 1, ArmSiloWithNuke 2, GhostAcademyResearch 3, MercCompoundResearch 4, HeroArmNuke 5, SpectreNukeSiloArmMagazine 6
 ACADEMY_REMOVED_ABILS = (3, 4, 5, 6)
@@ -58,6 +58,10 @@ SCENE_TEXT_PREFIX = 'Param/Value/GhostOpsScene_'
 HANSON_TEXT_PREFIX = 'Param/Value/GhostOpsH_'
 HANSON_TEXT_KEYS = ('BtnPreparing', 'BtnReady', 'BtnActive', 'ReadyMsg', 'SentMsg')
 HANSON_ROLES = ('base', 'houses', 'air')
+ZH_TEXT_PREFIX = 'Param/Value/GhostOpsZH_'
+ZH_TEXT_KEYS = ('ObjTitle', 'ObjText', 'AllDestroyed', 'RaynorName', 'RaynorText', 'HornerName', 'HornerText', 'HornerWaitText', 'RebelName', 'RebelText', 'RescueText',
+                'Tip1Title', 'Tip1Text', 'Tip2Title', 'Tip2Text', 'Tip3Title', 'Tip3Text')
+ZH_ORDER_ITEMS = ('marines', 'bunkers', 'turrets', 'scvs')
 SCENE_TEXT_KEYS = ('RaynorName', 'RaynorLine', 'MarineName', 'MarineBLine', 'MarineALine', 'Explain')
 
 
@@ -137,7 +141,107 @@ def validate_config(cfg):
         errs += validate_hanson(cfg)
     if cfg.get('ce0') is not None:
         errs += validate_ce0(cfg)
+    if cfg.get('campaign') is not None:
+        errs += validate_campaign(cfg)
+    if cfg.get('zerohour') is not None:
+        errs += validate_zerohour(cfg)
     return errs
+
+
+def validate_zerohour(cfg):
+    """TRaynor03 "Zero Hour" (config key "zerohour", see config/traynor03.json). Every number of the mission is a setting; unknown keys are errors."""
+    z = cfg['zerohour']
+    errs = []
+    if not isinstance(z, dict):
+        return ['zerohour must be an object']
+    known = {'order', 'limits', 'prices', 'recommended', 'test_budget', 'arrival_minutes', 'targets', 'ping_every', 'ghost_spawn', 'post_arrival', 'scene', 'texts', 'debug_log'}
+    for k in z:
+        if k not in known:
+            errs.append('zerohour.%s is not supported' % k)
+    isint = lambda v: isinstance(v, int) and not isinstance(v, bool)  # noqa: E731
+    lim = z.get('limits', {})
+    for grp in ('order', 'recommended'):
+        o = z.get(grp, {})
+        for k in ZH_ORDER_ITEMS:
+            if not isint(o.get(k)) or not 0 <= o[k] <= lim.get(k, -1):
+                errs.append('zerohour.%s.%s must be an integer 0..zerohour.limits.%s' % (grp, k, k))
+        extra = set(o) - set(ZH_ORDER_ITEMS)
+        if extra:
+            errs.append('zerohour.%s has unsupported items %s' % (grp, sorted(extra)))
+    for k in ZH_ORDER_ITEMS:
+        if not isint(lim.get(k)) or not 0 <= lim[k] <= 40:
+            errs.append('zerohour.limits.%s must be an integer 0..40' % k)
+        pr = z.get('prices', {}).get(k, {})
+        if not isint(pr.get('minerals')) or not isint(pr.get('gas')) or pr['minerals'] < 0 or pr['gas'] < 0:
+            errs.append('zerohour.prices.%s needs non-negative integer minerals and gas' % k)
+    tb = z.get('test_budget', {})
+    if not isint(tb.get('minerals')) or not isint(tb.get('gas')) or tb['minerals'] < 0 or tb['gas'] < 0:
+        errs.append('zerohour.test_budget needs non-negative integer minerals and gas (a budget of standalone tests only, never written into a campaign)')
+    if z.get('arrival_minutes') != 20:
+        errs.append('zerohour.arrival_minutes must be 20 (the constant of the original map; other values are not supported yet)')
+    t = z.get('targets')
+    if not isinstance(t, list) or not 1 <= len(t) <= 12 or any(not isint(x) or not 0 < x < 100000 for x in t) or len(set(t)) != len(t):
+        errs.append('zerohour.targets must be 1..12 distinct object ids of the map')
+    if not _num(z.get('ping_every')) or not 10 <= z['ping_every'] <= 600:
+        errs.append('zerohour.ping_every must be 10..600 (game seconds)')
+    gs = z.get('ghost_spawn')
+    if not (isinstance(gs, list) and len(gs) == 2 and all(_num(v) and 0 <= v <= 255 for v in gs)):
+        errs.append('zerohour.ghost_spawn must be [x, y]')
+    pa = z.get('post_arrival', {})
+    if not _num(pa.get('interval')) or not 20 <= pa.get('interval', 0) <= 1200:
+        errs.append('zerohour.post_arrival.interval must be 20..1200 (game seconds)')
+    if not isint(pa.get('max_active_units')) or not 0 <= pa.get('max_active_units', -1) <= 400:
+        errs.append('zerohour.post_arrival.max_active_units must be an integer 0..400')
+    for k in ('zerglings', 'hydralisks', 'roaches'):
+        if not isint(pa.get(k)) or not 0 <= pa[k] <= 40:
+            errs.append('zerohour.post_arrival.%s must be an integer 0..40' % k)
+    sc = z.get('scene', {})
+    for k, (lo, hi) in {'intro_delay': (1, 120), 'horner_delay': (0, 120), 'raynor_seconds': (3, 40), 'horner_seconds': (3, 40), 'rebel_seconds': (3, 40)}.items():
+        if not _num(sc.get(k)) or not lo <= sc[k] <= hi:
+            errs.append('zerohour.scene.%s must be a number in %s..%s' % (k, lo, hi))
+    texts = z.get('texts', {})
+    if set(texts) != set(ZH_TEXT_KEYS):
+        errs.append('zerohour.texts must have exactly the keys %s' % (ZH_TEXT_KEYS,))
+    for k in ZH_TEXT_KEYS:
+        v = texts.get(k)
+        if not isinstance(v, dict) or not all(isinstance(v.get(l), str) and v[l] and chr(10) not in v[l] for l in ('ru', 'en')):
+            errs.append('zerohour.texts.%s needs non-empty single-line ru and en texts' % k)
+    return errs
+
+
+def zerohour_cost(cfg, order=None):
+    """{'minerals': n, 'gas': n} of an order at the prices of the configuration (a plan can never change a price)."""
+    z = cfg['zerohour']
+    o = order if order is not None else z['order']
+    return {r: sum(int(o[k]) * z['prices'][k][r] for k in ZH_ORDER_ITEMS) for r in ('minerals', 'gas')}
+
+
+def validate_campaign(cfg):
+    """Campaign journal (config key "campaign": see core/GhostOpsCampaign.galaxy and contract section 14)."""
+    errs = []
+    c = cfg['campaign']
+    if not isinstance(c, dict):
+        return ['campaign must be a mapping']
+    if not isinstance(c.get('operation_id'), str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,40}', c.get('operation_id', '')):
+        errs.append('campaign.operation_id must be 1..40 characters of [A-Za-z0-9_-]')
+    for k in c:
+        if k not in ('operation_id',):
+            errs.append('campaign.%s is not supported' % k)
+    return errs
+
+
+def data_hash(cfg):
+    """Hash of the settings snapshot a map is built from (the profile label / message do not count). It is baked into the map and written
+    into the build manifest, so a result proposal can be tied to exactly that build."""
+    snap = json.dumps({k: v for k, v in cfg.items() if k != 'profile'}, sort_keys=True)
+    return hashlib.sha256(snap.encode('utf-8')).hexdigest()[:16]
+
+
+def gen_campaign(cfg):
+    """GhostOps_Camp_Apply(): constants of the campaign journal module."""
+    c = cfg['campaign']
+    return chr(10).join(['// Generated campaign journal configuration', 'void GhostOps_Camp_Apply () {', '    go_cpEnabled = true;', '    go_cpOp = "%s";' % c['operation_id'],
+                         '    go_cpMission = "%s";' % cfg['mission'], '    go_cpHash = "%s";' % data_hash(cfg), '}', ''])
 
 
 def validate_ce0(cfg):
@@ -161,9 +265,8 @@ def validate_ce0(cfg):
 def gen_ce0(cfg):
     """GhostOps_Ce0_Apply(): constants of the development probe."""
     c = cfg['ce0']
-    snapshot = json.dumps({k: v for k, v in cfg.items() if k != 'profile'}, sort_keys=True)
     lines = ['// Generated CE-0 probe configuration (development only)', 'void GhostOps_Ce0_Apply () {',
-             '    go_c0Enabled = true;', '    go_c0Op = "%s";' % c['operation_id'], '    go_c0Hash = "%s";' % hashlib.sha256(snapshot.encode('utf-8')).hexdigest()[:16],
+             '    go_c0Enabled = true;', '    go_c0Op = "%s";' % c['operation_id'], '    go_c0Hash = "%s";' % data_hash(cfg),
              '    go_c0TypeCount = %d;' % len(c['census_types'])]
     for i, t in enumerate(c['census_types']):
         lines.append('    go_c0Types[%d] = "%s";' % (i, t))
@@ -298,7 +401,7 @@ def validate_tactical(cfg):
     if tm.get('can_attack') is not False:
         errs.append('tactical.trained_marine.can_attack must be false (new Marines have no weapon)')
     st = t.get('story', {})
-    for k, (lo, hi) in {'first_delay': (1, 120), 'second_delay': (1, 300), 'alert_seconds': (3, 40), 'swann_seconds': (2, 30), 'arrival_seconds': (3, 40), 'ghost_seconds': (2, 20)}.items():
+    for k, (lo, hi) in {'first_delay': (1, 120), 'second_delay': (1, 300), 'alert_seconds': (3, 40), 'swann_seconds': (2, 30), 'arrival_seconds': (3, 40), 'ghost_seconds': (2, 20), 'raynor_delay': (0, 60), 'raynor_seconds': (3, 40)}.items():
         if not num(st.get(k), lo, hi):
             errs.append('tactical.story.%s must be a number in %s..%s' % (k, lo, hi))
     a = t.get('academy', {})
@@ -309,6 +412,10 @@ def validate_tactical(cfg):
         errs.append('tactical.nuke.aim_time must be 2..60 and a multiple of 0.2')
     if not num(n.get('flight_time'), 1, 60):
         errs.append('tactical.nuke.flight_time must be 1..60')
+    if not isinstance(n.get('count', 1), int) or isinstance(n.get('count', 1), bool) or not 1 <= n.get('count', 1) <= 6:
+        errs.append('tactical.nuke.count must be an integer 1..6')
+    if not isinstance(n.get('both_may_aim', False), bool) or not isinstance(t.get('spotter_defeat', True), bool):
+        errs.append('tactical.nuke.both_may_aim and tactical.spotter_defeat must be boolean')
     if not num(n.get('range'), 1, 30):
         errs.append('tactical.nuke.range must be 1..30')
     texts = t.get('texts', {})
@@ -531,6 +638,11 @@ def gen_tactical(cfg):
         '    go_tacStorySwannLen = %.1f;' % t['story']['swann_seconds'],
         '    go_tacStoryArrivalLen = %.1f;' % t['story']['arrival_seconds'],
         '    go_tacStoryGhostLen = %.1f;' % t['story']['ghost_seconds'],
+        '    go_tacNukeCount = %d;' % t['nuke'].get('count', 1),
+        '    go_tacBothAim = %s;' % b(t['nuke'].get('both_may_aim', False)),
+        '    go_tacSpotterDefeat = %s;' % b(t.get('spotter_defeat', True)),
+        '    go_tacStoryRaynorDelay = %.1f;' % t['story']['raynor_delay'],
+        '    go_tacStoryRaynorLen = %.1f;' % t['story']['raynor_seconds'],
         '}', '']
     return chr(10).join(lines)
 
@@ -592,6 +704,26 @@ def gen_hanson(cfg):
         lines.append('    go_hTurretY[%d] = %.4f;' % (i, t['y']))
     if h.get('autotest'):
         lines.append('    GhostOps_ApplyHansonTestConfig();')
+    lines += ['}', '']
+    return chr(10).join(lines)
+
+
+def gen_zerohour(cfg):
+    """GhostOps_ApplyZeroHourConfig(): constants of the TRaynor03 module."""
+    z = cfg['zerohour']
+    b = lambda v: 'true' if v else 'false'  # noqa: E731
+    o, pa, sc = z['order'], z['post_arrival'], z['scene']
+    lines = ['// Generated TRaynor03 configuration', 'void GhostOps_ApplyZeroHourConfig () {', '    go_zhEnabled = true;',
+             '    go_zhDebug = %s;' % b(z.get('debug_log')),
+             '    go_zhOrdMarines = %d;' % o['marines'], '    go_zhOrdBunkers = %d;' % o['bunkers'], '    go_zhOrdTurrets = %d;' % o['turrets'], '    go_zhOrdScvs = %d;' % o['scvs'],
+             '    go_zhTargetCount = %d;' % len(z['targets']),
+             '    go_zhPingEvery = %.1f;' % z['ping_every'], '    go_zhGhostX = %.4f;' % z['ghost_spawn'][0], '    go_zhGhostY = %.4f;' % z['ghost_spawn'][1],
+             '    go_zhPostInterval = %.1f;' % pa['interval'], '    go_zhPostMaxActive = %d;' % pa['max_active_units'], '    go_zhPostZerglings = %d;' % pa['zerglings'],
+             '    go_zhPostHydras = %d;' % pa['hydralisks'], '    go_zhPostRoaches = %d;' % pa['roaches'],
+             '    go_zhIntroDelay = %.1f;' % sc['intro_delay'], '    go_zhHornerDelay = %.1f;' % sc['horner_delay'], '    go_zhRaynorLen = %.1f;' % sc['raynor_seconds'],
+             '    go_zhHornerLen = %.1f;' % sc['horner_seconds'], '    go_zhRebelLen = %.1f;' % sc['rebel_seconds']]
+    for i, t in enumerate(z['targets']):
+        lines.append('    go_zhTargetId[%d] = %d;' % (i, t))
     lines += ['}', '']
     return chr(10).join(lines)
 
@@ -744,6 +876,11 @@ def text_entries(cfg):
         for loc, lang in (('ruRU', 'ru'), ('enUS', 'en')):
             for k in HANSON_TEXT_KEYS:
                 out.setdefault(loc, []).append((HANSON_TEXT_PREFIX + k, hs['texts'][k][lang]))
+    zh = cfg.get('zerohour')
+    if zh:
+        for loc, lang in (('ruRU', 'ru'), ('enUS', 'en')):
+            for k in ZH_TEXT_KEYS:
+                out.setdefault(loc, []).append((ZH_TEXT_PREFIX + k, zh['texts'][k][lang]))
     sc = cfg.get('scene')
     if sc:
         for loc, lang in (('ruRU', 'ru'), ('enUS', 'en')):
@@ -762,12 +899,16 @@ def build_block(adapter, cfg):
         extra = '\n'.join(read(os.path.join(ROOT, m), 'r').rstrip() + '\n' for m in mods) + '\n'
     if 'tactical' in gens:
         extra += gen_tactical_test(cfg) + '\n' + gen_tactical(cfg) + '\n'
+    if 'zerohour' in gens:
+        extra += gen_zerohour(cfg) + '\n'
     if 'hanson' in gens:
         extra += gen_hanson_test(cfg) + '\n' + gen_hanson(cfg) + '\n'
     if cfg.get('scene'):
         extra += gen_scene(cfg) + '\n'
     if cfg.get('ce0'):
         extra += gen_ce0(cfg) + '\n'
+    if cfg.get('campaign'):
+        extra += gen_campaign(cfg) + '\n'
     return core.rstrip() + '\n\n' + gen_config(cfg) + '\n' + extra + ad
 
 
@@ -824,34 +965,77 @@ def resolve_config(adapter, preset=None, diag=False):
 
 
 def apply_ce0(adapter, cfg):
-    """Development only: a resolved config with the key "ce0" adds the probe module, the mission's probe extras and the probe hooks to a
-    COPY of the adapter. Without the key the adapter is returned untouched, so no playable build can contain any of it."""
-    if not cfg.get('ce0'):
+    """Optional modules chosen by the RESOLVED config, added to a COPY of the adapter:
+    key "ce0" (development probe, only in *_dev profiles) and key "campaign" (the campaign journal of a playable profile that takes part in the
+    economy). Without a key the adapter is returned untouched, so a profile without it contains nothing of it."""
+    if not cfg.get('ce0') and not cfg.get('campaign'):
         return adapter
     a = json.loads(json.dumps(adapter))
     a['generators'] = adapter.get('generators', ['tactical'] if adapter.get('modules') else [])
-    a['modules'] = list(adapter.get('modules') or []) + ['core/GhostOpsCe0.galaxy', adapter['ce0_extra']]
-    a['extra_hooks'] = list(adapter.get('extra_hooks', [])) + list(adapter.get('ce0_hooks', []))
-    a['ce0'] = True
+    mods = list(adapter.get('modules') or [])
+    hooks = list(adapter.get('extra_hooks', []))
+    if cfg.get('campaign'):
+        mods.append('core/GhostOpsCampaign.galaxy')
+        hooks += list(adapter.get('campaign_hooks', []))
+        a['campaign'] = True
+    if cfg.get('ce0'):
+        mods += ['core/GhostOpsCe0.galaxy', adapter['ce0_extra']]
+        hooks += list(adapter.get('ce0_hooks', []))
+        a['ce0'] = True
+    a['modules'] = mods
+    a['extra_hooks'] = hooks
     return a
+
+
+def load_plan(path):
+    """An operation plan written by the launcher: {"operation_id", "mission", "preset", "order": {...}}. Only these keys are accepted."""
+    plan = load_json_file(path)
+    if not isinstance(plan, dict) or not re.fullmatch(r'[A-Za-z0-9_-]{1,40}', str(plan.get('operation_id', ''))):
+        raise ConfigError('plan: operation_id must be 1..40 characters of [A-Za-z0-9_-]')
+    for k in plan:
+        if k not in ('operation_id', 'mission', 'preset', 'order', 'cost'):
+            raise ConfigError('plan: unsupported key "%s"' % k)
+    return plan
+
+
+def load_json_file(path):
+    with open(path, encoding='utf-8-sig') as f:
+        return json.load(f)
 
 
 def context(args):
     adapter = load_adapter(args.mission)
     cfg, preset = resolve_config(adapter, getattr(args, 'preset', None), getattr(args, 'diag', False))
+    plan_path = getattr(args, 'plan', None)
+    if plan_path:
+        plan = load_plan(plan_path)
+        if plan.get('mission') not in (None, args.mission):
+            raise ConfigError('plan is for mission %s, not %s' % (plan.get('mission'), args.mission))
+        if not cfg.get('campaign'):
+            raise ConfigError('profile %s has no campaign key: it cannot carry an operation' % preset)
+        cfg = deep_merge(cfg, {'campaign': {'operation_id': plan['operation_id']}})
+        if plan.get('order') is not None:
+            section = adapter.get('order_section')
+            if not section:
+                raise ConfigError('mission %s takes no order' % args.mission)
+            cfg = deep_merge(cfg, {section: {'order': plan['order']}})
+        adapter = json.loads(json.dumps(adapter))
+        adapter['_op'] = plan['operation_id']
     return apply_ce0(adapter, cfg), cfg, preset
 
 
 def key_for(adapter, preset):
-    return adapter['mission'] + ('_' + preset if preset else '')
+    return adapter['mission'] + ('_' + preset if preset else '') + ('__' + adapter['_op'] if adapter.get('_op') else '')
 
 
 def output_name(adapter, preset):
     name = adapter['output_map_file']
-    if not preset:
-        return name
     stem, ext = os.path.splitext(name)
-    return '%s_%s%s' % (stem, preset, ext)
+    if preset:
+        stem = '%s_%s' % (stem, preset)
+    if adapter.get('_op'):  # an operation of the campaign: its own unique file, never overwritten by a later build (contract 14.2, step 4)
+        stem = '%s__%s' % (stem, adapter['_op'])
+    return stem + ext
 
 
 def paths(adapter, source=None, preset=None):
@@ -914,6 +1098,8 @@ def cmd_build(args):
         'script_patched_sha256': sha256(data),
         'config': adapter['config'],
         'preset': preset,
+        'operation_id': adapter.get('_op'),
+        'data_hash': data_hash(cfg) if cfg.get('campaign') or cfg.get('ce0') else None,
         'label': cfg.get('profile', {}).get('label'),
         'diag': bool(args.diag) if hasattr(args, 'diag') else False,
         'snipe_cooldown': cfg.get('ghost_tuning', {}).get('snipe', {}).get('cooldown', 0) if cfg.get('ghost_tuning') else None,
@@ -1158,6 +1344,32 @@ def prepare(args, progress=None):
     return ensure_installed(args)
 
 
+def prepare_existing(args, progress=None):
+    """The map set of a started operation is IMMUTABLE (contract 14.2): when its unique map file is installed, nothing is built and nothing is replaced;
+    only a missing file is rebuilt from the same plan."""
+    note = progress or (lambda stage: None)
+    adapter, cfg, preset = context(args)
+    _, dest = launch_command(adapter, cfg, preset)
+    if adapter.get('_op') and os.path.isfile(dest) and os.path.exists(install_manifest_path(key_for(adapter, preset))):
+        note('check')
+        if sc2_running():
+            print('StarCraft II is already running: close it first (this launcher never closes your game).')
+            return 7
+        print('operation set already installed and kept as it is: %s' % dest)
+        return 0
+    return prepare(args, progress)
+
+
+def read_build_manifest(args):
+    """The manifest of the last build of the plan / profile in `args` (data_hash, output sha256, ...), or None."""
+    adapter, cfg, preset = context(args)
+    path = build_manifest_path(key_for(adapter, preset))
+    if not os.path.exists(path):
+        return None
+    with open(path, encoding='utf-8') as f:
+        return json.load(f)
+
+
 def start_detached(command):
     """Start SC2 outside this process tree (it survives the launcher closing)."""
     ps = "Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = '%s'; CurrentDirectory = '%s' } | Out-Null" % (
@@ -1187,6 +1399,7 @@ def main(argv=None):
     p.add_argument('command', choices=['build', 'verify', 'install', 'uninstall', 'launch'])
     p.add_argument('--mission', default='traynor02')
     p.add_argument('--source')
+    p.add_argument('--plan', help='an operation plan (JSON written by the launcher): builds the unique map file of that operation')
     p.add_argument('--preset', help='balance profile of the mission (TRaynor01: easy, hard); default: the mission default')
     p.add_argument('--diag', action='store_true', help='show the detailed in-game diagnostic message in this build')
     p.add_argument('--print-only', dest='print_only', action='store_true', help='launch: only print the SC2 command')

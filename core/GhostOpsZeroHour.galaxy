@@ -1,0 +1,505 @@
+//==================================================================================================
+// GhostOps module: TRaynor03 "Zero Hour" (MIT). Config key "zerohour" (config/traynor03.json); built only into maps whose adapter lists it.
+//
+// What it does (everything else of the mission is the original; the Hard numbers, the waves and the rescue groups are untouched):
+//   - the ORDER: the final number of Marines, Bunkers, Missile Turrets and extra SCVs the player starts with (baked into the build by the launcher's plan; the
+//     standalone test build uses the recommended order). The original objects are the stock the order is taken from: Marines / Bunkers / Turrets beyond the
+//     order are removed before anything else happens, missing SCVs are created. Nothing is added for free and nothing is given again after a loss.
+//   - two Ghosts (the tactical module does the garrison zone, the Ghost rules and the two-missile strike);
+//   - the victory: BOTH the evacuation timer of the original (20 game minutes) AND every marked target destroyed; the original victory function is gated by the hook
+//     GhostOps_ZH_Gate() and re-run exactly once when the second condition is met; after the timer the ship waits and the mission goes on;
+//   - a small separate wave handler after the timer (interval and active-unit limit from the config) so the pressure does not stop;
+//   - the scenes (portrait + text, queued behind the original talks) and the target counter.
+// Everything saved with the game is a global of this module: a loaded game continues with the same order, scene stage and target state.
+//==================================================================================================
+bool go_zhEnabled;
+bool go_zhStarted;
+bool go_zhVictoryDone;
+bool go_zhTimerDone;
+int go_zhOrdMarines;
+int go_zhOrdBunkers;
+int go_zhOrdTurrets;
+int go_zhOrdScvs;
+int go_zhTargetCount;
+int[12] go_zhTargetId;
+bool[12] go_zhTargetDead;
+int go_zhDead;
+int go_zhObjective;
+int go_zhSceneStage;           // 0 waiting, 1 Raynor shown, 2 Horner shown, 3 done
+fixed go_zhSceneT;
+fixed go_zhIntroDelay;
+fixed go_zhHornerDelay;
+fixed go_zhRaynorLen;
+fixed go_zhHornerLen;
+fixed go_zhRebelLen;
+fixed go_zhPingEvery;
+fixed go_zhLastPing;
+bool go_zhRebelCallSaid;
+bool go_zhRescueSaid;
+fixed go_zhPostInterval;
+int go_zhPostMaxActive;
+int go_zhPostZerglings;
+int go_zhPostHydras;
+int go_zhPostRoaches;
+fixed go_zhLastWave;
+int go_zhWaveSide;
+fixed go_zhGhostX;
+fixed go_zhGhostY;
+bool go_zhDebug;
+int go_zhLogN;
+bank go_zhBank;
+trigger go_zhTick;
+trigger go_zhSceneTick;
+
+void GhostOps_ApplyZeroHourConfig ();
+void GhostOps_ZH_PostWave ();
+
+void GhostOps_ZH_Log (string lp_text) {
+    if (!go_zhDebug) {
+        return;
+    }
+
+    go_zhBank = BankLoad("GhostOpsZeroHour", 1);
+    go_zhLogN += 1;
+    BankValueSetFromString(go_zhBank, "log", "e" + IntToString(go_zhLogN), FixedToString(GameGetMissionTime(), 2) + " " + lp_text);
+    BankSave(go_zhBank);
+}
+
+unitfilter GhostOps_ZH_Live () {
+    return UnitFilter(0, 0, (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32)) | (1 << (c_targetFilterHidden - 32)));
+}
+
+void GhostOps_ZH_Say (string lp_nameKey, string lp_textKey) {
+    UIDisplayMessage(PlayerGroupAll(), c_messageAreaSubtitle, StringExternal(lp_nameKey) + StringToText(": ") + StringExternal(lp_textKey));
+}
+
+void GhostOps_ZH_Directive (string lp_key) {
+    UIDisplayMessage(PlayerGroupAll(), c_messageAreaDirective, StringExternal(lp_key));
+}
+
+//--------------------------------------------------------------------------------------------------
+// The order: remove what was not ordered (before the garrison is captured), create the extra SCVs
+//--------------------------------------------------------------------------------------------------
+// Remove the units of the group beyond the number to keep. Marines: the ones nearest to the base centre are kept.
+void GhostOps_ZH_KeepNearest (unitgroup lp_group, int lp_keep, point lp_centre) {
+    int lv_n;
+    int lv_i;
+    int lv_j;
+    unit lv_best;
+    fixed lv_bestD;
+    fixed lv_d;
+    unitgroup lv_work;
+    int lv_kept;
+
+    lv_work = UnitGroupCopy(lp_group);
+    lv_kept = 0;
+    while (UnitGroupCount(lv_work, c_unitCountAll) > 0) {
+        lv_best = null;
+        lv_bestD = 100000.0;
+        lv_n = UnitGroupCount(lv_work, c_unitCountAll);
+        lv_i = 1;
+        while (lv_i <= lv_n) {
+            lv_d = DistanceBetweenPoints(UnitGetPosition(UnitGroupUnit(lv_work, lv_i)), lp_centre);
+            if (lv_d < lv_bestD) {
+                lv_bestD = lv_d;
+                lv_best = UnitGroupUnit(lv_work, lv_i);
+            }
+
+            lv_i += 1;
+        }
+
+        UnitGroupRemove(lv_work, lv_best);
+        lv_kept += 1;
+        if (lv_kept > lp_keep) {
+            UnitRemove(lv_best);
+        }
+    }
+}
+
+void GhostOps_ZH_ApplyOrder () {
+    unitgroup lv_g;
+    unit lv_cc;
+    int lv_i;
+    int lv_ids;
+    int lv_removed;
+
+    lv_cc = UnitFromId(23);
+    // Marines of the player: the 24 stock Marines of the map
+    lv_g = UnitGroupCopy(UnitGroup("Marine", 1, RegionEntireMap(), GhostOps_ZH_Live(), 0));
+    // the Marines that stand inside the four stock bunkers are Marines of the map too (not found by the region search)
+    lv_i = 0;
+    while (lv_i < 4) {
+        if (lv_i == 0) {
+            lv_ids = 4;
+        }
+        else if (lv_i == 1) {
+            lv_ids = 13;
+        }
+        else if (lv_i == 2) {
+            lv_ids = 291;
+        }
+        else {
+            lv_ids = 298;
+        }
+
+        if (UnitIsAlive(UnitFromId(lv_ids))) {
+            UnitGroupAddUnitGroup(lv_g, UnitCargoGroup(UnitFromId(lv_ids)));
+        }
+
+        lv_i += 1;
+    }
+
+    GhostOps_ZH_Log("order: marines of the map (with those in bunkers) " + IntToString(UnitGroupCount(lv_g, c_unitCountAll)) + ", ordered " + IntToString(go_zhOrdMarines));
+    GhostOps_ZH_KeepNearest(lv_g, go_zhOrdMarines, UnitGetPosition(lv_cc));
+    // Bunkers: the two base bunkers (ids 4, 13) are given up first, then the bridge bunkers (291, 298): the order keeps the entrances
+    lv_removed = 0;
+    lv_i = 0;
+    while ((lv_i < 4) && ((4 - lv_removed) > go_zhOrdBunkers)) {
+        if (lv_i == 0) {
+            lv_ids = 4;
+        }
+        else if (lv_i == 1) {
+            lv_ids = 13;
+        }
+        else if (lv_i == 2) {
+            lv_ids = 291;
+        }
+        else {
+            lv_ids = 298;
+        }
+
+        if (UnitIsAlive(UnitFromId(lv_ids))) {
+            // marines inside leave with their bunker? they were already removed or kept by the Marine rule above; the bunker simply goes
+            UnitRemove(UnitFromId(lv_ids));
+        }
+
+        lv_removed += 1;
+        lv_i += 1;
+    }
+
+    // Turrets: ids 752, 294, 113, 245 in that order
+    lv_removed = 0;
+    lv_i = 0;
+    while ((lv_i < 4) && ((4 - lv_removed) > go_zhOrdTurrets)) {
+        if (lv_i == 0) {
+            lv_ids = 752;
+        }
+        else if (lv_i == 1) {
+            lv_ids = 294;
+        }
+        else if (lv_i == 2) {
+            lv_ids = 113;
+        }
+        else {
+            lv_ids = 245;
+        }
+
+        if (UnitIsAlive(UnitFromId(lv_ids))) {
+            UnitRemove(UnitFromId(lv_ids));
+        }
+
+        lv_removed += 1;
+        lv_i += 1;
+    }
+
+    // extra SCVs next to the Command Center (idle: they repair)
+    if (go_zhOrdScvs > 0) {
+        UnitCreate(go_zhOrdScvs, "SCV", 0, 1, PointWithOffset(UnitGetPosition(lv_cc), -3.0, 6.0), 270.0);
+    }
+
+    GhostOps_ZH_Log("order applied: marines " + IntToString(UnitGroupCount(UnitGroup("Marine", 1, RegionEntireMap(), GhostOps_ZH_Live(), 0), c_unitCountAlive)) + " bunkers " + IntToString(UnitGroupCount(UnitGroup("Bunker", 1, RegionEntireMap(), GhostOps_ZH_Live(), 0), c_unitCountAlive)) + " turrets " + IntToString(UnitGroupCount(UnitGroup("MissileTurret", 1, RegionEntireMap(), GhostOps_ZH_Live(), 0), c_unitCountAlive)) + " scvs " + IntToString(UnitGroupCount(UnitGroup("SCV", 1, RegionEntireMap(), GhostOps_ZH_Live(), 0), c_unitCountAlive)));
+}
+
+//--------------------------------------------------------------------------------------------------
+// Targets
+//--------------------------------------------------------------------------------------------------
+bool GhostOps_ZH_AllTargetsDead () {
+    return go_zhDead >= go_zhTargetCount;
+}
+
+void GhostOps_ZH_ObjectiveText () {
+    if (go_zhObjective == c_invalidObjectiveId) {
+        return;
+    }
+
+    ObjectiveSetName(go_zhObjective, StringExternal("Param/Value/GhostOpsZH_ObjTitle") + StringToText(" (") + IntToText(go_zhDead) + StringToText(" / ") + IntToText(go_zhTargetCount) + StringToText(")"));
+}
+
+void GhostOps_ZH_RunVictory () {
+    if (go_zhVictoryDone) {
+        return;
+    }
+
+    go_zhVictoryDone = true;
+    GhostOps_ZH_Log("victory: both conditions met");
+    // the original victory function; the hook below lets it through now
+    TriggerExecute(TriggerCreate("gt_VictoryHoldOutCompleted_Func"), false, false);
+}
+
+// Hook in front of the first action of gt_VictoryHoldOutCompleted_Func (the original timer reached zero): true = do not run the original victory now.
+bool GhostOps_ZH_Gate () {
+    if (!go_zhEnabled) {
+        return false;
+    }
+
+    go_zhTimerDone = true;
+    go_zhLastWave = GameGetMissionTime();
+    GhostOps_ZH_Log("evacuation timer reached zero; targets dead " + IntToString(go_zhDead) + "/" + IntToString(go_zhTargetCount));
+    if (GhostOps_ZH_AllTargetsDead()) {
+        go_zhVictoryDone = true;
+        return false;
+    }
+
+    if (!go_zhVictoryDone) {
+        // the ship has arrived and waits: said once, queued behind the original talks
+        TriggerExecute(TriggerCreate("GhostOps_ZH_WaitMsg"), true, false);
+    }
+
+    return true;
+}
+
+bool GhostOps_ZH_Tick (bool lp_testConds, bool lp_runActions) {
+    int lv_i;
+    unit lv_u;
+    bool lv_changed;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    if (go_zhVictoryDone) {
+        return true;
+    }
+
+    lv_changed = false;
+    lv_i = 0;
+    while (lv_i < go_zhTargetCount) {
+        if (!go_zhTargetDead[lv_i]) {
+            lv_u = UnitFromId(go_zhTargetId[lv_i]);
+            if ((lv_u == null) || !UnitIsAlive(lv_u)) {
+                go_zhTargetDead[lv_i] = true;
+                go_zhDead += 1;
+                lv_changed = true;
+                GhostOps_ZH_Log("target " + IntToString(go_zhTargetId[lv_i]) + " destroyed: " + IntToString(go_zhDead) + "/" + IntToString(go_zhTargetCount));
+            }
+        }
+
+        lv_i += 1;
+    }
+
+    if (lv_changed) {
+        GhostOps_ZH_ObjectiveText();
+        if (GhostOps_ZH_AllTargetsDead()) {
+            if (ObjectiveGetState(go_zhObjective) == c_objectiveStateActive) {
+                ObjectiveSetState(go_zhObjective, c_objectiveStateCompleted);
+            }
+
+            if (go_zhTimerDone) {
+                GhostOps_ZH_RunVictory();
+                return true;
+            }
+
+            GhostOps_ZH_Directive("Param/Value/GhostOpsZH_AllDestroyed");
+        }
+    }
+
+    // marks: a short minimap ping on every living target, without showing anything else of the map
+    if (((GameGetMissionTime() - go_zhLastPing) >= go_zhPingEvery) && !GhostOps_ZH_AllTargetsDead()) {
+        go_zhLastPing = GameGetMissionTime();
+        lv_i = 0;
+        while (lv_i < go_zhTargetCount) {
+            if (!go_zhTargetDead[lv_i]) {
+                MinimapPing(PlayerGroupAll(), UnitGetPosition(UnitFromId(go_zhTargetId[lv_i])), 5.0, Color(100.00, 45.00, 0.00));
+            }
+
+            lv_i += 1;
+        }
+    }
+
+    // after the timer: a small wave now and then, never more than the active-unit limit
+    if (go_zhTimerDone && !go_zhVictoryDone && ((GameGetMissionTime() - go_zhLastWave) >= go_zhPostInterval)) {
+        go_zhLastWave = GameGetMissionTime();
+        GhostOps_ZH_PostWave();
+    }
+
+    return true;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Waves after the timer (the original waves are scripted and end; this keeps a moderate pressure)
+//--------------------------------------------------------------------------------------------------
+void GhostOps_ZH_PostWave () {
+    int lv_side;
+    int lv_active;
+
+    lv_active = UnitGroupCount(UnitGroup(null, 2, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterStructure), (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive);
+    lv_active += UnitGroupCount(UnitGroup(null, 3, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterStructure), (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive);
+    lv_active += UnitGroupCount(UnitGroup(null, 4, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterStructure), (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive);
+    if (lv_active > go_zhPostMaxActive) {
+        GhostOps_ZH_Log("post wave skipped: active enemy units " + IntToString(lv_active));
+        return;
+    }
+
+    lv_side = 2 + (go_zhWaveSide % 3);
+    go_zhWaveSide += 1;
+    AIAttackWaveSetTargetPlayer(lv_side, PlayerGroupSingle(1));
+    AIAttackWaveSetGatherPoint(lv_side, PointFromId(264));
+    AIAttackWaveAddWaypoint(lv_side, PointFromId(378), false);
+    AIAttackWaveAddUnits4(go_zhPostZerglings, go_zhPostZerglings, go_zhPostZerglings, go_zhPostZerglings, "Zergling");
+    AIAttackWaveAddUnits4(go_zhPostHydras, go_zhPostHydras, go_zhPostHydras, go_zhPostHydras, "Hydralisk");
+    AIAttackWaveAddUnits4(go_zhPostRoaches, go_zhPostRoaches, go_zhPostRoaches, go_zhPostRoaches, "Roach");
+    AIAttackWaveSend(lv_side, 120, false);
+    GhostOps_ZH_Log("post wave sent by player " + IntToString(lv_side) + ", active enemy units " + IntToString(lv_active));
+}
+
+//--------------------------------------------------------------------------------------------------
+// Scenes (portrait + text; no new audio: the clips that do not exist yet are listed in the report)
+//--------------------------------------------------------------------------------------------------
+bool GhostOps_ZH_RaynorMsg (bool lp_testConds, bool lp_runActions) {
+    if (!lp_runActions) {
+        return true;
+    }
+
+    TriggerQueueEnter();
+    GhostOps_ZH_Log("scene: Raynor after the intro");
+    GhostOps_ZH_Say("Param/Value/GhostOpsZH_RaynorName", "Param/Value/GhostOpsZH_RaynorText");
+    TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("RaynorCommanderPortrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", null, null, null, go_zhRaynorLen, c_transmissionDurationSet, true);
+    TriggerQueueExit();
+    return true;
+}
+
+bool GhostOps_ZH_HornerMsg (bool lp_testConds, bool lp_runActions) {
+    if (!lp_runActions) {
+        return true;
+    }
+
+    TriggerQueueEnter();
+    GhostOps_ZH_Log("scene: Horner explains the two tasks");
+    GhostOps_ZH_Say("Param/Value/GhostOpsZH_HornerName", "Param/Value/GhostOpsZH_HornerText");
+    TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("HornerPortrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", null, null, null, go_zhHornerLen, c_transmissionDurationSet, true);
+    TriggerQueueExit();
+    return true;
+}
+
+bool GhostOps_ZH_WaitMsg (bool lp_testConds, bool lp_runActions) {
+    if (!lp_runActions) {
+        return true;
+    }
+
+    TriggerQueueEnter();
+    GhostOps_ZH_Log("scene: the ship waits");
+    GhostOps_ZH_Say("Param/Value/GhostOpsZH_HornerName", "Param/Value/GhostOpsZH_HornerWaitText");
+    TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("HornerPortrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", null, null, null, go_zhHornerLen, c_transmissionDurationSet, true);
+    TriggerQueueExit();
+    return true;
+}
+
+bool GhostOps_ZH_RebelMsg (bool lp_testConds, bool lp_runActions) {
+    if (!lp_runActions) {
+        return true;
+    }
+
+    TriggerQueueEnter();
+    GhostOps_ZH_Log("scene: first appeal of the cut-off group");
+    GhostOps_ZH_Say("Param/Value/GhostOpsZH_RebelName", "Param/Value/GhostOpsZH_RebelText");
+    TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("MarineAPortrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", null, null, null, go_zhRebelLen, c_transmissionDurationSet, true);
+    TriggerQueueExit();
+    return true;
+}
+
+bool GhostOps_ZH_RescueMsg (bool lp_testConds, bool lp_runActions) {
+    if (!lp_runActions) {
+        return true;
+    }
+
+    TriggerQueueEnter();
+    GhostOps_ZH_Log("scene: first rescue");
+    GhostOps_ZH_Say("Param/Value/GhostOpsZH_RaynorName", "Param/Value/GhostOpsZH_RescueText");
+    TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("RaynorCommanderPortrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", null, null, null, go_zhRebelLen, c_transmissionDurationSet, true);
+    TriggerQueueExit();
+    return true;
+}
+
+// hooks in the three rebel intro functions and the three rescued functions of the original: said once
+void GhostOps_ZH_OnRebelCall () {
+    if (!go_zhEnabled || go_zhRebelCallSaid) {
+        return;
+    }
+
+    go_zhRebelCallSaid = true;
+    TriggerExecute(TriggerCreate("GhostOps_ZH_RebelMsg"), true, false);
+}
+
+void GhostOps_ZH_OnRescue () {
+    if (!go_zhEnabled || go_zhRescueSaid) {
+        return;
+    }
+
+    go_zhRescueSaid = true;
+    TriggerExecute(TriggerCreate("GhostOps_ZH_RescueMsg"), true, false);
+}
+
+bool GhostOps_ZH_SceneTick (bool lp_testConds, bool lp_runActions) {
+    fixed lv_now;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    lv_now = GameGetMissionTime();
+    if (go_zhSceneStage == 0) {
+        if ((lv_now - go_zhSceneT) >= go_zhIntroDelay) {
+            go_zhSceneStage = 1;
+            go_zhSceneT = lv_now;
+            TriggerExecute(TriggerCreate("GhostOps_ZH_RaynorMsg"), true, false);
+        }
+    }
+    else if (go_zhSceneStage == 1) {
+        if ((lv_now - go_zhSceneT) >= go_zhHornerDelay) {
+            go_zhSceneStage = 2;
+            go_zhSceneT = lv_now;
+            TriggerExecute(TriggerCreate("GhostOps_ZH_HornerMsg"), true, false);
+        }
+    }
+
+    return true;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Start (called once from the adapter at the end of the original intro; a loaded game never reaches it again)
+//--------------------------------------------------------------------------------------------------
+void GhostOps_ZH_Start () {
+    int lv_i;
+
+    if (go_zhStarted) {
+        return;
+    }
+
+    go_zhStarted = true;
+    GhostOps_ApplyZeroHourConfig();
+    if (!go_zhEnabled) {
+        return;
+    }
+
+    GhostOps_ZH_Log("start; order marines " + IntToString(go_zhOrdMarines) + " bunkers " + IntToString(go_zhOrdBunkers) + " turrets " + IntToString(go_zhOrdTurrets) + " scvs " + IntToString(go_zhOrdScvs));
+    GhostOps_ZH_ApplyOrder();
+    go_zhDead = 0;
+    lv_i = 0;
+    while (lv_i < go_zhTargetCount) {
+        go_zhTargetDead[lv_i] = false;
+        lv_i += 1;
+    }
+
+    HelpPanelAddTip(PlayerGroupAll(), StringExternal("Param/Value/GhostOpsZH_Tip1Title"), StringExternal("Param/Value/GhostOpsZH_Tip1Text"), StringExternal("Param/Value/GhostOpsZH_Tip1Title"), "Assets\\Textures\\ui_icon_attention.dds");
+    HelpPanelAddTip(PlayerGroupAll(), StringExternal("Param/Value/GhostOpsZH_Tip2Title"), StringExternal("Param/Value/GhostOpsZH_Tip2Text"), StringExternal("Param/Value/GhostOpsZH_Tip2Title"), "Assets\\Textures\\ui_icon_attention.dds");
+    HelpPanelAddTip(PlayerGroupAll(), StringExternal("Param/Value/GhostOpsZH_Tip3Title"), StringExternal("Param/Value/GhostOpsZH_Tip3Text"), StringExternal("Param/Value/GhostOpsZH_Tip3Title"), "Assets\\Textures\\ui_icon_attention.dds");
+    ObjectiveCreate(StringExternal("Param/Value/GhostOpsZH_ObjTitle"), StringExternal("Param/Value/GhostOpsZH_ObjText"), c_objectiveStateActive, true);
+    go_zhObjective = ObjectiveLastCreated();
+    GhostOps_ZH_ObjectiveText();
+    go_zhSceneT = GameGetMissionTime();
+    go_zhLastPing = GameGetMissionTime() - go_zhPingEvery + 20.0;
+    go_zhTick = TriggerCreate("GhostOps_ZH_Tick");
+    TriggerAddEventTimePeriodic(go_zhTick, 1.0, c_timeGame);
+    go_zhSceneTick = TriggerCreate("GhostOps_ZH_SceneTick");
+    TriggerAddEventTimePeriodic(go_zhSceneTick, 0.5, c_timeGame);
+}

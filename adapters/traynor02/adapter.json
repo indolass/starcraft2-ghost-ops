@@ -60,5 +60,22 @@
       "after": "gv_gameOver = true;",
       "call": "GhostOps_Ce0_OnDefeat();"
     }
+  ],
+  "campaign_hooks": [
+    {
+      "function": "gt_IntroSequence_Func",
+      "after": "TriggerExecute(gt_StartGame, true, false);",
+      "call": "GhostOps_Camp_Start();"
+    },
+    {
+      "function": "gt_VictoryDominionOutpostCompleted_Func",
+      "after": "gv_gameOver = true;",
+      "call": "GhostOps_Camp_OnVictory();"
+    },
+    {
+      "function": "gt_DefeatBaseDead_Func",
+      "after": "gv_gameOver = true;",
+      "call": "GhostOps_Camp_OnDefeat();"
+    }
   ]
 }

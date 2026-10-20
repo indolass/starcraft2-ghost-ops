@@ -1,0 +1,123 @@
+//==================================================================================================
+// GhostOps Campaign journal (MIT). Built only into maps whose resolved configuration has the key "campaign" (see docs/MISSION_SETTINGS_AND_CAMPAIGN_ECONOMY.md,
+// section 14). The map owns nothing of the campaign: it only
+//   - gives the attempt an identity (a saved global made once at a fresh start; a load brings the saved one back),
+//   - writes a small journal into the Bank "GhostOpsCampaign" (section j: START / LOADED / DEFEAT, section r: RESULT),
+//   - counts what the report needs (start stock, resource pallets found) and reads the resources before the standard victory sequence.
+// The RESULT row is a PROPOSAL. The launcher decides whether it is accepted (once). Measured in the installed game: a load restores the Bank to its saved state, so
+// nothing here is ever read back as gameplay state; the Bank is written, never read.
+//==================================================================================================
+bool go_cpEnabled;
+bool go_cpStarted;
+bool go_cpResultDone;
+string go_cpOp;
+string go_cpMission;
+string go_cpHash;
+string go_cpAttempt;
+int go_cpStartMin;
+int go_cpStartGas;
+int go_cpFoundMin;
+int go_cpFoundGas;
+bank go_cpBank;
+trigger go_cpPickTrig;
+trigger go_cpLoadTrig;
+
+void GhostOps_Camp_Apply ();
+
+void GhostOps_Camp_Write (string lp_section, string lp_text) {
+    int lv_n;
+
+    go_cpBank = BankLoad("GhostOpsCampaign", 1);
+    BankOptionSet(go_cpBank, c_bankOptionSignature, false);
+    lv_n = 0;
+    if (BankKeyExists(go_cpBank, "meta", "n")) {
+        lv_n = BankValueGetAsInt(go_cpBank, "meta", "n");
+    }
+
+    lv_n += 1;
+    BankValueSetFromInt(go_cpBank, "meta", "n", lv_n);
+    BankValueSetFromString(go_cpBank, lp_section, "e" + IntToString(lv_n), IntToString(lv_n) + "|" + FixedToString(GameGetMissionTime(), 2) + "|" + go_cpAttempt + "|" + lp_text);
+    BankSave(go_cpBank);
+}
+
+string GhostOps_Camp_Head () {
+    return "op=" + go_cpOp + " mission=" + go_cpMission + " hash=" + go_cpHash;
+}
+
+// pallets of the original (PickupMinerals100 / PickupGas100): "found" resources, 100 each by the name of the ability
+bool GhostOps_Camp_Pickup (bool lp_test, bool lp_run) {
+    if (!lp_run) {
+        return true;
+    }
+
+    if (go_cpResultDone) {
+        return true;
+    }
+
+    if (EventUnitAbility() == AbilityCommand("PickupMinerals100", 0)) {
+        go_cpFoundMin += 100;
+    }
+    else {
+        go_cpFoundGas += 100;
+    }
+
+    return true;
+}
+
+bool GhostOps_Camp_LoadFunc (bool lp_test, bool lp_run) {
+    if (!lp_run) {
+        return true;
+    }
+
+    GhostOps_Camp_Write("j", "LOADED " + GhostOps_Camp_Head());
+    return true;
+}
+
+// called once per fresh start from the mission hook (a load never reaches it again)
+void GhostOps_Camp_Start () {
+    if (go_cpStarted) {
+        return;
+    }
+
+    go_cpStarted = true;
+    GhostOps_Camp_Apply();
+    if (!go_cpEnabled) {
+        return;
+    }
+
+    go_cpAttempt = "A" + IntToString(RandomInt(100000, 999999999));
+    go_cpStartMin = PlayerGetPropertyInt(1, c_playerPropMinerals);
+    go_cpStartGas = PlayerGetPropertyInt(1, c_playerPropVespene);
+    go_cpPickTrig = TriggerCreate("GhostOps_Camp_Pickup");
+    TriggerAddEventUnitAbility(go_cpPickTrig, null, AbilityCommand("PickupMinerals100", 0), c_unitAbilStageExecute, false);
+    TriggerAddEventUnitAbility(go_cpPickTrig, null, AbilityCommand("PickupGas100", 0), c_unitAbilStageExecute, false);
+    go_cpLoadTrig = TriggerCreate("GhostOps_Camp_LoadFunc");
+    TriggerAddEventLoadGameDone(go_cpLoadTrig);
+    GhostOps_Camp_Write("j", "START " + GhostOps_Camp_Head() + " startMin=" + IntToString(go_cpStartMin) + " startGas=" + IntToString(go_cpStartGas));
+}
+
+// the proposal: the resources are read here, BEFORE the standard victory sequence of the mission
+void GhostOps_Camp_OnVictory () {
+    string lv_s;
+
+    if (!go_cpEnabled || go_cpResultDone) {
+        return;
+    }
+
+    go_cpResultDone = true;
+    lv_s = "RESULT " + GhostOps_Camp_Head() + " id=" + go_cpAttempt + "-" + IntToString(RandomInt(100000, 999999999)) + " outcome=victory";
+    lv_s = lv_s + " min=" + IntToString(PlayerGetPropertyInt(1, c_playerPropMinerals)) + " gas=" + IntToString(PlayerGetPropertyInt(1, c_playerPropVespene));
+    lv_s = lv_s + " startMin=" + IntToString(go_cpStartMin) + " startGas=" + IntToString(go_cpStartGas);
+    lv_s = lv_s + " minedMin=" + IntToString(PlayerGetPropertyInt(1, c_playerPropMineralsCollected)) + " minedGas=" + IntToString(PlayerGetPropertyInt(1, c_playerPropVespeneCollected));
+    lv_s = lv_s + " foundMin=" + IntToString(go_cpFoundMin) + " foundGas=" + IntToString(go_cpFoundGas) + " time=" + FixedToString(GameGetMissionTime(), 0);
+    GhostOps_Camp_Write("r", lv_s);
+    GhostOps_Camp_Write("j", lv_s);
+}
+
+void GhostOps_Camp_OnDefeat () {
+    if (!go_cpEnabled || go_cpResultDone) {
+        return;
+    }
+
+    GhostOps_Camp_Write("j", "DEFEAT " + GhostOps_Camp_Head() + " min=" + IntToString(PlayerGetPropertyInt(1, c_playerPropMinerals)) + " gas=" + IntToString(PlayerGetPropertyInt(1, c_playerPropVespene)));
+}

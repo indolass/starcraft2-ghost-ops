@@ -46,6 +46,10 @@ MISSIONS = [
     {'id': 'thanson01', 'title': 'Эвакуация', 'subtitle': 'Evacuation', 'status': 'Эксперимент',
      'description': 'Конечный отряд, один призрак. Конвои колонистов уходят только по вашей команде, а Snipe призрака снимает '
                     'опасных врагов по одному выстрелу. Производство и строительство запрещены, поселение прикрыто ПВО. Противники — Blizzard Hard.'},
+    {'id': 'traynor03', 'title': 'Час икс', 'subtitle': 'Zero Hour', 'status': 'Эксперимент',
+     'description': 'Предварительно заказанный гарнизон базы, два призрака с постоянной маскировкой и две ядерные ракеты. Победа: прошло 20 минут до прибытия корабля '
+                    'И уничтожены все отмеченные инкубаторы; если цели остались, корабль ждёт. Отдельный запуск использует рекомендуемый заказ и тестовый бюджет, '
+                    'в кампанию ничего не пишет. Противники — Blizzard Hard.'},
     {'id': 'ttychus01', 'title': 'Smash and Grab', 'subtitle': 'TTychus01', 'status': 'Прототип',
      'description': 'Скрытная операция среди протоссов и зергов с настоящими детекторами. Ранний прототип без выбора сложности.'},
 ]
@@ -80,6 +84,8 @@ def detail_lines(mission_id, preset):
     gt = cfg.get('ghost_tuning')
     if not gt:
         return []
+    if cfg.get('zerohour'):
+        return zerohour_lines(cfg)
     if cfg.get('tactical'):
         return tactical_lines(cfg)
     if cfg.get('hanson'):
@@ -117,6 +123,29 @@ def hanson_lines(cfg):
             len(h['turrets']['list']), roles['base'], roles['houses'], roles['air']),
         'Колонисты, союзная охрана и её пополнение, налёты и условия победы / поражения — штатные. Противники: Blizzard Hard',
         'Время — в игровых секундах',
+    ]
+
+
+def zerohour_lines(cfg):
+    """Exact characteristics of TRaynor03 "Zero Hour" (taken from the resolved configuration; the numbers marked experimental are not approved values)."""
+    z, t, gt = cfg['zerohour'], cfg['tactical'], cfg['ghost_tuning']
+    g, zone, n = t['garrison'], t['garrison']['zone'], t['nuke']
+    num = lambda v: ('%g' % v).replace('.', ',')  # noqa: E731
+    o, pr, lim = z['recommended'], z['prices'], z['limits']
+    cost = build.zerohour_cost(cfg, o)
+    return [
+        'Заказ (рекомендуемый, экспериментальный): морпехи %d, бункеры %d, ракетные турели %d, КСМ %d' % (o['marines'], o['bunkers'], o['turrets'], o['scvs']),
+        'Цены (экспериментальные): морпех %d, бункер %d, турель %d, КСМ %d минералов; итог %d минералов, %d газа. Пределы: %d / %d / %d / %d' % (
+            pr['marines']['minerals'], pr['bunkers']['minerals'], pr['turrets']['minerals'], pr['scvs']['minerals'], cost['minerals'], cost['gas'],
+            lim['marines'], lim['bunkers'], lim['turrets'], lim['scvs']),
+        'Гарнизон: обычное здоровье, урон ×%s, оружие только внутри круга базы (радиус %s); спасённые повстанцы не ограничены' % (num(g['damage_multiplier']), num(zone['radius'])),
+        'Производство и строительство запрещены; бойцов и укрепления после гибели заново не выдают',
+        'Призраки: 2, здоровье %s/%s, постоянная маскировка бесплатно, энергия %g/%g (+%g в секунду), Snipe %g энергии, урон %g, подготовка %s с, перезарядка %g с; EMP отключён' % (
+            gt['ghost_life'], gt['ghost_life'], gt['energy_start'], gt['energy_max'], gt['regen_per_second'], gt['snipe']['cost'], gt['snipe']['damage'],
+            num(gt['snipe']['cast_time']), gt['snipe']['cooldown']),
+        'Ядерные ракеты: %d на всю операцию, наведение %g с, полёт %g с; наводить может любой призрак; замена призрака невозможна' % (n['count'], n['aim_time'], n['flight_time']),
+        'Победа: прошло %d игровых минут до прибытия корабля И уничтожены все отмеченные инкубаторы (%d); после нуля корабль ждёт, миссия продолжается' % (z['arrival_minutes'], len(z['targets'])),
+        'После нуля каждые %g с небольшая волна (не более %d активных вражеских юнитов). Противники: Blizzard Hard. Время — в игровых секундах' % (z['post_arrival']['interval'], z['post_arrival']['max_active_units']),
     ]
 
 

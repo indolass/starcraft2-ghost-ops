@@ -1,0 +1,55 @@
+// CE-0 probe: TRaynor03 specific state and commands (development only; compiled only with the config key "ce0").
+string GhostOps_Ce0_Extra () {
+    string lv_s;
+
+    lv_s = "zh dead=" + IntToString(go_zhDead) + "/" + IntToString(go_zhTargetCount) + " timer=" + IntToString(GhostOps_Ce0_B(go_zhTimerDone));
+    lv_s = lv_s + " victory=" + IntToString(GhostOps_Ce0_B(go_zhVictoryDone)) + " scene=" + IntToString(go_zhSceneStage);
+    lv_s = lv_s + " tac state=" + IntToString(go_tacState) + " launches=" + IntToString(go_tacLaunches) + " nukes=" + IntToString(TechTreeUnitCount(1, "Nuke", c_techCountCompleteOnly));
+    return lv_s;
+}
+
+void GhostOps_Ce0_MissionStart () {
+}
+
+bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
+    int lv_i;
+    unit lv_g1;
+
+    if (lp_cmd == "timer") {
+        // the original timer reaching zero: the original victory function is started (our gate decides)
+        GhostOps_Ce0_Write("j", "TIMER simulated (the original victory function is run)");
+        TriggerExecute(TriggerCreate("gt_VictoryHoldOutCompleted_Func"), false, false);
+        return true;
+    }
+
+    if (lp_cmd == "killtargets") {
+        // kill n targets (default all)
+        lv_i = 0;
+        while (lv_i < go_zhTargetCount) {
+            if ((lp_a == "") || (lv_i < StringToInt(lp_a))) {
+                UnitKill(UnitFromId(go_zhTargetId[lv_i]));
+            }
+
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", "TARGETS killed " + lp_a);
+        return true;
+    }
+
+    if (lp_cmd == "aim") {
+        // the n-th Ghost (a = 1 or 2) aims 11 cells north of himself
+        lv_g1 = GhostOps_SquadUnit(StringToInt(lp_a) - 1);
+        UnitIssueOrder(lv_g1, OrderTargetingPoint(AbilityCommand("TacNukeStrike", 0), PointWithOffset(UnitGetPosition(lv_g1), 0.0, 11.0)), c_orderQueueReplace);
+        GhostOps_Ce0_Write("j", "AIM ordered by ghost " + lp_a);
+        return true;
+    }
+
+    if (lp_cmd == "cancel") {
+        UnitIssueOrder(GhostOps_SquadUnit(StringToInt(lp_a) - 1), Order(AbilityCommand("TacNukeStrike", 1)), c_orderQueueReplace);
+        GhostOps_Ce0_Write("j", "CANCEL ordered by ghost " + lp_a);
+        return true;
+    }
+
+    return false;
+}

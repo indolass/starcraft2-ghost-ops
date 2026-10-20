@@ -141,7 +141,10 @@ def build_app():
             self.settings_button = ctk.CTkButton(left, text='Настройки', height=34, width=120, corner_radius=8, font=(FONT, 13),
                                                  fg_color='transparent', border_width=1, border_color=LINE, text_color=MUTED,
                                                  hover_color=CARD, command=self.open_settings)
-            self.settings_button.grid(row=4, column=0, sticky='w', padx=14, pady=14)
+            self.settings_button.grid(row=5, column=0, sticky='w', padx=14, pady=(0, 14))
+            self.campaign_button = ctk.CTkButton(left, text='Кампания: Вне закона → Час икс', height=44, corner_radius=10, font=(FONT, 13, 'bold'),
+                                                 fg_color=ACCENT_DARK, hover_color=ACCENT, text_color=TEXT, command=self.open_campaign)
+            self.campaign_button.grid(row=4, column=0, sticky='ew', padx=14, pady=(8, 8))
 
             right = ctk.CTkFrame(self, fg_color=PANEL, corner_radius=14)
             right.grid(row=0, column=1, sticky='nsew', padx=(7, 14), pady=(14, 7))
@@ -409,6 +412,17 @@ def build_app():
 
         def hide_error(self):
             self.error_frame.grid_remove()
+
+        def open_campaign(self):
+            import gui_campaign
+            win = getattr(self, 'campaign_window', None)
+            if win is not None and win.winfo_exists():
+                win.lift()
+                return win
+            cls = gui_campaign.make_window_class(ctk, dict(BG=BG, PANEL=PANEL, CARD=CARD, LINE=LINE, ACCENT=ACCENT, ACCENT_HOVER=ACCENT_HOVER, TEXT=TEXT, MUTED=MUTED,
+                                                           AMBER=AMBER, RED=RED, GREEN=GREEN, FONT=FONT))
+            self.campaign_window = cls(self)
+            return self.campaign_window
 
         def open_log(self):
             core.log('log opened by the user')

@@ -186,12 +186,12 @@
               "en": "The Ghost Academy is destroyed. The missile is lost."
             },
             "AlertTitle": {
-              "ru": "Тревога!",
-              "en": "Alert!"
+              "ru": "Адъютант",
+              "en": "Adjutant"
             },
             "AlertText": {
-              "ru": "Компьютеры базы заражены вирусом. Оружие гарнизона работает только возле базы. Новые клоны морпехов ослаблены и небоеспособны.",
-              "en": "The base computers are infected with a virus. The garrison weapons only work near the base. New Marine clones are weakened and unable to fight."
+              "ru": "Компьютерная сеть базы заражена. Оружие гарнизона работает только в пределах локальной сети. У новобранцев нарушена работа боевого снаряжения — вести огонь они не могут.",
+              "en": "The base computer network is infected. The garrison weapons only work inside the local network. The recruits' combat gear is damaged: they cannot fire."
             },
             "SwannName": {
               "ru": "Свонн",
@@ -252,6 +252,34 @@
             "Tip4Text": {
               "ru": "Спасённые повстанцы сохраняют обычные характеристики. Запуск ракеты миссию не завершает: добейте оставшиеся силы и здания.",
               "en": "Rescued rebels keep their normal stats. The launch does not end the mission: finish the remaining forces and buildings."
+            },
+            "AlertClip": {
+              "ru": "Тревога.",
+              "en": "Alert."
+            },
+            "RaynorName": {
+              "ru": "Рейнор",
+              "en": "Raynor"
+            },
+            "RaynorText": {
+              "ru": "Вот же сволочи… Гарнизон оставляем здесь. Ресурсы всё равно собирайте: нам ещё корабль чинить и людей снаряжать. Пригодятся для следующих операций.",
+              "en": "Bastards... We leave the garrison here. Keep gathering resources anyway: we still have a ship to repair and people to equip. They will be needed for the next operations."
+            },
+            "SwannExplain": {
+              "ru": "Эти двое к заражённой сети не подключались. Снаряжение исправно. Я подготовил одну ядерную ракету — наводчик обозначен. Береги его, Джим: до запуска заменить его некому.",
+              "en": "These two were never connected to the infected network. Their gear is fine. I prepared one nuclear missile - the Spotter is marked. Look after him, Jim: nobody can replace him before the launch."
+            },
+            "GhostExplain": {
+              "ru": "Повстанцы поблизости ещё держатся. Их оружие исправно — помогут добить противника после удара.",
+              "en": "The rebels nearby are still holding. Their weapons work: they will help finish the enemy after the strike."
+            },
+            "RoleGhost": {
+              "ru": "Призрак",
+              "en": "Ghost"
+            },
+            "InfoGhost": {
+              "ru": "Постоянная маскировка и Snipe. Может навести ядерный удар; общий запас — две ракеты на операцию. Заменить призрака нельзя.",
+              "en": "Permanent cloak and Snipe. May aim the nuclear strike; two missiles for the whole operation. A Ghost cannot be replaced."
             }
           },
           "story": {
@@ -260,8 +288,13 @@
             "alert_seconds": 14,
             "swann_seconds": 6,
             "arrival_seconds": 10,
-            "ghost_seconds": 5
+            "ghost_seconds": 5,
+            "raynor_delay": 2,
+            "raynor_seconds": 11
           }
+        },
+        "campaign": {
+          "operation_id": "STANDALONE"
         }
       }
     },
@@ -299,7 +332,9 @@
             "alert_seconds": 4,
             "swann_seconds": 3,
             "arrival_seconds": 4,
-            "ghost_seconds": 3
+            "ghost_seconds": 3,
+            "raynor_delay": 1,
+            "raynor_seconds": 4
           }
         }
       }
@@ -323,7 +358,9 @@
             "alert_seconds": 4,
             "swann_seconds": 3,
             "arrival_seconds": 4,
-            "ghost_seconds": 3
+            "ghost_seconds": 3,
+            "raynor_delay": 1,
+            "raynor_seconds": 4
           }
         },
         "ce0": {
@@ -357,7 +394,9 @@
             "alert_seconds": 4,
             "swann_seconds": 3,
             "arrival_seconds": 4,
-            "ghost_seconds": 3
+            "ghost_seconds": 3,
+            "raynor_delay": 1,
+            "raynor_seconds": 4
           }
         },
         "ce0": {

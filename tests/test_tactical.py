@@ -58,7 +58,7 @@ class TacticalConfig(unittest.TestCase):
         self.assertEqual(gt['remove_abilities'], ['EMP'])
         self.assertEqual(t['garrison']['damage_multiplier'], 20)
         self.assertEqual(t['trained_marine'], {'life': 1, 'can_attack': False})  # 1/1 and no weapon at all (no x0.1 any more)
-        self.assertEqual(t['story'], {'first_delay': 15, 'second_delay': 15, 'alert_seconds': 14, 'swann_seconds': 6, 'arrival_seconds': 10, 'ghost_seconds': 5})
+        self.assertEqual(t['story'], {'first_delay': 15, 'second_delay': 15, 'alert_seconds': 14, 'swann_seconds': 6, 'arrival_seconds': 10, 'ghost_seconds': 5, 'raynor_delay': 2, 'raynor_seconds': 11})
         self.assertEqual((t['nuke']['aim_time'], t['nuke']['flight_time']), (12, 6))
         # the explosion keeps the stock damage, radii and falloff: nothing of ours in the config
         for k in ('damage', 'structure_bonus', 'areas'):

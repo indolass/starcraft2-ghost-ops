@@ -1,0 +1,427 @@
+{
+  "schema_version": 4,
+  "mission": "traynor03",
+  "operatives": {
+    "squad": [
+      "Ghost",
+      "Ghost"
+    ],
+    "start_hold_fire": false,
+    "ghost_permanent_cloak": false,
+    "ghost_start_cloaked": false
+  },
+  "base_support": {
+    "damage_multiplier": 1
+  },
+  "experimental": {
+    "invulnerable_allies": false
+  },
+  "scenario": {
+    "waves": "original",
+    "timers": "original",
+    "victory": "original"
+  },
+  "nukes_granted": 0,
+  "difficulty": {
+    "expected": 3,
+    "show_message": false
+  },
+  "ghost_tuning": {
+    "energy_start": 100,
+    "energy_max": 100,
+    "regen_per_second": 20,
+    "cloak_activation_cost": 0,
+    "cloak_net_per_second": -10,
+    "ghost_life": 45,
+    "snipe": {
+      "cost": 10,
+      "damage": 45,
+      "cast_time": 0.3,
+      "cooldown": 7
+    },
+    "remove_abilities": [
+      "EMP"
+    ]
+  },
+  "tactical": {
+    "debug_log": false,
+    "garrison": {
+      "damage_multiplier": 4,
+      "zone": {
+        "center": [
+          86.0,
+          46.0
+        ],
+        "radius": 26.0
+      },
+      "show_border": true
+    },
+    "trained_marine": {
+      "life": 1,
+      "can_attack": false
+    },
+    "academy": {
+      "position": [
+        103.5,
+        29.5
+      ],
+      "arm_time": 1
+    },
+    "nuke": {
+      "aim_time": 12,
+      "flight_time": 6,
+      "range": 12,
+      "count": 2,
+      "both_may_aim": true
+    },
+    "texts": {
+      "ZoneLeft": {
+        "ru": "Морпехи гарнизона вне зоны обороны: оружие отключено до возвращения на базу.",
+        "en": "Garrison Marines outside the defence zone: weapon disabled until they return to the base."
+      },
+      "RoleSpotter": {
+        "ru": "Наводчик",
+        "en": "Spotter"
+      },
+      "RoleOperative": {
+        "ru": "Оперативник",
+        "en": "Operative"
+      },
+      "InfoSpotter": {
+        "ru": "Единственный, кто может вызвать ядерный удар. Если погибнет до запуска, операция провалена.",
+        "en": "The only unit that can call the nuclear strike. If he dies before the launch the operation has failed."
+      },
+      "InfoOperative": {
+        "ru": "Разведка и точные выстрелы. Ядерный удар ему недоступен.",
+        "en": "Scouting and precise shots. He cannot call the nuclear strike."
+      },
+      "NukeReady": {
+        "ru": "Ядерная ракета готова. Наводить может любой из призраков; запас — две ракеты на операцию.",
+        "en": "A nuclear missile is ready. Either Ghost may aim it; two missiles for the whole operation."
+      },
+      "Aiming": {
+        "ru": "Наведение: не двигайтесь {aim_time} секунд. Отмена возвращает ракету в готовность.",
+        "en": "Aiming: do not move for {aim_time} seconds. Cancelling returns the missile to ready."
+      },
+      "AimCancelled": {
+        "ru": "Наведение отменено. Ракета готова.",
+        "en": "Aiming cancelled. The missile is ready."
+      },
+      "Launched": {
+        "ru": "Ракета запущена — отходите!",
+        "en": "Missile launched - get out!"
+      },
+      "SpotterLost": {
+        "ru": "Наводчик погиб до запуска ракеты. Операция провалена.",
+        "en": "The Spotter died before the launch. The operation has failed."
+      },
+      "SpotterLostAfter": {
+        "ru": "Наводчик погиб, но ракета уже запущена и достигнет цели.",
+        "en": "The Spotter died, but the missile is already launched and will reach its target."
+      },
+      "AcademyLost": {
+        "ru": "Академия призраков уничтожена. Оставшиеся ракеты потеряны.",
+        "en": "The Ghost Academy is destroyed. The remaining missiles are lost."
+      },
+      "AlertTitle": {
+        "ru": "Адъютант",
+        "en": "Adjutant"
+      },
+      "AlertText": {
+        "ru": "Компьютерная сеть базы заражена. Оружие гарнизона работает только в пределах локальной сети. У новобранцев нарушена работа боевого снаряжения — вести огонь они не могут.",
+        "en": "The base computer network is infected. The garrison weapons only work inside the local network. The recruits' combat gear is damaged: they cannot fire."
+      },
+      "SwannName": {
+        "ru": "Свонн",
+        "en": "Swann"
+      },
+      "SwannText": {
+        "ru": "Я решил, что помощь тебе не помешает.",
+        "en": "I figured you could use some help."
+      },
+      "GhostName": {
+        "ru": "Призрак",
+        "en": "Ghost"
+      },
+      "GhostText": {
+        "ru": "Призрак явился.",
+        "en": "Ghost reporting."
+      },
+      "ArrivalText": {
+        "ru": "Прибыло подкрепление: спецотряд призраков избежал заражения. Используйте ядерный удар для штурма базы противника. Доступна только одна ракета.",
+        "en": "Reinforcements have arrived: the Ghost special unit escaped the infection. Use the nuclear strike to storm the enemy base. Only one missile is available."
+      },
+      "ObjectiveTitle": {
+        "ru": "Спецотряд и ядерный удар",
+        "en": "Special unit and nuclear strike"
+      },
+      "ObjectiveText": {
+        "ru": "Наводчик — единственный, кто может вызвать ядерный удар; ракета одна. Смерть Наводчика до необратимого запуска — поражение. После запуска у вас {flight_time} секунд: отойдите из зоны собственного взрыва, он может убить и своих. Запуск сам по себе миссию не завершает: после взрыва уничтожьте оставшиеся силы и здания. Спасённые повстанцы сохраняют обычные характеристики.",
+        "en": "Only the Spotter can call the nuclear strike; there is one missile. If the Spotter dies before the irreversible launch the mission is lost. After the launch you have {flight_time} seconds: leave the zone of your own blast, it can kill your own units. The launch does not end the mission: after the blast destroy the remaining forces and buildings. Rescued rebels keep their normal stats."
+      },
+      "Tip1Title": {
+        "ru": "Вирус на базе",
+        "en": "Virus on the base"
+      },
+      "Tip1Text": {
+        "ru": "Оружие исходного гарнизона работает только в зоне обороны (кольцо из «+»). Новые морпехи имеют 1 здоровья и не могут атаковать.",
+        "en": "The weapons of the original garrison only work inside the defence zone (the ring of \"+\"). New Marines have 1 life and cannot attack."
+      },
+      "Tip2Title": {
+        "ru": "Наводчик и Оперативник",
+        "en": "Spotter and Operative"
+      },
+      "Tip2Text": {
+        "ru": "Только Наводчик может вызвать ядерный удар. Оперативник — разведка и Snipe. Призраки не восполняются.",
+        "en": "Only the Spotter can call the nuclear strike. The Operative scouts and uses Snipe. The Ghosts cannot be replaced."
+      },
+      "Tip3Title": {
+        "ru": "Ядерный удар",
+        "en": "Nuclear strike"
+      },
+      "Tip3Text": {
+        "ru": "Наведение {aim_time} секунд: Наводчик стоит на месте, отмена возвращает ракету. После запуска до взрыва {flight_time} секунд — отходите.",
+        "en": "Aiming takes {aim_time} seconds: the Spotter stands still, cancelling returns the missile. After the launch the blast comes in {flight_time} seconds: get out."
+      },
+      "Tip4Title": {
+        "ru": "Повстанцы и победа",
+        "en": "Rebels and victory"
+      },
+      "Tip4Text": {
+        "ru": "Спасённые повстанцы сохраняют обычные характеристики. Запуск ракеты миссию не завершает: добейте оставшиеся силы и здания.",
+        "en": "Rescued rebels keep their normal stats. The launch does not end the mission: finish the remaining forces and buildings."
+      },
+      "AlertClip": {
+        "ru": "Тревога.",
+        "en": "Alert."
+      },
+      "RaynorName": {
+        "ru": "Рейнор",
+        "en": "Raynor"
+      },
+      "RaynorText": {
+        "ru": "Вот же сволочи… Гарнизон оставляем здесь. Ресурсы всё равно собирайте: нам ещё корабль чинить и людей снаряжать. Пригодятся для следующих операций.",
+        "en": "Bastards... We leave the garrison here. Keep gathering resources anyway: we still have a ship to repair and people to equip. They will be needed for the next operations."
+      },
+      "SwannExplain": {
+        "ru": "Эти двое к заражённой сети не подключались. Снаряжение исправно. Я подготовил одну ядерную ракету — наводчик обозначен. Береги его, Джим: до запуска заменить его некому.",
+        "en": "These two were never connected to the infected network. Their gear is fine. I prepared one nuclear missile - the Spotter is marked. Look after him, Jim: nobody can replace him before the launch."
+      },
+      "GhostExplain": {
+        "ru": "Повстанцы поблизости ещё держатся. Их оружие исправно — помогут добить противника после удара.",
+        "en": "The rebels nearby are still holding. Their weapons work: they will help finish the enemy after the strike."
+      },
+      "RoleGhost": {
+        "ru": "Призрак",
+        "en": "Ghost"
+      },
+      "InfoGhost": {
+        "ru": "Постоянная маскировка и Snipe. Может навести ядерный удар; общий запас — две ракеты на операцию. Заменить призрака нельзя.",
+        "en": "Permanent cloak and Snipe. May aim the nuclear strike; two missiles for the whole operation. A Ghost cannot be replaced."
+      }
+    },
+    "story": {
+      "first_delay": 15,
+      "second_delay": 15,
+      "alert_seconds": 14,
+      "swann_seconds": 6,
+      "arrival_seconds": 10,
+      "ghost_seconds": 5,
+      "raynor_delay": 2,
+      "raynor_seconds": 11
+    },
+    "spotter_defeat": false
+  },
+  "campaign": {
+    "operation_id": "STANDALONE"
+  },
+  "zerohour": {
+    "debug_log": false,
+    "arrival_minutes": 20,
+    "limits": {
+      "marines": 16,
+      "bunkers": 4,
+      "turrets": 4,
+      "scvs": 8
+    },
+    "prices": {
+      "marines": {
+        "minerals": 40,
+        "gas": 0
+      },
+      "bunkers": {
+        "minerals": 75,
+        "gas": 0
+      },
+      "turrets": {
+        "minerals": 75,
+        "gas": 0
+      },
+      "scvs": {
+        "minerals": 50,
+        "gas": 0
+      }
+    },
+    "recommended": {
+      "marines": 8,
+      "bunkers": 4,
+      "turrets": 4,
+      "scvs": 4
+    },
+    "order": {
+      "marines": 8,
+      "bunkers": 4,
+      "turrets": 4,
+      "scvs": 4
+    },
+    "test_budget": {
+      "minerals": 1500,
+      "gas": 0
+    },
+    "targets": [
+      88,
+      122,
+      259,
+      93,
+      198,
+      57,
+      119,
+      164
+    ],
+    "ping_every": 45,
+    "ghost_spawn": [
+      100.0,
+      36.0
+    ],
+    "post_arrival": {
+      "interval": 120,
+      "max_active_units": 40,
+      "zerglings": 10,
+      "hydralisks": 3,
+      "roaches": 2
+    },
+    "scene": {
+      "intro_delay": 6,
+      "horner_delay": 4,
+      "raynor_seconds": 12,
+      "horner_seconds": 14,
+      "rebel_seconds": 9
+    },
+    "texts": {
+      "ObjTitle": {
+        "ru": "Уничтожить отмеченные инкубаторы",
+        "en": "Destroy the marked hatcheries"
+      },
+      "ObjText": {
+        "ru": "Уничтожьте отмеченные инкубаторы Зергов. Победа наступит, когда пройдут 20 минут до прибытия корабля и все цели будут уничтожены. Если цели останутся к прибытию, корабль ждёт на орбите, а миссия продолжается.",
+        "en": "Destroy the marked Zerg hatcheries. You win when the 20 minutes until the ship arrives have passed AND every target is destroyed. If targets remain at the arrival the ship waits in orbit and the mission goes on."
+      },
+      "AllDestroyed": {
+        "ru": "Все отмеченные инкубаторы уничтожены. Ждём прибытия корабля.",
+        "en": "All marked hatcheries are destroyed. Waiting for the ship to arrive."
+      },
+      "RaynorName": {
+        "ru": "Рейнор",
+        "en": "Raynor"
+      },
+      "RaynorText": {
+        "ru": "Вирус всё ещё сидит в нашей сети. Гарнизон сможет прикрыть базу, но за периметром его оружие бесполезно. Призраки, разведайте подступы и найдите наших людей. Заменить вас по-прежнему некем.",
+        "en": "The virus is still in our network. The garrison can cover the base, but outside the perimeter its weapons are useless. Ghosts, scout the approaches and find our people. There is still nobody to replace you."
+      },
+      "HornerName": {
+        "ru": "Мэтт",
+        "en": "Matt"
+      },
+      "HornerText": {
+        "ru": "Джим, будем у вас через двадцать минут. Но пока работают эти инкубаторы, посадочную зону удержать не получится. Уничтожьте отмеченные цели. Если не успеете к нашему прибытию — останемся на орбите и будем ждать.",
+        "en": "Jim, we will be with you in twenty minutes. But while these hatcheries work we cannot hold the landing zone. Destroy the marked targets. If you are not done by the time we arrive, we will stay in orbit and wait."
+      },
+      "HornerWaitText": {
+        "ru": "Мы на месте, Джим. Посадка пока невозможна. Заканчивайте работу — мы вас дождёмся.",
+        "en": "We are in position, Jim. We cannot land yet. Finish the job - we will wait for you."
+      },
+      "RebelName": {
+        "ru": "Морпех",
+        "en": "Marine"
+      },
+      "RebelText": {
+        "ru": "Наши люди отрезаны от базы. Их снаряжение не заражено. Выведите их к своим — они ещё смогут помочь нам пробиться к инкубаторам.",
+        "en": "Our people are cut off from the base. Their gear is not infected. Bring them to our lines - they can still help us fight through to the hatcheries."
+      },
+      "RescueText": {
+        "ru": "Хорошо, что вы целы. Держитесь вместе. Нам ещё понадобится каждый ствол.",
+        "en": "Good that you are alive. Stay together. We will still need every gun."
+      },
+      "Tip1Title": {
+        "ru": "Вирус и гарнизон",
+        "en": "Virus and garrison"
+      },
+      "Tip1Text": {
+        "ru": "Оружие гарнизонных морпехов работает только внутри круга базы (кольцо из «+»); за периметром оно отключено. Спасённые повстанцы вирусом не затронуты. Новых бойцов и зданий в этой операции взять негде.",
+        "en": "The garrison Marines only have a weapon inside the base circle (the ring of \"+\"); outside the perimeter it is switched off. Rescued rebels are not affected by the virus. There are no new troops or buildings in this operation."
+      },
+      "Tip2Title": {
+        "ru": "Призраки и ракеты",
+        "en": "Ghosts and missiles"
+      },
+      "Tip2Text": {
+        "ru": "Оба призрака могут наводить ядерный удар: наведение 12 секунд на месте, запас — две ракеты на всю операцию. Отмена возвращает ракету, запуск необратим. Призрака заменить нельзя.",
+        "en": "Both Ghosts can aim the nuclear strike: aiming takes 12 seconds standing still, two missiles for the whole operation. Cancelling returns the missile, a launch is irreversible. A Ghost cannot be replaced."
+      },
+      "Tip3Title": {
+        "ru": "Победа",
+        "en": "Victory"
+      },
+      "Tip3Text": {
+        "ru": "Нужно одновременно: дождаться корабля (20 игровых минут) и уничтожить все отмеченные инкубаторы. Если цели остались, корабль ждёт, а миссия продолжается.",
+        "en": "Both are needed: wait for the ship (20 game minutes) AND destroy every marked hatchery. If targets remain the ship waits and the mission goes on."
+      }
+    }
+  },
+  "default_preset": "standard",
+  "presets": {
+    "standard": {
+      "label": "Час икс",
+      "message": "Ghost Ops: «Час икс»",
+      "message_en": "Ghost Ops - Zero Hour",
+      "experimental": true,
+      "card": "Предварительная закупка, два призрака, гарнизон базы, эвакуация через 20 минут",
+      "details": [
+        "Заказ: морпехи, бункеры, турели, КСМ - число и цены в настройках (экспериментальные)",
+        "Два призрака 45/45 с постоянной маскировкой, две ядерные ракеты",
+        "Победа: прошло 20 игровых минут И уничтожены все отмеченные инкубаторы"
+      ],
+      "overrides": {}
+    },
+    "standard_dev": {
+      "label": "Час икс (разработка)",
+      "message": "Ghost Ops - Zero Hour (dev)",
+      "message_en": "Ghost Ops - Zero Hour (dev)",
+      "hidden": true,
+      "extends": "standard",
+      "card": "Отладочная сборка с журналом",
+      "details": [
+        "Только для разработки"
+      ],
+      "overrides": {
+        "tactical": {
+          "debug_log": true
+        },
+        "zerohour": {
+          "debug_log": true
+        },
+        "ce0": {
+          "operation_id": "CE0-TR03",
+          "census_types": [
+            "Ghost",
+            "Marine",
+            "Medic",
+            "SCV",
+            "Bunker",
+            "MissileTurret"
+          ]
+        }
+      }
+    }
+  }
+}

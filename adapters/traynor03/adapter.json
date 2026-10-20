@@ -1,0 +1,107 @@
+{
+  "schema_version": 1,
+  "mission": "traynor03",
+  "title": "Zero Hour",
+  "source_map_file": "TRaynor03.SC2Map",
+  "output_map_file": "GhostOps_TRaynor03.SC2Map",
+  "script_member": "MapScript.galaxy",
+  "adapter_source": "adapters/traynor03/adapter.galaxy",
+  "config": "config/traynor03.json",
+  "modules": [
+    "core/GhostOpsTactical.galaxy",
+    "core/GhostOpsZeroHour.galaxy"
+  ],
+  "generators": [
+    "tactical",
+    "zerohour"
+  ],
+  "order_section": "zerohour",
+  "start_hooks": [
+    {
+      "function": "gt_IntroSequence_Func",
+      "after": "TriggerExecute(gt_StartGame, true, false);",
+      "call": "GhostOps_OnMissionStart();"
+    }
+  ],
+  "extra_hooks": [
+    {
+      "function": "gt_VictoryHoldOutCompleted_Func",
+      "before": "TriggerEnable(TriggerGetCurrent(), false);",
+      "call": "if (GhostOps_ZH_Gate()) { return true; }"
+    },
+    {
+      "function": "gt_VictoryHoldOutCompleted_Func",
+      "after": "gv_gameOver = true;",
+      "call": "GhostOps_Tac_OnVictory();"
+    },
+    {
+      "function": "gt_DefeatBaseDead_Func",
+      "after": "gv_gameOver = true;",
+      "call": "GhostOps_Tac_OnDefeat();"
+    },
+    {
+      "function": "gt_RebelMarines01Intro_Func",
+      "after": "libNtve_gf_ShowHideUnit(gv_rebelMarinesBeacon01, true);",
+      "call": "GhostOps_ZH_OnRebelCall();"
+    },
+    {
+      "function": "gt_RebelMarines02Intro_Func",
+      "after": "libNtve_gf_ShowHideUnit(gv_rebelMarinesBeacon02, true);",
+      "call": "GhostOps_ZH_OnRebelCall();"
+    },
+    {
+      "function": "gt_RebelMarines03Intro_Func",
+      "after": "libNtve_gf_ShowHideUnit(gv_rebelMarinesBeacon03, true);",
+      "call": "GhostOps_ZH_OnRebelCall();"
+    },
+    {
+      "function": "gt_RebelMarines01Rescued_Func",
+      "after": "gv_rebelFightersRescued += 1;",
+      "call": "GhostOps_ZH_OnRescue();"
+    },
+    {
+      "function": "gt_RebelMarines02Rescued_Func",
+      "after": "gv_rebelFightersRescued += 1;",
+      "call": "GhostOps_ZH_OnRescue();"
+    },
+    {
+      "function": "gt_RebelMarines03Rescued_Func",
+      "after": "gv_rebelFightersRescued += 1;",
+      "call": "GhostOps_ZH_OnRescue();"
+    }
+  ],
+  "campaign_hooks": [
+    {
+      "function": "gt_IntroSequence_Func",
+      "after": "TriggerExecute(gt_StartGame, true, false);",
+      "call": "GhostOps_Camp_Start();"
+    },
+    {
+      "function": "gt_VictoryHoldOutCompleted_Func",
+      "after": "gv_gameOver = true;",
+      "call": "GhostOps_Camp_OnVictory();"
+    },
+    {
+      "function": "gt_DefeatBaseDead_Func",
+      "after": "gv_gameOver = true;",
+      "call": "GhostOps_Camp_OnDefeat();"
+    }
+  ],
+  "ce0_extra": "adapters/traynor03/ce0_extra.galaxy",
+  "ce0_hooks": [
+    {
+      "function": "gt_IntroSequence_Func",
+      "after": "TriggerExecute(gt_StartGame, true, false);",
+      "call": "GhostOps_Ce0_Start();"
+    }
+  ],
+  "required_markers": [
+    "gt_StartGame",
+    "gt_IntroSequence_Func",
+    "gt_VictoryHoldOutCompleted_Func",
+    "gt_DefeatBaseDead_Func",
+    "gt_RebelMarines01Intro_Func",
+    "gt_RebelMarines01Rescued_Func",
+    "void InitLibs"
+  ]
+}
