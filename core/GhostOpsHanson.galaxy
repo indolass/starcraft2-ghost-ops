@@ -1,0 +1,385 @@
+//==================================================================================================
+// GhostOps module: THanson01 "Evacuation" - sniper cover (config key "hanson"; see config/thanson01.json).
+//
+// What this module does (everything else of the mission is the original):
+//   * a finite squad: one Ghost (created by the core, GhostOps_SpawnOperatives) at the start of the playable part;
+//   * a development lock: the player cannot train, build, research or hire (TechTreeUnitAllow / UpgradeAllow, derived
+//     from what the player's own unit types can produce, so mercenaries and add-ons are covered too);
+//   * ready Missile Turrets around the settlement (positions in the config);
+//   * the convoy command: the original starts a trip as soon as the colonists are gathered
+//     (gt_ConvoySpawned_Func); the hook GhostOps_Hanson_Hold() in front of the trip's first action holds it until the
+//     player presses the button "Send convoy", then the original function runs from its beginning exactly once.
+// Nothing here touches balance of the original units, the colonist logic, the attacks or the victory / defeat rules.
+//==================================================================================================
+bool go_hEnabled;
+bool go_hDebug;
+bool go_hLock;
+bool go_hCommand;
+fixed go_hGhostX;
+fixed go_hGhostY;
+int go_hTurretCount;
+fixed[24] go_hTurretX;
+fixed[24] go_hTurretY;
+int go_hTurretOwner;
+int go_hBtnW;
+int go_hBtnH;
+int go_hBtnOffX;
+int go_hBtnOffY;
+bool go_hTurretsMade;
+unit[24] go_hTurret;
+// convoy command: 0 not started yet, 1 preparing, 2 ready (waiting for the player), 3 trip
+int go_hCmdState;
+bool go_hGateOpen;
+trigger go_hGateTrig;
+int go_hDlg;
+int go_hBtn;
+int go_hLbl;
+trigger go_hClickTrig;
+trigger go_hLoadTrig;
+trigger go_hLockTrig;
+// values of the original mission, delivered once a second by the hook GhostOps_Hanson_Probe
+int go_hPhase;
+int go_hEscort;
+int go_hSent;
+int go_hSaved;
+int go_hKilled;
+int go_hWaves;
+int go_hLastPhase;
+bank go_hBank;
+int go_hLogN;
+int go_hLockTypes;
+string[48] go_hLockSeen;
+
+void GhostOps_HansonTest_Start ();
+void GhostOps_HansonTest_Probe ();
+
+//--------------------------------------------------------------------------------------------------
+// Helpers
+//--------------------------------------------------------------------------------------------------
+int GhostOps_Hanson_B (bool lp_v) {
+    if (lp_v) {
+        return 1;
+    }
+
+    return 0;
+}
+
+void GhostOps_Hanson_Log (string lp_text) {
+    if (!go_hDebug) {
+        return;
+    }
+
+    if (go_hBank == null) {
+        go_hBank = BankLoad("GhostOpsHanson", 1);
+    }
+
+    go_hLogN += 1;
+    BankValueSetFromString(go_hBank, "log", "e" + IntToString(go_hLogN), FixedToString(GameGetMissionTime(), 2) + " " + lp_text);
+    BankSave(go_hBank);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Development lock
+//--------------------------------------------------------------------------------------------------
+// Everything the given unit type can produce (units, structures, add-ons, upgrades, hired mercenaries) is forbidden for player 1.
+void GhostOps_Hanson_LockType (string lp_type) {
+    int lv_i;
+    int lv_n;
+
+    lv_n = TechTreeUnitProducesUnitCount(lp_type);
+    lv_i = 0;
+    while (lv_i < lv_n) {
+        TechTreeUnitAllow(1, TechTreeUnitProducesUnit(lp_type, lv_i), false);
+        lv_i += 1;
+    }
+
+    lv_n = TechTreeUnitProducesUpgradeCount(lp_type);
+    lv_i = 0;
+    while (lv_i < lv_n) {
+        TechTreeUpgradeAllow(1, TechTreeUnitProducesUpgrade(lp_type, lv_i), false);
+        lv_i += 1;
+    }
+}
+
+// The types of a Terran base that the derived lock may miss (aliases, suppressed buttons): always forbidden for player 1.
+void GhostOps_Hanson_LockFixed () {
+    string[28] lv_types;
+    int lv_i;
+
+    lv_types[0] = "CommandCenter";
+    lv_types[1] = "OrbitalCommand";
+    lv_types[2] = "PlanetaryFortress";
+    lv_types[3] = "SupplyDepot";
+    lv_types[4] = "Refinery";
+    lv_types[5] = "Barracks";
+    lv_types[6] = "EngineeringBay";
+    lv_types[7] = "MissileTurret";
+    lv_types[8] = "Bunker";
+    lv_types[9] = "SensorTower";
+    lv_types[10] = "GhostAcademy";
+    lv_types[11] = "Factory";
+    lv_types[12] = "Starport";
+    lv_types[13] = "MercCompound";
+    lv_types[14] = "Armory";
+    lv_types[15] = "FusionCore";
+    lv_types[16] = "SCV";
+    lv_types[17] = "Marine";
+    lv_types[18] = "Marauder";
+    lv_types[19] = "Reaper";
+    lv_types[20] = "Firebat";
+    lv_types[21] = "Medic";
+    lv_types[22] = "Ghost";
+    lv_types[23] = "BarracksTechLab";
+    lv_types[24] = "BarracksReactor";
+    lv_types[25] = "AutomatedRefinery";
+    lv_types[26] = "PerditionTurret";
+    lv_types[27] = "HiveMindEmulator";
+    lv_i = 0;
+    while (lv_i < 28) {
+        TechTreeUnitAllow(1, lv_types[lv_i], false);
+        lv_i += 1;
+    }
+}
+
+bool GhostOps_Hanson_LockTick (bool lp_testConds, bool lp_runActions) {
+    unitgroup lv_group;
+    unit lv_unit;
+    string lv_type;
+    int lv_i;
+    int lv_k;
+    int lv_n;
+    bool lv_seen;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    GhostOps_Hanson_LockFixed();
+    lv_group = UnitGroup(null, 1, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32))), 0);
+    lv_n = UnitGroupCount(lv_group, c_unitCountAll);
+    lv_i = 1;
+    while (lv_i <= lv_n) {
+        lv_unit = UnitGroupUnit(lv_group, lv_i);
+        lv_type = UnitGetType(lv_unit);
+        lv_seen = false;
+        lv_k = 0;
+        while (lv_k < go_hLockTypes) {
+            if (go_hLockSeen[lv_k] == lv_type) {
+                lv_seen = true;
+                break;
+            }
+
+            lv_k += 1;
+        }
+
+        if (!lv_seen && go_hLockTypes < 48) {
+            go_hLockSeen[go_hLockTypes] = lv_type;
+            go_hLockTypes += 1;
+            GhostOps_Hanson_LockType(lv_type);
+            GhostOps_Hanson_Log("lock: " + lv_type + " produces " + IntToString(TechTreeUnitProducesUnitCount(lv_type)) + " units, " + IntToString(TechTreeUnitProducesUpgradeCount(lv_type)) + " upgrades");
+        }
+
+        lv_i += 1;
+    }
+
+    return true;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Turrets
+//--------------------------------------------------------------------------------------------------
+bool GhostOps_Hanson_TurretDied (bool lp_testConds, bool lp_runActions) {
+    unit lv_k;
+    string lv_who;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    lv_who = "unknown";
+    lv_k = EventUnitDamageSourceUnit();
+    if (lv_k != null) {
+        lv_who = UnitGetType(lv_k) + " of player " + IntToString(UnitGetOwner(lv_k));
+    }
+
+    GhostOps_Hanson_Log("turret lost at (" + FixedToString(PointGetX(UnitGetPosition(EventUnit())), 1) + ", " + FixedToString(PointGetY(UnitGetPosition(EventUnit())), 1) + "), killer " + lv_who);
+    return true;
+}
+
+void GhostOps_Hanson_MakeTurrets () {
+    trigger lv_died;
+
+    int lv_i;
+
+    if (go_hTurretsMade) {
+        return;
+    }
+
+    go_hTurretsMade = true;
+    lv_i = 0;
+    while (lv_i < go_hTurretCount) {
+        UnitCreate(1, "MissileTurret", 0, go_hTurretOwner, Point(go_hTurretX[lv_i], go_hTurretY[lv_i]), 270.0);
+        go_hTurret[lv_i] = UnitLastCreated();
+        if (go_hDebug) {
+            lv_died = TriggerCreate("GhostOps_Hanson_TurretDied");
+            TriggerAddEventUnitDied(lv_died, UnitRefFromUnit(go_hTurret[lv_i]));
+        }
+
+        lv_i += 1;
+    }
+
+    GhostOps_Hanson_Log("turrets created: " + IntToString(go_hTurretCount));
+    lv_i = 0;
+    while (lv_i < go_hTurretCount) {
+        GhostOps_Hanson_Log("   turret " + IntToString(lv_i) + " asked (" + FixedToString(go_hTurretX[lv_i], 1) + ", " + FixedToString(go_hTurretY[lv_i], 1) + ") placed (" + FixedToString(PointGetX(UnitGetPosition(go_hTurret[lv_i])), 1) + ", " + FixedToString(PointGetY(UnitGetPosition(go_hTurret[lv_i])), 1) + ")");
+        lv_i += 1;
+    }
+
+}
+
+//--------------------------------------------------------------------------------------------------
+// Convoy command (the button)
+//--------------------------------------------------------------------------------------------------
+void GhostOps_Hanson_UpdateUI () {
+    if (!go_hCommand || (go_hDlg == c_invalidDialogId) || (go_hBtn == c_invalidDialogId)) {
+        return;
+    }
+
+    if (go_hCmdState == 2) {
+        DialogControlSetPropertyAsText(go_hBtn, c_triggerControlPropertyText, PlayerGroupAll(), StringExternal("Param/Value/GhostOpsH_BtnReady"));
+        DialogControlSetEnabled(go_hBtn, PlayerGroupAll(), true);
+    }
+    else if (go_hCmdState == 3) {
+        DialogControlSetPropertyAsText(go_hBtn, c_triggerControlPropertyText, PlayerGroupAll(), StringExternal("Param/Value/GhostOpsH_BtnActive"));
+        DialogControlSetEnabled(go_hBtn, PlayerGroupAll(), false);
+    }
+    else {
+        DialogControlSetPropertyAsText(go_hBtn, c_triggerControlPropertyText, PlayerGroupAll(), StringExternal("Param/Value/GhostOpsH_BtnPreparing"));
+        DialogControlSetEnabled(go_hBtn, PlayerGroupAll(), false);
+    }
+}
+
+// The dialog is not part of a saved game: it is created again after a load (and at the start).
+void GhostOps_Hanson_CreateUI () {
+    if (!go_hCommand) {
+        return;
+    }
+
+    DialogCreate(go_hBtnW, go_hBtnH, c_anchorTopLeft, go_hBtnOffX, go_hBtnOffY, false);
+    go_hDlg = DialogLastCreated();
+    DialogControlCreate(go_hDlg, c_triggerControlTypeButton);
+    go_hBtn = DialogControlLastCreated();
+    DialogControlSetSize(go_hBtn, PlayerGroupAll(), go_hBtnW, go_hBtnH);
+    DialogControlSetPosition(go_hBtn, PlayerGroupAll(), c_anchorCenter, 0, 0);
+    DialogControlSetVisible(go_hBtn, PlayerGroupAll(), true);
+    DialogSetVisible(go_hDlg, PlayerGroupAll(), true);
+    go_hClickTrig = TriggerCreate("GhostOps_Hanson_OnClick");
+    TriggerAddEventDialogControl(go_hClickTrig, c_playerAny, go_hBtn, c_triggerControlEventTypeClick);
+    GhostOps_Hanson_UpdateUI();
+    GhostOps_Hanson_Log("ui created, state " + IntToString(go_hCmdState));
+}
+
+bool GhostOps_Hanson_OnLoad (bool lp_testConds, bool lp_runActions) {
+    if (!lp_runActions) {
+        return true;
+    }
+
+    if (go_hDlg != c_invalidDialogId) {
+        DialogDestroy(go_hDlg);
+    }
+
+    go_hDlg = c_invalidDialogId;
+    go_hBtn = c_invalidDialogId;
+    GhostOps_Hanson_CreateUI();
+    GhostOps_Hanson_Log("loaded game: state " + IntToString(go_hCmdState) + ", gate open " + IntToString(GhostOps_Hanson_B(go_hGateOpen)) + ", ghosts " + IntToString(UnitGroupCount(UnitGroup("Ghost", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive))
+        + ", turrets " + IntToString(UnitGroupCount(UnitGroup("MissileTurret", go_hTurretOwner, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive)) + ", sent " + IntToString(go_hSent) + " index " + IntToString(go_hEscort));
+    return true;
+}
+
+bool GhostOps_Hanson_OnClick (bool lp_testConds, bool lp_runActions) {
+    if (!lp_runActions) {
+        return true;
+    }
+
+    // only a ready convoy can be sent, and only once: the state changes before anything else happens
+    if ((go_hCmdState != 2) || go_hGateOpen) {
+        return true;
+    }
+
+    go_hCmdState = 3;
+    go_hGateOpen = true;
+    GhostOps_Hanson_UpdateUI();
+    GhostOps_Hanson_Log("command: convoy " + IntToString(go_hEscort) + " sent by the player");
+    UIDisplayMessage(PlayerGroupAll(), c_messageAreaDirective, StringExternal("Param/Value/GhostOpsH_SentMsg"));
+    TriggerExecute(go_hGateTrig, true, false);
+    return true;
+}
+
+// Hook in gt_Gathercolonistspriortoevacuation_Func: a new trip starts to be prepared.
+void GhostOps_Hanson_Preparing () {
+    if (!go_hEnabled || !go_hCommand) {
+        return;
+    }
+
+    go_hCmdState = 1;
+    GhostOps_Hanson_UpdateUI();
+    GhostOps_Hanson_Log("convoy preparing (index " + IntToString(go_hEscort) + ")");
+}
+
+// Hook in front of the first action of gt_ConvoySpawned_Func (the original start of a trip). True = hold the trip: the original
+// function ends here and is executed again by the button; false = go on.
+bool GhostOps_Hanson_Hold (trigger lp_trigger) {
+    if (!go_hEnabled || !go_hCommand) {
+        return false;
+    }
+
+    if (go_hGateOpen) {
+        go_hGateOpen = false;
+        GhostOps_Hanson_Log("convoy released");
+        return false;
+    }
+
+    go_hGateTrig = lp_trigger;
+    go_hCmdState = 2;
+    GhostOps_Hanson_UpdateUI();
+    PingCreate(PlayerGroupAll(), "PingSimple", PointFromId(3242), ColorWithAlpha(0.00, 100.00, 0.00, 0.00), 6.0);
+    UIDisplayMessage(PlayerGroupAll(), c_messageAreaDirective, StringExternal("Param/Value/GhostOpsH_ReadyMsg"));
+    GhostOps_Hanson_Log("convoy ready, waiting for the command");
+    return true;
+}
+
+// Hook (once a second) with values of the original mission; also the test module's heartbeat.
+void GhostOps_Hanson_Probe (int lp_phase, int lp_escort, int lp_sent, int lp_saved, int lp_killed, int lp_waves) {
+    go_hPhase = lp_phase;
+    go_hEscort = lp_escort;
+    go_hSent = lp_sent;
+    go_hSaved = lp_saved;
+    go_hKilled = lp_killed;
+    go_hWaves = lp_waves;
+    if (go_hLastPhase != lp_phase) {
+        go_hLastPhase = lp_phase;
+        GhostOps_Hanson_Log("mission phase " + IntToString(lp_phase));
+    }
+
+    GhostOps_HansonTest_Probe();
+}
+
+//--------------------------------------------------------------------------------------------------
+// Start (from the adapter, once)
+//--------------------------------------------------------------------------------------------------
+void GhostOps_Hanson_Start () {
+    GhostOps_Hanson_MakeTurrets();
+    if (go_hLock) {
+        GhostOps_Hanson_LockTick(true, true);
+        go_hLockTrig = TriggerCreate("GhostOps_Hanson_LockTick");
+        TriggerAddEventTimePeriodic(go_hLockTrig, 1.0, c_timeGame);
+    }
+
+    if (go_hCommand) {
+        GhostOps_Hanson_CreateUI();
+        go_hLoadTrig = TriggerCreate("GhostOps_Hanson_OnLoad");
+        TriggerAddEventLoadGameDone(go_hLoadTrig);
+    }
+
+    GhostOps_HansonTest_Start();
+}

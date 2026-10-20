@@ -1,11 +1,13 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "mission": "ttychus01",
   "operatives": {
     "squad": [
       "Nova",
       "Ghost",
-      "Ghost"
+      "Ghost",
+      "Medic",
+      "Medic"
     ],
     "start_hold_fire": true,
     "ghost_permanent_cloak": true,
@@ -22,5 +24,9 @@
     "timers": "original",
     "victory": "original"
   },
-  "nukes_granted": 0
+  "nukes_granted": 0,
+  "difficulty": {
+    "expected": 3,
+    "show_message": true
+  }
 }

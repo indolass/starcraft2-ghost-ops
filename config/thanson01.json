@@ -1,0 +1,165 @@
+{
+  "schema_version": 4,
+  "mission": "thanson01",
+  "operatives": {
+    "squad": ["Ghost"],
+    "start_hold_fire": false,
+    "ghost_permanent_cloak": true,
+    "ghost_start_cloaked": true,
+    "disabled_abilities": []
+  },
+  "army": {
+    "fragile_units": []
+  },
+  "base_support": {
+    "damage_multiplier": 1
+  },
+  "experimental": {
+    "invulnerable_allies": false
+  },
+  "scenario": {
+    "waves": "original",
+    "timers": "original",
+    "victory": "original"
+  },
+  "nukes_granted": 0,
+  "difficulty": {
+    "expected": 3,
+    "show_message": false
+  },
+  "ghost_tuning": {
+    "energy_start": 100,
+    "energy_max": 100,
+    "regen_per_second": 0,
+    "cloak_activation_cost": 0,
+    "cloak_net_per_second": 0,
+    "ghost_life": 45,
+    "snipe": {
+      "cost": 0,
+      "damage": 1000,
+      "cast_time": 0.3,
+      "cooldown": 1.0,
+      "exclude_friendly": true
+    },
+    "remove_abilities": ["TacNukeStrike", "EMP"]
+  },
+  "hanson": {
+    "debug_log": false,
+    "lock_development": true,
+    "convoy_command": true,
+    "ghost_spawn": [110.0, 49.0],
+    "button": {
+      "width": 380,
+      "height": 56,
+      "offset_x": 16,
+      "offset_y": 230
+    },
+    "turrets": {
+      "owner": 4,
+      "list": [
+        {"x": 38.0, "y": 45.0, "role": "base"},
+        {"x": 35.0, "y": 41.0, "role": "base"},
+        {"x": 39.0, "y": 40.0, "role": "base"},
+        {"x": 35.0, "y": 50.0, "role": "base"},
+        {"x": 30.0, "y": 53.0, "role": "base"},
+        {"x": 22.0, "y": 52.0, "role": "base"},
+        {"x": 26.0, "y": 53.0, "role": "base"},
+        {"x": 23.0, "y": 46.0, "role": "base"},
+        {"x": 48.0, "y": 50.0, "role": "houses"},
+        {"x": 43.0, "y": 52.0, "role": "houses"},
+        {"x": 66.0, "y": 50.0, "role": "houses"},
+        {"x": 60.0, "y": 42.0, "role": "houses"},
+        {"x": 29.0, "y": 59.0, "role": "air"},
+        {"x": 41.0, "y": 57.0, "role": "air"},
+        {"x": 71.0, "y": 50.0, "role": "air"}
+      ]
+    },
+    "texts": {
+      "BtnPreparing": {
+        "ru": "Конвой: сбор колонистов",
+        "en": "Convoy: gathering"
+      },
+      "BtnReady": {
+        "ru": "ОТПРАВИТЬ КОНВОЙ",
+        "en": "SEND THE CONVOY"
+      },
+      "BtnActive": {
+        "ru": "Конвой в пути",
+        "en": "Convoy on the road"
+      },
+      "ReadyMsg": {
+        "ru": "Колонисты готовы. Расчистите дорогу и нажмите «Отправить конвой».",
+        "en": "The colonists are ready. Clear the road and press \"Send the convoy\"."
+      },
+      "SentMsg": {
+        "ru": "Конвой отправлен. Прикрывайте колонистов.",
+        "en": "The convoy is on its way. Cover the colonists."
+      }
+    }
+  },
+  "default_preset": "sniper",
+  "presets": {
+    "sniper": {
+      "label": "Снайперское прикрытие",
+      "message": "Ghost Ops — Снайперское прикрытие",
+      "message_en": "Ghost Ops - Sniper cover",
+      "experimental": true,
+      "card": "Конечный отряд. Конвои по команде. Снайперское прикрытие",
+      "details": [
+        "Один призрак (45 здоровья), постоянная маскировка без расхода энергии",
+        "Snipe: убивает любую вражескую боевую цель, перезарядка 1 с, подготовка 0,3 с, без энергии",
+        "Производство, строительство, найм и исследования запрещены",
+        "Каждый конвой отправляется по вашей команде; налёты на поселение и ПВО сохранены"
+      ],
+      "overrides": {}
+    },
+    "sniper_dev": {
+      "label": "Снайперское прикрытие (отладка)",
+      "message": "Ghost Ops — Снайперское прикрытие (отладка)",
+      "message_en": "Ghost Ops - Sniper cover (debug)",
+      "hidden": true,
+      "extends": "sniper",
+      "card": "Отладочная сборка с журналом",
+      "details": [
+        "Только для разработки"
+      ],
+      "overrides": {
+        "hanson": {
+          "debug_log": true,
+          "autotest": {
+            "mode": 1,
+            "time_scale": 1.0
+          }
+        }
+      }
+    },
+    "ce0_dev": {
+      "label": "CE-0 probe (dev)",
+      "message": "Ghost Ops - CE-0 probe (dev)",
+      "message_en": "Ghost Ops - CE-0 probe (dev)",
+      "hidden": true,
+      "extends": "sniper",
+      "card": "Technical probe for the campaign economy checks",
+      "details": [
+        "Development only"
+      ],
+      "overrides": {
+        "hanson": {
+          "debug_log": true,
+          "lock_development": false
+        },
+        "ce0": {
+          "operation_id": "CE0-TH01",
+          "census_types": [
+            "Ghost",
+            "Marine",
+            "Firebat",
+            "Medic",
+            "SCV",
+            "MissileTurret"
+          ]
+        }
+      }
+    }
+  }
+}

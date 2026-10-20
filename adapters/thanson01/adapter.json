@@ -1,0 +1,67 @@
+{
+  "schema_version": 1,
+  "mission": "thanson01",
+  "title": "Evacuation",
+  "source_map_file": "THanson01.SC2Map",
+  "output_map_file": "GhostOps_THanson01.SC2Map",
+  "script_member": "MapScript.galaxy",
+  "adapter_source": "adapters/thanson01/adapter.galaxy",
+  "config": "config/thanson01.json",
+  "modules": [
+    "core/GhostOpsHanson.galaxy"
+  ],
+  "generators": [
+    "hanson"
+  ],
+  "start_hooks": [
+    {
+      "function": "gt_IntroSequence_Func",
+      "after": "TriggerExecute(gt_StartGame, true, false);",
+      "call": "GhostOps_OnMissionStart();"
+    }
+  ],
+  "extra_hooks": [
+    {
+      "function": "gt_Gathercolonistspriortoevacuation_Func",
+      "before": "auto37AAE177_n = gv_unloadAmount[gv_escortIndex];",
+      "call": "GhostOps_Hanson_Preparing();"
+    },
+    {
+      "function": "gt_ConvoySpawned_Func",
+      "before": "libNtve_gf_SendActorMessageToUnit(gv_tHEONETRUCK, \"AnimBracketStop Work\");",
+      "call": "if (GhostOps_Hanson_Hold(TriggerGetCurrent())) { return true; }"
+    },
+    {
+      "function": "gt_DoomsdayZergAI_Func",
+      "before": "UnitGroupLoopBegin(gv_doomsdayZergUnitGroup);",
+      "call": "GhostOps_Hanson_Probe(gv_missionPhase, gv_escortIndex, gv_convoyTrucksSent, gv_colonistsSaved, gv_colonistsKilled, gv_doomsdayWavesSent);"
+    }
+  ],
+  "init_hook": {
+    "function": "gt_Initialization_Func",
+    "before": "libCamp_gf_LoadCampaignData(4);",
+    "call": "GhostOps_CaptureInit();"
+  },
+  "required_markers": [
+    "gt_StartGame",
+    "gt_IntroSequence_Func",
+    "gt_ConvoySpawned_Func",
+    "gt_Gathercolonistspriortoevacuation_Func",
+    "gt_DoomsdayZergAI_Func",
+    "gt_Initialization_Func",
+    "void InitLibs"
+  ],
+  "ce0_extra": "adapters/thanson01/ce0_extra.galaxy",
+  "ce0_hooks": [
+    {
+      "function": "gt_IntroSequence_Func",
+      "after": "TriggerExecute(gt_StartGame, true, false);",
+      "call": "GhostOps_Ce0_Start();"
+    },
+    {
+      "function": "gt_Victory_Func",
+      "before": "VictoryPanelAddAchievement(\"THanson01_1\");",
+      "call": "GhostOps_Ce0_OnVictory();"
+    }
+  ]
+}

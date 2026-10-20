@@ -1,0 +1,106 @@
+//==================================================================================================
+// GhostOps adapter: Liberation Day (TRaynor01). All mission specific knowledge lives here.
+// Player 1 is the human player (Raynor and his marines). The mission has two intro branches (watch
+// the cinematic / skip it); both end in a cleanup trigger that starts gt_StartGame, and both call
+// GhostOps_OnMissionStart() right after that (see adapter.json). GhostOps_ClaimStart() makes the
+// squad appear exactly once. The squad appears behind the starting group (Start-Marine01A point).
+// The early hook GhostOps_CaptureInit() runs before the mission initialises its difficulty triggers.
+//==================================================================================================
+//--------------------------------------------------------------------------------------------------
+// Wounded squad scene (config key "scene"): right after Raynor's standard first line three short voice
+// clips are played, one after the other, each with its own portrait and a subtitle that matches the clip:
+// Raynor "ready for battle?" -> pause -> a Marine "send reinforcements!" -> pause -> another Marine "Medic!".
+// Durations and pauses are real seconds (the clips play in real time; mission time runs faster at the Faster speed).
+// The details stay in the text (directive message). The scene waits in the dialogue queue behind the
+// standard talks, so nothing overlaps; it is played once (go_sceneDone), never again when the Ghosts
+// (the reinforcements) appear or when a saved game is loaded. Balance and the squad are not touched.
+//--------------------------------------------------------------------------------------------------
+void GhostOps_Scene_Log (string lp_text) {
+    if (!go_sceneDebug) {
+        return;
+    }
+
+    if (go_sceneBank == null) {
+        go_sceneBank = BankLoad("GhostOpsScene", 1);
+    }
+
+    go_sceneLogN += 1;
+    BankValueSetFromString(go_sceneBank, "log", "e" + IntToString(go_sceneLogN), FixedToString(GameGetMissionTime(), 2) + " " + lp_text);
+    BankSave(go_sceneBank);
+}
+
+// The lines are shown in the subtitle message area by the script itself: a transmission with a sound link shows its subtitle only when the
+// player's subtitle option is on (it is off by default), and the text must never depend on that option.
+void GhostOps_Scene_Say (text lp_speaker, text lp_line) {
+    UIDisplayMessage(PlayerGroupAll(), c_messageAreaSubtitle, lp_speaker + StringToText(": ") + lp_line);
+}
+
+bool GhostOps_T1_SceneMsg (bool lp_testConds, bool lp_runActions) {
+    transmissionsource lv_raynor;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    TriggerQueueEnter();
+    lv_raynor = TransmissionSourceFromModel(null);
+    if (go_sceneRaynor != null) {
+        lv_raynor = TransmissionSourceFromUnit(go_sceneRaynor, true, false, "Talk");
+    }
+
+    GhostOps_Scene_Log("scene: Raynor line on screen");
+    libCamp_gf_SetAllSoundChannelVolumesCampaign(1);
+    libLbty_gf_PlayTransmissionCueSound(PlayerGroupAll());
+    GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsScene_RaynorName"), StringExternal("Param/Value/GhostOpsScene_RaynorLine"));
+    TransmissionSend(PlayerGroupAll(), lv_raynor, libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", go_sceneRaynorClip, null, null, go_sceneRaynorLen, c_transmissionDurationSet, true);
+    libCamp_gf_SetAllSoundChannelVolumesCampaign(2);
+    GhostOps_Scene_Log("scene: Raynor line finished");
+    Wait(go_scenePause, c_timeReal);
+    UIDisplayMessage(PlayerGroupAll(), c_messageAreaDirective, StringExternal("Param/Value/GhostOpsScene_Explain"));
+    GhostOps_Scene_Log("scene: Marine B line on screen");
+    libCamp_gf_SetAllSoundChannelVolumesCampaign(1);
+    libLbty_gf_PlayTransmissionCueSound(PlayerGroupAll());
+    GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsScene_MarineName"), StringExternal("Param/Value/GhostOpsScene_MarineBLine"));
+    TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("Marine1Portrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", go_sceneMarineBClip, null, null, go_sceneMarineBLen, c_transmissionDurationSet, true);
+    libCamp_gf_SetAllSoundChannelVolumesCampaign(2);
+    GhostOps_Scene_Log("scene: Marine B line finished");
+    Wait(go_scenePause, c_timeReal);
+    GhostOps_Scene_Log("scene: Marine A line on screen");
+    libCamp_gf_SetAllSoundChannelVolumesCampaign(1);
+    libLbty_gf_PlayTransmissionCueSound(PlayerGroupAll());
+    GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsScene_MarineName"), StringExternal("Param/Value/GhostOpsScene_MarineALine"));
+    TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("Marine2Portrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", go_sceneMarineAClip, null, null, go_sceneMarineALen, c_transmissionDurationSet, true);
+    libCamp_gf_SetAllSoundChannelVolumesCampaign(2);
+    GhostOps_Scene_Log("scene: Marine A line finished");
+    TriggerQueueExit();
+    return true;
+}
+
+// Called from the hook in the standard opening line (adapter.json, extra_hooks) with Raynor's unit.
+void GhostOps_T1_OnOpeningLine (unit lp_raynor) {
+    GhostOps_ApplySceneConfig();
+    if (!go_sceneEnabled || go_sceneDone) {
+        return;
+    }
+
+    go_sceneDone = true;
+    go_sceneRaynor = lp_raynor;
+    GhostOps_Scene_Log("scene: started after the opening line");
+    GhostOps_Scene_Log("scene: clip lengths " + FixedToString(SoundLengthSync(go_sceneRaynorClip), 2) + " " + FixedToString(SoundLengthSync(go_sceneMarineBClip), 2) + " " + FixedToString(SoundLengthSync(go_sceneMarineAClip), 2));
+    TriggerExecute(TriggerCreate("GhostOps_T1_SceneMsg"), true, false);
+}
+
+void GhostOps_OnMissionStart () {
+    if (!GhostOps_ClaimStart()) {
+        return;
+    }
+
+    GhostOps_Init();
+    GhostOps_SetPlayerCovered(1, true);
+    GhostOps_SpawnOperatives(1, PointWithOffset(PointFromId(505), 0.0, -4.0));
+    GhostOps_Start();
+    GhostOps_ReportProfile();
+    GhostOps_ReportDifficulty(1);
+    // Diagnostic: put the camera on the starting group (the original script leaves it at CameraInfoDefault()).
+    CameraPan(1, PointFromId(505), 0.0, -1, 10, false);
+}

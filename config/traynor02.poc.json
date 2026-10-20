@@ -1,11 +1,13 @@
 {
-  "schema_version": 3,
+  "schema_version": 4,
   "mission": "traynor02",
   "operatives": {
     "squad": [
       "Nova",
       "Ghost",
-      "Ghost"
+      "Ghost",
+      "Medic",
+      "Medic"
     ],
     "start_hold_fire": true,
     "ghost_permanent_cloak": true,
@@ -22,5 +24,353 @@
     "timers": "original",
     "victory": "original"
   },
-  "nukes_granted": 0
+  "nukes_granted": 0,
+  "difficulty": {
+    "expected": 3,
+    "show_message": true
+  },
+  "default_preset": "tactical",
+  "presets": {
+    "prototype": {
+      "label": "Прототип (Нова)",
+      "message": "Ghost Ops — Прототип",
+      "message_en": "Ghost Ops - Prototype",
+      "hidden": true,
+      "card": "Прежний прототип: Нова, два призрака, два медика и усиление армии",
+      "details": [
+        "Прежний прототип (доступен из командной строки: --preset prototype)"
+      ],
+      "overrides": {}
+    },
+    "tactical": {
+      "label": "Тактический",
+      "message": "Ghost Ops — Тактический",
+      "message_en": "Ghost Ops - Tactical",
+      "experimental": true,
+      "card": "Малый отряд: сильный гарнизон базы, два призрака и одна ядерная ракета",
+      "details": [
+        "Гарнизон базы: морпехи с исходной базы бьют в 20 раз сильнее, но стреляют только в зоне обороны",
+        "Обученные морпехи: 1 здоровье, атаковать не могут",
+        "Спасённые повстанцы: обычные морпехи и медики",
+        "Два призрака 45/45 прилетают на транспорте через несколько десятков секунд после начала: Наводчик и Оперативник, невосполнимые",
+        "Одна ядерная ракета, только у Наводчика: наведение 12 с, отход 6 с",
+        "Смерть Наводчика до запуска — поражение; после запуска ракета долетает",
+        "Нова, медики и усиление армии не используются"
+      ],
+      "overrides": {
+        "audio": {
+          "clips": [
+            {
+              "id": "GhostOpsAdjutantAlert",
+              "source": "assets/audio/traynor02/adjutant_alert.wav"
+            },
+            {
+              "id": "GhostOpsSwannHelp",
+              "source": "assets/audio/traynor02/swann_B.wav"
+            },
+            {
+              "id": "GhostOpsGhostReady",
+              "source": "assets/audio/traynor02/ghost_ready00.wav"
+            }
+          ]
+        },
+        "operatives": {
+          "squad": [
+            "Ghost",
+            "Ghost"
+          ],
+          "start_hold_fire": false,
+          "ghost_permanent_cloak": false,
+          "ghost_start_cloaked": false
+        },
+        "base_support": {
+          "damage_multiplier": 1
+        },
+        "difficulty": {
+          "expected": 3,
+          "show_message": false
+        },
+        "ghost_tuning": {
+          "energy_start": 100,
+          "energy_max": 100,
+          "regen_per_second": 20,
+          "cloak_activation_cost": 0,
+          "cloak_net_per_second": -10,
+          "ghost_life": 45,
+          "snipe": {
+            "cost": 10,
+            "damage": 45,
+            "cast_time": 0.3,
+            "cooldown": 7
+          },
+          "remove_abilities": [
+            "EMP"
+          ]
+        },
+        "tactical": {
+          "debug_log": false,
+          "garrison": {
+            "damage_multiplier": 20,
+            "zone": {
+              "center": [
+                86.0,
+                31.0
+              ],
+              "radius": 16.0
+            },
+            "show_border": true
+          },
+          "trained_marine": {
+            "life": 1,
+            "can_attack": false
+          },
+          "academy": {
+            "position": [
+              98.5,
+              28.5
+            ],
+            "arm_time": 1
+          },
+          "nuke": {
+            "aim_time": 12,
+            "flight_time": 6,
+            "range": 12
+          },
+          "texts": {
+            "ZoneLeft": {
+              "ru": "Морпехи гарнизона вне зоны обороны: оружие отключено до возвращения на базу.",
+              "en": "Garrison Marines outside the defence zone: weapon disabled until they return to the base."
+            },
+            "RoleSpotter": {
+              "ru": "Наводчик",
+              "en": "Spotter"
+            },
+            "RoleOperative": {
+              "ru": "Оперативник",
+              "en": "Operative"
+            },
+            "InfoSpotter": {
+              "ru": "Единственный, кто может вызвать ядерный удар. Если погибнет до запуска, операция провалена.",
+              "en": "The only unit that can call the nuclear strike. If he dies before the launch the operation has failed."
+            },
+            "InfoOperative": {
+              "ru": "Разведка и точные выстрелы. Ядерный удар ему недоступен.",
+              "en": "Scouting and precise shots. He cannot call the nuclear strike."
+            },
+            "NukeReady": {
+              "ru": "Ядерная ракета готова. Только Наводчик может навести удар.",
+              "en": "The nuclear missile is ready. Only the Spotter can call the strike."
+            },
+            "Aiming": {
+              "ru": "Наведение: не двигайтесь {aim_time} секунд. Отмена возвращает ракету в готовность.",
+              "en": "Aiming: do not move for {aim_time} seconds. Cancelling returns the missile to ready."
+            },
+            "AimCancelled": {
+              "ru": "Наведение отменено. Ракета готова.",
+              "en": "Aiming cancelled. The missile is ready."
+            },
+            "Launched": {
+              "ru": "Ракета запущена — отходите!",
+              "en": "Missile launched - get out!"
+            },
+            "SpotterLost": {
+              "ru": "Наводчик погиб до запуска ракеты. Операция провалена.",
+              "en": "The Spotter died before the launch. The operation has failed."
+            },
+            "SpotterLostAfter": {
+              "ru": "Наводчик погиб, но ракета уже запущена и достигнет цели.",
+              "en": "The Spotter died, but the missile is already launched and will reach its target."
+            },
+            "AcademyLost": {
+              "ru": "Академия призраков уничтожена. Ракета потеряна.",
+              "en": "The Ghost Academy is destroyed. The missile is lost."
+            },
+            "AlertTitle": {
+              "ru": "Тревога!",
+              "en": "Alert!"
+            },
+            "AlertText": {
+              "ru": "Компьютеры базы заражены вирусом. Оружие гарнизона работает только возле базы. Новые клоны морпехов ослаблены и небоеспособны.",
+              "en": "The base computers are infected with a virus. The garrison weapons only work near the base. New Marine clones are weakened and unable to fight."
+            },
+            "SwannName": {
+              "ru": "Свонн",
+              "en": "Swann"
+            },
+            "SwannText": {
+              "ru": "Я решил, что помощь тебе не помешает.",
+              "en": "I figured you could use some help."
+            },
+            "GhostName": {
+              "ru": "Призрак",
+              "en": "Ghost"
+            },
+            "GhostText": {
+              "ru": "Призрак явился.",
+              "en": "Ghost reporting."
+            },
+            "ArrivalText": {
+              "ru": "Прибыло подкрепление: спецотряд призраков избежал заражения. Используйте ядерный удар для штурма базы противника. Доступна только одна ракета.",
+              "en": "Reinforcements have arrived: the Ghost special unit escaped the infection. Use the nuclear strike to storm the enemy base. Only one missile is available."
+            },
+            "ObjectiveTitle": {
+              "ru": "Спецотряд и ядерный удар",
+              "en": "Special unit and nuclear strike"
+            },
+            "ObjectiveText": {
+              "ru": "Наводчик — единственный, кто может вызвать ядерный удар; ракета одна. Смерть Наводчика до необратимого запуска — поражение. После запуска у вас {flight_time} секунд: отойдите из зоны собственного взрыва, он может убить и своих. Запуск сам по себе миссию не завершает: после взрыва уничтожьте оставшиеся силы и здания. Спасённые повстанцы сохраняют обычные характеристики.",
+              "en": "Only the Spotter can call the nuclear strike; there is one missile. If the Spotter dies before the irreversible launch the mission is lost. After the launch you have {flight_time} seconds: leave the zone of your own blast, it can kill your own units. The launch does not end the mission: after the blast destroy the remaining forces and buildings. Rescued rebels keep their normal stats."
+            },
+            "Tip1Title": {
+              "ru": "Вирус на базе",
+              "en": "Virus on the base"
+            },
+            "Tip1Text": {
+              "ru": "Оружие исходного гарнизона работает только в зоне обороны (кольцо из «+»). Новые морпехи имеют 1 здоровья и не могут атаковать.",
+              "en": "The weapons of the original garrison only work inside the defence zone (the ring of \"+\"). New Marines have 1 life and cannot attack."
+            },
+            "Tip2Title": {
+              "ru": "Наводчик и Оперативник",
+              "en": "Spotter and Operative"
+            },
+            "Tip2Text": {
+              "ru": "Только Наводчик может вызвать ядерный удар. Оперативник — разведка и Snipe. Призраки не восполняются.",
+              "en": "Only the Spotter can call the nuclear strike. The Operative scouts and uses Snipe. The Ghosts cannot be replaced."
+            },
+            "Tip3Title": {
+              "ru": "Ядерный удар",
+              "en": "Nuclear strike"
+            },
+            "Tip3Text": {
+              "ru": "Наведение {aim_time} секунд: Наводчик стоит на месте, отмена возвращает ракету. После запуска до взрыва {flight_time} секунд — отходите.",
+              "en": "Aiming takes {aim_time} seconds: the Spotter stands still, cancelling returns the missile. After the launch the blast comes in {flight_time} seconds: get out."
+            },
+            "Tip4Title": {
+              "ru": "Повстанцы и победа",
+              "en": "Rebels and victory"
+            },
+            "Tip4Text": {
+              "ru": "Спасённые повстанцы сохраняют обычные характеристики. Запуск ракеты миссию не завершает: добейте оставшиеся силы и здания.",
+              "en": "Rescued rebels keep their normal stats. The launch does not end the mission: finish the remaining forces and buildings."
+            }
+          },
+          "story": {
+            "first_delay": 15,
+            "second_delay": 15,
+            "alert_seconds": 14,
+            "swann_seconds": 6,
+            "arrival_seconds": 10,
+            "ghost_seconds": 5
+          }
+        }
+      }
+    },
+    "tactical_dev": {
+      "label": "Тактический (отладка)",
+      "message": "Ghost Ops — Тактический (отладка)",
+      "message_en": "Ghost Ops - Tactical (debug)",
+      "hidden": true,
+      "extends": "tactical",
+      "card": "Отладочная сборка с журналом",
+      "details": [
+        "Только для разработки"
+      ],
+      "overrides": {
+        "tactical": {
+          "debug_log": true,
+          "autotest": {
+            "mode": 4,
+            "target": [
+              43.0,
+              97.5
+            ],
+            "spotter": [
+              44.0,
+              86.0
+            ],
+            "retreat": [
+              44.0,
+              62.0
+            ]
+          },
+          "story": {
+            "first_delay": 3,
+            "second_delay": 15,
+            "alert_seconds": 4,
+            "swann_seconds": 3,
+            "arrival_seconds": 4,
+            "ghost_seconds": 3
+          }
+        }
+      }
+    },
+    "ce0_dev": {
+      "label": "CE-0 probe (dev)",
+      "message": "Ghost Ops - CE-0 probe (dev)",
+      "message_en": "Ghost Ops - CE-0 probe (dev)",
+      "hidden": true,
+      "extends": "tactical",
+      "card": "Technical probe for the campaign economy checks",
+      "details": [
+        "Development only"
+      ],
+      "overrides": {
+        "tactical": {
+          "debug_log": true,
+          "story": {
+            "first_delay": 3,
+            "second_delay": 6,
+            "alert_seconds": 4,
+            "swann_seconds": 3,
+            "arrival_seconds": 4,
+            "ghost_seconds": 3
+          }
+        },
+        "ce0": {
+          "operation_id": "CE0-TR02",
+          "census_types": [
+            "Ghost",
+            "Marine",
+            "Medic",
+            "SCV",
+            "MissileTurret"
+          ]
+        }
+      }
+    },
+    "ce0_wait_dev": {
+      "label": "CE-0 probe, Swann wait (dev)",
+      "message": "Ghost Ops - CE-0 probe (dev)",
+      "message_en": "Ghost Ops - CE-0 probe (dev)",
+      "hidden": true,
+      "extends": "tactical",
+      "card": "Technical probe for the campaign economy checks",
+      "details": [
+        "Development only"
+      ],
+      "overrides": {
+        "tactical": {
+          "debug_log": true,
+          "story": {
+            "first_delay": 3,
+            "second_delay": 70,
+            "alert_seconds": 4,
+            "swann_seconds": 3,
+            "arrival_seconds": 4,
+            "ghost_seconds": 3
+          }
+        },
+        "ce0": {
+          "operation_id": "CE0-TR02W",
+          "census_types": [
+            "Ghost",
+            "Marine",
+            "Medic",
+            "SCV",
+            "MissileTurret"
+          ]
+        }
+      }
+    }
+  }
 }

@@ -38,9 +38,10 @@ class MpqTests(unittest.TestCase):
 
 class PatchTests(unittest.TestCase):
     def setUp(self):
-        self.adapter = json.load(open(os.path.join(ROOT, 'adapters', 'traynor02', 'adapter.json')))
+        self.adapter = json.load(open(os.path.join(ROOT, 'adapters', 'traynor02', 'adapter.json'), encoding='utf-8'))
         self.adapter['required_markers'] = ['gt_StartGame', 'gt_IntroSequence_Func', 'CameraInfoFromId(1117)', 'void InitLibs']
-        self.cfg = json.load(open(os.path.join(ROOT, 'config', 'traynor02.poc.json')))
+        self.adapter['start_hooks'] = self.adapter['start_hooks'][:1]  # the synthetic script only has the intro function
+        self.cfg = json.load(open(os.path.join(ROOT, 'config', 'traynor02.poc.json'), encoding='utf-8'))
 
     def cfg_with(self, **kw):
         c = json.loads(json.dumps(self.cfg))

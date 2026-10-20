@@ -1,0 +1,500 @@
+//==================================================================================================
+// GhostOps module: THanson01 scripted checks (DEVELOPMENT ONLY).
+// Included only when the configuration has hanson.autotest (hidden preset sniper_dev); never part of a playable build.
+// Everything is written to Documents\StarCraft II\Banks\GhostOpsHanson.SC2Bank through GhostOps_Hanson_Log.
+//   mode 1  Snipe: ground / air / strongest targets, friendly targets, cooldown, energy, cloak and detection
+//   mode 2  development lock, repair of a turret by an SCV, marine refill (needs the escort phase: the Ghost walks in)
+//   mode 3  convoy command: log only (the button is pressed from outside)
+//   mode 4  convoy command: the test presses the button itself, repeatedly (several convoys)
+//   mode 5  raids on the settlement: 8, 12+2 and 16+2 Mutalisks like the original late raids, observing the turrets
+//   mode 6  ASCII map of the settlement (pathing)
+//==================================================================================================
+int go_htMode;
+fixed go_htScale;
+fixed go_htGhostSpawnX;
+trigger go_htTrig;
+int go_htLastCmdState;
+fixed go_htLastLog;
+int go_htAutoClicks;
+bool go_htRaidActive;
+unitgroup go_htRaiders;
+
+int GhostOps_HT_B (bool lp_v) {
+    if (lp_v) {
+        return 1;
+    }
+
+    return 0;
+}
+
+void GhostOps_HT_Report (string lp_tag) {
+    unit lv_ghost;
+    int lv_i;
+    int lv_alive;
+    fixed lv_life;
+
+    lv_ghost = GhostOps_SquadUnit(0);
+    lv_alive = 0;
+    lv_life = 0.0;
+    lv_i = 0;
+    while (lv_i < go_hTurretCount) {
+        if (UnitIsAlive(go_hTurret[lv_i])) {
+            lv_alive += 1;
+            lv_life += UnitGetPropertyFixed(go_hTurret[lv_i], c_unitPropLifePercent, c_unitPropCurrent);
+        }
+
+        lv_i += 1;
+    }
+
+    GhostOps_Hanson_Log(lp_tag + " | turrets alive " + IntToString(lv_alive) + "/" + IntToString(go_hTurretCount) + " life% sum " + FixedToString(lv_life, 0)
+        + " | raiders alive " + IntToString(UnitGroupCount(go_htRaiders, c_unitCountAlive)));
+    GhostOps_Hanson_Log("   ghost alive " + IntToString(GhostOps_HT_B(UnitIsAlive(lv_ghost))) + " cloaked " + IntToString(GhostOps_HT_B(UnitTestState(lv_ghost, c_unitStateCloaked)))
+        + " energy " + FixedToString(UnitGetPropertyFixed(lv_ghost, c_unitPropEnergy, c_unitPropCurrent), 1) + " life " + FixedToString(UnitGetPropertyFixed(lv_ghost, c_unitPropLife, c_unitPropCurrent), 1)
+        + "/" + FixedToString(UnitGetPropertyFixed(lv_ghost, c_unitPropLifeMax, c_unitPropCurrent), 1));
+}
+
+// ---- mode 1 --------------------------------------------------------------------------------
+bool GhostOps_HT_SnipeTarget (string lp_type, int lp_owner, fixed lp_dx, fixed lp_dy) {
+    unit lv_ghost;
+    unit lv_t;
+    fixed lv_t0;
+    fixed lv_e0;
+
+    lv_ghost = GhostOps_SquadUnit(0);
+    UnitCreate(1, lp_type, 0, lp_owner, PointWithOffset(UnitGetPosition(lv_ghost), lp_dx, lp_dy), 270.0);
+    lv_t = UnitLastCreated();
+    libNtve_gf_PauseUnit(lv_t, true);
+    Wait(0.5, c_timeGame);
+    lv_e0 = UnitGetPropertyFixed(lv_ghost, c_unitPropEnergy, c_unitPropCurrent);
+    lv_t0 = GameGetMissionTime();
+    UnitIssueOrder(lv_ghost, OrderTargetingUnit(AbilityCommand("Snipe", 0), lv_t), c_orderQueueReplace);
+    Wait(0.1, c_timeGame);
+    GhostOps_Hanson_Log("   order accepted: queued orders " + IntToString(UnitOrderCount(lv_ghost)));
+    while (UnitIsAlive(lv_t) && ((GameGetMissionTime() - lv_t0) < 6.0)) {
+        Wait(0.0625, c_timeGame);
+    }
+
+    GhostOps_Hanson_Log("snipe " + lp_type + " owner " + IntToString(lp_owner) + " dead " + IntToString(GhostOps_HT_B(!UnitIsAlive(lv_t)))
+        + " after " + FixedToString(GameGetMissionTime() - lv_t0, 2) + "s, t " + FixedToString(GameGetMissionTime(), 2) + ", energy " + FixedToString(lv_e0, 1) + "->" + FixedToString(UnitGetPropertyFixed(lv_ghost, c_unitPropEnergy, c_unitPropCurrent), 1)
+        + ", life of target before: " + FixedToString(UnitGetPropertyFixed(lv_t, c_unitPropLifeMax, c_unitPropCurrent), 0));
+    if (UnitIsAlive(lv_t)) {
+        UnitRemove(lv_t);
+        Wait(2.5, c_timeGame);
+        return false;
+    }
+
+    Wait(2.5, c_timeGame);
+    return true;
+}
+
+// two Zerglings, the second order is given the moment the first one dies and repeated until the cast starts
+void GhostOps_HT_Cooldown () {
+    unit lv_ghost;
+    unit lv_a;
+    unit lv_b;
+    fixed lv_ta;
+    fixed lv_tb;
+    fixed lv_cast;
+
+    lv_ghost = GhostOps_SquadUnit(0);
+    UnitCreate(1, "Zergling", 0, 2, PointWithOffset(UnitGetPosition(lv_ghost), 7.0, 0.0), 270.0);
+    lv_a = UnitLastCreated();
+    UnitCreate(1, "Zergling", 0, 2, PointWithOffset(UnitGetPosition(lv_ghost), 7.0, 1.0), 270.0);
+    lv_b = UnitLastCreated();
+    libNtve_gf_PauseUnit(lv_a, true);
+    libNtve_gf_PauseUnit(lv_b, true);
+    Wait(1.0, c_timeGame);
+    UnitIssueOrder(lv_ghost, OrderTargetingUnit(AbilityCommand("Snipe", 0), lv_a), c_orderQueueReplace);
+    lv_cast = GameGetMissionTime();
+    while (UnitIsAlive(lv_a)) {
+        Wait(0.0625, c_timeGame);
+    }
+
+    lv_ta = GameGetMissionTime();
+    UnitIssueOrder(lv_ghost, OrderTargetingUnit(AbilityCommand("Snipe", 0), lv_b), c_orderQueueReplace);
+    while (UnitIsAlive(lv_b) && ((GameGetMissionTime() - lv_ta) < 5.0)) {
+        if (UnitOrderCount(lv_ghost) == 0) {
+            UnitIssueOrder(lv_ghost, OrderTargetingUnit(AbilityCommand("Snipe", 0), lv_b), c_orderQueueReplace);
+        }
+
+        Wait(0.0625, c_timeGame);
+    }
+
+    lv_tb = GameGetMissionTime();
+    GhostOps_Hanson_Log("cooldown test: first death after " + FixedToString(lv_ta - lv_cast, 2) + " s from the order, second death " + FixedToString(lv_tb - lv_ta, 2) + " s after the first, " + FixedToString(lv_tb - lv_cast, 2) + " s after the first order (second alive " + IntToString(GhostOps_HT_B(UnitIsAlive(lv_b))) + ")");
+}
+
+void GhostOps_HT_Mode1 () {
+    unit lv_ghost;
+    unit lv_h;
+    unit lv_o;
+    unit lv_m;
+    fixed lv_life0;
+
+    Wait(6.0, c_timeGame);
+    lv_ghost = GhostOps_SquadUnit(0);
+    GhostOps_HT_Report("start");
+    GhostOps_Hanson_Log("catalog: " + GhostOps_TuningText());
+    GhostOps_Hanson_Log("catalog range " + CatalogFieldValueGet(c_gameCatalogAbil, "Snipe", "Range", 1) + " filters " + CatalogFieldValueGet(c_gameCatalogAbil, "Snipe", "TargetFilters", 1));
+    // detection: a hydralisk without a detector must not see the cloaked Ghost, with an Overseer next to it it does.
+    // the Zerg are passive towards the player in the original (the attack waves fight anyway); make them real enemies for this test
+    libNtve_gf_SetAlliance(1, 2, 8);
+    // Step 1: a visible Marine of the player next to the Ghost proves that the hydralisk fights at all.
+    UnitCreate(1, "Marine", 0, 1, PointWithOffset(UnitGetPosition(lv_ghost), 2.0, 1.0), 270.0);
+    lv_m = UnitLastCreated();
+    UnitSetPropertyFixed(lv_m, c_unitPropLifeMax, 2000.0);
+    UnitSetPropertyFixed(lv_m, c_unitPropLife, 2000.0);
+    UnitCreate(1, "Hydralisk", 0, 2, PointWithOffset(UnitGetPosition(lv_ghost), 5.0, 0.0), 270.0);
+    lv_h = UnitLastCreated();
+    lv_life0 = UnitGetPropertyFixed(lv_ghost, c_unitPropLife, c_unitPropCurrent);
+    Wait(6.0, c_timeGame);
+    GhostOps_Hanson_Log("detect 1: ghost visible to player 2: " + IntToString(GhostOps_HT_B(UnitFilterMatch(lv_ghost, 2, UnitFilter((1 << c_targetFilterVisible), 0, 0, 0)))) + "; no detector: ghost life " + FixedToString(lv_life0, 1) + " -> " + FixedToString(UnitGetPropertyFixed(lv_ghost, c_unitPropLife, c_unitPropCurrent), 1)
+        + ", visible marine life 2000 -> " + FixedToString(UnitGetPropertyFixed(lv_m, c_unitPropLife, c_unitPropCurrent), 1) + ", cloaked " + IntToString(GhostOps_HT_B(UnitTestState(lv_ghost, c_unitStateCloaked))));
+    UnitKill(lv_m);
+    UnitCreate(1, "Overseer", 0, 2, PointWithOffset(UnitGetPosition(lv_ghost), 4.0, 2.0), 270.0);
+    lv_o = UnitLastCreated();
+    lv_life0 = UnitGetPropertyFixed(lv_ghost, c_unitPropLife, c_unitPropCurrent);
+    Wait(8.0, c_timeGame);
+    GhostOps_Hanson_Log("detect 2: ghost visible to player 2: " + IntToString(GhostOps_HT_B(UnitFilterMatch(lv_ghost, 2, UnitFilter((1 << c_targetFilterVisible), 0, 0, 0)))) + "; with an Overseer: ghost life " + FixedToString(lv_life0, 1) + " -> " + FixedToString(UnitGetPropertyFixed(lv_ghost, c_unitPropLife, c_unitPropCurrent), 1) + ", cloaked " + IntToString(GhostOps_HT_B(UnitTestState(lv_ghost, c_unitStateCloaked))));
+    libNtve_gf_SetAlliance(1, 2, 5);
+    UnitRemove(lv_h);
+    UnitRemove(lv_o);
+    if (!UnitIsAlive(lv_ghost)) {
+        GhostOps_Hanson_Log("ghost died in the detection test; a new one is not created, the test ends");
+        return;
+    }
+
+    UnitSetPropertyFixed(lv_ghost, c_unitPropLife, UnitGetPropertyFixed(lv_ghost, c_unitPropLifeMax, c_unitPropCurrent));
+    // Snipe on the targets one after another
+    GhostOps_HT_SnipeTarget("Zergling", 2, 7.0, 0.0);
+    GhostOps_HT_SnipeTarget("Hydralisk", 2, 7.0, 1.0);
+    GhostOps_HT_SnipeTarget("Roach", 2, 7.0, -1.0);
+    GhostOps_HT_SnipeTarget("Mutalisk", 2, 7.0, 2.0);
+    GhostOps_HT_SnipeTarget("Overseer", 2, 7.0, -2.0);
+    GhostOps_HT_SnipeTarget("Corruptor", 2, 7.0, 0.5);
+    GhostOps_HT_SnipeTarget("Ultralisk", 2, 8.0, 0.0);
+    GhostOps_HT_SnipeTarget("Baneling", 2, 7.0, -0.5);
+    GhostOps_HT_SnipeTarget("Queen", 2, 7.0, 1.5);
+    // targets that must be refused
+    GhostOps_HT_SnipeTarget("Marine", 4, 6.0, 0.0);
+    GhostOps_HT_SnipeTarget("Civilian", 4, 6.0, 1.0);
+    GhostOps_HT_SnipeTarget("ColonistTransport", 4, 6.0, -2.0);
+    GhostOps_HT_SnipeTarget("SpineCrawler", 2, 7.0, 3.0);
+    GhostOps_HT_SnipeTarget("Marine", 1, 6.0, -1.5);
+    // cooldown: two Zerglings back to back, the time between the two deaths
+    GhostOps_HT_Cooldown();
+    GhostOps_HT_Report("end of mode 1");
+}
+
+// ---- mode 2 --------------------------------------------------------------------------------
+void GhostOps_HT_TryOrder (unit lp_unit, string lp_abil, int lp_count, point lp_target, string lp_label) {
+    int lv_i;
+
+    lv_i = 0;
+    while (lv_i < lp_count) {
+        UnitIssueOrder(lp_unit, Order(AbilityCommand(lp_abil, lv_i)), c_orderQueueReplace);
+        Wait(0.2, c_timeGame);
+        GhostOps_Hanson_Log("order " + lp_label + " " + lp_abil + " " + IntToString(lv_i) + " -> queued orders " + IntToString(UnitOrderCount(lp_unit)));
+        UnitIssueOrder(lp_unit, Order(AbilityCommand("stop", 0)), c_orderQueueReplace);
+        lv_i += 1;
+    }
+}
+
+void GhostOps_HT_Mode2 () {
+    unit lv_cc;
+    unit lv_rax;
+    unit lv_merc;
+    unit lv_scv;
+    unit lv_tur;
+    int lv_i;
+    int lv_n;
+    int lv_marines;
+
+    lv_n = 0;
+    // walk into the settlement: the original switches to the escort phase
+    Wait(4.0, c_timeGame);
+    UnitSetPosition(GhostOps_SquadUnit(0), RegionGetCenter(RegionFromId(29)), false);
+    while (go_hPhase != 1) {
+        Wait(0.5, c_timeGame);
+    }
+
+    Wait(20.0, c_timeGame);
+    GhostOps_Hanson_Log("lock: SCV allowed " + IntToString(GhostOps_HT_B(TechTreeUnitIsAllowed(1, "SCV"))) + ", Marine " + IntToString(GhostOps_HT_B(TechTreeUnitIsAllowed(1, "Marine")))
+        + ", Barracks " + IntToString(GhostOps_HT_B(TechTreeUnitIsAllowed(1, "Barracks"))) + ", MissileTurret " + IntToString(GhostOps_HT_B(TechTreeUnitIsAllowed(1, "MissileTurret")))
+        + ", SupplyDepot " + IntToString(GhostOps_HT_B(TechTreeUnitIsAllowed(1, "SupplyDepot"))) + ", Firebat " + IntToString(GhostOps_HT_B(TechTreeUnitIsAllowed(1, "Firebat")))
+        + ", Ghost " + IntToString(GhostOps_HT_B(TechTreeUnitIsAllowed(1, "Ghost"))) + ", Stimpack " + IntToString(GhostOps_HT_B(TechTreeUpgradeIsAllowed(1, "Stimpack"))));
+    lv_cc = UnitGroupRandomUnit(UnitGroup("CommandCenter", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive);
+    lv_rax = UnitGroupRandomUnit(UnitGroup("Barracks", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive);
+    lv_merc = UnitGroupRandomUnit(UnitGroup("MercCompound", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive);
+    GhostOps_Hanson_Log("structures of player 1: cc " + IntToString(GhostOps_HT_B(lv_cc != null)) + " barracks " + IntToString(GhostOps_HT_B(lv_rax != null)) + " merc " + IntToString(GhostOps_HT_B(lv_merc != null)));
+    GhostOps_Hanson_Log("minerals " + IntToString(PlayerGetPropertyInt(1, c_playerPropMinerals)) + " gas " + IntToString(PlayerGetPropertyInt(1, c_playerPropVespene)));
+    PlayerModifyPropertyInt(1, c_playerPropMinerals, c_playerPropOperSetTo, 5000);
+    PlayerModifyPropertyInt(1, c_playerPropVespene, c_playerPropOperSetTo, 2000);
+    GhostOps_HT_TryOrder(lv_cc, "CommandCenterTrain", 2, null, "cc");
+    GhostOps_HT_TryOrder(lv_rax, "BarracksTrain", 6, null, "barracks");
+    GhostOps_HT_TryOrder(lv_rax, "BarracksAddOns", 2, null, "barracks addon");
+    GhostOps_HT_TryOrder(lv_merc, "MercCompoundResearch", 8, null, "merc");
+    lv_scv = UnitGroupRandomUnit(UnitGroup("SCV", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive);
+    GhostOps_Hanson_Log("scv found " + IntToString(GhostOps_HT_B(lv_scv != null)));
+    lv_i = 1;
+    while (lv_i < 14) {
+        UnitIssueOrder(lv_scv, OrderTargetingPoint(AbilityCommand("TerranBuild", lv_i), PointWithOffset(UnitGetPosition(lv_scv), 6.0, -6.0)), c_orderQueueReplace);
+        Wait(0.2, c_timeGame);
+        GhostOps_Hanson_Log("order scv build " + IntToString(lv_i) + " -> queued orders " + IntToString(UnitOrderCount(lv_scv)));
+        UnitIssueOrder(lv_scv, Order(AbilityCommand("stop", 0)), c_orderQueueReplace);
+        lv_i += 1;
+    }
+
+    UnitIssueOrder(lv_scv, OrderTargetingPoint(AbilityCommand("TerranBuild", 0), PointWithOffset(UnitGetPosition(lv_scv), 6.0, -6.0)), c_orderQueueReplace);
+    Wait(14.0, c_timeGame);
+    GhostOps_Hanson_Log("after the build orders: structures of player 1 " + IntToString(UnitGroupCount(UnitGroup(null, 1, RegionEntireMap(), UnitFilter((1 << c_targetFilterStructure), 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive))
+        + ", CommandCenters " + IntToString(UnitGroupCount(UnitGroup("CommandCenter", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive)) + ", minerals " + IntToString(PlayerGetPropertyInt(1, c_playerPropMinerals)));
+    // repair: a damaged turret next to an SCV (SCVs and turrets belong to different players: repair of an ally)
+    lv_tur = go_hTurret[0];
+    UnitSetPropertyFixed(lv_tur, c_unitPropLifePercent, 30.0);
+    UnitIssueOrder(lv_scv, OrderTargetingUnit(AbilityCommand("Repair", 0), lv_tur), c_orderQueueReplace);
+    Wait(1.0, c_timeGame);
+    GhostOps_Hanson_Log("repair order accepted: queued orders " + IntToString(UnitOrderCount(lv_scv)) + ", turret life% " + FixedToString(UnitGetPropertyFixed(lv_tur, c_unitPropLifePercent, c_unitPropCurrent), 1));
+    Wait(30.0, c_timeGame);
+    GhostOps_Hanson_Log("repair: turret life% after 30 s " + FixedToString(UnitGetPropertyFixed(lv_tur, c_unitPropLifePercent, c_unitPropCurrent), 1) + ", scv order count " + IntToString(UnitOrderCount(lv_scv)));
+    // supplies and units that exist now
+    GhostOps_Hanson_Log("units of player 1 now: SCV " + IntToString(UnitGroupCount(UnitGroup("SCV", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive))
+        + ", Marine " + IntToString(UnitGroupCount(UnitGroup("Marine", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive))
+        + ", Barracks " + IntToString(UnitGroupCount(UnitGroup("Barracks", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive)));
+    // marine refill: kill allied marines near the spawn point, count again after a while
+    lv_marines = UnitGroupCount(UnitGroup("Marine", 4, RegionCircle(PointFromId(2079), 12.0), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive);
+    GhostOps_Hanson_Log("allied marines near the settlement: " + IntToString(lv_marines));
+    UnitGroupLoopBegin(UnitGroup("Marine", 4, RegionCircle(PointFromId(2079), 12.0), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0));
+    while (!UnitGroupLoopDone()) {
+        lv_n += 1;
+        if (lv_n <= 3) {
+            UnitKill(UnitGroupLoopCurrent());
+        }
+
+        UnitGroupLoopStep();
+    }
+    UnitGroupLoopEnd();
+    Wait(5.0, c_timeGame);
+    GhostOps_Hanson_Log("after killing 3: " + IntToString(UnitGroupCount(UnitGroup("Marine", 4, RegionCircle(PointFromId(2079), 12.0), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive)));
+    Wait(40.0, c_timeGame);
+    GhostOps_Hanson_Log("45 s later: " + IntToString(UnitGroupCount(UnitGroup("Marine", 4, RegionCircle(PointFromId(2079), 12.0), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive)));
+}
+
+// ---- mode 3 / 4 ----------------------------------------------------------------------------
+void GhostOps_HT_Mode34 () {
+    // the Ghost walks into the settlement; afterwards the log of the convoy command is written by the module itself
+    Wait(4.0, c_timeGame);
+    UnitSetPosition(GhostOps_SquadUnit(0), RegionGetCenter(RegionFromId(29)), false);
+}
+
+void GhostOps_HT_Mode4Click () {
+    if (go_hCmdState == 2) {
+        go_htAutoClicks += 1;
+        GhostOps_Hanson_Log("test presses the button (" + IntToString(go_htAutoClicks) + "), counters: saved " + IntToString(go_hSaved) + " killed " + IntToString(go_hKilled) + " sent " + IntToString(go_hSent) + " index " + IntToString(go_hEscort));
+        TriggerExecute(go_hClickTrig, true, false);
+    }
+}
+
+// ---- mode 5 --------------------------------------------------------------------------------
+void GhostOps_HT_RaidWave (int lp_count, bool lp_overseers) {
+    unitgroup lv_g;
+    unit lv_u;
+
+    UnitCreate(lp_count, "Mutalisk", 0, 3, PointFromId(59), 270.0);
+    UnitGroupAddUnitGroup(go_htRaiders, UnitLastCreatedGroup());
+    UnitCreate(lp_count, "Mutalisk", 0, 3, PointFromId(223), 270.0);
+    UnitGroupAddUnitGroup(go_htRaiders, UnitLastCreatedGroup());
+    if (lp_overseers) {
+        UnitCreate(1, "Overseer", 0, 3, PointFromId(59), 270.0);
+        UnitGroupAdd(go_htRaiders, UnitLastCreated());
+        UnitCreate(1, "Overseer", 0, 3, PointFromId(1652), 270.0);
+        UnitGroupAdd(go_htRaiders, UnitLastCreated());
+    }
+}
+
+bool GhostOps_HT_RaidAI (bool lp_testConds, bool lp_runActions) {
+    if (!lp_runActions) {
+        return true;
+    }
+
+    UnitGroupLoopBegin(go_htRaiders);
+    while (!UnitGroupLoopDone()) {
+        if (UnitGetType(UnitGroupLoopCurrent()) == "Mutalisk") {
+            UnitIssueOrder(UnitGroupLoopCurrent(), OrderTargetingPoint(AbilityCommand("attack", 0), libNtve_gf_RandomPointBetweenPoints(PointFromId(808), PointFromId(1098))), c_orderQueueReplace);
+        }
+        else {
+            UnitIssueOrder(UnitGroupLoopCurrent(), OrderTargetingPoint(AbilityCommand("attack", 0), RegionRandomPoint(RegionFromId(16))), c_orderQueueReplace);
+        }
+
+        UnitGroupLoopStep();
+    }
+    UnitGroupLoopEnd();
+    return true;
+}
+
+void GhostOps_HT_Mode5 () {
+    int lv_wave;
+    int lv_counts;
+    fixed lv_t0;
+
+    go_htRaiders = UnitGroupEmpty();
+    lv_wave = 1;
+    Wait(5.0, c_timeGame);
+    UnitSetPosition(GhostOps_SquadUnit(0), RegionGetCenter(RegionFromId(29)), false);
+    while (go_hPhase != 1) {
+        Wait(0.5, c_timeGame);
+    }
+
+    // the original gives the settlement to the player first; wait for the quiet part
+    Wait(30.0, c_timeGame);
+    go_htTrig = TriggerCreate("GhostOps_HT_RaidAI");
+    TriggerAddEventTimePeriodic(go_htTrig, 1.0, c_timeGame);
+    GhostOps_HT_Report("before raids");
+    while (lv_wave <= 3) {
+        lv_t0 = GameGetMissionTime();
+        if (lv_wave == 1) {
+            lv_counts = 4;
+            GhostOps_HT_RaidWave(4, false);
+        }
+        else if (lv_wave == 2) {
+            lv_counts = 6;
+            GhostOps_HT_RaidWave(6, true);
+        }
+        else {
+            lv_counts = 8;
+            GhostOps_HT_RaidWave(8, true);
+        }
+
+        GhostOps_Hanson_Log("RAID " + IntToString(lv_wave) + ": " + IntToString(lv_counts * 2) + " mutalisks");
+        while ((UnitGroupCount(go_htRaiders, c_unitCountAlive) > 0) && ((GameGetMissionTime() - lv_t0) < 150.0)) {
+            Wait(5.0, c_timeGame);
+            GhostOps_HT_Report("raid " + IntToString(lv_wave) + " +" + FixedToString(GameGetMissionTime() - lv_t0, 0));
+        }
+
+        GhostOps_HT_Report("RAID " + IntToString(lv_wave) + " over after " + FixedToString(GameGetMissionTime() - lv_t0, 0) + " s");
+        UnitGroupLoopBegin(go_htRaiders);
+        while (!UnitGroupLoopDone()) {
+            UnitKill(UnitGroupLoopCurrent());
+            UnitGroupLoopStep();
+        }
+        UnitGroupLoopEnd();
+        Wait(20.0, c_timeGame);
+        lv_wave += 1;
+    }
+}
+
+// ---- mode 6 --------------------------------------------------------------------------------
+void GhostOps_HT_Mode6 () {
+    int lv_x;
+    int lv_y;
+    string lv_row;
+
+    Wait(2.0, c_timeGame);
+    lv_y = 66;
+    while (lv_y >= 34) {
+        lv_row = "";
+        lv_x = 16;
+        while (lv_x <= 78) {
+            if (PointPathingPassable(Point(lv_x + 0.5, lv_y + 0.5))) {
+                lv_row = lv_row + ".";
+            }
+            else {
+                lv_row = lv_row + "#";
+            }
+
+            lv_x += 1;
+        }
+
+        GhostOps_Hanson_Log("y" + IntToString(lv_y) + " " + lv_row);
+        lv_y -= 1;
+    }
+}
+
+// ---- mode 7: where does a Missile Turret really stand (valid placement of a 2x2 structure) --------------
+void GhostOps_HT_Mode7 () {
+    int lv_x;
+    int lv_y;
+    string lv_row;
+    point lv_p;
+    fixed lv_d;
+
+    Wait(2.0, c_timeGame);
+    lv_y = 64;
+    while (lv_y >= 36) {
+        lv_row = "";
+        lv_x = 18;
+        while (lv_x <= 76) {
+            lv_p = Point(lv_x, lv_y);
+            UnitCreate(1, "MissileTurret", 0, 4, lv_p, 270.0);
+            lv_d = DistanceBetweenPoints(lv_p, UnitGetPosition(UnitLastCreated()));
+            UnitRemove(UnitLastCreated());
+            if (lv_d < 0.2) {
+                lv_row = lv_row + "T";
+            }
+            else {
+                lv_row = lv_row + ".";
+            }
+
+            lv_x += 1;
+        }
+
+        GhostOps_Hanson_Log("t" + IntToString(lv_y) + " " + lv_row);
+        lv_y -= 1;
+    }
+}
+
+// ---- entry ---------------------------------------------------------------------------------
+bool GhostOps_HT_Run (bool lp_testConds, bool lp_runActions) {
+    if (!lp_runActions) {
+        return true;
+    }
+
+    if (go_htMode == 1) {
+        GhostOps_HT_Mode1();
+    }
+    else if (go_htMode == 2) {
+        GhostOps_HT_Mode2();
+    }
+    else if (go_htMode == 3) {
+        GhostOps_HT_Mode34();
+    }
+    else if (go_htMode == 4) {
+        GhostOps_HT_Mode34();
+    }
+    else if (go_htMode == 5) {
+        GhostOps_HT_Mode5();
+    }
+    else if (go_htMode == 6) {
+        GhostOps_HT_Mode6();
+    }
+    else if (go_htMode == 7) {
+        GhostOps_HT_Mode7();
+    }
+
+    return true;
+}
+
+void GhostOps_HansonTest_Start () {
+    if (go_htScale > 1.0) {
+        GameSetGlobalTimeScale(go_htScale);
+    }
+
+    TriggerExecute(TriggerCreate("GhostOps_HT_Run"), true, false);
+}
+
+// once a second (the probe hook): state changes of the command and automatic presses of mode 4
+void GhostOps_HansonTest_Probe () {
+    if (go_hCmdState != go_htLastCmdState) {
+        go_htLastCmdState = go_hCmdState;
+        GhostOps_Hanson_Log("command state " + IntToString(go_hCmdState) + " | saved " + IntToString(go_hSaved) + " killed " + IntToString(go_hKilled) + " sent " + IntToString(go_hSent) + " index " + IntToString(go_hEscort) + " waves " + IntToString(go_hWaves));
+    }
+
+    if ((GameGetMissionTime() - go_htLastLog) >= 15.0) {
+        go_htLastLog = GameGetMissionTime();
+        GhostOps_Hanson_Log("tick | phase " + IntToString(go_hPhase) + " state " + IntToString(go_hCmdState) + " saved " + IntToString(go_hSaved) + " killed " + IntToString(go_hKilled) + " sent " + IntToString(go_hSent) + " index " + IntToString(go_hEscort));
+    }
+
+    if ((go_htMode == 4) && (go_hCmdState == 2) && (go_htAutoClicks < 4)) {
+        GhostOps_HT_Mode4Click();
+    }
+}

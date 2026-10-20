@@ -1,0 +1,584 @@
+//==================================================================================================
+// GhostOps Tactical TEST module (development only, never part of a playable build).
+// Built only into the hidden dev presets (tactical.autotest). It drives the nuclear strike by script and
+// writes everything the Owner cannot see into the bank log (GhostOps_Tac_Log), so that the chain of the
+// installed game version can be measured instead of guessed.
+//==================================================================================================
+int go_tacTestMode;         // 1 aim, cancel, aim again, retreat after launch; 2 same without retreat; 3 operative tries the strike
+fixed go_tacTestTargetX;
+fixed go_tacTestTargetY;
+fixed go_tacTestSpotX;
+fixed go_tacTestSpotY;
+fixed go_tacTestRetreatX;
+fixed go_tacTestRetreatY;
+
+void GhostOps_ApplyTacticalTestConfig ();
+
+void GhostOps_TacTest_Counts (string lp_tag) {
+    GhostOps_Tac_Log(lp_tag + " P2 barracks " + IntToString(UnitGroupCount(UnitGroup("Barracks", 2, RegionEntireMap(), GhostOps_Tac_LiveFilter(), 0), c_unitCountAlive))
+        + " factory " + IntToString(UnitGroupCount(UnitGroup("Factory", 2, RegionEntireMap(), GhostOps_Tac_LiveFilter(), 0), c_unitCountAlive))
+        + " cc " + IntToString(UnitGroupCount(UnitGroup("CommandCenter", 2, RegionEntireMap(), GhostOps_Tac_LiveFilter(), 0), c_unitCountAlive))
+        + " depots " + IntToString(UnitGroupCount(UnitGroup("SupplyDepot", 2, RegionEntireMap(), GhostOps_Tac_LiveFilter(), 0), c_unitCountAlive))
+        + " techlab " + IntToString(UnitGroupCount(UnitGroup("TechLab", 2, RegionEntireMap(), GhostOps_Tac_LiveFilter(), 0), c_unitCountAlive))
+        + " bunker " + IntToString(UnitGroupCount(UnitGroup("Bunker", 2, RegionEntireMap(), GhostOps_Tac_LiveFilter(), 0), c_unitCountAlive))
+        + " marines " + IntToString(UnitGroupCount(UnitGroup("Marine", 2, RegionEntireMap(), GhostOps_Tac_LiveFilter(), 0), c_unitCountAlive))
+        + " scv " + IntToString(UnitGroupCount(UnitGroup("SCV", 2, RegionEntireMap(), GhostOps_Tac_LiveFilter(), 0), c_unitCountAlive))
+        + " tank " + IntToString(UnitGroupCount(UnitGroup("SiegeTankSieged", 2, RegionEntireMap(), GhostOps_Tac_LiveFilter(), 0), c_unitCountAlive)));
+}
+
+void GhostOps_TacTest_Spotter (string lp_tag) {
+    string lv_life;
+
+    lv_life = "dead";
+    if (GhostOps_Tac_Alive(go_tacSpotter)) {
+        lv_life = FixedToString(UnitGetPropertyFixed(go_tacSpotter, c_unitPropLife, c_unitPropCurrent), 1);
+    }
+
+    GhostOps_Tac_Log(lp_tag + " spotter life " + lv_life + " state " + IntToString(go_tacState) + " nukes " + IntToString(TechTreeUnitCount(1, "Nuke", c_techCountCompleteOnly))
+        + " orders " + IntToString(UnitOrderCount(go_tacSpotter)) + " energy " + FixedToString(UnitGetPropertyFixed(go_tacSpotter, c_unitPropEnergy, c_unitPropCurrent), 1)
+        + " dist " + FixedToString(DistanceBetweenPoints(UnitGetPosition(go_tacSpotter), Point(go_tacTestTargetX, go_tacTestTargetY)), 1));
+}
+
+bool GhostOps_TacTest_Run (bool lp_testConds, bool lp_runActions) {
+    int lv_i;
+    point lv_target;
+    bool lv_operativeTried;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    lv_i = 0;
+    while (((go_tacState != 2) || (go_tacOperative == null) || (go_tacScStage < 7)) && (lv_i < 600)) {
+        Wait(0.5, c_timeGame);
+        lv_i += 1;
+    }
+
+    GhostOps_Tac_Log("test begins, state " + IntToString(go_tacState));
+    libNtve_gf_SetAlliance(1, 2, libNtve_ge_AllianceSetting_Neutral);
+    libNtve_gf_SetAlliance(1, 5, libNtve_ge_AllianceSetting_Neutral);
+    libNtve_gf_SetAlliance(1, 4, libNtve_ge_AllianceSetting_Neutral);
+    GhostOps_TacTest_Counts("before");
+    lv_target = Point(go_tacTestTargetX, go_tacTestTargetY);
+    UnitSetPosition(go_tacSpotter, Point(go_tacTestSpotX, go_tacTestSpotY), false);
+    UnitSetPosition(go_tacOperative, Point(go_tacTestSpotX + 3.0, go_tacTestSpotY), false);
+    Wait(1.0, c_timeGame);
+    GhostOps_Tac_Log("spotter at " + FixedToString(PointGetX(UnitGetPosition(go_tacSpotter)), 1) + "," + FixedToString(PointGetY(UnitGetPosition(go_tacSpotter)), 1)
+        + " distance to target " + FixedToString(DistanceBetweenPoints(UnitGetPosition(go_tacSpotter), lv_target), 1));
+    if (go_tacTestMode == 3) {
+        // the operative must not be able to use the strike: try, with the order and with the ability check
+        GhostOps_Tac_Log("operative may use ability: " + GhostOps_Tac_B(UnitAbilityCheck(go_tacOperative, "TacNukeStrike", true)) + " spotter may: " + GhostOps_Tac_B(UnitAbilityCheck(go_tacSpotter, "TacNukeStrike", true)));
+        GhostOps_Tac_Log("operative order valid: " + GhostOps_Tac_B(UnitOrderIsValid(go_tacOperative, OrderTargetingPoint(AbilityCommand("TacNukeStrike", 0), lv_target))));
+        UnitIssueOrder(go_tacOperative, OrderTargetingPoint(AbilityCommand("TacNukeStrike", 0), lv_target), c_orderQueueReplace);
+        Wait(3.0, c_timeGame);
+        GhostOps_TacTest_Spotter("after operative try");
+        GhostOps_Tac_Log("operative orders " + IntToString(UnitOrderCount(go_tacOperative)));
+        return true;
+    }
+
+    GhostOps_Tac_Log("enabled " + GhostOps_Tac_B(UnitAbilityCheck(go_tacSpotter, "TacNukeStrike", true)) + " near point valid " + GhostOps_Tac_B(UnitOrderIsValid(go_tacSpotter, OrderTargetingPoint(AbilityCommand("TacNukeStrike", 0), PointWithOffset(UnitGetPosition(go_tacSpotter), 0.0, -4.0)))) + " no-target order valid " + GhostOps_Tac_B(UnitOrderIsValid(go_tacSpotter, Order(AbilityCommand("TacNukeStrike", 0)))) + " target valid " + GhostOps_Tac_B(UnitOrderIsValid(go_tacSpotter, OrderTargetingPoint(AbilityCommand("TacNukeStrike", 0), lv_target))));
+    GhostOps_Tac_Log("(arm is tech-banned for the player)");
+    Wait(0.5, c_timeGame);
+    GhostOps_Tac_Log("academy arm re-enabled: spotter valid " + GhostOps_Tac_B(UnitOrderIsValid(go_tacSpotter, OrderTargetingPoint(AbilityCommand("TacNukeStrike", 0), PointWithOffset(UnitGetPosition(go_tacSpotter), 0.0, -4.0)))));
+    UnitAbilityEnable(go_tacOperative, "TacNukeStrike", true);
+    Wait(0.5, c_timeGame);
+    GhostOps_Tac_Log("operative gate lifted: operative valid " + GhostOps_Tac_B(UnitOrderIsValid(go_tacOperative, OrderTargetingPoint(AbilityCommand("TacNukeStrike", 0), PointWithOffset(UnitGetPosition(go_tacOperative), 0.0, -4.0)))) + " spotter valid " + GhostOps_Tac_B(UnitOrderIsValid(go_tacSpotter, OrderTargetingPoint(AbilityCommand("TacNukeStrike", 0), PointWithOffset(UnitGetPosition(go_tacSpotter), 0.0, -4.0)))));
+    UnitAbilityEnable(go_tacOperative, "TacNukeStrike", false);
+    GhostOps_Tac_Log("snipe valid " + GhostOps_Tac_B(UnitOrderIsValid(go_tacSpotter, OrderTargetingUnit(AbilityCommand("Snipe", 0), go_tacOperative))) + " cloak valid " + GhostOps_Tac_B(UnitOrderIsValid(go_tacSpotter, Order(AbilityCommand("GhostCloak", 0)))) + " tac abil 0 allowed? nukes " + IntToString(TechTreeUnitCount(1, "Nuke", c_techCountCompleteOnly)) + " academy " + GhostOps_Tac_B(GhostOps_Tac_Alive(go_tacAcademy)) + " ghost allow? ");
+    VisExploreArea(1, RegionCircle(lv_target, 22.0), true, false);
+    VisRevealArea(1, RegionCircle(lv_target, 22.0), 600.0, false);
+    Wait(1.0, c_timeGame);
+    GhostOps_Tac_Log("after reveal target valid " + GhostOps_Tac_B(UnitOrderIsValid(go_tacSpotter, OrderTargetingPoint(AbilityCommand("TacNukeStrike", 0), lv_target))) + " cmd1 valid " + GhostOps_Tac_B(UnitOrderIsValid(go_tacSpotter, Order(AbilityCommand("TacNukeStrike", 1)))));
+    GhostOps_Tac_Log("spotter order valid: " + GhostOps_Tac_B(UnitOrderIsValid(go_tacSpotter, OrderTargetingPoint(AbilityCommand("TacNukeStrike", 0), lv_target))));
+    UnitIssueOrder(go_tacSpotter, OrderTargetingPoint(AbilityCommand("TacNukeStrike", 0), lv_target), c_orderQueueReplace);
+    GhostOps_TacTest_Spotter("order given");
+    Wait(4.0, c_timeGame);
+    GhostOps_TacTest_Spotter("aiming +4");
+    if (go_tacTestMode == 5) {
+        // the Spotter dies while aiming (before the launch): the one added defeat
+        UnitKill(go_tacSpotter);
+        Wait(5.0, c_timeGame);
+        GhostOps_Tac_Log("after death before launch: ended " + GhostOps_Tac_B(go_tacEnded) + " state " + IntToString(go_tacState));
+        return true;
+    }
+
+    UnitIssueOrder(go_tacSpotter, Order(AbilityCommand("TacNukeStrike", 1)), c_orderQueueReplace);
+    Wait(0.5, c_timeGame);
+    GhostOps_TacTest_Spotter("cancelled +0.5");
+    lv_i = 0;
+    while ((go_tacState != 2) && (lv_i < 40)) {
+        Wait(0.5, c_timeGame);
+        lv_i += 1;
+    }
+
+    Wait(3.0, c_timeGame);
+    GhostOps_TacTest_Spotter("cancelled, waited for ready and the recovery");
+    GhostOps_Tac_Log("second order valid: " + GhostOps_Tac_B(UnitOrderIsValid(go_tacSpotter, OrderTargetingPoint(AbilityCommand("TacNukeStrike", 0), lv_target))));
+    UnitIssueOrder(go_tacSpotter, OrderTargetingPoint(AbilityCommand("TacNukeStrike", 0), lv_target), c_orderQueueReplace);
+    lv_i = 0;
+    while ((go_tacState < 4) && (lv_i < 100)) {
+        Wait(0.5, c_timeGame);
+        lv_i += 1;
+        if ((lv_i % 4) == 0) {
+            GhostOps_TacTest_Spotter("aiming");
+        }
+    }
+
+    GhostOps_TacTest_Spotter("LAUNCHED");
+    if (go_tacTestMode == 2) {
+        // no retreat at all: the Spotter stands next to the target and dies of its own missile
+        UnitSetPosition(go_tacSpotter, PointWithOffset(lv_target, 2.0, 0.0), false);
+    }
+
+    if (go_tacTestMode == 1) {
+        UnitIssueOrder(go_tacSpotter, OrderTargetingPoint(AbilityCommand("move", 0), Point(go_tacTestRetreatX, go_tacTestRetreatY)), c_orderQueueReplace);
+        GhostOps_Tac_Log("retreat ordered");
+    }
+
+    lv_i = 0;
+    while ((go_tacState < 5) && (lv_i < 60)) {
+        Wait(0.5, c_timeGame);
+        lv_i += 1;
+        GhostOps_TacTest_Spotter("flight");
+    }
+
+    GhostOps_TacTest_Spotter("DETONATED");
+    GhostOps_TacTest_Counts("blast+0");
+    Wait(2.0, c_timeGame);
+    GhostOps_TacTest_Counts("blast+2");
+    Wait(6.0, c_timeGame);
+    GhostOps_TacTest_Counts("blast+8");
+    GhostOps_TacTest_Spotter("end");
+    GhostOps_Tac_Log("ended " + GhostOps_Tac_B(go_tacEnded));
+    return true;
+}
+
+string GhostOps_TacTest_MarineInfo (unit lp_unit) {
+    if (!GhostOps_Tac_Alive(lp_unit)) {
+        return "dead";
+    }
+
+    return "life " + FixedToString(UnitGetPropertyFixed(lp_unit, c_unitPropLife, c_unitPropCurrent), 1) + "/" + FixedToString(UnitGetPropertyFixed(lp_unit, c_unitPropLifeMax, c_unitPropCurrent), 1)
+        + " weapons " + IntToString(UnitWeaponCount(lp_unit)) + " garrisonDmg " + IntToString(UnitBehaviorCount(lp_unit, "GhostOpsGarrisonDamage"))
+        + " trainedDmg " + IntToString(UnitBehaviorCount(lp_unit, "GhostOpsTrainedDamage"));
+}
+
+void GhostOps_TacTest_GarrisonInfo (string lp_tag) {
+    int lv_i;
+    int lv_n;
+    string lv_text;
+
+    lv_text = "";
+    lv_n = UnitGroupCount(go_tacGarrison, c_unitCountAll);
+    lv_i = 1;
+    while (lv_i <= lv_n) {
+        lv_text = lv_text + "[" + GhostOps_TacTest_MarineInfo(UnitGroupUnit(go_tacGarrison, lv_i)) + "] ";
+        lv_i += 1;
+    }
+
+    GhostOps_Tac_Log(lp_tag + " garrison " + lv_text);
+}
+
+unit GhostOps_TacTest_Dummy (point lp_where) {
+    UnitCreate(1, "Barracks", 0, 2, lp_where, 270.0);
+    return UnitLastCreated();
+}
+
+bool GhostOps_TacTest_Marines (bool lp_testConds, bool lp_runActions) {
+    unit lv_b1;
+    unit lv_b2;
+    unit lv_b3;
+    unit lv_marine;
+    point lv_spot;
+    unit lv_g1;
+    unit lv_g2;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    libNtve_gf_SetAlliance(1, 2, libNtve_ge_AllianceSetting_Neutral);
+    Wait(3.0, c_timeGame);
+    lv_g1 = UnitGroupUnit(go_tacGarrison, 1);
+    lv_g2 = UnitGroupUnit(go_tacGarrison, 2);
+    lv_spot = PointWithOffset(UnitGetPosition(lv_g1), 4.0, 3.0);
+    GhostOps_TacTest_GarrisonInfo("start");
+    // 1. inside the zone: garrison Marine against a Barracks (1000 life, armor 1): each shot is 6 x 20 - 1
+    lv_b1 = GhostOps_TacTest_Dummy(lv_spot);
+    UnitIssueOrder(lv_g1, OrderTargetingUnit(AbilityCommand("attack", 0), lv_b1), c_orderQueueReplace);
+    Wait(2.0, c_timeGame);
+    GhostOps_Tac_Log("1 garrison marine, 2 s of fire: barracks " + GhostOps_TacTest_MarineInfo(lv_b1));
+    // 2. outside: no weapon at all, the attack order does nothing
+    go_tacZoneR = 1.0;
+    Wait(1.0, c_timeGame);
+    GhostOps_TacTest_GarrisonInfo("2 outside");
+    lv_b2 = GhostOps_TacTest_Dummy(PointWithOffset(lv_spot, 3.0, 0.0));
+    UnitIssueOrder(lv_g2, OrderTargetingUnit(AbilityCommand("attack", 0), lv_b2), c_orderQueueReplace);
+    Wait(4.0, c_timeGame);
+    GhostOps_Tac_Log("2 outside, 4 s: barracks " + GhostOps_TacTest_MarineInfo(lv_b2) + " marine " + GhostOps_TacTest_MarineInfo(lv_g2));
+    // 3. inside again: the weapon returns once and the same order works
+    go_tacZoneR = 16.0;
+    Wait(1.0, c_timeGame);
+    GhostOps_TacTest_GarrisonInfo("3 inside again");
+    UnitIssueOrder(lv_g2, OrderTargetingUnit(AbilityCommand("attack", 0), lv_b2), c_orderQueueReplace);
+    Wait(2.0, c_timeGame);
+    GhostOps_Tac_Log("3 inside again, 2 s: barracks " + GhostOps_TacTest_MarineInfo(lv_b2));
+    go_tacZoneR = 1.0;
+    Wait(0.6, c_timeGame);
+    go_tacZoneR = 16.0;
+    Wait(0.6, c_timeGame);
+    GhostOps_TacTest_GarrisonInfo("3b toggled twice");
+    // 4. a Marine of the player (as if trained)
+    UnitCreate(1, "Marine", 0, 1, PointWithOffset(lv_spot, -2.0, -1.0), 270.0);
+    lv_marine = UnitLastCreated();
+    Wait(0.5, c_timeGame);
+    GhostOps_Tac_Log("4 new marine " + GhostOps_TacTest_MarineInfo(lv_marine));
+    lv_b3 = GhostOps_TacTest_Dummy(PointWithOffset(lv_spot, 0.0, -4.0));
+    UnitIssueOrder(lv_marine, OrderTargetingUnit(AbilityCommand("attack", 0), lv_b3), c_orderQueueReplace);
+    Wait(8.0, c_timeGame);
+    GhostOps_Tac_Log("4 trained marine, 8 s of fire: barracks " + GhostOps_TacTest_MarineInfo(lv_b3) + " marine " + GhostOps_TacTest_MarineInfo(lv_marine));
+    // 5. a rescued Marine (handed over by the hook in the same tick)
+    UnitCreate(1, "Marine", 0, 1, PointWithOffset(lv_spot, -3.0, 2.0), 270.0);
+    lv_marine = UnitLastCreated();
+    GhostOps_Tac_OnRescue(lv_marine);
+    Wait(1.0, c_timeGame);
+    GhostOps_Tac_Log("5 rescued marine " + GhostOps_TacTest_MarineInfo(lv_marine));
+    GhostOps_Tac_Log("zone ring tags " + IntToString(go_tacTagCount));
+    // 6. real production: the barracks of the player trains a Marine (50 minerals); the rule must be applied by the creation event
+    Wait(1.0, c_timeGame);
+    GhostOps_Tac_Log("6 train valid " + GhostOps_Tac_B(UnitOrderIsValid(UnitFromId(106), Order(AbilityCommand("BarracksTrain", 0)))) + " minerals " + IntToString(PlayerGetPropertyInt(1, c_playerPropMinerals)));
+    PlayerModifyPropertyInt(1, c_playerPropSuppliesMade, c_playerPropOperAdd, 20);
+    Wait(1.0, c_timeGame);
+    GhostOps_Tac_Log("6 supply after depots " + IntToString(PlayerGetPropertyInt(1, c_playerPropSuppliesUsed)) + "/" + IntToString(PlayerGetPropertyInt(1, c_playerPropSuppliesMade)));
+    UnitIssueOrder(UnitFromId(106), Order(AbilityCommand("BarracksTrain", 0)), c_orderQueueReplace);
+    Wait(40.0, c_timeGame);
+    GhostOps_Tac_Log("6 marines of P1 " + IntToString(UnitGroupCount(UnitGroup("Marine", 1, RegionEntireMap(), GhostOps_Tac_LiveFilter(), 0), c_unitCountAlive)) + " barracks orders " + IntToString(UnitOrderCount(UnitFromId(106))) + " supply " + IntToString(PlayerGetPropertyInt(1, c_playerPropSuppliesUsed)) + "/" + IntToString(PlayerGetPropertyInt(1, c_playerPropSuppliesMade)));
+    GhostOps_Tac_Log("6 trained group size " + IntToString(UnitGroupCount(go_tacTrained, c_unitCountAll)) + " minerals " + IntToString(PlayerGetPropertyInt(1, c_playerPropMinerals)));
+    return true;
+}
+
+// ---- mode 6: damage of an unmodified Marine against a Marine trained in the real barracks, one static target each ----
+int go_tacTestHitsA;
+int go_tacTestHitsB;
+fixed go_tacTestDmgA;
+fixed go_tacTestDmgB;
+unit go_tacTestTargetA;
+unit go_tacTestTargetB;
+unit go_tacTestSrcA;
+unit go_tacTestSrcB;
+int go_tacTestHitsC;
+fixed go_tacTestDmgC;
+unit go_tacTestTargetC;
+unit go_tacTestSrcC;
+
+bool GhostOps_TacTest_HitTick (bool lp_testConds, bool lp_runActions) {
+    unit lv_src;
+    unit lv_dst;
+    string lv_tag;
+    int lv_n;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    lv_src = EventUnitDamageSourceUnit();
+    lv_dst = EventUnit();
+    lv_tag = "";
+    if ((lv_dst == go_tacTestTargetA) && (lv_src == go_tacTestSrcA)) {
+        go_tacTestHitsA += 1;
+        go_tacTestDmgA += EventUnitDamageAmount();
+        lv_tag = "A(normal)";
+        lv_n = go_tacTestHitsA;
+    }
+
+    if ((lv_dst == go_tacTestTargetB) && (lv_src == go_tacTestSrcB)) {
+        go_tacTestHitsB += 1;
+        go_tacTestDmgB += EventUnitDamageAmount();
+        lv_tag = "B(trained)";
+        lv_n = go_tacTestHitsB;
+    }
+
+    if ((lv_dst == go_tacTestTargetC) && UnitGroupHasUnit(go_tacGarrison, lv_src)) {
+        go_tacTestHitsC += 1;
+        go_tacTestDmgC += EventUnitDamageAmount();
+        lv_tag = "C(garrison)";
+        lv_n = go_tacTestHitsC;
+    }
+
+    if ((lv_tag != "") && (lv_n <= 5)) {
+        GhostOps_Tac_Log("hit " + lv_tag + " #" + IntToString(lv_n) + " attempted " + FixedToString(EventUnitDamageAttempted(), 3) + " amount " + FixedToString(EventUnitDamageAmount(), 3) + " absorbed " + FixedToString(EventUnitDamageAbsorbed(), 3) + " effect " + EventUnitDamageEffect());
+    }
+
+    return true;
+}
+
+bool GhostOps_TacTest_Damage (bool lp_testConds, bool lp_runActions) {
+    int lv_i;
+    point lv_spot;
+    trigger lv_hit;
+    fixed lv_lifeA;
+    fixed lv_lifeB;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    libNtve_gf_SetAlliance(1, 2, libNtve_ge_AllianceSetting_Neutral);
+    PlayerModifyPropertyInt(1, c_playerPropSuppliesMade, c_playerPropOperAdd, 20);
+    Wait(2.0, c_timeGame);
+    lv_spot = Point(94.0, 38.0);
+    // the Marine of the real barracks (no Marine other than the garrison exists yet, so the first trained one is it)
+    UnitIssueOrder(UnitFromId(106), Order(AbilityCommand("BarracksTrain", 0)), c_orderQueueReplace);
+    lv_i = 0;
+    while ((UnitGroupCount(go_tacTrained, c_unitCountAll) < 1) && (lv_i < 120)) {
+        Wait(0.5, c_timeGame);
+        lv_i += 1;
+    }
+
+    go_tacTestSrcB = UnitGroupUnit(go_tacTrained, 1);
+    // the unmodified Marine: handed through the rescue hook in the tick it is created, exactly like a rescued rebel
+    UnitCreate(1, "Marine", 0, 1, PointWithOffset(lv_spot, 0.0, 0.0), 270.0);
+    go_tacTestSrcA = UnitLastCreated();
+    GhostOps_Tac_OnRescue(go_tacTestSrcA);
+    UnitSetPosition(go_tacTestSrcB, PointWithOffset(lv_spot, 12.0, 0.0), false);
+    go_tacTestTargetA = GhostOps_TacTest_Dummy(PointWithOffset(lv_spot, 0.0, 5.0));
+    go_tacTestTargetB = GhostOps_TacTest_Dummy(PointWithOffset(lv_spot, 12.0, 5.0));
+    Wait(1.0, c_timeGame);
+    GhostOps_Tac_Log("A normal marine: " + GhostOps_TacTest_MarineInfo(go_tacTestSrcA));
+    GhostOps_Tac_Log("B trained marine: " + GhostOps_TacTest_MarineInfo(go_tacTestSrcB));
+    lv_hit = TriggerCreate("GhostOps_TacTest_HitTick");
+    TriggerAddEventUnitDamaged(lv_hit, UnitRefFromUnit(go_tacTestTargetA), c_unitDamageTypeAny, c_unitDamageEither, null);
+    TriggerAddEventUnitDamaged(lv_hit, UnitRefFromUnit(go_tacTestTargetB), c_unitDamageTypeAny, c_unitDamageEither, null);
+    go_tacTestSrcC = UnitGroupUnit(go_tacGarrison, 1);
+    UnitSetPosition(go_tacTestSrcC, PointWithOffset(lv_spot, 6.0, 0.0), false);
+    go_tacTestTargetC = GhostOps_TacTest_Dummy(PointWithOffset(lv_spot, 6.0, 5.0));
+    Wait(0.5, c_timeGame);
+    TriggerAddEventUnitDamaged(lv_hit, UnitRefFromUnit(go_tacTestTargetC), c_unitDamageTypeAny, c_unitDamageEither, null);
+    UnitIssueOrder(go_tacTestSrcC, OrderTargetingUnit(AbilityCommand("attack", 0), go_tacTestTargetC), c_orderQueueReplace);
+    GhostOps_Tac_Log("C garrison marine: " + GhostOps_TacTest_MarineInfo(go_tacTestSrcC));
+    lv_lifeA = UnitGetPropertyFixed(go_tacTestTargetA, c_unitPropLife, c_unitPropCurrent);
+    lv_lifeB = UnitGetPropertyFixed(go_tacTestTargetB, c_unitPropLife, c_unitPropCurrent);
+    GhostOps_Tac_Log("targets before: A " + FixedToString(lv_lifeA, 3) + " B " + FixedToString(UnitGetPropertyFixed(go_tacTestTargetB, c_unitPropLife, c_unitPropCurrent), 3)
+        + " armor A " + FixedToString(UnitGetPropertyFixed(go_tacTestTargetA, c_unitPropLifeArmor, c_unitPropCurrent), 2) + " B " + FixedToString(UnitGetPropertyFixed(go_tacTestTargetB, c_unitPropLifeArmor, c_unitPropCurrent), 2));
+    UnitIssueOrder(go_tacTestSrcA, OrderTargetingUnit(AbilityCommand("attack", 0), go_tacTestTargetA), c_orderQueueReplace);
+    UnitIssueOrder(go_tacTestSrcB, OrderTargetingUnit(AbilityCommand("attack", 0), go_tacTestTargetB), c_orderQueueReplace);
+    lv_i = 0;
+    while ((go_tacTestHitsA < 20) && (lv_i < 80)) {
+        Wait(0.5, c_timeGame);
+        lv_i += 1;
+        if (lv_i == 30) {
+            // attack-move (automatic fire on the way) is no way around the missing weapon either
+            UnitIssueOrder(go_tacTestSrcB, OrderTargetingPoint(AbilityCommand("attack", 0), UnitGetPosition(go_tacTestTargetB)), c_orderQueueReplace);
+        }
+    }
+
+    UnitIssueOrder(go_tacTestSrcA, Order(AbilityCommand("stop", 0)), c_orderQueueReplace);
+    UnitIssueOrder(go_tacTestSrcB, Order(AbilityCommand("stop", 0)), c_orderQueueReplace);
+    Wait(1.0, c_timeGame);
+    GhostOps_Tac_Log("targets after: A " + FixedToString(UnitGetPropertyFixed(go_tacTestTargetA, c_unitPropLife, c_unitPropCurrent), 3) + " B " + FixedToString(UnitGetPropertyFixed(go_tacTestTargetB, c_unitPropLife, c_unitPropCurrent), 3));
+    GhostOps_Tac_Log("A normal: hits " + IntToString(go_tacTestHitsA) + " total " + FixedToString(go_tacTestDmgA, 3));
+    GhostOps_Tac_Log("B trained: hits " + IntToString(go_tacTestHitsB) + " total " + FixedToString(go_tacTestDmgB, 3));
+    GhostOps_Tac_Log("C garrison: hits " + IntToString(go_tacTestHitsC) + " total " + FixedToString(go_tacTestDmgC, 3) + " target life " + FixedToString(UnitGetPropertyFixed(go_tacTestTargetC, c_unitPropLife, c_unitPropCurrent), 3));
+    GhostOps_Tac_Log("B marine still " + GhostOps_TacTest_MarineInfo(go_tacTestSrcB) + " groups: trained " + IntToString(UnitGroupCount(go_tacTrained, c_unitCountAll)) + " rescued " + IntToString(UnitGroupCount(go_tacRescued, c_unitCountAll)));
+    return true;
+}
+
+// ---- modes 8 / 9: real save and load driven from the outside (the game menu); everything the roles need is logged ----
+void GhostOps_TacTest_Snapshot (string lp_tag) {
+    string lv_sp;
+    string lv_op;
+
+    lv_sp = "dead";
+    lv_op = "dead";
+    if (GhostOps_Tac_Alive(go_tacSpotter)) {
+        lv_sp = "alive life " + FixedToString(UnitGetPropertyFixed(go_tacSpotter, c_unitPropLife, c_unitPropCurrent), 1) + " nukeAbil " + GhostOps_Tac_B(UnitAbilityCheck(go_tacSpotter, "TacNukeStrike", true));
+    }
+
+    if (GhostOps_Tac_Alive(go_tacOperative)) {
+        lv_op = "alive life " + FixedToString(UnitGetPropertyFixed(go_tacOperative, c_unitPropLife, c_unitPropCurrent), 1) + " nukeAbil " + GhostOps_Tac_B(UnitAbilityCheck(go_tacOperative, "TacNukeStrike", true));
+    }
+
+    GhostOps_Tac_Log(lp_tag + " | state " + IntToString(go_tacState) + " ended " + GhostOps_Tac_B(go_tacEnded) + " started " + GhostOps_Tac_B(go_tacStarted)
+        + " time " + FixedToString(GameGetMissionTime(), 1));
+    GhostOps_Tac_Log("  ghosts " + IntToString(UnitGroupCount(UnitGroup("Ghost", 1, RegionEntireMap(), GhostOps_Tac_LiveFilter(), 0), c_unitCountAlive)) + " spotter " + lv_sp + " operative " + lv_op);
+    GhostOps_Tac_Log("  nukes " + IntToString(TechTreeUnitCount(1, "Nuke", c_techCountCompleteOnly)) + " academy " + GhostOps_Tac_B(GhostOps_Tac_Alive(go_tacAcademy)));
+    GhostOps_Tac_Log("  garrison " + IntToString(UnitGroupCount(go_tacGarrison, c_unitCountAlive)) + " off " + IntToString(UnitGroupCount(go_tacWeaponOff, c_unitCountAlive))
+        + " trained " + IntToString(UnitGroupCount(go_tacTrained, c_unitCountAll)) + " rescued " + IntToString(UnitGroupCount(go_tacRescued, c_unitCountAll)));
+    GhostOps_Tac_Log("  zone " + FixedToString(go_tacZoneR, 1) + " tags " + IntToString(go_tacTagCount));
+    GhostOps_Tac_Log("  scene stage " + IntToString(go_tacScStage) + " transports " + IntToString(UnitGroupCount(UnitGroup("SpecialOpsDropship", 1, RegionEntireMap(), GhostOps_Tac_LiveFilter(), 0), c_unitCountAlive))
+        + " ghosts in the world " + IntToString(UnitGroupCount(UnitGroup("Ghost", 1, RegionEntireMap(), UnitFilter(0, 0, 0, 0), 0), c_unitCountAll)) + " missiles " + IntToString(TechTreeUnitCount(1, "Nuke", c_techCountCompleteOnly)));
+}
+
+bool GhostOps_TacTest_Heartbeat (bool lp_testConds, bool lp_runActions) {
+    if (!lp_runActions) {
+        return true;
+    }
+
+    GhostOps_TacTest_Snapshot("beat");
+    return true;
+}
+
+bool GhostOps_TacTest_LoadChecks (bool lp_testConds, bool lp_runActions) {
+    point lv_target;
+    int lv_i;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    Wait(2.0, c_timeReal);
+    if (go_tacTestMode == 10) {
+        GhostOps_TacTest_Snapshot("AFTER LOAD +2s (scene)");
+        Wait(25.0, c_timeGame);
+        GhostOps_TacTest_Snapshot("AFTER LOAD +27s (scene)");
+        Wait(40.0, c_timeGame);
+        GhostOps_TacTest_Snapshot("AFTER LOAD +67s (scene)");
+        return true;
+    }
+
+    CameraPan(1, Point(go_tacZoneX + go_tacZoneR - 3.0, go_tacZoneY), 0.0, -1, 10.0, false);
+    GhostOps_Tac_Log("camera panned to the zone border (after load)");
+    Wait(12.0, c_timeReal);
+    GhostOps_TacTest_Snapshot("AFTER LOAD +2s");
+    lv_target = Point(go_tacTestTargetX, go_tacTestTargetY);
+    // the roles of the Marines and the zone keep working after the load
+    go_tacZoneR = 1.0;
+    Wait(1.0, c_timeGame);
+    GhostOps_Tac_Log("after load: zone shrunk, garrison weapons off " + IntToString(UnitGroupCount(go_tacWeaponOff, c_unitCountAlive)) + " (6 expected)");
+    go_tacZoneR = 16.0;
+    Wait(1.0, c_timeGame);
+    GhostOps_Tac_Log("after load: zone restored, garrison weapons off " + IntToString(UnitGroupCount(go_tacWeaponOff, c_unitCountAlive)) + " (0 expected)");
+    UnitCreate(1, "Marine", 0, 1, Point(88.0, 30.0), 270.0);
+    Wait(0.5, c_timeGame);
+    GhostOps_Tac_Log("after load: a new Marine " + GhostOps_TacTest_MarineInfo(UnitLastCreated()) + " trained group " + IntToString(UnitGroupCount(go_tacTrained, c_unitCountAll)));
+    if (go_tacTestMode == 8) {
+        GhostOps_Tac_Log("after load: operative strike order valid " + GhostOps_Tac_B(UnitOrderIsValid(go_tacOperative, OrderTargetingPoint(AbilityCommand("TacNukeStrike", 0), lv_target)))
+            + " spotter strike order valid " + GhostOps_Tac_B(UnitOrderIsValid(go_tacSpotter, OrderTargetingPoint(AbilityCommand("TacNukeStrike", 0), lv_target))));
+        GhostOps_Tac_Log("after load: killing the spotter before any launch");
+        UnitKill(go_tacSpotter);
+        Wait(6.0, c_timeGame);
+        GhostOps_TacTest_Snapshot("AFTER LOAD spotter killed");
+    }
+
+    if (go_tacTestMode == 9) {
+        GhostOps_Tac_Log("after load: killing the spotter in flight");
+        UnitKill(go_tacSpotter);
+        Wait(3.0, c_timeGame);
+        GhostOps_TacTest_Snapshot("AFTER LOAD spotter killed in flight");
+        lv_i = 0;
+        while ((go_tacState < 5) && (lv_i < 120)) {
+            Wait(1.0, c_timeGame);
+            lv_i += 1;
+        }
+
+        GhostOps_TacTest_Snapshot("AFTER LOAD blast seen");
+        GhostOps_TacTest_Counts("after load blast");
+        Wait(5.0, c_timeGame);
+        GhostOps_TacTest_Snapshot("AFTER LOAD blast +5");
+    }
+
+    return true;
+}
+
+bool GhostOps_TacTest_SaveEvent (bool lp_testConds, bool lp_runActions) {
+    if (!lp_runActions) {
+        return true;
+    }
+
+    GhostOps_Tac_Log("EVENT: save or load notification");
+    return true;
+}
+
+bool GhostOps_TacTest_LoadEvent (bool lp_testConds, bool lp_runActions) {
+    if (!lp_runActions) {
+        return true;
+    }
+
+    GhostOps_Tac_Log("EVENT: load game done");
+    TriggerExecute(TriggerCreate("GhostOps_TacTest_LoadChecks"), true, false);
+    return true;
+}
+
+bool GhostOps_TacTest_SaveScenario (bool lp_testConds, bool lp_runActions) {
+    trigger lv_t;
+    trigger lv_beat;
+    point lv_target;
+    int lv_i;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    lv_t = TriggerCreate("GhostOps_TacTest_SaveEvent");
+    TriggerAddEventSaveGame(lv_t);
+    TriggerAddEventSaveGameDone(lv_t);
+    lv_t = TriggerCreate("GhostOps_TacTest_LoadEvent");
+    TriggerAddEventLoadGameDone(lv_t);
+    lv_beat = TriggerCreate("GhostOps_TacTest_Heartbeat");
+    TriggerAddEventTimePeriodic(lv_beat, 5.0, c_timeGame);
+    if (go_tacTestMode == 10) {
+        return true;
+    }
+
+    lv_i = 0;
+    while (((go_tacState != 2) || (go_tacOperative == null) || (go_tacScStage < 7)) && (lv_i < 600)) {
+        Wait(0.5, c_timeGame);
+        lv_i += 1;
+    }
+
+    libNtve_gf_SetAlliance(1, 2, libNtve_ge_AllianceSetting_Neutral);
+    libNtve_gf_SetAlliance(1, 5, libNtve_ge_AllianceSetting_Neutral);
+    libNtve_gf_SetAlliance(1, 4, libNtve_ge_AllianceSetting_Neutral);
+    lv_target = Point(go_tacTestTargetX, go_tacTestTargetY);
+    if (go_tacTestMode == 9) {
+        // case B: aim, wait for the irreversible launch (a long flight is configured in the dev preset)
+        UnitSetPosition(go_tacSpotter, Point(go_tacTestSpotX, go_tacTestSpotY), false);
+        Wait(1.0, c_timeGame);
+        VisExploreArea(1, RegionCircle(lv_target, 22.0), true, false);
+        Wait(1.0, c_timeGame);
+        UnitIssueOrder(go_tacSpotter, OrderTargetingPoint(AbilityCommand("TacNukeStrike", 0), lv_target), c_orderQueueReplace);
+        lv_i = 0;
+        while ((go_tacState < 4) && (lv_i < 100)) {
+            Wait(0.5, c_timeGame);
+            lv_i += 1;
+        }
+
+        GhostOps_TacTest_Snapshot("READY FOR SAVE (case B: in flight)");
+    }
+    else {
+        Wait(2.0, c_timeGame);
+        CameraPan(1, Point(go_tacZoneX + go_tacZoneR - 3.0, go_tacZoneY), 0.0, -1, 10.0, false);
+        Wait(1.0, c_timeGame);
+        GhostOps_TacTest_Snapshot("READY FOR SAVE (case A: before aiming)");
+    }
+
+    return true;
+}
+
+void GhostOps_TacTest_Delivered () {
+    GhostOps_Tac_Log("test: delivery noticed");
+}
+
+void GhostOps_TacTest_Start () {
+    GhostOps_ApplyTacticalTestConfig();
+    if (go_tacTestMode == 0) {
+        return;
+    }
+
+    if ((go_tacTestMode == 8) || (go_tacTestMode == 9) || (go_tacTestMode == 10)) {
+        TriggerExecute(TriggerCreate("GhostOps_TacTest_SaveScenario"), true, false);
+        return;
+    }
+
+    if (go_tacTestMode == 6) {
+        TriggerExecute(TriggerCreate("GhostOps_TacTest_Damage"), true, false);
+        return;
+    }
+
+    if (go_tacTestMode == 4) {
+        TriggerExecute(TriggerCreate("GhostOps_TacTest_Marines"), true, false);
+        return;
+    }
+
+    TriggerExecute(TriggerCreate("GhostOps_TacTest_Run"), true, false);
+}

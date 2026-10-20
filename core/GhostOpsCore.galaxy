@@ -23,15 +23,28 @@ string[6] go_cfgSquadType;
 bool go_cfgStartHoldFire;
 bool go_cfgGhostPermanentCloak;
 bool go_cfgGhostStartCloaked;
+bool go_cfgShowDifficulty;
+int go_cfgExpectedDifficulty;
+int go_cfgFragileCount;
+string[4] go_cfgFragileType;
+fixed[4] go_cfgFragileLife;
+bool go_missionStarted;
+bool go_cfgShowTuning;
+bool go_cfgHasProfile;
+text go_cfgPresetText;
+int go_initDifficulty;
+trigger go_fragileTrigger;
 trigger go_startStateTrigger;
 bool[16] go_playerCovered;
 unitgroup go_operatives;
+unit[6] go_squadUnit;
 unitgroup go_supported;
 unitgroup go_protected;
 string go_supportBehavior;
 trigger go_scanTrigger;
 
 void GhostOps_ApplyConfig ();
+void GhostOps_ApplyAbilityRestrictions (int lp_player);
 
 //--------------------------------------------------------------------------------------------------
 // Setup
@@ -91,6 +104,15 @@ void GhostOps_RegisterOperative (unit lp_unit) {
     }
 
     UnitGroupAdd(go_operatives, lp_unit);
+}
+
+// The operative created for squad slot lp_index (0 based, same order as the configured squad).
+unit GhostOps_SquadUnit (int lp_index) {
+    if ((lp_index < 0) || (lp_index > 5)) {
+        return null;
+    }
+
+    return go_squadUnit[lp_index];
 }
 
 bool GhostOps_IsOperative (unit lp_unit) {
@@ -234,6 +256,69 @@ bool GhostOps_ScanTick (bool lp_testConds, bool lp_runActions) {
     return true;
 }
 
+//--------------------------------------------------------------------------------------------------
+// Fragile units: the configured unit type of covered players has its MAXIMUM life lowered (so that
+// healing cannot raise it again). Units of other players are never touched. The scan runs every
+// 0.2 s, which is faster than any unit created by the mission can reach a fight.
+//--------------------------------------------------------------------------------------------------
+void GhostOps_FragileScan () {
+    unitgroup lv_group;
+    int lv_p;
+    int lv_k;
+    int lv_count;
+    int lv_i;
+    unit lv_unit;
+
+    lv_p = 0;
+    while (lv_p < 16) {
+        if (go_playerCovered[lv_p]) {
+            lv_k = 0;
+            while (lv_k < go_cfgFragileCount) {
+            lv_group = UnitGroup(go_cfgFragileType[lv_k], lv_p, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32))), 0);
+            lv_count = UnitGroupCount(lv_group, c_unitCountAll);
+            lv_i = 1;
+            while (lv_i <= lv_count) {
+                lv_unit = UnitGroupUnit(lv_group, lv_i);
+                if ((lv_unit != null) && (UnitGetPropertyFixed(lv_unit, c_unitPropLifeMax, c_unitPropCurrent) > go_cfgFragileLife[lv_k])) {
+                    UnitSetPropertyFixed(lv_unit, c_unitPropLifeMax, go_cfgFragileLife[lv_k]);
+                    UnitSetPropertyFixed(lv_unit, c_unitPropLife, go_cfgFragileLife[lv_k]);
+                }
+
+                lv_i += 1;
+            }
+            lv_k += 1;
+            }
+        }
+
+        lv_p += 1;
+    }
+}
+
+bool GhostOps_FragileTick (bool lp_testConds, bool lp_runActions) {
+    if (!lp_runActions) {
+        return true;
+    }
+
+    GhostOps_FragileScan();
+    return true;
+}
+
+// Adapters call this first in their start hook: the mission may reach the hook through more than one
+// scenario branch (for example watching or skipping an intro), the squad must appear exactly once.
+bool GhostOps_ClaimStart () {
+    if (go_missionStarted) {
+        return false;
+    }
+
+    go_missionStarted = true;
+    return true;
+}
+
+// Called from an early hook before the mission initialises its difficulty-dependent triggers.
+void GhostOps_CaptureInit () {
+    go_initDifficulty = PlayerDifficulty(1);
+}
+
 // Entry point for a future menu: 1 = original damage, 2 = double, 3 = triple.
 void GhostOps_SetDamageMultiplier (int lp_multiplier) {
     if ((lp_multiplier < 1) || (lp_multiplier > 3)) {
@@ -251,6 +336,77 @@ void GhostOps_Start () {
     go_scanTrigger = TriggerCreate("GhostOps_ScanTick");
     TriggerAddEventTimePeriodic(go_scanTrigger, 1.0, c_timeGame);
     GhostOps_ScanAll();
+    if (go_cfgFragileCount > 0) {
+        go_fragileTrigger = TriggerCreate("GhostOps_FragileTick");
+        TriggerAddEventTimePeriodic(go_fragileTrigger, 0.2, c_timeGame);
+        GhostOps_FragileScan();
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+// Diagnostics
+//--------------------------------------------------------------------------------------------------
+// Shows the campaign difficulty the mission really runs on (1 casual, 2 normal, 3 hard, 4 brutal).
+// The message is repeated every 10 seconds for one minute so that it can be read and photographed.
+int go_difficultyShown;
+trigger go_difficultyTrigger;
+
+// Reads the values the game actually uses (catalog), so the Owner can see a map's Ghost tuning in game.
+string GhostOps_TuningText () {
+    return " | Ghost energy max " + CatalogFieldValueGet(c_gameCatalogUnit, "Ghost", "EnergyMax", 1)
+        + ", regen " + CatalogFieldValueGet(c_gameCatalogUnit, "Ghost", "EnergyRegenRate", 1)
+        + ", cloak drain " + CatalogFieldValueGet(c_gameCatalogBehavior, "GhostCloak", "Modification.VitalRegenArray[Energy]", 1)
+        + ", cloak cost " + CatalogFieldValueGet(c_gameCatalogAbil, "GhostCloak", "Cost[0].Vital[Energy]", 1)
+        + ", Snipe cost " + CatalogFieldValueGet(c_gameCatalogAbil, "Snipe", "Cost[0].Vital[Energy]", 1)
+        + ", cast " + CatalogFieldValueGet(c_gameCatalogAbil, "Snipe", "CastIntroTime", 1)
+        + ", cooldown " + CatalogFieldValueGet(c_gameCatalogAbil, "Snipe", "Cost[0].Cooldown.TimeUse", 1)
+        + " (" + CatalogFieldValueGet(c_gameCatalogAbil, "Snipe", "Cost[0].Cooldown.Location", 1) + ")"
+        + ", damage " + CatalogFieldValueGet(c_gameCatalogEffect, "SnipeDamage", "Amount", 1);
+}
+
+void GhostOps_ShowDifficultyMessage (int lp_player) {
+    string lv_text;
+
+    lv_text = "Ghost Ops diagnostics | PlayerDifficulty at init = " + IntToString(go_initDifficulty) + ", now = " + IntToString(PlayerDifficulty(lp_player)) + " (expected " + IntToString(go_cfgExpectedDifficulty) + "; 0 = not captured); PersonalCloaking = " + IntToString(TechTreeUpgradeCount(lp_player, "PersonalCloaking", c_techCountCompleteOnly));
+    if (go_cfgShowTuning) {
+        lv_text = lv_text + GhostOps_TuningText();
+    }
+
+    UIDisplayMessage(PlayerGroupAll(), c_messageAreaDirective, StringToText(lv_text));
+}
+
+bool GhostOps_DifficultyTick (bool lp_testConds, bool lp_runActions) {
+    if (!lp_runActions) {
+        return true;
+    }
+
+    GhostOps_ShowDifficultyMessage(1);
+    go_difficultyShown += 1;
+    if (go_difficultyShown >= 6) {
+        TriggerDestroy(go_difficultyTrigger);
+    }
+
+    return true;
+}
+
+// One short message naming the Ghost Ops profile of this mission start. The text comes from the map's
+// string table (StringExternal), because Galaxy source must stay plain ASCII (a Cyrillic literal breaks the compile).
+void GhostOps_ReportProfile () {
+    if (!go_cfgHasProfile) {
+        return;
+    }
+
+    UIDisplayMessage(PlayerGroupAll(), c_messageAreaDirective, go_cfgPresetText);
+}
+
+void GhostOps_ReportDifficulty (int lp_player) {
+    if (!go_cfgShowDifficulty) {
+        return;
+    }
+
+    GhostOps_ShowDifficultyMessage(lp_player);
+    go_difficultyTrigger = TriggerCreate("GhostOps_DifficultyTick");
+    TriggerAddEventTimePeriodic(go_difficultyTrigger, 10.0, c_timeReal);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -261,6 +417,9 @@ void GhostOps_Start () {
 // Both are player level: any other Ghost of the same player is affected as well.
 void GhostOps_GrantGhostTech (int lp_player) {
     TechTreeUpgradeAddLevel(lp_player, "PersonalCloaking", 1);
+    // The campaign enables tech tree restrictions; make sure the plain cloak commands are allowed.
+    TechTreeAbilityAllow(lp_player, AbilityCommand("GhostCloak", 0), true);
+    TechTreeAbilityAllow(lp_player, AbilityCommand("GhostCloak", 1), true);
     if (go_cfgGhostPermanentCloak) {
         TechTreeUpgradeAddLevel(lp_player, "PermanentCloakGhost", 1);
     }
@@ -297,7 +456,8 @@ bool GhostOps_StartStateTick (bool lp_testConds, bool lp_runActions) {
     while (lv_i <= lv_count) {
         lv_unit = UnitGroupUnit(go_operatives, lv_i);
         if (lv_unit != null) {
-            if (go_cfgStartHoldFire) {
+            // Medics have no weapon and no hold-fire command; they keep their automatic healing.
+            if (go_cfgStartHoldFire && (UnitGetType(lv_unit) != "Medic")) {
                 UnitIssueOrder(lv_unit, Order(AbilityCommand("GhostHoldFire", 0)), c_orderQueueAddToEnd);
             }
 
@@ -317,6 +477,51 @@ bool GhostOps_StartStateTick (bool lp_testConds, bool lp_runActions) {
 // registered before the first BaseSupport scan, so none of them receives the army bonus.
 unit GhostOps_SpawnOperatives (int lp_player, point lp_origin) {
     int lv_i;
+    int lv_fighters;
+    int lv_support;
+    unit lv_first;
+    point lv_pos;
+
+    lv_first = null;
+    lv_fighters = 0;
+    lv_support = 0;
+    if (GhostOps_SquadHasGhost()) {
+        GhostOps_GrantGhostTech(lp_player);
+    }
+
+    GhostOps_ApplyAbilityRestrictions(lp_player);
+
+    lv_i = 0;
+    while (lv_i < go_cfgSquadSize) {
+        // Fighters stand in a row at the origin, medics in a second row behind them (south).
+        if (go_cfgSquadType[lv_i] == "Medic") {
+            lv_pos = PointWithOffset(lp_origin, 1.0 + (2.0 * lv_support), -2.5);
+            lv_support += 1;
+        }
+        else {
+            lv_pos = PointWithOffset(lp_origin, 2.0 * lv_fighters, 0.0);
+            lv_fighters += 1;
+        }
+
+        UnitCreate(1, go_cfgSquadType[lv_i], 0, lp_player, lv_pos, 270.0);
+        GhostOps_RegisterOperative(UnitLastCreated());
+        go_squadUnit[lv_i] = UnitLastCreated();
+        if (lv_first == null) {
+            lv_first = UnitLastCreated();
+        }
+
+        lv_i += 1;
+    }
+
+    go_startStateTrigger = TriggerCreate("GhostOps_StartStateTick");
+    TriggerAddEventTimeElapsed(go_startStateTrigger, 0.5, c_timeGame);
+    return lv_first;
+}
+
+// The same squad, but created inside a transport that the adapter flies in later. The operatives are registered
+// at once (before any scan), exactly as with GhostOps_SpawnOperatives; returns the first of them.
+unit GhostOps_SpawnOperativesInCargo (int lp_player, unit lp_carrier) {
+    int lv_i;
     unit lv_first;
 
     lv_first = null;
@@ -324,12 +529,14 @@ unit GhostOps_SpawnOperatives (int lp_player, point lp_origin) {
         GhostOps_GrantGhostTech(lp_player);
     }
 
+    GhostOps_ApplyAbilityRestrictions(lp_player);
     lv_i = 0;
     while (lv_i < go_cfgSquadSize) {
-        UnitCreate(1, go_cfgSquadType[lv_i], 0, lp_player, PointWithOffset(lp_origin, 2.0 * lv_i, 0.0), 270.0);
-        GhostOps_RegisterOperative(UnitLastCreated());
+        UnitCargoCreate(lp_carrier, go_cfgSquadType[lv_i], 1);
+        GhostOps_RegisterOperative(UnitCargoLastCreated());
+        go_squadUnit[lv_i] = UnitCargoLastCreated();
         if (lv_first == null) {
-            lv_first = UnitLastCreated();
+            lv_first = UnitCargoLastCreated();
         }
 
         lv_i += 1;

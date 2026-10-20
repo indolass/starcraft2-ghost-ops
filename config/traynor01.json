@@ -1,0 +1,192 @@
+{
+  "schema_version": 4,
+  "mission": "traynor01",
+  "operatives": {
+    "squad": [
+      "Ghost",
+      "Ghost"
+    ],
+    "start_hold_fire": false,
+    "ghost_permanent_cloak": false,
+    "ghost_start_cloaked": false,
+    "disabled_abilities": []
+  },
+  "army": {
+    "fragile_units": [
+      {
+        "type": "Marine",
+        "max_life": 1
+      },
+      {
+        "type": "Raynor01",
+        "max_life": 45
+      }
+    ]
+  },
+  "base_support": {
+    "damage_multiplier": 1
+  },
+  "experimental": {
+    "invulnerable_allies": false
+  },
+  "scenario": {
+    "waves": "original",
+    "timers": "original",
+    "victory": "original"
+  },
+  "nukes_granted": 0,
+  "difficulty": {
+    "expected": 3,
+    "show_message": false
+  },
+  "ghost_tuning": {
+    "energy_start": 100,
+    "energy_max": 100,
+    "regen_per_second": 20,
+    "cloak_activation_cost": 0,
+    "cloak_net_per_second": -10,
+    "snipe": {
+      "cost": 10,
+      "damage": 45,
+      "cast_time": 0.3
+    },
+    "remove_abilities": [
+      "TacNukeStrike",
+      "EMP"
+    ]
+  },
+  "audio": {
+    "clips": [
+      {
+        "id": "GhostOpsRaynorTroopsReady",
+        "source": "assets/audio/traynor01/raynor_A.wav"
+      },
+      {
+        "id": "GhostOpsMarineSendHelp",
+        "source": "assets/audio/traynor01/marine_B.wav"
+      },
+      {
+        "id": "GhostOpsMarineDoctors",
+        "source": "assets/audio/traynor01/marine_A.wav"
+      }
+    ]
+  },
+  "scene": {
+    "enabled": true,
+    "debug_log": false,
+    "pause": 0.5,
+    "raynor_seconds": 3.0,
+    "marine_b_seconds": 3.5,
+    "marine_a_seconds": 3.0,
+    "raynor_clip": "GhostOpsRaynorTroopsReady",
+    "marine_b_clip": "GhostOpsMarineSendHelp",
+    "marine_a_clip": "GhostOpsMarineDoctors",
+    "texts": {
+      "RaynorName": {
+        "ru": "Рэйнор",
+        "en": "Raynor"
+      },
+      "RaynorLine": {
+        "ru": "Войска готовы к бою?",
+        "en": "Are the troops ready for battle?"
+      },
+      "MarineName": {
+        "ru": "Морпех",
+        "en": "Marine"
+      },
+      "MarineBLine": {
+        "ru": "Высылайте подмогу!",
+        "en": "Send reinforcements!"
+      },
+      "MarineALine": {
+        "ru": "Доктора! Доктора!",
+        "en": "Medic! Medic!"
+      },
+      "Explain": {
+        "ru": "Отряд пострадал при высадке. Морпехи тяжело ранены.",
+        "en": "The squad was hurt in the landing. The Marines are badly wounded."
+      }
+    }
+  },
+  "default_preset": "easy",
+  "presets": {
+    "easy": {
+      "label": "Лёгкий",
+      "message": "Ghost Ops — Лёгкий",
+      "overrides": {
+        "ghost_tuning": {
+          "snipe": {
+            "cooldown": 0
+          }
+        }
+      },
+      "message_en": "Ghost Ops - Easy",
+      "card": "Два призрака. Быстрые точные выстрелы",
+      "details": [
+        "Два призрака по 100 здоровья",
+        "Snipe без дополнительной перезарядки",
+        "Энергия 100, +20 в секунду вне маскировки, маскировка −10 в секунду"
+      ]
+    },
+    "hard": {
+      "label": "Сложный",
+      "message": "Ghost Ops — Сложный",
+      "overrides": {
+        "ghost_tuning": {
+          "snipe": {
+            "cooldown": 5
+          }
+        }
+      },
+      "message_en": "Ghost Ops - Hard",
+      "card": "Два призрака. Перезарядка точного выстрела 5 секунд",
+      "details": [
+        "Два призрака по 100 здоровья",
+        "Snipe: перезарядка 5 секунд у каждого призрака отдельно",
+        "Остальное как в лёгком варианте"
+      ],
+      "experimental": false
+    },
+    "easy_dev": {
+      "label": "Лёгкий (отладка)",
+      "message": "Ghost Ops — Лёгкий (отладка)",
+      "message_en": "Ghost Ops - Easy (debug)",
+      "hidden": true,
+      "extends": "easy",
+      "card": "Отладочная сборка с журналом сцены",
+      "details": [
+        "Только для разработки"
+      ],
+      "overrides": {
+        "scene": {
+          "debug_log": true
+        }
+      }
+    },
+    "extreme": {
+      "label": "Экстремальный",
+      "message": "Ghost Ops — Экстремальный",
+      "message_en": "Ghost Ops - Extreme",
+      "card": "Один призрак, 45 здоровья. Перезарядка точного выстрела 10 секунд",
+      "details": [
+        "Один призрак, 45 здоровья (начальное и максимальное)",
+        "Snipe: перезарядка 10 секунд",
+        "Остальное как в сложном варианте"
+      ],
+      "experimental": true,
+      "overrides": {
+        "operatives": {
+          "squad": [
+            "Ghost"
+          ]
+        },
+        "ghost_tuning": {
+          "ghost_life": 45,
+          "snipe": {
+            "cooldown": 10
+          }
+        }
+      }
+    }
+  }
+}

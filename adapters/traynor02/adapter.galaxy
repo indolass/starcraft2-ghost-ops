@@ -2,16 +2,302 @@
 // GhostOps adapter: The Outlaws (TRaynor02). All mission specific knowledge lives here.
 // Player 1 is the human player. The mission calls GhostOps_OnMissionStart() right after it
 // has started gt_StartGame, i.e. after the intro sequence (see adapter.json for the anchor).
+// The other hooks of adapter.json call the GhostOps_Tac_* functions of the tactical module; they do
+// nothing unless the tactical variant is built (go_tacEnabled).
+//
+// Tactical variant, story scene (all in game time, delays from the configuration):
+//   stage 0  wait first_delay, then (after the original talk has left the queue) the Adjutant message "Alarm"
+//   stage 1  Adjutant message on screen
+//   stage 2  wait second_delay after its end
+//   stage 8  Swann message queued (it waits behind any original talk); when it really starts the transport is created
+//   stage 3  Swann message + the transport with the two Ghosts flies in (created at the start of the message, Ghosts inside)
+//   stage 4  unloaded: text, task, tips; the transport leaves
+//   stage 5  transport on its way out, removed at the edge of the map
+//   stage 7  done
+// The stage is a global (saved with the game); a periodic trigger drives it, so a loaded game goes on from the same stage.
+// The messages are portrait transmissions with a short voice clip each (Adjutant "Alarm", Swann, one Ghost line; clips are imported by the
+// build, config key audio.clips); the details stay in the text and the on-screen duration is explicit, so it does not depend on the clip.
+// stage 2 starts when the Adjutant transmission is over (portrait, text, sound), the Swann message follows second_delay seconds later.
 //==================================================================================================
+trigger go_scTrig;
+unit go_scShip;
+point go_scLanding;
+bool go_scBusy;
+fixed go_scMsgEnd;
+
+// The lines are shown in the subtitle message area by the script itself: a transmission with a sound link shows its subtitle only when the
+// player's subtitle option is on (it is off by default), and the explanation must never depend on that option.
+void GhostOps_Scene_Say (text lp_speaker, text lp_line) {
+    UIDisplayMessage(PlayerGroupAll(), c_messageAreaSubtitle, lp_speaker + StringToText(": ") + lp_line);
+}
+
+// The voice clips use the same wrapper as the original talks: unit voices are lowered while a clip plays.
+void GhostOps_Scene_VoiceBegin () {
+    libCamp_gf_SetAllSoundChannelVolumesCampaign(1);
+    libLbty_gf_PlayTransmissionCueSound(PlayerGroupAll());
+}
+
+void GhostOps_Scene_VoiceEnd () {
+    libCamp_gf_SetAllSoundChannelVolumesCampaign(2);
+}
+
+// A free place for the transport on the start base: the first of the map's own drop points without a structure of the player nearby.
+point GhostOps_Scene_Landing () {
+    int lv_i;
+    point lv_p;
+    point lv_first;
+
+    lv_first = PointFromId(32);
+    lv_i = 0;
+    while (lv_i < 6) {
+        if (lv_i == 0) {
+            lv_p = PointFromId(32);
+        }
+        else if (lv_i == 1) {
+            lv_p = PointFromId(688);
+        }
+        else if (lv_i == 2) {
+            lv_p = PointFromId(1025);
+        }
+        else if (lv_i == 3) {
+            lv_p = PointFromId(1105);
+        }
+        else if (lv_i == 4) {
+            lv_p = PointFromId(1112);
+        }
+        else {
+            lv_p = PointFromId(1110);
+        }
+
+        if (UnitGroupCount(UnitGroup(null, 1, RegionCircle(lv_p, 3.0), UnitFilter((1 << c_targetFilterStructure), 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive) == 0) {
+            return lv_p;
+        }
+
+        lv_i += 1;
+    }
+
+    return lv_first;
+}
+
+void GhostOps_Scene_AddTips (int lp_from, int lp_to) {
+    int lv_i;
+
+    lv_i = lp_from;
+    while (lv_i <= lp_to) {
+        if (lv_i == 1) {
+            HelpPanelAddTip(PlayerGroupAll(), StringExternal("Param/Value/GhostOpsTac_Tip1Title"), StringExternal("Param/Value/GhostOpsTac_Tip1Text"), StringExternal("Param/Value/GhostOpsTac_Tip1Title"), "Assets\\Textures\\ui_icon_attention.dds");
+        }
+        else if (lv_i == 2) {
+            HelpPanelAddTip(PlayerGroupAll(), StringExternal("Param/Value/GhostOpsTac_Tip2Title"), StringExternal("Param/Value/GhostOpsTac_Tip2Text"), StringExternal("Param/Value/GhostOpsTac_Tip2Title"), "Assets\\Textures\\ui_icon_attention.dds");
+        }
+        else if (lv_i == 3) {
+            HelpPanelAddTip(PlayerGroupAll(), StringExternal("Param/Value/GhostOpsTac_Tip3Title"), StringExternal("Param/Value/GhostOpsTac_Tip3Text"), StringExternal("Param/Value/GhostOpsTac_Tip3Title"), "Assets\\Textures\\ui_icon_attention.dds");
+        }
+        else {
+            HelpPanelAddTip(PlayerGroupAll(), StringExternal("Param/Value/GhostOpsTac_Tip4Title"), StringExternal("Param/Value/GhostOpsTac_Tip4Text"), StringExternal("Param/Value/GhostOpsTac_Tip4Title"), "Assets\\Textures\\ui_icon_attention.dds");
+        }
+
+        lv_i += 1;
+    }
+}
+
+void GhostOps_Scene_SendTransport ();
+
+// Messages queue behind the original talk (TriggerQueueEnter) and never interrupt it.
+bool GhostOps_Scene_AlertMsg (bool lp_testConds, bool lp_runActions) {
+    if (!lp_runActions) {
+        return true;
+    }
+
+    TriggerQueueEnter();
+    go_scBusy = true;
+    GhostOps_Tac_Log("scene: alert message on screen");
+    GhostOps_Tac_Log("scene: clip lengths " + FixedToString(SoundLengthSync(SoundLink("GhostOpsAdjutantAlert", 0)), 2) + " " + FixedToString(SoundLengthSync(SoundLink("GhostOpsSwannHelp", 0)), 2) + " " + FixedToString(SoundLengthSync(SoundLink("GhostOpsGhostReady", 0)), 2));
+    GhostOps_Scene_VoiceBegin();
+    GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsTac_AlertTitle"), StringExternal("Param/Value/GhostOpsTac_AlertText"));
+    TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("AdjutantPortrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", SoundLink("GhostOpsAdjutantAlert", 0), null, null, go_tacStoryAlertLen, c_transmissionDurationSet, true);
+    go_scBusy = false;
+    if (go_tacScStage == 1) {
+        go_tacScStage = 2;
+        go_tacScT = GameGetMissionTime();
+        GhostOps_Scene_AddTips(1, 1);
+    }
+
+    GhostOps_Scene_VoiceEnd();
+    GhostOps_Tac_Log("scene: alert message finished (the pause before Swann starts now)");
+    TriggerQueueExit();
+    return true;
+}
+
+bool GhostOps_Scene_SwannMsg (bool lp_testConds, bool lp_runActions) {
+    if (!lp_runActions) {
+        return true;
+    }
+
+    TriggerQueueEnter();
+    if (go_tacScStage == 8) {
+        go_tacScStage = 3;
+        go_tacScT = GameGetMissionTime();
+        GhostOps_Scene_SendTransport();
+    }
+
+    GhostOps_Tac_Log("scene: Swann message on screen");
+    GhostOps_Scene_VoiceBegin();
+    GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsTac_SwannName"), StringExternal("Param/Value/GhostOpsTac_SwannText"));
+    TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("SwannPortrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", SoundLink("GhostOpsSwannHelp", 0), null, null, go_tacStorySwannLen, c_transmissionDurationSet, true);
+    GhostOps_Scene_VoiceEnd();
+    GhostOps_Tac_Log("scene: Swann message finished");
+    TriggerQueueExit();
+    return true;
+}
+
+// One short Ghost line when the unloading is over; said once for the pair (go_tacGhostSaid is set by the caller, before this runs).
+bool GhostOps_Scene_GhostMsg (bool lp_testConds, bool lp_runActions) {
+    if (!lp_runActions) {
+        return true;
+    }
+
+    TriggerQueueEnter();
+    GhostOps_Tac_Log("scene: Ghost line on screen");
+    GhostOps_Scene_VoiceBegin();
+    GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsTac_GhostName"), StringExternal("Param/Value/GhostOpsTac_GhostText"));
+    TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("GhostPortrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", SoundLink("GhostOpsGhostReady", 0), null, null, go_tacStoryGhostLen, c_transmissionDurationSet, true);
+    GhostOps_Scene_VoiceEnd();
+    GhostOps_Tac_Log("scene: Ghost line finished");
+    TriggerQueueExit();
+    return true;
+}
+
+// The transport with the two Ghosts (the only way the squad reaches the map in this variant).
+void GhostOps_Scene_SendTransport () {
+    go_scLanding = GhostOps_Scene_Landing();
+    libNtve_gf_CreateUnitsAtPoint2(1, "SpecialOpsDropship", 0, 1, PointFromId(472));
+    go_scShip = UnitLastCreated();
+    UnitSetState(go_scShip, c_unitStateSelectable, false);
+    UnitSetState(go_scShip, c_unitStateTargetable, false);
+    UnitSetState(go_scShip, c_unitStateUsingSupply, false);
+    GhostOps_SpawnOperativesInCargo(1, go_scShip);
+    GhostOps_Tac_OnGhostsDelivered(GhostOps_SquadUnit(0), GhostOps_SquadUnit(1));
+    UnitIssueOrder(go_scShip, OrderTargetingPoint(AbilityCommand("SpecOpsDropshipTransport", 2), go_scLanding), c_orderQueueReplace);
+    UnitIssueOrder(go_scShip, OrderTargetingPoint(AbilityCommand("move", 0), RegionGetCenter(RegionFromId(31))), c_orderQueueAddToEnd);
+    MinimapPing(PlayerGroupAll(), go_scLanding, 8.0, Color(0.00, 60.00, 100.00));
+    GhostOps_Tac_Log("scene: transport sent");
+}
+
+void GhostOps_Scene_Unloaded () {
+    ObjectiveCreate(StringExternal("Param/Value/GhostOpsTac_ObjectiveTitle"), StringExternal("Param/Value/GhostOpsTac_ObjectiveText"), c_objectiveStateActive, false);
+    GhostOps_Scene_AddTips(2, 4);
+    GhostOps_Tac_DrawRoles();
+    UIDisplayMessage(PlayerGroupAll(), c_messageAreaDirective, StringExternal("Param/Value/GhostOpsTac_ArrivalText"));
+    GhostOps_Tac_Log("scene: ghosts unloaded");
+    if (!go_tacGhostSaid) {
+        go_tacGhostSaid = true;
+        TriggerExecute(TriggerCreate("GhostOps_Scene_GhostMsg"), true, false);
+    }
+
+}
+
+bool GhostOps_Scene_Tick (bool lp_testConds, bool lp_runActions) {
+    fixed lv_now;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    if (go_tacEnded) {
+        return true;
+    }
+
+    lv_now = GameGetMissionTime();
+    if (go_tacScStage == 0) {
+        if ((lv_now - go_tacScT) >= go_tacStoryFirst) {
+            go_tacScStage = 1;
+            go_scMsgEnd = lv_now + go_tacStoryAlertLen + 120.0;
+            TriggerExecute(TriggerCreate("GhostOps_Scene_AlertMsg"), true, false);
+        }
+    }
+    else if (go_tacScStage == 1) {
+        // watchdog (for example after a load): the message is never shown twice, the scene goes on
+        if (lv_now > go_scMsgEnd) {
+            go_tacScStage = 2;
+            go_tacScT = lv_now;
+        }
+    }
+    else if (go_tacScStage == 2) {
+        if ((lv_now - go_tacScT) >= go_tacStorySecond) {
+            go_tacScStage = 8;
+            go_tacScT = lv_now;
+            GhostOps_Tac_Log("scene: Swann queued");
+            TriggerExecute(TriggerCreate("GhostOps_Scene_SwannMsg"), true, false);
+        }
+    }
+    else if (go_tacScStage == 8) {
+        // watchdog (for example after a load cut the waiting message): the transport comes anyway
+        if ((lv_now - go_tacScT) > 120.0) {
+            go_tacScStage = 3;
+            go_tacScT = lv_now;
+            GhostOps_Scene_SendTransport();
+        }
+    }
+    else if (go_tacScStage == 3) {
+        if (!GhostOps_Tac_Alive(go_scShip)) {
+            // the transport is gone: whoever was inside is lost with it; nothing is created again
+            go_tacScStage = 7;
+        }
+        else if (UnitGroupCount(UnitCargoGroup(go_scShip), c_unitCountAlive) == 0) {
+            go_tacScStage = 4;
+            go_tacScT = lv_now;
+            GhostOps_Scene_Unloaded();
+        }
+        else if ((lv_now - go_tacScT) > 150.0) {
+            // an unfinished delivery (for example a loaded game): order the unloading again
+            UnitIssueOrder(go_scShip, OrderTargetingPoint(AbilityCommand("SpecOpsDropshipTransport", 2), go_scLanding), c_orderQueueReplace);
+            UnitIssueOrder(go_scShip, OrderTargetingPoint(AbilityCommand("move", 0), RegionGetCenter(RegionFromId(31))), c_orderQueueAddToEnd);
+            go_tacScT = lv_now;
+        }
+    }
+    else if (go_tacScStage == 4) {
+        // the Ghosts are out: the transport has done its job and is removed at the edge of the map (never earlier than its leaving)
+        if (!GhostOps_Tac_Alive(go_scShip)) {
+            go_tacScStage = 7;
+        }
+        else if ((DistanceBetweenPoints(UnitGetPosition(go_scShip), RegionGetCenter(RegionFromId(31))) < 8.0) || ((lv_now - go_tacScT) > 90.0)) {
+            UnitRemove(go_scShip);
+            go_tacScStage = 7;
+            GhostOps_Tac_Log("scene: transport removed");
+        }
+    }
+
+    return true;
+}
+
 void GhostOps_OnMissionStart () {
     unit lv_operative;
 
+    // the intro branches of the mission reach this hook once; the squad must still never be created twice
+    if (!GhostOps_ClaimStart()) {
+        return;
+    }
+
+    GhostOps_ApplyTacticalConfig();
     GhostOps_Init();
     GhostOps_SetPlayerCovered(1, true);
-    lv_operative = GhostOps_SpawnOperatives(1, CameraInfoGetTarget(CameraInfoFromId(1117)));
-    if (lv_operative != null) {
-        UnitSelect(lv_operative, 1, true);
+    if (go_tacEnabled) {
+        // the Ghosts come later, by transport (see the scene above)
+        GhostOps_Tac_Start();
+        go_tacScStage = 0;
+        go_tacScT = GameGetMissionTime();
+        go_scTrig = TriggerCreate("GhostOps_Scene_Tick");
+        TriggerAddEventTimePeriodic(go_scTrig, 0.5, c_timeGame);
+    }
+    else {
+        lv_operative = GhostOps_SpawnOperatives(1, CameraInfoGetTarget(CameraInfoFromId(1117)));
+        if (lv_operative != null) {
+            UnitSelect(lv_operative, 1, true);
+        }
     }
 
     GhostOps_Start();
+    GhostOps_ReportProfile();
+    GhostOps_ReportDifficulty(1);
 }

@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "mission": "traynor01",
+  "title": "Liberation Day",
+  "source_map_file": "TRaynor01.SC2Map",
+  "output_map_file": "GhostOps_TRaynor01.SC2Map",
+  "script_member": "MapScript.galaxy",
+  "adapter_source": "adapters/traynor01/adapter.galaxy",
+  "config": "config/traynor01.json",
+  "start_hooks": [
+    {
+      "function": "gt_IntroCleanupNoEscape_Func",
+      "after": "TriggerExecute(gt_StartGame, true, false);",
+      "call": "GhostOps_OnMissionStart();"
+    },
+    {
+      "function": "gt_IntroCleanupEscape_Func",
+      "after": "TriggerExecute(gt_StartGame, true, false);",
+      "call": "GhostOps_OnMissionStart();"
+    }
+  ],
+  "extra_hooks": [
+    {
+      "function": "gt_OpeningLineQ_Func",
+      "after": "libCamp_gf_SetAllSoundChannelVolumesCampaign(2);",
+      "call": "GhostOps_T1_OnOpeningLine(gv_raynor);"
+    }
+  ],
+  "init_hook": {
+    "function": "gt_Initialization_Func",
+    "before": "libCamp_gf_LoadCampaignData(1);",
+    "call": "GhostOps_CaptureInit();"
+  },
+  "required_markers": ["gt_StartGame", "gt_IntroCleanupNoEscape_Func", "gt_IntroCleanupEscape_Func", "gt_Initialization_Func", "PointFromId(505)", "void InitLibs"]
+}

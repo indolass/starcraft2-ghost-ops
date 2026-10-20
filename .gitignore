@@ -10,3 +10,5 @@ __pycache__/
 *.pyc
 .claude/
 debug.log
+# game voice clips are copies of Blizzard lines: kept locally only (see assets/audio/SOURCES.md), never published
+assets/audio/**/*.wav

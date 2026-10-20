@@ -7,10 +7,58 @@
   "script_member": "MapScript.galaxy",
   "adapter_source": "adapters/traynor02/adapter.galaxy",
   "config": "config/traynor02.poc.json",
-  "start_hook": {
-    "function": "gt_IntroSequence_Func",
-    "after": "TriggerExecute(gt_StartGame, true, false);",
-    "call": "GhostOps_OnMissionStart();"
-  },
-  "required_markers": ["gt_StartGame", "gt_IntroSequence_Func", "CameraInfoFromId(1117)", "void InitLibs"]
+  "modules": [
+    "core/GhostOpsTactical.galaxy"
+  ],
+  "start_hooks": [
+    {
+      "function": "gt_IntroSequence_Func",
+      "after": "TriggerExecute(gt_StartGame, true, false);",
+      "call": "GhostOps_OnMissionStart();"
+    },
+    {
+      "function": "gt_RebelsCompleteQ_Func",
+      "after": "libNtve_gf_RescueUnit(UnitGroupLoopCurrent(), gv_pLAYER_01_USER, true);",
+      "call": "GhostOps_Tac_OnRescue(UnitGroupLoopCurrent());"
+    },
+    {
+      "function": "gt_VictoryDominionOutpostCompleted_Func",
+      "after": "gv_gameOver = true;",
+      "call": "GhostOps_Tac_OnVictory();"
+    },
+    {
+      "function": "gt_VictorySetup_Func",
+      "after": "gv_inCinematic = true;",
+      "call": "GhostOps_Tac_OnVictory();"
+    },
+    {
+      "function": "gt_DefeatBaseDead_Func",
+      "after": "gv_gameOver = true;",
+      "call": "GhostOps_Tac_OnDefeat();"
+    }
+  ],
+  "required_markers": [
+    "gt_StartGame",
+    "gt_IntroSequence_Func",
+    "CameraInfoFromId(1117)",
+    "void InitLibs"
+  ],
+  "ce0_extra": "adapters/traynor02/ce0_extra.galaxy",
+  "ce0_hooks": [
+    {
+      "function": "gt_IntroSequence_Func",
+      "after": "TriggerExecute(gt_StartGame, true, false);",
+      "call": "GhostOps_Ce0_Start();"
+    },
+    {
+      "function": "gt_VictoryDominionOutpostCompleted_Func",
+      "after": "gv_gameOver = true;",
+      "call": "GhostOps_Ce0_OnVictory();"
+    },
+    {
+      "function": "gt_DefeatBaseDead_Func",
+      "after": "gv_gameOver = true;",
+      "call": "GhostOps_Ce0_OnDefeat();"
+    }
+  ]
 }

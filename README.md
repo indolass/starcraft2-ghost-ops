@@ -6,8 +6,10 @@ mission, and your regular army deals more damage (x2/x3, configurable) so you ca
 timers and victory stay as Blizzard made them.
 
 **Status: P0 accepted for testing, P0.1/P1 in progress.** See [ROADMAP.md](ROADMAP.md). Implemented:
-squad of Nova + two standard Ghosts (free permanent cloak, hold fire from the start, hold fire /
-weapons free for everybody), BaseSupport army bonus, missions *The Outlaws* and *Smash and Grab*.
+squad of Nova + two standard Ghosts + two Medics (free permanent cloak, hold fire from the start,
+hold fire / weapons free for everybody), BaseSupport army bonus, a Hard-difficulty check message,
+missions *The Outlaws* (tactical variant, experiment), *Smash and Grab* and (candidate for the game check) *Liberation Day* with three named Ghost Ops variants (easy / hard / extreme experiment, see below). A mission registry and the `MissionPressure` design
+are in ROADMAP.md / docs; no time-pressure change is implemented yet.
 Nothing else is implemented.
 
 ## How it works
@@ -18,8 +20,8 @@ copy. Everything else in the map is kept byte for byte, and `verify` proves it.
 
 ```
 core/        mission independent Galaxy code (squad, protection)
-adapters/    one folder per mission (traynor02, ttychus01): anchors + mission specific Galaxy
-config/      one configuration per mission (schema_version 3), turned into Galaxy constants at build time
+adapters/    one folder per mission (traynor01, traynor02, thanson01, ttychus01): anchors + mission specific Galaxy
+config/      one configuration per mission (schema_version 4, as `validate_config` in tools/build.py demands), turned into Galaxy constants at build time
 tools/       sc2mpq.py (MPQ reader/writer), galaxy_lint.py, build.py
 tests/       python -m unittest discover -s tests
 docs/        architecture, research notes, owner instructions
@@ -36,6 +38,126 @@ python tools/build.py uninstall --mission ...   # exact rollback
 ```
 
 `GHOSTOPS_SC2_DIR` overrides the install path (default `E:\Games\StarCraft II`).
+
+### Liberation Day (TRaynor01) variants
+
+Double click **`GhostOps_Launcher.pyw`** (project root, no console window): the graphical launcher (CustomTkinter, Russian).
+Pick a mission on the left, a difficulty card below the mission card (*Подробнее* shows exact numbers), press *Начать миссию*:
+the map is built, verified, installed and started through the same code as the CLI (stages *Проверка окружения -> Подготовка
+карты -> Проверка -> Установка -> Запуск*, no fake percentage). It remembers the last mission and profile (first start:
+Liberation Day, Лёгкий), refuses a second start while one is running, and never closes a running StarCraft II (it tells you
+to close it yourself). Settings (game folder, diagnostic log) are behind *Настройки*. Settings file:
+`%APPDATA%\GhostOps\launcher_settings.json`; log: `%APPDATA%\GhostOps\launcher.log`; both are separate from the game configs.
+First start installs CustomTkinter 5.2.2 into `tmp\thirdparty\ctk` (`requirements-gui.txt`; Pillow and tkinter come with
+Python 3.12). Fallbacks stay: **`GhostOps_TRaynor01.cmd`** (console menu: *Лёгкий*, *Сложный*, *Экстремальный · эксперимент*,
+*Отмена*) and the command line:
+
+```
+python tools\build.py launch --mission traynor01 --preset easy     # also the default without --preset
+python tools\build.py launch --mission traynor01 --preset hard
+python tools\build.py launch --mission traynor01 --preset extreme
+python tools\build.py launch --mission traynor01 --preset hard --print-only   # only print the SC2 command
+python tools\build.py build|verify|install|uninstall --mission traynor01 --preset easy|hard|extreme
+```
+
+Profiles live in `config/traynor01.json`: the common settings plus `presets.easy` / `presets.hard` / `presets.extreme` with small
+`overrides`; `default_preset` is `easy`. An unknown profile name is an error, never a silent fallback. Each profile has
+its own files (`dist/GhostOps_TRaynor01_<profile>.SC2Map`, `Maps/GhostOps/...`) and manifests, so building or installing
+one never overwrites the other. `launch` refuses to run while StarCraft II is already open (it never closes your game),
+and always makes sure the installed file is the fresh build of the chosen profile. The profile applies to the mission you
+start now, not to an existing save. Enemy difficulty is Blizzard Hard in both; a short message at the start names the
+variant. If a map ever opens to an empty black screen, read `Documents\StarCraft II\GameLogs\<time> ScriptError.txt`.
+`--diag` adds the detailed catalog read-out (energy, costs, cast time, cooldown) to the start message.
+
+| Setting | Лёгкий (easy) | Сложный (hard) | Экстремальный · эксперимент (extreme) |
+|---|---|---|---|
+| **Squad** | 2 Ghosts, no Medic | same | **1 Ghost**, no Medic |
+| **Ghost HP** | 100/100 (game default) | same | **45/45** (only our Ghost) |
+| Raynor01 / own Marines | 45/45 HP / 1/1 HP | same | same |
+| Ghost energy | 100/100, +20/s outside cloak | same | same |
+| Cloak | free to start, net -10/s | same | same |
+| Snipe | 10 energy, 45 damage (ignores armour), 0.3 s cast, range 10 | same | same |
+| **Snipe cooldown** | **none** | **5 game seconds, per Ghost** | **10 game seconds** |
+| EMP / nuclear strike | removed | same | same |
+| Status | Owner considers it playable | Owner: "сложно, но проходимо" (balance judgement) | experimental; the last balance change, still needs an in-game confirmation |
+
+Balance tuning of the first mission is finished on this set (easy / hard / extreme as above); the last change (extreme: one Ghost,
+45/45, Snipe cooldown 10 s) is not yet confirmed in the game. No further balance changes are planned for TRaynor01.
+
+Known limits of the launcher: it only lists missions this project can really start (*Вне закона* has one profile, *Тактический*;
+*Smash and Grab* is a prototype with its single existing way of starting, no invented profiles); the mission picture is the map's own minimap
+from `tmp\source` or a generated placeholder; Windows scaling is handled by CustomTkinter (checked at 200% plus an extra 1.5x);
+at the minimum window size the right pane scrolls instead of clipping.
+
+**Wounded squad scene (all three profiles).** Right after Raynor's standard first line (hook in `gt_OpeningLineQ_Func`, once: `go_sceneDone`), queued behind the standard talks:
+Raynor «Войска готовы к бою?» -> 0.5 s (real) -> Marine «Высылайте подмогу!» (portrait Marine1) -> 0.5 s -> another Marine «Доктора! Доктора!» (Marine2); the directive
+text «Отряд пострадал при высадке. Морпехи тяжело ранены.» appears with the second line. Config key `scene` (durations 3.0 / 3.5 / 3.0 real seconds, texts, clip ids),
+clips in `assets/audio/traynor01/`. It does not repeat when the reinforcements arrive or after a load; balance, squad and profiles are untouched.
+
+### Evacuation (THanson01): sniper cover (experiment, added 2026-10-20)
+
+Launch: the GUI (mission *Эвакуация*, profile *Снайперское прикрытие*) or
+
+```
+python tools\build.py launch --mission thanson01 --preset sniper          # build, verify, install, start (Hard)
+python tools\build.py launch --mission thanson01 --preset sniper --print-only
+```
+
+Map: `<SC2>\Maps\GhostOps\GhostOps_THanson01_sniper.SC2Map`. Idea: a finite squad, no development, convoys leave **on the player's command**, one Ghost covers
+them with single Snipe shots. Everything of the original (story, terrain, route, scenes, voice, waves, nydus, drop pods, colonist logic, allied escort and its refill, late
+Mutalisk raids, victory 50 colonists, defeat at 20 dead colonists on Hard) is kept; the code is `core/GhostOpsHanson.galaxy` + `adapters/thanson01/` + `config/thanson01.json`.
+
+| item | what it does / where to change it |
+|---|---|
+| **Ghost** | exactly one ordinary male Ghost, created once at the start of the playable part (`gt_IntroSequence_Func` is the only way in, so a skipped intro gives the same result; `GhostOps_ClaimStart`) beside the starting squad at `hanson.ghost_spawn` [110, 49]; life 45/45 (`ghost_tuning.ghost_life`), permanent cloak without energy use (`operatives.ghost_permanent_cloak` = Blizzard's Crius Suit upgrade, `ghost_start_cloaked`, activation cost 0, drain 0), rifle kept (no hold fire), EMP and nuke removed. Snipe (`ghost_tuning.snipe`): cost 0, cast 0.3 s, cooldown 1.0 s, damage 1000 (the stock `SnipeDamage` effect, armor ignored), range stock 10; `exclude_friendly: true` turns the target filter into "biological, visible; not own / ally / neutral / structure / destructible ..." (stock Snipe could hit own and allied units). Never refilled; no separate defeat for its death |
+| **Development lock** | `hanson.lock_development`: `TechTreeUnitAllow` / `TechTreeUpgradeAllow` = false for everything the player's own unit types can produce (read from the game: `TechTreeUnitProducesUnit/Upgrade`, scanned every second, so SCV builds, Command Center, Barracks, add-ons, research, mercenaries are covered) plus a fixed list of base types (`GhostOps_Hanson_LockFixed`). Existing structures stay, SCVs keep moving / mining / repairing. Colonists, allied escort and its refill, script-created enemies and the evacuation ships are script-created and not affected |
+| **Convoy command** | button (screen dialog, top left under the objectives): *Конвой: сбор колонистов* (disabled) -> *ОТПРАВИТЬ КОНВОЙ* (enabled, ping + message) -> *Конвой в пути* (disabled). The original starts a trip in `gt_ConvoySpawned_Func`; the hook in front of its first action (`GhostOps_Hanson_Hold`) ends the function while the command is missing and remembers the trigger; the click (`GhostOps_Hanson_OnClick`: state 2 -> 3 first, then `TriggerExecute` of the remembered trigger) runs the original function from its beginning exactly once. No waiting thread (a load cannot cut it), no Stop orders. The colonists' gathering (`gt_Gathercolonistspriortoevacuation_Func`, hook `GhostOps_Hanson_Preparing`) is kept; the button is ready when the original says the convoy is ready. The dialog is created again after a load (`TriggerAddEventLoadGameDone`) |
+| **Turrets** | `hanson.turrets.list` (x, y, role base / houses / air), owner 4 (the settlement's player, so defeat rules are untouched); stock Missile Turret, repaired by SCVs (autocast), no new ones can be built. 15 turrets: base 8, houses 4, air approaches 3, all inside the settlement (the far north belongs to the Zerg: turrets there were killed by the map's Zerglings). The engine moves a turret to the nearest valid place, so the config holds the places the engine really gave |
+| **Raids** | the original late raids are kept (`gt_DoomsdayZergAttackWaves`: after the 6th trip on Hard, 8, then 12 + 2 Overseers, then 16 + 2 Overseers Mutalisks, driven by `gt_DoomsdayZergAI`) |
+| **Dev preset** | `sniper_dev` (hidden): `hanson.debug_log` writes `Documents\StarCraft II\Banks\GhostOpsHanson.SC2Bank`, `hanson.autotest.mode` runs a scripted check (1 Snipe, 2 lock / repair / refill, 3 command log, 4 command + automatic clicks, 5 raids on the turrets, 6 pathing map, 7 placement probe) |
+
+### The Outlaws (TRaynor02): tactical variant (experiment)
+
+Double click `GhostOps_Launcher.pyw`, pick *Вне закона* (one card: *Тактический*, badge *Эксперимент*), or
+`python tools\build.py launch --mission traynor02 --preset tactical`. The previous prototype (Nova, two Ghosts, two Medics, army bonus)
+is still there: `--preset prototype` (hidden in the GUI). Everything else of the mission is the original: map, story, Blizzard Hard
+enemies, victory (all Dominion units with PreventDefeat dead) and the final scene.
+
+| What | Rule |
+|---|---|
+| **Garrison** (the 6 Marines that stand at the start base when the mission starts, fixed by unit) | normal life and armor; damage x20 (catalog behavior `GhostOpsGarrisonDamage`, added once; measured 119 per hit on armor 1 = 6 x 20 - 1); the weapon exists only inside the defence zone (`UnitWeaponRemove/Add`, checked 4 times a second): outside it is removed, back inside it returns once; life is never healed by crossing the border; border marked by a ring of 36 small "+" text tags |
+| **Defence zone** | circle around the original start base, centre (86.0; 31.0), radius 16.0 (`tactical.garrison.zone`): covers the command center, barracks, depot, the academy and all six Marines, does not reach the road of the advance (rebel base, Dominion base); not tied to any building |
+| **Trained Marines** (any Marine that is neither garrison nor rescued) | life 1/1 (set when the unit is created, healing cannot raise it) and **no weapon at all** (`UnitWeaponRemove`, when the unit is created): no automatic fire, no attack order, no attack-move (measured: 0 hits against a static Barracks while a plain Marine made 20 hits of 5.0). The earlier x0.1 factor is gone. The garrison factor is a catalog `DamageDealtFraction`, which is **additive**: the build writes factor - 1 (19), measured 119 per hit on armor 1 = 6 x 20 - 1 |
+| **Rescued rebels** (hook right after the original change of owner in `gt_RebelsCompleteQ`) | untouched: normal Marines and Medics, keep their wounds, act on the whole map |
+| **Ghosts** | exactly two, **delivered by a transport** (see the story scene below): *Наводчик* (Spotter) and *Оперативник* (Operative), 45/45 life, no replacement (training and a second academy are banned, a foreign Ghost is removed); energy 100/100, +20/s outside cloak, free cloak start, net -10/s under cloak; Snipe 10 energy, 45 damage ignoring armor, 0.3 s cast, range 10, cooldown 7 game seconds per Ghost; EMP removed; names are text tags above the units |
+| **Ghost Academy** | created near the base (98.5; 28.5), visible and vulnerable, no hidden invulnerable building and no extra defeat condition; its research and hero/spectre arming abilities are removed; the single Nuke is armed for free (1 s) at the start |
+| **Nuclear strike** | one missile; only the Spotter may use it (`UnitAbilityEnable(Operative, TacNukeStrike, false)` + an order guard); states: ready -> aiming (12 game seconds, the Ghost cannot move: stock `Uninterruptible`) -> **irreversible launch** (start of the effect `GhostOpsNukeFlight`, the Spotter is free at once: `FinishTime` 0) -> 6 game seconds of flight -> blast. Damage, radii (4/6/8) and falloff of the blast are the **installed game's own** (300, +200 on structures); friendly fire stays |
+| **Cancel** | the stock chain spends the missile on a cancel (measured: `Nuke` 1 -> 0, stage 5 of the ability); the module arms the same single missile again for free (1 s) and the strike is ready again; the launch counter is the flight effect, never the click, so there is never a second launch |
+| **Save / load** (real game save through the game menu, measured) | before aiming and in flight both restore: two Ghosts and their roles, one missile (none after the launch), the Operative still cannot use the strike, the zone and the Marine groups work, the ring and the names are drawn again; after the load the Spotter's death before the launch gives the defeat, in flight it does not and the blast still happens; no new missile |
+| **Defeat** | Spotter dies before the irreversible launch: message + end of the mission (`libCamp_gf_EndCampaignMission`, same call as the original defeat); after the launch his death (also from his own blast) is no defeat, the missile still lands; Operative's death alone ends nothing; original defeat (no PreventDefeat unit left) unchanged; every check is switched off when the original victory / defeat sequence starts |
+| **Enemy production** | the original's, untouched: the strike kills troops, the pause is used for the rebels' assault; surviving production works by the original rules (waves, AI rebuilding, scripted squads, victory). Our earlier "stop after the production is destroyed" logic was removed |
+
+**Story scene** (the original intro and talk stay; everything below is portrait transmissions with a short voice clip each, no camera move, no cinematic mode,
+the player keeps control; delays are in `tactical.story` in mission (game) seconds, message durations in real seconds):
+
+| when | what |
+|---|---|
+| mission start | the Ghost Academy, the garrison and the zone are ready; there are no Ghosts yet (so the Spotter's death cannot end the mission before the delivery) |
+| 15 s after the start, and after the original talk has left the dialogue queue (`TriggerQueueEnter`) | Adjutant portrait, title «Тревога!», text about the infected base computers (14 s on screen); tip «Вирус на базе» is added to the tips |
+| 15 s (`tactical.story.second_delay`, mission seconds) after the end of that whole transmission (portrait, text, sound) | Swann portrait, «Я решил, что помощь тебе не помешает.» (6 s); when this message really starts (it waits in the dialogue queue behind any original talk) a `SpecialOpsDropship` (the map's own drop ship, not selectable / targetable / using supply) is created at the reinforcement point with the two Ghosts inside (`UnitCargoCreate`), flies to a free drop point of the start base (the first of the map's own points 32 / 688 / 1025 / 1105 / 1112 / 1110 without a structure of the player within 3) and unloads (`SpecOpsDropshipTransport`); the landing is pinged on the minimap |
+| when the cargo is empty | once (not per unit) the Ghost portrait says «Призрак явился.»; text about the special unit and the single missile (directive area), a secondary task «Спецотряд и ядерный удар» (the details and the rules), tips for Ghosts / strike / rebels; the roles' names appear above the Ghosts |
+| after that | the transport flies to the edge of the map (region 31) and is removed there (never while it still carries somebody) |
+
+**Voice** (2026-10-20): three short clips of the voice lab (`assets/audio/traynor02/`, sources and hashes in `assets/audio/SOURCES.md`): Adjutant «Тревога.»,
+Swann «Я решил, что помощь тебе не помешает.», one ordinary Ghost line «Призрак явился.». The build imports them (config `audio.clips`: id + file; the WAV is
+copied to `Assets\Sounds\GhostOps\` in the map archive, a `CSound` of category *Dialogue* is added to the map's `SoundData.xml`, manifest key `audio`, `verify`
+checks the hash); the scene plays them with `SoundLink("<id>", 0)`. A clip is replaced by changing the file / the `source` of its entry, nothing else. The details stay
+in the text: the lines are also shown by the script in the subtitle message area (a transmission with a sound link shows its own subtitle only when the player's
+subtitle option is on, the Owner's is off). The ASR texts of the clips were not checked by a human. The scene stage is a global saved with the game; a loaded
+game goes on from the same stage, never shows a finished message again and never creates a second transport or a second pair; the Ghost line has its own once-flag.
+
+Test launches of the game by the tools (not the Owner's launch) follow the rules in `CLAUDE.md`: second monitor, 1024x768 window, no sound,
+own PID only.
 
 ## Licence
 

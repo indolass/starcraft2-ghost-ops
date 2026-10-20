@@ -1,0 +1,6 @@
+# Graphical launcher only. Installed next to the project (tmp/thirdparty/ctk) by tools/gui_launcher.py on first start,
+# or by hand:  pip install -r requirements-gui.txt --target tmp\thirdparty\ctk
+# Pillow (images) and tkinter come with the system Python (tested with Pillow 12.2.0, Python 3.12).
+customtkinter==5.2.2
+darkdetect==0.8.0
+packaging>=23

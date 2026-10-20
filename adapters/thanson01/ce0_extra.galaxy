@@ -1,0 +1,409 @@
+// CE-0 probe: THanson01 specific state and commands (development only; compiled only with the config key "ce0").
+//
+// Turret-kit experiment (NOT a rule of any playable profile, no price): which real events does the game give for a structure built by an
+// SCV, so that the contract's kit rule "N ordered = N free builds; start reserves, cancel returns, completion spends, death of a finished
+// turret returns nothing" can be implemented? All counters are saved globals (they travel with a save, like any gameplay state).
+int go_kOrdered;
+int go_kReserved;
+int go_kSpent;
+int go_kLostUnfinished;       // reserved kits whose turret was destroyed before it was finished (the rule for them is an open question)
+unit[8] go_kUnit;
+int[8] go_kState;             // 0 free, 1 constructing, 2 complete, 3 destroyed unfinished, 4 destroyed complete, 5 cancelled
+int go_kBuildIdx;
+bool go_kStarted;
+trigger go_kCreatedTrig;
+trigger go_kStartTrig;
+trigger go_kCancelTrig;
+trigger go_kCompleteTrig;
+trigger go_kDiedTrig;
+
+int GhostOps_Ce0_KitSlot (unit lp_u) {
+    int lv_i;
+
+    lv_i = 0;
+    while (lv_i < 8) {
+        if ((go_kState[lv_i] != 0) && (go_kUnit[lv_i] == lp_u)) {
+            return lv_i;
+        }
+
+        lv_i += 1;
+    }
+
+    return -1;
+}
+
+int GhostOps_Ce0_KitNewSlot (unit lp_u) {
+    int lv_i;
+
+    lv_i = 0;
+    while (lv_i < 8) {
+        if (go_kState[lv_i] == 0) {
+            go_kUnit[lv_i] = lp_u;
+            return lv_i;
+        }
+
+        lv_i += 1;
+    }
+
+    return -1;
+}
+
+int GhostOps_Ce0_KitFree () {
+    return go_kOrdered - go_kReserved - go_kSpent;
+}
+
+void GhostOps_Ce0_KitGate () {
+    TechTreeUnitAllow(1, "MissileTurret", GhostOps_Ce0_KitFree() > 0);
+}
+
+string GhostOps_Ce0_KitText () {
+    string lv_s;
+    int lv_i;
+
+    lv_s = "kits ordered=" + IntToString(go_kOrdered) + " reserved=" + IntToString(go_kReserved) + " spent=" + IntToString(go_kSpent);
+    lv_s = lv_s + " lostUnfinished=" + IntToString(go_kLostUnfinished) + " free=" + IntToString(GhostOps_Ce0_KitFree()) + " slots=";
+    lv_i = 0;
+    while (lv_i < 8) {
+        lv_s = lv_s + IntToString(go_kState[lv_i]);
+        lv_i += 1;
+    }
+
+    return lv_s;
+}
+
+// every event is logged with what the engine says about its unit: this is the measurement
+void GhostOps_Ce0_KitEventLog (string lp_what) {
+    unit lv_u;
+    unit lv_p;
+    string lv_t;
+
+    lv_u = EventUnit();
+    lv_p = EventUnitProgressUnit();
+    lv_t = "KIT " + lp_what + ": event unit type=" + UnitGetType(lv_u) + " progress unit type=" + UnitGetType(lv_p);
+    lv_t = lv_t + " objectType=" + EventUnitProgressObjectType() + " slot=" + IntToString(GhostOps_Ce0_KitSlot(lv_p));
+    if (lv_p != null) {
+        lv_t = lv_t + " progress unit alive=" + IntToString(GhostOps_Ce0_B(UnitIsAlive(lv_p))) + " life=" + FixedToString(UnitGetPropertyFixed(lv_p, c_unitPropLife, c_unitPropCurrent), 1);
+    }
+
+    GhostOps_Ce0_Write("j", lv_t + " | " + GhostOps_Ce0_KitText());
+}
+
+bool GhostOps_Ce0_KitCreated (bool lp_test, bool lp_run) {
+    unit lv_u;
+    int lv_slot;
+    string lv_t;
+
+    if (!lp_run) {
+        return true;
+    }
+
+    lv_u = EventUnitCreatedUnit();
+    if ((UnitGetType(lv_u) != "MissileTurret") || (UnitGetOwner(lv_u) != 1)) {
+        return true;
+    }
+
+    lv_slot = GhostOps_Ce0_KitNewSlot(lv_u);
+    lv_t = "KIT created by SCV: slot " + IntToString(lv_slot) + " free before=" + IntToString(GhostOps_Ce0_KitFree());
+    lv_t = lv_t + " life=" + FixedToString(UnitGetPropertyFixed(lv_u, c_unitPropLife, c_unitPropCurrent), 1);
+    lv_t = lv_t + " minerals=" + IntToString(PlayerGetPropertyInt(1, c_playerPropMinerals));
+    if (lv_slot >= 0) {
+        go_kState[lv_slot] = 1;
+        go_kReserved += 1;
+    }
+
+    GhostOps_Ce0_Write("j", lv_t + " | " + GhostOps_Ce0_KitText());
+    GhostOps_Ce0_KitGate();
+    return true;
+}
+
+bool GhostOps_Ce0_KitStart (bool lp_test, bool lp_run) {
+    if (!lp_run) {
+        return true;
+    }
+
+    GhostOps_Ce0_KitEventLog("progress START");
+    return true;
+}
+
+bool GhostOps_Ce0_KitCancel (bool lp_test, bool lp_run) {
+    int lv_slot;
+
+    if (!lp_run) {
+        return true;
+    }
+
+    lv_slot = GhostOps_Ce0_KitSlot(EventUnitProgressUnit());
+    if ((lv_slot >= 0) && (go_kState[lv_slot] == 1)) {
+        go_kState[lv_slot] = 5;
+        go_kReserved -= 1;
+    }
+
+    GhostOps_Ce0_KitEventLog("progress CANCEL");
+    GhostOps_Ce0_KitGate();
+    return true;
+}
+
+bool GhostOps_Ce0_KitComplete (bool lp_test, bool lp_run) {
+    int lv_slot;
+
+    if (!lp_run) {
+        return true;
+    }
+
+    lv_slot = GhostOps_Ce0_KitSlot(EventUnitProgressUnit());
+    if ((lv_slot >= 0) && (go_kState[lv_slot] == 1)) {
+        go_kState[lv_slot] = 2;
+        go_kReserved -= 1;
+        go_kSpent += 1;
+    }
+
+    GhostOps_Ce0_KitEventLog("progress COMPLETE");
+    GhostOps_Ce0_KitGate();
+    return true;
+}
+
+bool GhostOps_Ce0_KitDied (bool lp_test, bool lp_run) {
+    unit lv_u;
+    int lv_slot;
+    string lv_t;
+
+    if (!lp_run) {
+        return true;
+    }
+
+    lv_u = EventUnit();
+    if (UnitGetType(lv_u) != "MissileTurret") {
+        return true;
+    }
+
+    lv_slot = GhostOps_Ce0_KitSlot(lv_u);
+    lv_t = "KIT died: slot=" + IntToString(lv_slot);
+    if (lv_slot >= 0) {
+        lv_t = lv_t + " was state " + IntToString(go_kState[lv_slot]);
+        if (go_kState[lv_slot] == 1) {
+            go_kState[lv_slot] = 3;
+            go_kReserved -= 1;
+            go_kLostUnfinished += 1;
+        }
+        else if (go_kState[lv_slot] == 2) {
+            go_kState[lv_slot] = 4;
+        }
+    }
+
+    GhostOps_Ce0_Write("j", lv_t + " | " + GhostOps_Ce0_KitText());
+    GhostOps_Ce0_KitGate();
+    return true;
+}
+
+string GhostOps_Ce0_Extra () {
+    string lv_s;
+    int lv_i;
+    int lv_alive;
+
+    lv_alive = 0;
+    lv_i = 0;
+    while (lv_i < go_hTurretCount) {
+        if ((go_hTurret[lv_i] != null) && UnitIsAlive(go_hTurret[lv_i])) {
+            lv_alive += 1;
+        }
+
+        lv_i += 1;
+    }
+
+    lv_s = "han cmd=" + IntToString(go_hCmdState) + " phase=" + IntToString(go_hPhase) + " sent=" + IntToString(go_hSent);
+    lv_s = lv_s + " saved=" + IntToString(go_hSaved) + " killed=" + IntToString(go_hKilled) + " idx=" + IntToString(go_hEscort);
+    lv_s = lv_s + " waves=" + IntToString(go_hWaves) + " turrets=" + IntToString(lv_alive);
+    lv_s = lv_s + " | " + GhostOps_Ce0_KitText();
+    return lv_s;
+}
+
+void GhostOps_Ce0_MissionStart () {
+    if (go_kStarted) {
+        return;
+    }
+
+    go_kStarted = true;
+    go_kCreatedTrig = TriggerCreate("GhostOps_Ce0_KitCreated");
+    TriggerAddEventUnitCreated(go_kCreatedTrig, null, "TerranBuild", null);
+    go_kStartTrig = TriggerCreate("GhostOps_Ce0_KitStart");
+    TriggerAddEventUnitConstructProgress(go_kStartTrig, null, c_unitProgressStageStart);
+    go_kCancelTrig = TriggerCreate("GhostOps_Ce0_KitCancel");
+    TriggerAddEventUnitConstructProgress(go_kCancelTrig, null, c_unitProgressStageCancel);
+    go_kCompleteTrig = TriggerCreate("GhostOps_Ce0_KitComplete");
+    TriggerAddEventUnitConstructProgress(go_kCompleteTrig, null, c_unitProgressStageComplete);
+    go_kDiedTrig = TriggerCreate("GhostOps_Ce0_KitDied");
+    TriggerAddEventUnitDied(go_kDiedTrig, null);
+}
+
+unit GhostOps_Ce0_First (string lp_type) {
+    return UnitGroupUnit(UnitGroup(lp_type, 1, RegionEntireMap(), GhostOps_Ce0_Live(), 0), 1);
+}
+
+bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
+    unit lv_scv;
+    unit lv_cc;
+    point lv_p;
+    int lv_i;
+    string lv_t;
+
+    if (lp_cmd == "enter") {
+        // the Ghost walks into the settlement: the escort phase starts (as in the scripted test)
+        UnitSetPosition(GhostOps_SquadUnit(0), RegionGetCenter(RegionFromId(29)), false);
+        GhostOps_Ce0_Write("j", "ENTER settlement");
+        return true;
+    }
+
+    if (lp_cmd == "click") {
+        TriggerExecute(go_hClickTrig, true, false);
+        GhostOps_Ce0_Write("j", "CLICK executed (trigger, not the real button)");
+        return true;
+    }
+
+    if (lp_cmd == "kitinit") {
+        // kitinit N: N kits ordered; the gate allows the turret while a kit is free; the cost of the turret is set to 0 for this test
+        go_kOrdered = StringToInt(lp_a);
+        GhostOps_Ce0_KitGate();
+        lv_t = "KITINIT set cost ok=" + IntToString(GhostOps_Ce0_B(CatalogFieldValueSet(c_gameCatalogUnit, "MissileTurret", "CostResource[Minerals]", 1, "0")));
+        lv_t = lv_t + " cost now=" + CatalogFieldValueGet(c_gameCatalogUnit, "MissileTurret", "CostResource[Minerals]", 1);
+        GhostOps_Ce0_Write("j", lv_t + " | " + GhostOps_Ce0_KitText());
+        return true;
+    }
+
+    if (lp_cmd == "ebay") {
+        lv_cc = GhostOps_Ce0_First("CommandCenter");
+        UnitCreate(1, "EngineeringBay", 0, 1, PointWithOffset(UnitGetPosition(lv_cc), -9.0, 7.0), 270.0);
+        GhostOps_Ce0_Write("j", "EBAY created for the test fixture (the requirement of the turret)");
+        return true;
+    }
+
+    if (lp_cmd == "abil") {
+        // which TerranBuild index builds the turret, and is the order valid
+        lv_scv = GhostOps_Ce0_First("SCV");
+        lv_cc = GhostOps_Ce0_First("CommandCenter");
+        lv_p = PointWithOffset(UnitGetPosition(lv_cc), 8.0, -6.0);
+        lv_i = 0;
+        go_kBuildIdx = -1;
+        while (lv_i < 24) {
+            lv_t = CatalogFieldValueGet(c_gameCatalogAbil, "TerranBuild", "InfoArray[" + IntToString(lv_i) + "].Unit", 1);
+            if (lv_t == "MissileTurret") {
+                go_kBuildIdx = lv_i;
+            }
+
+            lv_i += 1;
+        }
+
+        lv_t = "ABIL turret build index=" + IntToString(go_kBuildIdx);
+        if (go_kBuildIdx >= 0) {
+            lv_t = lv_t + " order valid=" + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(lv_scv, OrderTargetingPoint(AbilityCommand("TerranBuild", go_kBuildIdx), lv_p))));
+            lv_t = lv_t + " cost=" + CatalogFieldValueGet(c_gameCatalogUnit, "MissileTurret", "CostResource[Minerals]", 1);
+        }
+
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "grid") {
+        // which places near the Command Center accept a turret order (for the next build commands)
+        lv_scv = GhostOps_Ce0_First("SCV");
+        lv_cc = GhostOps_Ce0_First("CommandCenter");
+        lv_t = "GRID valid dx,dy:";
+        lv_i = 0;
+        while (lv_i < 40) {
+            lv_p = PointWithOffset(UnitGetPosition(lv_cc), -14.0 + 4.0 * IntToFixed(lv_i % 8), -14.0 + 4.0 * IntToFixed(lv_i / 8));
+            if (UnitOrderIsValid(lv_scv, OrderTargetingPoint(AbilityCommand("TerranBuild", go_kBuildIdx), lv_p))) {
+                lv_t = lv_t + " " + FixedToString(-14.0 + 4.0 * IntToFixed(lv_i % 8) - 8.0, 0) + "," + FixedToString(-14.0 + 4.0 * IntToFixed(lv_i / 8) + 6.0, 0);
+            }
+
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "build") {
+        // build [dx dy]: the first SCV builds a turret near the Command Center
+        lv_scv = GhostOps_Ce0_First("SCV");
+        lv_cc = GhostOps_Ce0_First("CommandCenter");
+        lv_p = PointWithOffset(UnitGetPosition(lv_cc), 8.0 + StringToFixed(lp_a), -6.0 + StringToFixed(lp_b));
+        if (go_kBuildIdx < 0) {
+            GhostOps_Ce0_Write("j", "BUILD refused: run abil first");
+            return true;
+        }
+
+        lv_t = "BUILD order valid=" + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(lv_scv, OrderTargetingPoint(AbilityCommand("TerranBuild", go_kBuildIdx), lv_p))));
+        GhostOps_Ce0_Write("j", lv_t + " kits free=" + IntToString(GhostOps_Ce0_KitFree()));
+        UnitIssueOrder(lv_scv, OrderTargetingPoint(AbilityCommand("TerranBuild", go_kBuildIdx), lv_p), c_orderQueueReplace);
+        return true;
+    }
+
+    if ((lp_cmd == "buildcancel") || (lp_cmd == "buildkill")) {
+        // buildcancel|buildkill <delay>: the first SCV starts a turret at (-10,0), after <delay> game seconds the unfinished turret is cancelled
+        // (the structure's own cancel command, tried as BuildInProgress 0 and 1) or killed; everything is measured by the progress / died events
+        lv_scv = GhostOps_Ce0_First("SCV");
+        lv_cc = GhostOps_Ce0_First("CommandCenter");
+        lv_p = PointWithOffset(UnitGetPosition(lv_cc), -2.0, -6.0);
+        UnitIssueOrder(lv_scv, OrderTargetingPoint(AbilityCommand("TerranBuild", go_kBuildIdx), lv_p), c_orderQueueReplace);
+        Wait(3.0, c_timeGame);
+        lv_i = 7;
+        while ((lv_i >= 0) && ((go_kState[lv_i] != 1) || (go_kUnit[lv_i] == null))) {
+            lv_i -= 1;
+        }
+
+        if (lv_i < 0) {
+            GhostOps_Ce0_Write("j", "BUILDCANCEL: no turret under construction after 3 s");
+            return true;
+        }
+
+        Wait(StringToFixed(lp_a), c_timeGame);
+        lv_t = "BUILDCANCEL slot " + IntToString(lv_i) + " valid BuildInProgress 0=" + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(go_kUnit[lv_i], Order(AbilityCommand("BuildInProgress", 0)))));
+        lv_t = lv_t + " 1=" + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(go_kUnit[lv_i], Order(AbilityCommand("BuildInProgress", 1)))));
+        GhostOps_Ce0_Write("j", lv_t);
+        if (lp_cmd == "buildkill") {
+            UnitKill(go_kUnit[lv_i]);
+        }
+        else if (UnitOrderIsValid(go_kUnit[lv_i], Order(AbilityCommand("BuildInProgress", 1)))) {
+            UnitIssueOrder(go_kUnit[lv_i], Order(AbilityCommand("BuildInProgress", 1)), c_orderQueueReplace);
+        }
+        else {
+            UnitIssueOrder(go_kUnit[lv_i], Order(AbilityCommand("BuildInProgress", 0)), c_orderQueueReplace);
+        }
+
+        return true;
+    }
+
+    if (lp_cmd == "sel") {
+        // sel <slot>: the camera goes to the turret and it is selected (then the Escape key = the player's real cancel of a building under construction)
+        lv_i = StringToInt(lp_a);
+        if ((lv_i >= 0) && (lv_i < 8) && (go_kUnit[lv_i] != null) && UnitIsAlive(go_kUnit[lv_i])) {
+            CameraPan(1, UnitGetPosition(go_kUnit[lv_i]), 0.0, -1.0, 10.0, false);
+            UnitSelect(go_kUnit[lv_i], 1, true);
+            GhostOps_Ce0_Write("j", "SEL slot " + lp_a);
+        }
+
+        return true;
+    }
+
+    if (lp_cmd == "cancelbuild") {
+        // the player's cancel of the unfinished turret (the command of the structure itself)
+        lv_i = StringToInt(lp_a);
+        if ((lv_i >= 0) && (lv_i < 8) && (go_kUnit[lv_i] != null) && UnitIsAlive(go_kUnit[lv_i])) {
+            UnitIssueOrder(go_kUnit[lv_i], Order(AbilityCommand("CancelBuilding", 0)), c_orderQueueReplace);
+            GhostOps_Ce0_Write("j", "CANCEL ordered for slot " + lp_a + " (CancelBuilding 0)");
+        }
+
+        return true;
+    }
+
+    if (lp_cmd == "killturret") {
+        lv_i = StringToInt(lp_a);
+        if ((lv_i >= 0) && (lv_i < 8) && (go_kUnit[lv_i] != null) && UnitIsAlive(go_kUnit[lv_i])) {
+            UnitKill(go_kUnit[lv_i]);
+            GhostOps_Ce0_Write("j", "KILL ordered for slot " + lp_a);
+        }
+
+        return true;
+    }
+
+    return false;
+}

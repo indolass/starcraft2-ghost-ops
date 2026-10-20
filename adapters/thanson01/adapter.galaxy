@@ -1,0 +1,23 @@
+//==================================================================================================
+// GhostOps adapter: Evacuation (THanson01), sniper cover. All mission specific knowledge lives here.
+// Player 1 is the human player. gt_IntroSequence_Func (the only way into the playable part: the intro and
+// a skipped intro are the same function) calls GhostOps_OnMissionStart() right after it has started
+// gt_StartGame (see adapter.json); GhostOps_ClaimStart() makes the start happen exactly once.
+// The module (core/GhostOpsHanson.galaxy) has the turrets, the development lock and the convoy command; the other hooks
+// of adapter.json call it. The original squad (2 Firebats, 2 Medics) and the base are not changed.
+//==================================================================================================
+void GhostOps_OnMissionStart () {
+    if (!GhostOps_ClaimStart()) {
+        return;
+    }
+
+    GhostOps_ApplyHansonConfig();
+    GhostOps_Init();
+    GhostOps_SetPlayerCovered(1, true);
+    // the Ghost stands next to the starting squad (the Firebats / Medics walk to the points 1646..1650 from the drop ship)
+    GhostOps_SpawnOperatives(1, Point(go_hGhostX, go_hGhostY));
+    GhostOps_Start();
+    GhostOps_Hanson_Start();
+    GhostOps_ReportProfile();
+    GhostOps_ReportDifficulty(1);
+}

@@ -48,7 +48,7 @@ def lint(src, prefix='GhostOps_'):
                     break
         if depth > 0:
             problems.append('unbalanced %s%s: %d unclosed %s' % (a, b, depth, a))
-    decl = re.compile(r'^\s*(?:void|bool|int|fixed|string|unit|point|trigger|unitgroup)\s+(' + prefix + r'\w+)\s*\(', re.M)
+    decl = re.compile(r'^\s*(?:void|bool|int|fixed|string|unit|point|trigger|unitgroup|unitfilter|text|bank)\s+(' + prefix + r'\w+)\s*\(', re.M)
     declared = {}
     for m in decl.finditer(s):
         declared.setdefault(m.group(1), m.start())

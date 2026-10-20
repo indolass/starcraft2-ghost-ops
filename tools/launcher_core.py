@@ -1,0 +1,312 @@
+"""Logic of the Ghost Ops graphical launcher (no GUI code here, so it can be tested).
+
+The launcher is a thin shell over tools/build.py: the same build / verify / install / start functions that the CLI
+(`python tools/build.py launch --mission ... --preset ...`) and the console menu use. Nothing here builds or starts the
+game by itself.
+"""
+import argparse
+import contextlib
+import importlib
+import io
+import json
+import os
+import re
+import threading
+import time
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(HERE)
+
+import sys  # noqa: E402
+sys.path.insert(0, HERE)
+import build  # noqa: E402
+
+APP_DIR = os.path.join(os.environ.get('APPDATA') or os.path.expanduser('~'), 'GhostOps')
+SETTINGS_PATH = os.path.join(APP_DIR, 'launcher_settings.json')
+LOG_PATH = os.path.join(APP_DIR, 'launcher.log')
+DEFAULT_GAME_DIR = os.environ.get('GHOSTOPS_SC2_DIR', r'E:\Games\StarCraft II')
+
+STAGES = {
+    'check': 'Проверка окружения',
+    'build': 'Подготовка карты',
+    'verify': 'Проверка',
+    'install': 'Установка',
+    'start': 'Запуск',
+}
+
+# User facing texts of the missions the launcher can start. Profiles of TRaynor01 come from config/traynor01.json.
+MISSIONS = [
+    {'id': 'traynor01', 'title': 'День освобождения', 'subtitle': 'Liberation Day', 'status': 'Играбельно',
+     'description': 'Расчистите путь через Риксвилл и сопроводите Рейнора к штабу Доминиона. '
+                    'Призраки поддерживают отряд точными выстрелами; их число зависит от выбранной сложности. '
+                    'Противники — оригинальная сложность Blizzard Hard.'},
+    {'id': 'traynor02', 'title': 'Вне закона', 'subtitle': 'The Outlaws', 'status': 'Эксперимент',
+     'description': 'Спасите повстанцев и уничтожьте базу Доминиона малым отрядом: гарнизон держит оборону базы, '
+                    'два призрака проникают к врагу, а единственный ядерный удар наводит Наводчик. Противники — Blizzard Hard.'},
+    {'id': 'thanson01', 'title': 'Эвакуация', 'subtitle': 'Evacuation', 'status': 'Эксперимент',
+     'description': 'Конечный отряд, один призрак. Конвои колонистов уходят только по вашей команде, а Snipe призрака снимает '
+                    'опасных врагов по одному выстрелу. Производство и строительство запрещены, поселение прикрыто ПВО. Противники — Blizzard Hard.'},
+    {'id': 'ttychus01', 'title': 'Smash and Grab', 'subtitle': 'TTychus01', 'status': 'Прототип',
+     'description': 'Скрытная операция среди протоссов и зергов с настоящими детекторами. Ранний прототип без выбора сложности.'},
+]
+DEFAULT_MISSION = 'traynor01'
+
+
+def mission_info(mission_id):
+    return next((m for m in MISSIONS if m['id'] == mission_id), None)
+
+
+def profiles_of(mission_id):
+    """[{name, label, card, details, experimental}] for a mission; [] means: no profiles (prototype, one way to start)."""
+    adapter = build.load_adapter(mission_id)
+    raw = build.load_json(adapter['config'])
+    presets = raw.get('presets')
+    if not presets:
+        return []
+    return [{'name': n, 'label': p['label'], 'card': p.get('card', ''), 'details': p.get('details', []),
+             'experimental': bool(p.get('experimental'))} for n, p in presets.items() if not p.get('hidden')]
+
+
+def default_profile(mission_id):
+    adapter = build.load_adapter(mission_id)
+    raw = build.load_json(adapter['config'])
+    return raw.get('default_preset') if raw.get('presets') else None
+
+
+def detail_lines(mission_id, preset):
+    """Exact characteristics of a profile (shown behind "Подробнее"), taken from the resolved configuration."""
+    adapter = build.load_adapter(mission_id)
+    cfg, _ = build.resolve_config(adapter, preset)
+    gt = cfg.get('ghost_tuning')
+    if not gt:
+        return []
+    if cfg.get('tactical'):
+        return tactical_lines(cfg)
+    if cfg.get('hanson'):
+        return hanson_lines(cfg)
+    life = gt.get('ghost_life', 100)
+    sn = gt['snipe']
+    cd = sn.get('cooldown', 0)
+    ghosts = sum(1 for u in cfg['operatives']['squad'] if u == 'Ghost')
+    return [
+        'Призраки: %d, здоровье %s/%s' % (ghosts, life, life),
+        'Энергия %g/%g, +%g в секунду вне маскировки' % (gt['energy_start'], gt['energy_max'], gt['regen_per_second']),
+        'Маскировка: включение бесплатно, расход %g в секунду' % -gt['cloak_net_per_second'],
+        'Snipe: %g энергии, урон %g (игнорирует броню), подготовка %g с, дальность 10' % (sn['cost'], sn['damage'], sn['cast_time']),
+        'Перезарядка Snipe: %s' % ('нет' if not cd else ('%g с' % cd) + (' у каждого призрака отдельно' if ghosts > 1 else '')),
+        'Рейнор 45/45, свои морпехи 1/1, медика нет',
+        'EMP и ядерный удар отключены. Противники: Blizzard Hard',
+        'Время — в игровых секундах',
+    ]
+
+
+def hanson_lines(cfg):
+    """Exact characteristics of the sniper cover variant of THanson01 (taken from the resolved configuration)."""
+    h, gt = cfg['hanson'], cfg['ghost_tuning']
+    sn = gt['snipe']
+    num = lambda v: ('%g' % v).replace('.', ',')  # noqa: E731
+    roles = {r: sum(1 for t in h['turrets']['list'] if t['role'] == r) for r in ('base', 'houses', 'air')}
+    return [
+        'Призрак: один, здоровье %s/%s, не восполняется; появляется рядом со стартовым отрядом' % (gt['ghost_life'], gt['ghost_life']),
+        'Маскировка постоянная, энергию не тратит; детекторы раскрывают штатно; EMP и ядерный удар отключены',
+        'Snipe: %s энергии, урон %g (убивает любую вражескую боевую цель, здания и союзники исключены), подготовка %s с, перезарядка %s с' % (
+            num(sn['cost']), sn['damage'], num(sn['cast_time']), num(sn['cooldown'])),
+        'Производство, строительство, найм и исследования запрещены; существующие SCV добывают и чинят',
+        'Конвой уходит по кнопке «Отправить конвой» (по команде игрока), только когда колонисты собраны',
+        'Ракетные турели (ПВО): %d — база %d, дома колонистов %d, воздушные подходы %d; чинятся SCV, новые строить нельзя' % (
+            len(h['turrets']['list']), roles['base'], roles['houses'], roles['air']),
+        'Колонисты, союзная охрана и её пополнение, налёты и условия победы / поражения — штатные. Противники: Blizzard Hard',
+        'Время — в игровых секундах',
+    ]
+
+
+def tactical_lines(cfg):
+    """Exact characteristics of the tactical variant of TRaynor02 (taken from the resolved configuration)."""
+    t, gt = cfg['tactical'], cfg['ghost_tuning']
+    g, z = t['garrison'], t['garrison']['zone']
+    tm, n = t['trained_marine'], t['nuke']
+    num = lambda v: ('%g' % v).replace('.', ',')  # noqa: E731
+    return [
+        'Гарнизон (морпехи исходной базы): урон ×%s, оружие только в зоне обороны (радиус %s)' % (num(g['damage_multiplier']), num(z['radius'])),
+        'Обученные морпехи: здоровье %d/%d, атаковать не могут' % (tm['life'], tm['life']),
+        'Спасённые повстанцы: обычные морпехи и медики, действуют по всей карте',
+        'Призраки: 2 (Наводчик и Оперативник), здоровье %s/%s, не восполняются; прилетают на транспорте через %g с после начала миссии (с сюжетной сценой)' % (
+            gt['ghost_life'], gt['ghost_life'], t['story']['first_delay'] + t['story']['second_delay'] + t['story']['alert_seconds']),
+        'Энергия %g/%g, +%g в секунду вне маскировки, маскировка %g в секунду' % (gt['energy_start'], gt['energy_max'], gt['regen_per_second'], -gt['cloak_net_per_second']),
+        'Snipe: %g энергии, урон %g (игнорирует броню), подготовка %s с, перезарядка %g с у каждого призрака' % (
+            gt['snipe']['cost'], gt['snipe']['damage'], num(gt['snipe']['cast_time']), gt['snipe']['cooldown']),
+        'Ядерный удар: одна ракета, только у Наводчика; наведение %g с (не двигаться), после запуска %g с до взрыва' % (n['aim_time'], n['flight_time']),
+        'Мощность взрыва, радиусы и спад урона — штатные; дружественный огонь сохраняется',
+        'Смерть Наводчика до запуска — поражение; после запуска ракета долетает',
+        'EMP отключён. Противники: Blizzard Hard. Время — в игровых секундах',
+    ]
+
+
+# ---------------------------------------------------------------------------------------------- settings
+class Settings:
+    def __init__(self, path=SETTINGS_PATH):
+        self.path = path
+        self.data = {'game_dir': DEFAULT_GAME_DIR, 'mission': DEFAULT_MISSION, 'profiles': {}}
+        self.load()
+
+    def load(self):
+        try:
+            with open(self.path, encoding='utf-8') as f:
+                loaded = json.load(f)
+            if isinstance(loaded, dict):
+                self.data.update({k: v for k, v in loaded.items() if k in self.data})
+        except (OSError, ValueError):
+            pass  # first start or a damaged file: keep the defaults
+
+    def save(self):
+        os.makedirs(os.path.dirname(self.path), exist_ok=True)
+        tmp = self.path + '.tmp'
+        with open(tmp, 'w', encoding='utf-8') as f:
+            json.dump(self.data, f, ensure_ascii=False, indent=2)
+        os.replace(tmp, self.path)
+
+    @property
+    def game_dir(self):
+        return self.data['game_dir']
+
+    def mission(self):
+        m = self.data.get('mission')
+        return m if mission_info(m) else DEFAULT_MISSION
+
+    def profile(self, mission_id):
+        """Remembered profile of a mission if it still exists, else the mission default (easy for TRaynor01)."""
+        names = [p['name'] for p in profiles_of(mission_id)]
+        if not names:
+            return None
+        remembered = self.data.get('profiles', {}).get(mission_id)
+        return remembered if remembered in names else default_profile(mission_id)
+
+    def remember(self, mission_id, preset):
+        self.data['mission'] = mission_id
+        if preset:
+            self.data.setdefault('profiles', {})[mission_id] = preset
+        self.save()
+
+
+def game_dir_problem(path):
+    if not path or not os.path.isdir(path):
+        return 'Папка игры не найдена: %s' % path
+    if not os.path.isfile(os.path.join(path, 'Support64', 'SC2Switcher_x64.exe')):
+        return 'В папке нет Support64\\SC2Switcher_x64.exe, это не папка StarCraft II.'
+    return None
+
+
+# ---------------------------------------------------------------------------------------------- log
+def log(message, path=LOG_PATH):
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, 'a', encoding='utf-8') as f:
+            f.write('[%s] %s\n' % (time.strftime('%Y-%m-%d %H:%M:%S'), message.rstrip()))
+    except OSError:
+        pass
+
+
+# ---------------------------------------------------------------------------------------------- backend
+class BuildBackend:
+    """The real thing: calls tools/build.py. Tests replace it with a fake."""
+
+    def args(self, mission, preset):
+        return argparse.Namespace(mission=mission, preset=preset, source=None, multiplier=None, diag=False,
+                                  print_only=False, start=True)
+
+    def sc2_running(self):
+        return build.sc2_running()
+
+    def configure(self, game_dir):
+        # the window may have been open for hours: always run the current build code and configs, not what was loaded at its start
+        importlib.reload(build)
+        build.SC2_DIR = game_dir
+
+    def prepare(self, mission, preset, progress):
+        return build.prepare(self.args(mission, preset), progress)
+
+    def start(self, mission, preset):
+        a = self.args(mission, preset)
+        adapter, cfg, name = build.context(a)
+        command, dest = build.launch_command(adapter, cfg, name)
+        if not os.path.isfile(dest):
+            print('expected installed map is missing: %s' % dest)
+            return 8
+        return build.start_detached(command)
+
+
+class Result:
+    def __init__(self, ok, message, kind='error', output=''):
+        self.ok, self.message, self.kind, self.output = ok, message, kind, output  # kind: ok | busy-game | error
+
+
+# ---------------------------------------------------------------------------------------------- controller
+class Launcher:
+    """Runs "prepare -> install -> start" for the chosen mission and profile, one run at a time."""
+
+    def __init__(self, settings=None, backend=None, log_fn=log):
+        self.settings = settings or Settings()
+        self.backend = backend or BuildBackend()
+        self.log = log_fn
+        self._lock = threading.Lock()
+        self.busy = False
+
+    def begin(self):
+        """Claims the single run slot; False when a run is already in progress."""
+        with self._lock:
+            if self.busy:
+                return False
+            self.busy = True
+            return True
+
+    def run(self, mission_id, preset, on_stage=None):
+        """Synchronous pipeline (call begin() first). Always releases the slot; never raises."""
+        note = on_stage or (lambda stage: None)
+        buf = io.StringIO()
+        try:
+            self.backend.configure(self.settings.game_dir)
+            problem = game_dir_problem(self.settings.game_dir) if isinstance(self.backend, BuildBackend) else None
+            if problem:
+                return self._finish(Result(False, problem, 'error'))
+            valid = [p['name'] for p in profiles_of(mission_id)]
+            if valid and preset not in valid:
+                return self._finish(Result(False, 'Неизвестный вариант сложности: %s' % preset, 'error'))
+            if not valid and preset:
+                return self._finish(Result(False, 'У этой миссии нет вариантов сложности.', 'error'))
+            self.settings.remember(mission_id, preset)
+            self.log('start requested: %s / %s' % (mission_id, preset))
+            if self.backend.sc2_running():
+                return self._finish(Result(False, 'StarCraft II уже запущена. Закройте игру самостоятельно и повторите: '
+                                           'запускатель никогда не завершает её принудительно.', 'busy-game'))
+            with contextlib.redirect_stdout(buf), contextlib.redirect_stderr(buf):
+                rc = self.backend.prepare(mission_id, preset, lambda stage: note(stage))
+                if rc == 7:
+                    return self._finish(Result(False, 'StarCraft II уже запущена. Закройте игру самостоятельно и повторите.', 'busy-game', buf.getvalue()))
+                if rc != 0:
+                    why = [ln.strip() for ln in buf.getvalue().splitlines() if re.search(r'INVALID|FAIL|error|refus|MUST', ln, re.I) or ln.startswith('  tactical')]
+                    return self._finish(Result(False, 'Не удалось подготовить карту (код %s).%s' % (rc, (' ' + ' | '.join(why[:2])) if why else ''), 'error', buf.getvalue()))
+                note('start')
+                rc = self.backend.start(mission_id, preset)
+            if rc != 0:
+                return self._finish(Result(False, 'Не удалось запустить игру (код %s).' % rc, 'error', buf.getvalue()))
+            return self._finish(Result(True, 'Игра запускается. Окно запускателя можно закрыть.', 'ok', buf.getvalue()))
+        except Exception as e:  # noqa: BLE001 - the interface must never stay locked
+            return self._finish(Result(False, 'Неожиданная ошибка: %s' % e, 'error', buf.getvalue()))
+
+    def _finish(self, result):
+        if result.output:
+            self.log(result.output)
+        self.log('result: %s %s' % ('OK' if result.ok else 'FAILED', result.message))
+        with self._lock:
+            self.busy = False
+        return result
+
+    def start_async(self, mission_id, preset, on_stage, on_done):
+        """Runs in a worker thread; callbacks are called from that thread (the GUI forwards them through a queue)."""
+        if not self.begin():
+            return False
+
+        def work():
+            on_done(self.run(mission_id, preset, on_stage))
+        threading.Thread(target=work, daemon=True).start()
+        return True

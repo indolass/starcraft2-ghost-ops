@@ -16,4 +16,5 @@ void GhostOps_OnMissionStart () {
     }
 
     GhostOps_Start();
+    GhostOps_ReportDifficulty(1);
 }

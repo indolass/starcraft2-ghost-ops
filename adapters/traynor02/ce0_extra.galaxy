@@ -1,0 +1,48 @@
+// CE-0 probe: TRaynor02 specific state and commands (development only; compiled only with the config key "ce0").
+bool GhostOps_Ce0_Alive (unit lp_u) {
+    if (lp_u == null) {
+        return false;
+    }
+
+    return UnitIsAlive(lp_u);
+}
+
+string GhostOps_Ce0_Extra () {
+    string lv_s;
+
+    lv_s = "tac stage=" + IntToString(go_tacScStage) + " state=" + IntToString(go_tacState);
+    lv_s = lv_s + " nukes=" + IntToString(TechTreeUnitCount(1, "Nuke", c_techCountCompleteOnly));
+    lv_s = lv_s + " ships=" + IntToString(UnitGroupCount(UnitGroup("SpecialOpsDropship", c_playerAny, RegionEntireMap(), GhostOps_Ce0_Live(), 0), c_unitCountAlive));
+    lv_s = lv_s + " spotter=" + IntToString(GhostOps_Ce0_B(GhostOps_Ce0_Alive(go_tacSpotter)));
+    lv_s = lv_s + " operative=" + IntToString(GhostOps_Ce0_B(GhostOps_Ce0_Alive(go_tacOperative)));
+    lv_s = lv_s + " ghostsaid=" + IntToString(GhostOps_Ce0_B(go_tacGhostSaid));
+    lv_s = lv_s + " ended=" + IntToString(GhostOps_Ce0_B(go_tacEnded));
+    return lv_s;
+}
+
+void GhostOps_Ce0_MissionStart () {
+}
+
+bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
+    if (lp_cmd == "aim") {
+        // the spotter aims the strike at a point 11 cells north of himself, away from the base (his own blast radius is 8; he does not move)
+        UnitIssueOrder(go_tacSpotter, OrderTargetingPoint(AbilityCommand("TacNukeStrike", 0), PointWithOffset(UnitGetPosition(go_tacSpotter), 0.0, -11.0)), c_orderQueueReplace);
+        GhostOps_Ce0_Write("j", "AIM ordered at " + FixedToString(PointGetX(UnitGetPosition(go_tacSpotter)), 1) + "," + FixedToString(PointGetY(UnitGetPosition(go_tacSpotter)) - 11.0, 1));
+        return true;
+    }
+
+    if (lp_cmd == "cancel") {
+        UnitIssueOrder(go_tacSpotter, Order(AbilityCommand("TacNukeStrike", 1)), c_orderQueueReplace);
+        GhostOps_Ce0_Write("j", "CANCEL ordered");
+        return true;
+    }
+
+    if (lp_cmd == "win") {
+        // the original victory trigger (our hook inside it reads the resources before the standard victory sequence)
+        GhostOps_Ce0_Write("j", "WIN trigger executed");
+        TriggerExecute(TriggerCreate("gt_VictoryDominionOutpostCompleted_Func"), false, false);
+        return true;
+    }
+
+    return false;
+}

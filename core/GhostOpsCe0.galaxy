@@ -1,0 +1,375 @@
+//==================================================================================================
+// GhostOps CE-0 technical probe (DEVELOPMENT ONLY, MIT).
+// Built only when the resolved configuration has the key "ce0" (hidden dev presets "ce0_dev"); a playable build never
+// contains this file. It measures platform facts for the campaign-economy design (docs/MISSION_SETTINGS_AND_CAMPAIGN_ECONOMY.md):
+//   - an append-only journal in the Bank "GhostOpsCe0" (section j) and result proposals (section r), with a monotonic
+//     sequence number kept IN THE BANK (never in the game), so a load of an old save can never roll it back;
+//   - the identity of the attempt: a saved global created once at the fresh start; a load brings the saved value back;
+//   - snapshots of the state (resources, census of the player's units, Ghosts, mission extras) at save, at load, on demand;
+//   - chat commands (the developer types them into the test game) to drive the experiments without touching gameplay rules.
+// Nothing in this file is gameplay: no balance, no price, no rule of any playable profile.
+//==================================================================================================
+bool go_c0Enabled;
+bool go_c0Started;
+string go_c0Op;
+string go_c0Hash;               // hash of the settings snapshot the build was made from (baked at build time)
+string go_c0Attempt;
+int go_c0TypeCount;
+string[8] go_c0Types;
+bank go_c0Bank;
+trigger go_c0ChatTrig;
+trigger go_c0SaveTrig;
+trigger go_c0SavedTrig;
+trigger go_c0LoadTrig;
+trigger go_c0TickTrig;
+int go_c0Marker;               // a gameplay-like counter that lives ONLY in the game state (saved / loaded with it)
+
+void GhostOps_Ce0_Apply ();
+string GhostOps_Ce0_Extra ();
+bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b);
+void GhostOps_Ce0_MissionStart ();
+
+int GhostOps_Ce0_BankN () {
+    if (BankKeyExists(go_c0Bank, "meta", "n")) {
+        return BankValueGetAsInt(go_c0Bank, "meta", "n");
+    }
+
+    return -1;
+}
+
+int GhostOps_Ce0_B (bool lp_v) {
+    if (lp_v) {
+        return 1;
+    }
+
+    return 0;
+}
+
+
+// the Bank is the only memory outside the game; its counter n is the monotonic sequence of the journal
+int GhostOps_Ce0_Write (string lp_section, string lp_text) {
+    int lv_n;
+
+    go_c0Bank = BankLoad("GhostOpsCe0", 1);
+    BankOptionSet(go_c0Bank, c_bankOptionSignature, false);
+    lv_n = 0;
+    if (BankKeyExists(go_c0Bank, "meta", "n")) {
+        lv_n = BankValueGetAsInt(go_c0Bank, "meta", "n");
+    }
+
+    lv_n += 1;
+    BankValueSetFromInt(go_c0Bank, "meta", "n", lv_n);
+    BankValueSetFromString(go_c0Bank, lp_section, "e" + IntToString(lv_n), IntToString(lv_n) + "|" + FixedToString(GameGetMissionTime(), 2) + "|" + go_c0Attempt + "|" + lp_text);
+    BankSave(go_c0Bank);
+    return lv_n;
+}
+
+string GhostOps_Ce0_Resources () {
+    string lv_s;
+
+    lv_s = "min=" + IntToString(PlayerGetPropertyInt(1, c_playerPropMinerals));
+    lv_s = lv_s + " gas=" + IntToString(PlayerGetPropertyInt(1, c_playerPropVespene));
+    lv_s = lv_s + " minCol=" + IntToString(PlayerGetPropertyInt(1, c_playerPropMineralsCollected));
+    lv_s = lv_s + " gasCol=" + IntToString(PlayerGetPropertyInt(1, c_playerPropVespeneCollected));
+    lv_s = lv_s + " marker=" + IntToString(go_c0Marker);
+    return lv_s;
+}
+
+unitfilter GhostOps_Ce0_Live () {
+    return UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32)));
+}
+
+// count / total life of the configured types
+string GhostOps_Ce0_Census () {
+    int lv_i;
+    int lv_n;
+    int lv_k;
+    unitgroup lv_g;
+    unit lv_u;
+    string lv_s;
+    fixed lv_life;
+
+    lv_s = "";
+    lv_i = 0;
+    while (lv_i < go_c0TypeCount) {
+        lv_g = UnitGroup(go_c0Types[lv_i], 1, RegionEntireMap(), GhostOps_Ce0_Live(), 0);
+        lv_n = UnitGroupCount(lv_g, c_unitCountAlive);
+        lv_life = 0.0;
+        lv_k = 1;
+        while (lv_k <= lv_n) {
+            lv_u = UnitGroupUnit(lv_g, lv_k);
+            lv_life += UnitGetPropertyFixed(lv_u, c_unitPropLife, c_unitPropCurrent);
+            lv_k += 1;
+        }
+
+        lv_s = lv_s + go_c0Types[lv_i] + "=" + IntToString(lv_n) + "/" + FixedToString(lv_life, 1) + ";";
+        lv_i += 1;
+    }
+
+    return lv_s;
+}
+
+// every Ghost: life, energy, place
+string GhostOps_Ce0_Ghosts () {
+    int lv_n;
+    int lv_k;
+    unitgroup lv_g;
+    unit lv_u;
+    string lv_s;
+
+    lv_g = UnitGroup("Ghost", 1, RegionEntireMap(), GhostOps_Ce0_Live(), 0);
+    lv_n = UnitGroupCount(lv_g, c_unitCountAlive);
+    lv_s = "";
+    lv_k = 1;
+    while (lv_k <= lv_n) {
+        lv_u = UnitGroupUnit(lv_g, lv_k);
+        lv_s = lv_s + "G(" + FixedToString(UnitGetPropertyFixed(lv_u, c_unitPropLife, c_unitPropCurrent), 1) + ",";
+        lv_s = lv_s + FixedToString(UnitGetPropertyFixed(lv_u, c_unitPropEnergy, c_unitPropCurrent), 1) + ",";
+        lv_s = lv_s + FixedToString(PointGetX(UnitGetPosition(lv_u)), 0) + ",";
+        lv_s = lv_s + FixedToString(PointGetY(UnitGetPosition(lv_u)), 0) + ");";
+        lv_k += 1;
+    }
+
+    return lv_s;
+}
+
+void GhostOps_Ce0_Snap (string lp_why) {
+    string lv_s;
+
+    lv_s = "SNAP " + lp_why + " | " + GhostOps_Ce0_Resources();
+    lv_s = lv_s + " | " + GhostOps_Ce0_Census();
+    lv_s = lv_s + " | " + GhostOps_Ce0_Ghosts();
+    lv_s = lv_s + " | " + GhostOps_Ce0_Extra();
+    GhostOps_Ce0_Write("j", lv_s);
+}
+
+// a result PROPOSAL (never an accounting entry): the launcher side decides whether it is accepted
+void GhostOps_Ce0_Result (string lp_outcome) {
+    string lv_s;
+
+    lv_s = "RESULT op=" + go_c0Op + " id=" + go_c0Attempt + "-" + IntToString(RandomInt(100000, 999999999)) + " hash=" + go_c0Hash + " outcome=" + lp_outcome + " " + GhostOps_Ce0_Resources();
+    GhostOps_Ce0_Write("r", lv_s);
+    GhostOps_Ce0_Write("j", lv_s);
+}
+
+void GhostOps_Ce0_OnVictory () {
+    if (!go_c0Enabled) {
+        return;
+    }
+
+    GhostOps_Ce0_Result("victory");
+}
+
+void GhostOps_Ce0_OnDefeat () {
+    if (!go_c0Enabled) {
+        return;
+    }
+
+    GhostOps_Ce0_Write("j", "DEFEAT " + GhostOps_Ce0_Resources());
+}
+
+bool GhostOps_Ce0_ChatFunc (bool lp_test, bool lp_run) {
+    string lv_t;
+    string lv_cmd;
+    string lv_a;
+    string lv_b;
+    unitgroup lv_g;
+    unit lv_u;
+    int lv_n;
+
+    if (!lp_run) {
+        return true;
+    }
+
+    lv_t = EventChatMessage(false);
+    lv_cmd = StringWord(lv_t, 1);
+    lv_a = StringWord(lv_t, 2);
+    lv_b = StringWord(lv_t, 3);
+    if (lv_cmd == "snap") {
+        GhostOps_Ce0_Snap("cmd " + lv_a);
+    }
+    else if (lv_cmd == "id") {
+        GhostOps_Ce0_Write("j", "ID op=" + go_c0Op + " attempt=" + go_c0Attempt);
+    }
+    else if (lv_cmd == "mark") {
+        go_c0Marker = StringToInt(lv_a);
+        GhostOps_Ce0_Write("j", "MARK " + IntToString(go_c0Marker));
+    }
+    else if (lv_cmd == "kill") {
+        // kill <type> [n]: the n-th unit of the player (default 1)
+        lv_g = UnitGroup(lv_a, 1, RegionEntireMap(), GhostOps_Ce0_Live(), 0);
+        lv_n = StringToInt(lv_b);
+        if (lv_n < 1) {
+            lv_n = 1;
+        }
+
+        lv_u = UnitGroupUnit(lv_g, lv_n);
+        if (lv_u != null) {
+            UnitKill(lv_u);
+            GhostOps_Ce0_Write("j", "KILLED " + lv_a + " " + IntToString(lv_n));
+        }
+    }
+    else if (lv_cmd == "drain") {
+        // drain <energy>: every Ghost
+        lv_g = UnitGroup("Ghost", 1, RegionEntireMap(), GhostOps_Ce0_Live(), 0);
+        lv_n = 1;
+        while (lv_n <= UnitGroupCount(lv_g, c_unitCountAlive)) {
+            UnitSetPropertyFixed(UnitGroupUnit(lv_g, lv_n), c_unitPropEnergy, StringToFixed(lv_a));
+            lv_n += 1;
+        }
+
+        GhostOps_Ce0_Write("j", "DRAINED to " + lv_a);
+    }
+    else if (lv_cmd == "hurt") {
+        // hurt <type> <life>: first unit of the type
+        lv_g = UnitGroup(lv_a, 1, RegionEntireMap(), GhostOps_Ce0_Live(), 0);
+        lv_u = UnitGroupUnit(lv_g, 1);
+        if (lv_u != null) {
+            UnitSetPropertyFixed(lv_u, c_unitPropLife, StringToFixed(lv_b));
+            GhostOps_Ce0_Write("j", "HURT " + lv_a + " to " + lv_b);
+        }
+    }
+    else if (lv_cmd == "minerals") {
+        PlayerModifyPropertyInt(1, c_playerPropMinerals, c_playerPropOperAdd, StringToInt(lv_a));
+        GhostOps_Ce0_Write("j", "MINERALS added " + lv_a);
+    }
+    else if (lv_cmd == "gas") {
+        PlayerModifyPropertyInt(1, c_playerPropVespene, c_playerPropOperAdd, StringToInt(lv_a));
+        GhostOps_Ce0_Write("j", "GAS added " + lv_a);
+    }
+    else if (lv_cmd == "result") {
+        GhostOps_Ce0_Result(lv_a);
+    }
+    else if (lv_cmd == "mine") {
+        // every SCV of the player harvests the nearest mineral field (to measure what the engine counts as "collected")
+        lv_g = UnitGroup("SCV", 1, RegionEntireMap(), GhostOps_Ce0_Live(), 0);
+        lv_n = 1;
+        lv_t = "MINE types: ";
+        lv_u = UnitGroupClosestToPoint(UnitGroup("MineralField", 0, RegionEntireMap(), GhostOps_Ce0_Live(), 0), UnitGetPosition(UnitGroupUnit(lv_g, 1)));
+        if (lv_u == null) {
+            lv_u = UnitGroupClosestToPoint(UnitGroup("MineralField750", 0, RegionEntireMap(), GhostOps_Ce0_Live(), 0), UnitGetPosition(UnitGroupUnit(lv_g, 1)));
+        }
+
+        if (lv_u == null) {
+            GhostOps_Ce0_Write("j", "MINE: no mineral field of the known types");
+        }
+        else {
+            lv_t = "MINE field " + UnitGetType(lv_u) + " scvs " + IntToString(UnitGroupCount(lv_g, c_unitCountAlive));
+            while (lv_n <= UnitGroupCount(lv_g, c_unitCountAlive)) {
+                UnitIssueOrder(UnitGroupUnit(lv_g, lv_n), OrderTargetingUnit(AbilityCommand("SCVHarvest", 0), lv_u), c_orderQueueReplace);
+                lv_n += 1;
+            }
+
+            GhostOps_Ce0_Write("j", lv_t);
+        }
+    }
+    else if (lv_cmd == "train") {
+        // train <n> Marines at the first Barracks (spending money by a normal order)
+        lv_u = UnitGroupUnit(UnitGroup("Barracks", 1, RegionEntireMap(), GhostOps_Ce0_Live(), 0), 1);
+        lv_n = StringToInt(lv_a);
+        while (lv_n > 0) {
+            UnitIssueOrder(lv_u, Order(AbilityCommand("BarracksTrain", 0)), c_orderQueueAddToEnd);
+            lv_n -= 1;
+        }
+
+        GhostOps_Ce0_Write("j", "TRAIN ordered " + lv_a);
+    }
+    else if (lv_cmd == "rnd") {
+        // the random numbers after a load: the engine state is part of the save?
+        lv_t = "RND " + IntToString(RandomInt(0, 1000000000)) + " " + IntToString(RandomInt(0, 1000000000)) + " " + IntToString(RandomInt(0, 1000000000));
+        GhostOps_Ce0_Write("j", lv_t);
+    }
+    else if (lv_cmd == "bankcheck") {
+        // what does the loaded game hold in the bank: the state of the save (memory) or the file on disk?
+        go_c0Bank = BankLoad("GhostOpsCe0", 1);
+        lv_t = "BANKCHECK mem_n=" + IntToString(GhostOps_Ce0_BankN()) + " mem_ext=" + BankValueGetAsString(go_c0Bank, "ext", "x");
+        BankReload(go_c0Bank);
+        lv_t = lv_t + " | after BankReload disk_n=" + IntToString(GhostOps_Ce0_BankN()) + " disk_ext=" + BankValueGetAsString(go_c0Bank, "ext", "x");
+        GhostOps_Ce0_Write("j", lv_t);
+    }
+    else if (lv_cmd == "reload") {
+        // does the game read a bank that somebody else changed on disk? (the launcher -> map direction)
+        go_c0Bank = BankLoad("GhostOpsCe0In", 1);
+        BankOptionSet(go_c0Bank, c_bankOptionSignature, false);
+        BankReload(go_c0Bank);
+        lv_t = "RELOAD token=" + BankValueGetAsString(go_c0Bank, "in", "token");
+        lv_t = lv_t + " exists=" + IntToString(GhostOps_Ce0_B(BankKeyExists(go_c0Bank, "in", "token")));
+        lv_t = lv_t + " verify=" + IntToString(GhostOps_Ce0_B(BankVerify(go_c0Bank)));
+        GhostOps_Ce0_Write("j", lv_t);
+    }
+    else if (!GhostOps_Ce0_MissionCmd(lv_cmd, lv_a, lv_b)) {
+        GhostOps_Ce0_Write("j", "UNKNOWN command " + lv_t);
+    }
+
+    return true;
+}
+
+bool GhostOps_Ce0_SaveFunc (bool lp_test, bool lp_run) {
+    if (!lp_run) {
+        return true;
+    }
+
+    GhostOps_Ce0_Snap("SAVEGAME event");
+    return true;
+}
+
+bool GhostOps_Ce0_SavedFunc (bool lp_test, bool lp_run) {
+    if (!lp_run) {
+        return true;
+    }
+
+    GhostOps_Ce0_Write("j", "SAVEGAME done " + GhostOps_Ce0_Resources());
+    return true;
+}
+
+bool GhostOps_Ce0_LoadFunc (bool lp_test, bool lp_run) {
+    string lv_t;
+
+    if (!lp_run) {
+        return true;
+    }
+
+    // the attempt in the text is the SAVED one: a load brings back the identity that the save carried
+    go_c0Bank = BankLoad("GhostOpsCe0", 1);
+    lv_t = "LOADED op=" + go_c0Op + " attempt=" + go_c0Attempt + " mem_n=" + IntToString(GhostOps_Ce0_BankN()) + " mem_ext=" + BankValueGetAsString(go_c0Bank, "ext", "x");
+    GhostOps_Ce0_Write("j", lv_t);
+    GhostOps_Ce0_Snap("LOAD done");
+    return true;
+}
+
+bool GhostOps_Ce0_TickFunc (bool lp_test, bool lp_run) {
+    if (!lp_run) {
+        return true;
+    }
+
+    GhostOps_Ce0_Snap("tick");
+    return true;
+}
+
+// called once per fresh start from the mission hook; a loaded game never reaches it again
+void GhostOps_Ce0_Start () {
+    if (go_c0Started) {
+        return;
+    }
+
+    go_c0Started = true;
+    GhostOps_Ce0_Apply();
+    if (!go_c0Enabled) {
+        return;
+    }
+
+    go_c0Attempt = "A" + IntToString(RandomInt(100000, 999999999));
+    go_c0ChatTrig = TriggerCreate("GhostOps_Ce0_ChatFunc");
+    TriggerAddEventChatMessage(go_c0ChatTrig, c_playerAny, "", false);
+    go_c0SaveTrig = TriggerCreate("GhostOps_Ce0_SaveFunc");
+    TriggerAddEventSaveGame(go_c0SaveTrig);
+    go_c0SavedTrig = TriggerCreate("GhostOps_Ce0_SavedFunc");
+    TriggerAddEventSaveGameDone(go_c0SavedTrig);
+    go_c0LoadTrig = TriggerCreate("GhostOps_Ce0_LoadFunc");
+    TriggerAddEventLoadGameDone(go_c0LoadTrig);
+    go_c0TickTrig = TriggerCreate("GhostOps_Ce0_TickFunc");
+    TriggerAddEventTimePeriodic(go_c0TickTrig, 20.0, c_timeGame);
+    GhostOps_Ce0_Write("j", "START op=" + go_c0Op + " attempt=" + go_c0Attempt);
+    GhostOps_Ce0_MissionStart();
+    GhostOps_Ce0_Snap("start");
+}

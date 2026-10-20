@@ -23,11 +23,12 @@ def jsn(*parts):
 
 
 class SquadConfig(unittest.TestCase):
-    def test_default_squad_is_nova_plus_two_ghosts(self):
+    def test_default_squad_is_five_operatives(self):
         for m, cfgpath in MISSIONS.items():
             cfg = jsn(cfgpath)
             self.assertEqual(build.validate_config(cfg), [], m)
-            self.assertEqual(cfg['operatives']['squad'], ['Nova', 'Ghost', 'Ghost'])
+            self.assertEqual(cfg['operatives']['squad'], ['Nova', 'Ghost', 'Ghost', 'Medic', 'Medic'])
+            self.assertEqual(cfg['difficulty'], {'expected': 3, 'show_message': True})
             self.assertTrue(cfg['operatives']['ghost_permanent_cloak'])
             self.assertTrue(cfg['operatives']['ghost_start_cloaked'])
             self.assertTrue(cfg['operatives']['start_hold_fire'])
@@ -36,11 +37,11 @@ class SquadConfig(unittest.TestCase):
 
     def test_squad_validation(self):
         cfg = jsn(MISSIONS['traynor02'])
-        for bad in ([], ['Ghost'] * 7, ['Marine'], 'Nova', [None]):
+        for bad in ([], ['Ghost'] * 7, ['Marine'], 'Nova', [None], ['Medic'] * 7):
             c = json.loads(json.dumps(cfg))
             c['operatives']['squad'] = bad
             self.assertTrue(build.validate_config(c), bad)
-        for good in (['Nova'], ['Ghost'] * 6, ['Nova', 'Ghost']):
+        for good in (['Nova'], ['Ghost'] * 6, ['Nova', 'Ghost'], ['Medic'], ['Nova', 'Medic', 'Medic']):
             c = json.loads(json.dumps(cfg))
             c['operatives']['squad'] = good
             self.assertEqual(build.validate_config(c), [], good)
@@ -50,7 +51,8 @@ class SquadConfig(unittest.TestCase):
 
     def test_generated_config(self):
         g = build.gen_config(jsn(MISSIONS['ttychus01']))
-        for line in ('go_cfgSquadSize = 3;', 'go_cfgSquadType[0] = "Nova";', 'go_cfgSquadType[2] = "Ghost";',
+        for line in ('go_cfgSquadSize = 5;', 'go_cfgSquadType[0] = "Nova";', 'go_cfgSquadType[2] = "Ghost";', 'go_cfgSquadType[4] = "Medic";',
+                     'go_cfgExpectedDifficulty = 3;', 'go_cfgShowDifficulty = true;',
                      'go_cfgStartHoldFire = true;', 'go_cfgGhostPermanentCloak = true;',
                      'go_cfgGhostStartCloaked = true;', 'go_cfgDamageMultiplier = 3;', 'go_cfgInvulnerableAllies = false;'):
             self.assertIn(line, g)
@@ -89,12 +91,58 @@ class CoreSquad(unittest.TestCase):
         self.assertIn('UnitGetType(lv_unit) == "Ghost"', t)  # only standard ghosts get the cloak order
         # one shot, not a periodic order loop
         self.assertIn('TriggerAddEventTimeElapsed(go_startStateTrigger', self.code)
-        self.assertEqual(self.code.count('TriggerAddEventTimePeriodic'), 1)
+        # periodic triggers: the BaseSupport scan and the (config-gated) difficulty message only
+        self.assertEqual(self.code.count('TriggerAddEventTimePeriodic'), 3)
+        self.assertNotIn('TriggerAddEventTimePeriodic(go_startStateTrigger', self.code)
 
     def test_operatives_never_get_the_army_bonus(self):
         sup = self.fn('GhostOps_SupportUnit')
         self.assertIn('GhostOps_IsOperative(lp_unit)', sup)
         self.assertNotIn('Nova', self.code)
+
+
+    def test_difficulty_validation(self):
+        cfg = jsn(MISSIONS['traynor02'])
+        for bad in (0, 5, True, None, '3'):
+            c = json.loads(json.dumps(cfg))
+            c['difficulty']['expected'] = bad
+            self.assertTrue(build.validate_config(c), bad)
+        c = json.loads(json.dumps(cfg))
+        del c['difficulty']
+        self.assertTrue(build.validate_config(c))
+
+
+class MedicRules(unittest.TestCase):
+    def setUp(self):
+        self.core = text('core', 'GhostOpsCore.galaxy')
+
+    def test_medics_are_registered_but_get_no_ghost_orders(self):
+        end = chr(10) + '}' + chr(10)
+        t = self.core[self.core.index('bool GhostOps_StartStateTick'):].split(end)[0]
+        self.assertIn('UnitGetType(lv_unit) != "Medic"', t)  # no hold-fire order for medics
+        self.assertIn('UnitGetType(lv_unit) == "Ghost"', t)  # cloak only for standard ghosts
+        sp = self.core[self.core.index('unit GhostOps_SpawnOperatives'):].split(end)[0]
+        self.assertIn('GhostOps_RegisterOperative(UnitLastCreated())', sp)  # every type is registered
+        self.assertIn('"Medic"', sp)
+        # ghost tech is only granted for ghosts, never for medics
+        self.assertEqual(self.core.count('TechTreeUpgradeAddLevel'), 2)
+
+    def test_medic_ability_set_is_not_modified(self):
+        frag = text('core', 'data', 'NovaFireControl.xml')
+        self.assertNotIn('Medic', frag)
+
+    def test_launch_command_requests_hard(self):
+        import io
+        import contextlib
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            build.main(['launch', '--mission', 'ttychus01'])
+        self.assertIn('-difficulty 3', buf.getvalue())
+
+    def test_difficulty_report_uses_player_difficulty(self):
+        self.assertIn('PlayerDifficulty(lp_player)', self.core)
+        for m in MISSIONS:
+            self.assertIn('GhostOps_ReportDifficulty(1);', text('adapters', m, 'adapter.galaxy'))
 
 
 class NovaFireControl(unittest.TestCase):
@@ -131,7 +179,9 @@ class Adapters(unittest.TestCase):
             self.assertEqual(meta['mission'], m)
             self.assertEqual(meta['config'], MISSIONS[m])
             self.assertTrue(os.path.isfile(os.path.join(ROOT, meta['config'])))
-            self.assertEqual(meta['start_hook']['after'], 'TriggerExecute(gt_StartGame, true, false);')
+            hooks = meta.get('start_hooks') or [meta['start_hook']]
+            self.assertEqual(hooks[0]['after'], 'TriggerExecute(gt_StartGame, true, false);')
+            self.assertEqual(hooks[0]['call'], 'GhostOps_OnMissionStart();')
 
     def test_missions_do_not_share_constants(self):
         a = jsn('adapters', 'traynor02', 'adapter.json')['required_markers']
