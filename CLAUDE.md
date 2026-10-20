@@ -35,3 +35,12 @@ Use `python tools/test_launch.py --mission M --preset P --seconds N [--keep] [--
   "not authorized" lines are known noise of launches from the Maps folder, a compile error is not.
 - The dev-only preset `tactical_dev` (TRaynor02) writes `Documents\StarCraft II\Banks\GhostOpsTac.SC2Bank` and can script the nuclear
   strike test (`tactical.autotest.mode`); it is hidden from the GUI and never part of a playable build.
+
+## Campaign, saves and probes (Owner rules, 2026-10-20)
+
+- The campaign state (`%APPDATA%\GhostOps\campaign.json`) and the Owner's saves / Banks are never filled with test data: tests and probes use their own files (`GHOSTOPS_CAMPAIGN_FILE`, `GHOSTOPS_BANK_DIR`,
+  saves named `CE0_*` that are deleted afterwards). A test budget of a standalone map test is never written into the campaign.
+- `tools/ce0_session.py stop` uninstalls the preset's map: use `--keep-map` for any map that is not a hidden dev map. The CE-0 probe (`ce0` key) exists only in hidden `*_dev` presets.
+- A started operation's map file is immutable (unique name per operation); do not rebuild over it and do not delete it while a save may depend on it.
+- Game voice WAVs stay local (git-ignored); only the manifest `assets/audio/SOURCES.md` is published. No commit of the voice lab tree, installs, CASC data, original maps, saves or Banks.
+- Documentation separates: implemented and confirmed / agreed / architectural requirement / open question / technical check. Experimental numbers (prices, limits, waves) are never called Owner-approved.

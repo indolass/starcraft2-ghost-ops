@@ -159,6 +159,34 @@ game goes on from the same stage, never shows a finished message again and never
 Test launches of the game by the tools (not the Owner's launch) follow the rules in `CLAUDE.md`: second monitor, 1024x768 window, no sound,
 own PID only.
 
+### The first three missions and the campaign link (2026-10-20, experiment)
+
+Plan and statuses: [docs/MISSION_ROADMAP.md](docs/MISSION_ROADMAP.md); economy and save rules (the one contract): [docs/MISSION_SETTINGS_AND_CAMPAIGN_ECONOMY.md](docs/MISSION_SETTINGS_AND_CAMPAIGN_ECONOMY.md).
+
+| mission | how to start | what it is |
+|---|---|---|
+| *Liberation Day* (TRaynor01) | launcher card, profiles easy / hard / extreme | unchanged balance; the wounded-squad scene now ends with Raynor's closing words (portrait + text) |
+| *The Outlaws* (TRaynor02) | launcher card *Тактический*; or the campaign window | the accepted tactical variant; Raynor explains that resources are kept for the next operations (text only); the victory writes a **result proposal** (remainder, report) |
+| *Zero Hour* (TRaynor03) | launcher card *Час икс* (standalone test, recommended order, no campaign) or the campaign window | pre-ordered garrison, two Ghosts, two missiles, victory = 20 game minutes AND every marked hatchery destroyed |
+
+**Campaign window** (launcher button *Кампания: Вне закона → Час икс*): the stock of the campaign, step 1 *Вне закона* (no purchases; start / continue a saved attempt / free restart / refuse), the
+map's result shown as a proposal with the report (start, mined, found, derived net of spending, passed remainder) that you confirm ONCE, step 2 *Час икс*: the order form (marines, bunkers,
+turrets, SCVs: prices, limits, total, shortage; the cost of the chosen order is charged once, no credit and no hidden surcharge) and *Оплатить и начать*. State file:
+`%APPDATA%\GhostOps\campaign.json` (one atomic write for the stock change and the accepted mark). Each operation gets its own map file
+`Maps\GhostOps\GhostOps_<Mission>_<profile>__<operation>.SC2Map` that later builds never overwrite.
+
+**Saves.** Save and load freely with the game's own menu (F10): a load returns exactly the saved state (verified in the installed game, RESEARCH.md "CE-0"), costs nothing and the losses of the
+cancelled future are not kept. Closing the game does not abandon the attempt: save, close, start the same operation with *Продолжить сохранение* (the map starts, you load your save inside the game).
+A full restart (*Перезапустить*) is free and gives the original paid order again. Loading from the SC2 *main menu* was not tried (it needs your login). Do not delete the map file of an
+operation you still want to continue: a save names the map by its path.
+
+**Prices and limits of TRaynor03 are experimental numbers** in `config/traynor03.json` (`zerohour.prices`, `limits`, `recommended`), not approved by the Owner: marine 40, bunker 75, turret 75, SCV 50
+minerals; recommended order 8 / 4 / 4 / 4 = 1120 minerals (the base price of a marine 50, bunker and turret 100 scaled by a factor; see the report in docs/MISSION_ROADMAP.md). A standalone test of the map
+never writes into the campaign.
+
+Limits: the voice lines of Raynor (TRaynor02, TRaynor03), Matt and the cut-off marines have no clips yet (portrait + text only); loading from the main menu, a full TRaynor03 playthrough by a human and
+the balance of the order are for the Owner to judge.
+
 ## Licence
 
 Code, tools and docs: [MIT](LICENSE). Blizzard data and maps are not part of this repository.

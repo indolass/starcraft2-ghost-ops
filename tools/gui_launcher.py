@@ -218,7 +218,8 @@ def build_app():
             self.subtitle_label.configure(text=m['subtitle'])
             self.status_badge.configure(text=m['status'], fg_color=ACCENT_DARK if m['status'] == 'Играбельно' else '#5a4a1f',
                                         text_color=TEXT if m['status'] == 'Играбельно' else AMBER)
-            self.description_label.configure(text=m['description'])
+            path, there = core.installed_map_info(self.mission, self.preset, self.settings.game_dir)
+            self.description_label.configure(text=m['description'] + '\n\nКарта: %s%s' % (path, '' if there else '  (будет собрана и установлена при запуске)'))
             if mission_key(self.mission) not in self.images:
                 from PIL import Image  # noqa: F401
                 img = mission_image(self.mission)

@@ -83,7 +83,7 @@ class WoundedSquadScene(unittest.TestCase):
         self.assertEqual(s['texts']['RaynorLine']['ru'], 'Войска готовы к бою?')
         self.assertEqual(s['texts']['MarineBLine']['ru'], 'Высылайте подмогу!')
         self.assertEqual(s['texts']['MarineALine']['ru'], 'Доктора! Доктора!')
-        self.assertEqual(s['texts']['Explain']['ru'], 'Отряд пострадал при высадке. Морпехи тяжело ранены.')
+        self.assertEqual(s['texts']['Explain']['ru'], 'Отряд серьёзно пострадал при высадке. Морпехи ещё могут сражаться, но любое ранение станет последним.')
         for k in ('raynor_seconds', 'marine_b_seconds', 'marine_a_seconds'):
             self.assertGreaterEqual(s[k], 2.5)  # readable even when the clip is a second long
         bad = copy.deepcopy(self.cfg)
@@ -104,7 +104,7 @@ class WoundedSquadScene(unittest.TestCase):
         order = [body.index(x) for x in ('go_sceneRaynorClip, ', 'go_sceneMarineBClip, ', 'go_sceneMarineAClip, ')]
         self.assertEqual(order, sorted(order))
         self.assertEqual(body.count('Wait(go_scenePause, c_timeReal);'), 2)
-        self.assertEqual(body.count('c_transmissionDurationSet, true);'), 3)  # waits for each one: nothing overlaps
+        self.assertEqual(body.count('c_transmissionDurationSet, true);'), 4)  # three clips + Raynor's closing words; each waits: nothing overlaps
         self.assertEqual(body.count('TriggerQueueEnter();'), body.count('TriggerQueueExit();'))
         self.assertIn('Marine1Portrait', body)
         self.assertIn('Marine2Portrait', body)  # two different soldiers

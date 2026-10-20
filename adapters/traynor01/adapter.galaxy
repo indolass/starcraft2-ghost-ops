@@ -72,6 +72,10 @@ bool GhostOps_T1_SceneMsg (bool lp_testConds, bool lp_runActions) {
     TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("Marine2Portrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", go_sceneMarineAClip, null, null, go_sceneMarineALen, c_transmissionDurationSet, true);
     libCamp_gf_SetAllSoundChannelVolumesCampaign(2);
     GhostOps_Scene_Log("scene: Marine A line finished");
+    // Raynor's closing words: portrait and text only (no new audio); the explanation stays in the task / subtitle area
+    GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsScene_RaynorName"), StringExternal("Param/Value/GhostOpsScene_Closing"));
+    TransmissionSend(PlayerGroupAll(), lv_raynor, libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", null, null, null, go_sceneClosingLen, c_transmissionDurationSet, true);
+    GhostOps_Scene_Log("scene: Raynor closing words finished");
     TriggerQueueExit();
     return true;
 }

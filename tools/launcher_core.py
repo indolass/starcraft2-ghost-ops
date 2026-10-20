@@ -71,6 +71,14 @@ def profiles_of(mission_id):
              'experimental': bool(p.get('experimental'))} for n, p in presets.items() if not p.get('hidden')]
 
 
+def installed_map_info(mission_id, preset, game_dir=None):
+    """(path, installed?) of the map a start of this mission / profile uses (Maps\\GhostOps of the game folder)."""
+    adapter = build.load_adapter(mission_id)
+    root = game_dir or DEFAULT_GAME_DIR
+    path = os.path.join(root, 'Maps', 'GhostOps', build.output_name(adapter, preset))
+    return path, os.path.isfile(path)
+
+
 def default_profile(mission_id):
     adapter = build.load_adapter(mission_id)
     raw = build.load_json(adapter['config'])

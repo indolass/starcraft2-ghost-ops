@@ -249,3 +249,24 @@ quick save, named slots beyond the menu, autosave, loads of a save whose Galaxy 
 was clean in each launch; the known campaign-init "not authorized" lines appear).
 Side effect to know: every run of a map from `Maps\GhostOps` (and every load) rewrites the Blizzard campaign Bank files in `Documents\StarCraft II\Banks`
 (TCampaign, TRaynor01, ..., listed in `save.ioBankList`) with the snapshot the game holds; this is the existing behaviour of the campaign init code, not of the probe.
+
+
+## TRaynor03 "Zero Hour" (2026-10-20), facts from the installed map and the first real runs
+- Original (5700-line script): player 1 starts with Command Center (id 23), 2 Barracks, Engineering Bay, 4 Supply Depots, 5 SCVs, 4 Bunkers (ids 4 and 13 at the base, 291 and 298 at the
+  two bridges; the script keeps them in `gv_bunkerBase*` / `gv_bunkerBridge*`), 4 Missile Turrets (ids 113, 245, 294, 752) and the Marines of the start groups. The Objects file lists
+  24 Marines of player 1, but **16 exist at the start** (the others are difficulty-dependent objects): the map search finds 8 outside, the other 8 stand in the bunkers (cargo; they
+  are found with `UnitCargoGroup` of the four bunkers). No script variable keeps a start Marine by id.
+- Zerg players 2, 3, 4 own the 8 Hatcheries: ids 88, 122, 259 (P2, west), 93, 198 (P3), 57, 119, 164 (P4, north / east). The rebel Marines are player 6 (allied, groups 1..3, rescue
+  = reaching a region, no change of owner): they are not Marines of player 1, so the garrison rules never touch them.
+- Timer: `gv_sURVIVETIME` = 20.0 (a constant, all difficulties), `gv_evacuationTimer` started by `gt_StartTimers` after the objective "Hold out" is created (about 6 s after the start);
+  its expiry triggers `gt_VictoryHoldOutCompleted_Func`, which sets `gv_gameOver` and runs the standard victory sequence. Our hook in front of its first action
+  (`GhostOps_ZH_Gate()`) lets it through only when every target is dead; otherwise the function is run again by `TriggerExecute(TriggerCreate("gt_VictoryHoldOutCompleted_Func"), false, false)`
+  when the last target dies (checked: the original victory runs exactly once, a result proposal is written once).
+- The scripted waves (`gt_AttackWaves*`) end after about 15 minutes; a small separate handler (`GhostOps_ZH_PostWave`, interval 120 game seconds, at most 40 active enemy units) keeps
+  moderate pressure after the timer.
+- Portrait models of the installed campaign data: `RaynorCommanderPortrait`, `HornerPortrait` (Matt), `SwannPortrait`, `MarineAPortrait`, `GhostPortrait`, `AdjutantPortrait`; each has a
+  facial animation set; `TransmissionSend(..., "Talk", ...)` plays it also WITHOUT a sound clip (frame differences of the mouth region of Raynor's portrait were about twice those of the
+  forehead during a text-only transmission, mouth open / closed visible in two frames).
+- Two missiles (both Ghosts may aim): the first launch re-arms the academy for free (state 8, ready 1.1 s later), a second launch ends the chain (`launches` = 2, `nukes` 0), a third
+  order is refused; a second Ghost cannot aim while the first one holds the only armed missile. The launch counter is the flight effect, never the click.
+- Known limits found: the TRaynor03 dev run needs about two minutes to compile and load; `UnitCreate` of the Ghost Academy moves to the nearest valid place (see the log).

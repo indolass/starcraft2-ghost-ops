@@ -398,3 +398,14 @@ Evidence: RESEARCH.md section "CE-0". Everything marked **[CE0-VERIFIED]** was m
 
 ### 14.3 First sequence (Owner, 2026-10-20)
 TRaynor02 -> accepted remainder -> TRaynor03 preparation -> launch. THanson01 stays the following, separate stage; its preparation cost 1000 minerals / 500 gas belongs to THanson01 and is NOT transferred to TRaynor03. TRaynor03 has no separate preparation fee in the first prototype: the cost of the chosen order is charged once. Its prices and limits are EXPERIMENTAL numbers in the config (MISSION_ROADMAP.md section 7.3 and the report), not Owner-approved values.
+
+### 14.4 Implementation status after CE-1 (2026-10-20; updated at the end of the work)
+| piece | status |
+|---|---|
+| Map journal `core/GhostOpsCampaign.galaxy` (attempt id, START / LOADED / RESULT proposal, found pallets, resources read before the victory sequence) | **[IMPL]** in TRaynor02 `tactical` and TRaynor03 `standard`; **[CE0-VERIFIED]** in real runs through the dev presets: START row, RESULT row with start / mined / remainder, written once |
+| Launcher state `tools/campaign.py` (one atomic commit of stock + accepted mark, pay once, accept once, abandoned attempts, stale Bank file) | **[IMPL]**; proven by fault-injection unit tests (crash before write / half written / before replace / after replace) |
+| Flow `tools/campaign_flow.py` + window `tools/gui_campaign.py` (order form, quote with shortage, unique operation set, result confirmation) | **[IMPL]**; flow by unit tests with a fake backend; the window was rendered with a fake backend (screenshots); the real window -> real game path is the e2e check below |
+| Unique map file per operation, immutable (`build.py --plan`, `prepare_existing`) | **[IMPL]**; built and started in the real game (plan with a changed order: the order was applied) |
+| Loading a save of a paid operation continues the same attempt without a second charge | design **[CE0-VERIFIED]** for the attempt identity (saved global); the launcher side (`intent continue`) by unit tests |
+| Loading from the SC2 main menu, `Maps` path of a deleted set, quick save / autosave | **[OPEN - technical check]** (needs the Owner's login / not tried) |
+| Result of an operation accepted twice, replay income, rollback of the campaign | **[OPEN - Owner decision]** (7.3); the code refuses a second acceptance and gives no replay income |

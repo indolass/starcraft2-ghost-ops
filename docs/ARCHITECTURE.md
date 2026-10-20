@@ -201,3 +201,22 @@ IMPL / AGREED / AGREED-V1 / REQUIREMENT / DESIGN / OPEN (Owner decision or techn
   Unsupported keys are errors.
 - The «Вне закона» (TRaynor02) design keeps its agreed minimal scope; a complete ban on training new soldiers was discussed and is **not** approved.
 - Note: the config format is `schema_version` 4 (`validate_config`); the "Configuration" item of the first section and the README now say 4 as well (corrected 2026-10-20, documentation only).
+
+
+## Campaign, operation sets and TRaynor03 (2026-10-20, implemented; contract: MISSION_SETTINGS_AND_CAMPAIGN_ECONOMY.md sections 7 and 14)
+Components (all new files are small and sit next to the existing ones):
+- `core/GhostOpsCampaign.galaxy` (config key `campaign`, adapter keys `campaign_hooks`): the map-side journal. At a fresh start it makes the attempt id (a saved global), writes
+  `START` / `LOADED` / `DEFEAT` rows and one `RESULT` row (a PROPOSAL: resources read before the standard victory sequence, start stock, mined = native collected counter, found = pallets of the
+  original) into the Bank `GhostOpsCampaign`. The Bank is only written, never read back; a load restores it with the save (measured, RESEARCH.md "CE-0").
+- `tools/campaign.py`: the launcher-side state file `%APPDATA%\GhostOps\campaign.json` (env `GHOSTOPS_CAMPAIGN_FILE` for tests): stock, ledger, operations (`paid` -> `started` ->
+  `accepted` / `abandoned`), attempts, accepted results. ONE atomic write changes the stock and marks a result accepted (temp file + `os.replace`). Rules: one charge per operation, a result
+  is accepted once, an abandoned attempt's result is never accepted automatically, a Bank file older than the launch is stale, the active attempt is the one of the last journal rows.
+- `tools/campaign_flow.py` (logic) and `tools/gui_campaign.py` (window "Кампания" of the launcher): order -> quote (limits / prices of the resolved config, a shortage is shown, no credit) ->
+  pay once -> `build.py --plan` builds the UNIQUE map file `GhostOps_<Mission>_<profile>__<operation>.SC2Map` (never overwritten; `prepare_existing` keeps an installed set as it is) ->
+  start -> after the game exits the fresh journal is read and the proposal is shown for confirmation.
+- `build.py`: `apply_ce0` assembles optional modules from the RESOLVED config (`ce0` dev probe, `campaign`); `--plan` merges an operation plan (`operation_id`, `order`) into the config; the manifest
+  carries `operation_id` and `data_hash` (hash of the settings snapshot, baked into the map and returned in the proposal).
+- `core/GhostOpsZeroHour.galaxy` (config key `zerohour`, adapter `adapters/traynor03/`): the order (marines / bunkers / turrets removed beyond the order, extra SCVs created), the targets, the victory
+  gate in front of the original timer victory, the post-timer waves, the scenes. The tactical module (`core/GhostOpsTactical.galaxy`) is shared with TRaynor02 and generalised by config:
+  `tactical.nuke.count` (missiles = successful launches), `tactical.nuke.both_may_aim`, `tactical.spotter_defeat` (defaults keep TRaynor02 as it was).
+- The CE-0 probe (`core/GhostOpsCe0.galaxy`, `adapters/*/ce0_extra.galaxy`, `tools/ce0_session.py`, `tools/ce0_ui.py`) stays dev-only; no playable profile contains it (`tests/test_ce0_build.py`).

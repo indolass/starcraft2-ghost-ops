@@ -103,10 +103,15 @@
         "en": "Medic! Medic!"
       },
       "Explain": {
-        "ru": "Отряд пострадал при высадке. Морпехи тяжело ранены.",
-        "en": "The squad was hurt in the landing. The Marines are badly wounded."
+        "ru": "Отряд серьёзно пострадал при высадке. Морпехи ещё могут сражаться, но любое ранение станет последним.",
+        "en": "The squad was badly hurt in the landing. The Marines can still fight, but any wound will be their last."
+      },
+      "Closing": {
+        "ru": "Призраки, придётся вам поработать. Расчищайте дорогу, остальные прикроют. И без геройства: специалистов у нас больше нет.",
+        "en": "Ghosts, you will have to do the work. Clear the road, the rest will cover you. And no heroics: we have no more specialists."
       }
-    }
+    },
+    "closing_seconds": 11.0
   },
   "default_preset": "easy",
   "presets": {

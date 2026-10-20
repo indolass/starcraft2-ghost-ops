@@ -14,6 +14,30 @@ void GhostOps_Ce0_MissionStart () {
 bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
     int lv_i;
     unit lv_g1;
+    unit lv_z;
+
+    if (lp_cmd == "zt") {
+        // zt out|in: garrison weapon test. out = the zone is moved far away (every garrison Marine is outside), in = back to the real zone. A paused enemy Zergling next to the
+        // first Marine of the player is attacked by him for 5 seconds; its life tells whether the weapon works.
+        if (lp_a == "out") {
+            go_tacZoneX = 400.0;
+        }
+        else {
+            go_tacZoneX = 86.0;
+        }
+
+        Wait(1.5, c_timeGame);
+        lv_g1 = UnitGroupUnit(UnitGroup("Marine", 1, RegionEntireMap(), GhostOps_Ce0_Live(), 0), 1);
+        UnitCreate(1, "Zergling", 0, 2, PointWithOffset(UnitGetPosition(lv_g1), 2.0, 0.0), 270.0);
+        lv_z = UnitLastCreated();
+        libNtve_gf_PauseUnit(lv_z, true);
+        UnitIssueOrder(lv_g1, OrderTargetingUnit(AbilityCommand("attack", 0), lv_z), c_orderQueueReplace);
+        Wait(5.0, c_timeGame);
+        GhostOps_Ce0_Write("j", "ZONE TEST " + lp_a + ": zergling life " + FixedToString(UnitGetPropertyFixed(lv_z, c_unitPropLife, c_unitPropCurrent), 1) + " of " + FixedToString(UnitGetPropertyFixed(lv_z, c_unitPropLifeMax, c_unitPropCurrent), 1) + " marine pos " + FixedToString(PointGetX(UnitGetPosition(lv_g1)), 0) + "," + FixedToString(PointGetY(UnitGetPosition(lv_g1)), 0));
+        UnitRemove(lv_z);
+        go_tacZoneX = 86.0;
+        return true;
+    }
 
     if (lp_cmd == "timer") {
         // the original timer reaching zero: the original victory function is started (our gate decides)

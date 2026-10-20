@@ -376,7 +376,8 @@
         "ru": "Нужно одновременно: дождаться корабля (20 игровых минут) и уничтожить все отмеченные инкубаторы. Если цели остались, корабль ждёт, а миссия продолжается.",
         "en": "Both are needed: wait for the ship (20 game minutes) AND destroy every marked hatchery. If targets remain the ship waits and the mission goes on."
       }
-    }
+    },
+    "lock_production": true
   },
   "default_preset": "standard",
   "presets": {
