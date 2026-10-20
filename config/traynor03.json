@@ -46,7 +46,7 @@
   "tactical": {
     "debug_log": false,
     "garrison": {
-      "damage_multiplier": 4,
+      "damage_multiplier": 8,
       "zone": {
         "center": [
           86.0,
@@ -263,19 +263,19 @@
       }
     },
     "recommended": {
-      "marines": 8,
+      "marines": 16,
       "bunkers": 4,
       "turrets": 4,
-      "scvs": 4
+      "scvs": 8
     },
     "order": {
-      "marines": 8,
+      "marines": 16,
       "bunkers": 4,
       "turrets": 4,
-      "scvs": 4
+      "scvs": 8
     },
     "test_budget": {
-      "minerals": 1500,
+      "minerals": 1700,
       "gas": 0
     },
     "targets": [

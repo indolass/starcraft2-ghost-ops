@@ -49,7 +49,7 @@ def save_state(s):
     json.dump(s, open(STATE, 'w'), indent=2)
 
 
-def bank_files(name='GhostOpsCe0'):
+def bank_files(name='GhostOpsDevCe0'):
     return sorted(glob.glob(os.path.join(BANKS, '**', name + '.SC2Bank'), recursive=True))
 
 
@@ -66,7 +66,7 @@ def read_bank(path):
     return out
 
 
-def journal(section='j', since=0, name='GhostOpsCe0'):
+def journal(section='j', since=0, name='GhostOpsDevCe0'):
     files = bank_files(name)
     if not files:
         return []

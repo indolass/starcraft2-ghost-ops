@@ -120,7 +120,7 @@ Built only into maps whose `adapter.json` lists `modules` (TRaynor02); inert whe
 (`gt_RebelsCompleteQ_Func`, per unit), the original victory (`gt_VictoryDominionOutpostCompleted_Func`, `gt_VictorySetup_Func`) and defeat
 (`gt_DefeatBaseDead_Func`) which only switch the module off.
 
-Nuclear strike chain (measured in the installed game 3.1.4, not guessed; `tactical_dev` + bank log `GhostOpsTac.SC2Bank`):
+Nuclear strike chain (measured in the installed game 3.1.4, not guessed; `tactical_dev` + bank log `GhostOpsDevTac.SC2Bank`):
 - Campaign data of this mission hides the arming (`TrainNuke` shows only if Ghosts are allowed and needs a Factory): the build overrides
   `TrainNuke` (Use and Show -> "no nuke queued"), the Nuke unit costs 0, `ArmSiloWithNuke` Ammo1 takes 1 s; the module lifts the campaign tech
   restrictions of the chain and arms the missile by order.
@@ -160,7 +160,7 @@ of the map archive plus `CSound` entries (parent `SM_Old` = category Dialogue, 2
 otherwise); the manifest lists them (`audio`), `verify` checks the hashes and that only the expected files were added. The clip files and where they came from:
 `assets/audio/` + `SOURCES.md`. Extra hooks: adapter key `extra_hooks` (same form as `start_hooks`). TRaynor01 scene: config key `scene` -> generated
 `GhostOps_ApplySceneConfig()` + globals (`gen_scene`), texts `Param/Value/GhostOpsScene_*`, code in `adapters/traynor01/adapter.galaxy`
-(`GhostOps_T1_OnOpeningLine` -> trigger `GhostOps_T1_SceneMsg`); hidden preset `easy_dev` writes `Banks\GhostOpsScene.SC2Bank`. TRaynor02: the scene stage machine got stage 8
+(`GhostOps_T1_OnOpeningLine` -> trigger `GhostOps_T1_SceneMsg`); hidden preset `easy_dev` writes `Banks\GhostOpsDevScene.SC2Bank`. TRaynor02: the scene stage machine got stage 8
 (Swann queued: the transport is created when the Swann message really starts), `GhostOps_Scene_GhostMsg` plays the single Ghost line.
 
 

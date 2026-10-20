@@ -80,7 +80,7 @@ void GhostOps_Tac_Log (string lp_text) {
     }
 
     if (go_tacBank == null) {
-        go_tacBank = BankLoad("GhostOpsTac", 1);
+        go_tacBank = BankLoad("GhostOpsDevTac", 1);
     }
 
     go_tacLogN += 1;

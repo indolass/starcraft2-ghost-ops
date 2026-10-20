@@ -126,7 +126,7 @@ def run(mission, preset, seconds, keep=False, width=1024, height=768, shot=None,
     if rc != 0:
         print('prepare failed', rc)
         return rc, report
-    for f in glob.glob(os.path.join(DOCS, 'Banks', '**', 'GhostOpsTac*'), recursive=True):
+    for f in glob.glob(os.path.join(DOCS, 'Banks', '**', 'GhostOpsDevTac*'), recursive=True):
         os.remove(f)
     t0 = time.time()
     adapter, cfg, name = build.context(args)

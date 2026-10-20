@@ -2,7 +2,7 @@
 // GhostOps CE-0 technical probe (DEVELOPMENT ONLY, MIT).
 // Built only when the resolved configuration has the key "ce0" (hidden dev presets "ce0_dev"); a playable build never
 // contains this file. It measures platform facts for the campaign-economy design (docs/MISSION_SETTINGS_AND_CAMPAIGN_ECONOMY.md):
-//   - an append-only journal in the Bank "GhostOpsCe0" (section j) and result proposals (section r), with a monotonic
+//   - an append-only journal in the Bank "GhostOpsDevCe0" (section j) and result proposals (section r), with a monotonic
 //     sequence number kept IN THE BANK (never in the game), so a load of an old save can never roll it back;
 //   - the identity of the attempt: a saved global created once at the fresh start; a load brings the saved value back;
 //   - snapshots of the state (resources, census of the player's units, Ghosts, mission extras) at save, at load, on demand;
@@ -51,7 +51,7 @@ int GhostOps_Ce0_B (bool lp_v) {
 int GhostOps_Ce0_Write (string lp_section, string lp_text) {
     int lv_n;
 
-    go_c0Bank = BankLoad("GhostOpsCe0", 1);
+    go_c0Bank = BankLoad("GhostOpsDevCe0", 1);
     BankOptionSet(go_c0Bank, c_bankOptionSignature, false);
     lv_n = 0;
     if (BankKeyExists(go_c0Bank, "meta", "n")) {
@@ -200,6 +200,9 @@ bool GhostOps_Ce0_ChatFunc (bool lp_test, bool lp_run) {
     unitgroup lv_g;
     unit lv_u;
     int lv_n;
+    int lv_k;
+    int lv_sum;
+    int lv_cnt;
 
     if (!lp_run) {
         return true;
@@ -252,6 +255,24 @@ bool GhostOps_Ce0_ChatFunc (bool lp_test, bool lp_run) {
             UnitSetPropertyFixed(lv_u, c_unitPropLife, StringToFixed(lv_b));
             GhostOps_Ce0_Write("j", "HURT " + lv_a + " to " + lv_b);
         }
+    }
+    else if (lv_cmd == "fields") {
+        // remaining ore of the mineral fields within 25 cells of the first SCV (what the base can still give)
+        lv_g = UnitGroup("SCV", 1, RegionEntireMap(), GhostOps_Ce0_Live(), 0);
+        lv_u = UnitGroupUnit(lv_g, 1);
+        lv_sum = 0;
+        lv_cnt = 0;
+        lv_g = UnitGroup("MineralField", 0, RegionCircle(UnitGetPosition(lv_u), 25.0), GhostOps_Ce0_Live(), 0);
+        UnitGroupAddUnitGroup(lv_g, UnitGroup("MineralField750", 0, RegionCircle(UnitGetPosition(lv_u), 25.0), GhostOps_Ce0_Live(), 0));
+        lv_n = UnitGroupCount(lv_g, c_unitCountAlive);
+        lv_k = 1;
+        while (lv_k <= lv_n) {
+            lv_sum += UnitGetPropertyInt(UnitGroupUnit(lv_g, lv_k), c_unitPropResources, c_unitPropCurrent);
+            lv_cnt += 1;
+            lv_k += 1;
+        }
+
+        GhostOps_Ce0_Write("j", "FIELDS near the base: " + IntToString(lv_cnt) + " resource units, ore left " + IntToString(lv_sum));
     }
     else if (lv_cmd == "minerals") {
         PlayerModifyPropertyInt(1, c_playerPropMinerals, c_playerPropOperAdd, StringToInt(lv_a));
@@ -310,7 +331,7 @@ bool GhostOps_Ce0_ChatFunc (bool lp_test, bool lp_run) {
     }
     else if (lv_cmd == "bankcheck") {
         // what does the loaded game hold in the bank: the state of the save (memory) or the file on disk?
-        go_c0Bank = BankLoad("GhostOpsCe0", 1);
+        go_c0Bank = BankLoad("GhostOpsDevCe0", 1);
         lv_t = "BANKCHECK mem_n=" + IntToString(GhostOps_Ce0_BankN()) + " mem_ext=" + BankValueGetAsString(go_c0Bank, "ext", "x");
         BankReload(go_c0Bank);
         lv_t = lv_t + " | after BankReload disk_n=" + IntToString(GhostOps_Ce0_BankN()) + " disk_ext=" + BankValueGetAsString(go_c0Bank, "ext", "x");
@@ -318,7 +339,7 @@ bool GhostOps_Ce0_ChatFunc (bool lp_test, bool lp_run) {
     }
     else if (lv_cmd == "reload") {
         // does the game read a bank that somebody else changed on disk? (the launcher -> map direction)
-        go_c0Bank = BankLoad("GhostOpsCe0In", 1);
+        go_c0Bank = BankLoad("GhostOpsDevCe0In", 1);
         BankOptionSet(go_c0Bank, c_bankOptionSignature, false);
         BankReload(go_c0Bank);
         lv_t = "RELOAD token=" + BankValueGetAsString(go_c0Bank, "in", "token");
@@ -359,7 +380,7 @@ bool GhostOps_Ce0_LoadFunc (bool lp_test, bool lp_run) {
     }
 
     // the attempt in the text is the SAVED one: a load brings back the identity that the save carried
-    go_c0Bank = BankLoad("GhostOpsCe0", 1);
+    go_c0Bank = BankLoad("GhostOpsDevCe0", 1);
     lv_t = "LOADED op=" + go_c0Op + " attempt=" + go_c0Attempt + " mem_n=" + IntToString(GhostOps_Ce0_BankN()) + " mem_ext=" + BankValueGetAsString(go_c0Bank, "ext", "x");
     GhostOps_Ce0_Write("j", lv_t);
     GhostOps_Ce0_Snap("LOAD done");

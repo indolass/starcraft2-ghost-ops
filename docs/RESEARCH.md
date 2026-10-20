@@ -183,7 +183,7 @@ can block the route there). `relaxed` would instead restart both timers with a l
 
 Method: hidden dev presets `ce0_dev` (TRaynor02, THanson01) and `ce0_wait_dev` (TRaynor02, Swann wait 70 s) build the probe `core/GhostOpsCe0.galaxy` +
 `adapters/*/ce0_extra.galaxy` (config key `ce0`, never in a playable profile: `tests/test_ce0_build.py`). The probe writes a journal into the Bank `GhostOpsCe0`
-(`Documents\StarCraft II\Banks\GhostOpsCe0.SC2Bank`, section `j`; result proposals in section `r`) and takes chat commands (Enter, text, Enter) typed into the
+(`Documents\StarCraft II\Banks\GhostOpsDevCe0.SC2Bank`, section `j`; result proposals in section `r`) and takes chat commands (Enter, text, Enter) typed into the
 test window. Helpers: `tools/ce0_session.py`, `tools/ce0_ui.py` (menu flows checked on screenshots), `tools/sc2_ui.py`. The test window was on the PRIMARY monitor
 (no second monitor was detected in this session; 1024x768 start size, muted by process, never activated). All saves were made through the game menu
 (F10 -> Save), named `CE0_*`, and are deleted after the work; the Owner's saves were never touched.
@@ -277,3 +277,12 @@ Side effect to know: every run of a map from `Maps\GhostOps` (and every load) re
   inside the real zone (damage x4); (f) the bunkers of the map are EMPTY at the start; (g) a real plan build (`--plan`) puts the ordered numbers into the map and the journal START row carries the operation id and the data hash.
 - Real campaign chain (`tools/ce0_campaign_e2e.py`, own campaign file): TRaynor02 -> proposal (start 100, mined 225, remainder 325) -> accepted once -> order of 8 marines (320) charged once -> unique TRaynor03 map
   `GhostOps_TRaynor03_standard_dev__OP0002.SC2Map` built and started -> `continue_operation` started the same set without a rebuild and without a second charge.
+
+## 2026-10-21: TRaynor03 defence, post-zero waves, campaign window, mining (summary; full tables in docs/MISSION_ROADMAP.md "Итог пятого задания")
+
+- Scripted-player defence (dev command `defend`, no healing): 8/4/4/4 falls at ~740 s (x4), 1117 s (x8), ~1087 s (x12); 16/4/4/8 falls at ~1090 s with x4 and holds past the 1207.9 s timer with x8 (checked to 1321 s). Enemy ranged units (Roach, Hydralisk, Mutalisk of players 2/3/4) break bunkers at the bridge / south and later the Command Center; there is no replacement because production is locked by design.
+- Post-timer waves: every 120 s by players 2/3/4, contact ~110 s after sending (zone count 12-28 against a static 8), gather point keeps the original 45 and peaks at 109, total enemy fighters 227-279, no uncontrolled accumulation (dev trace `wv`).
+- Missiles in TRaynor03: aiming 12 s, cancel by selection + Esc returns the missile (`aim cancelled, missile armed again`), a game load restores launches / ammo, two simultaneous aim orders give one persistent effect and one launch, a third order after two launches has no effect.
+- TRaynor02 mining: 8 SCVs mined 3275 minerals in 622 game seconds (~330 per game minute), 12379 ore in the 8 patches at the base at the start.
+- Campaign window (real CustomTkinter widgets, real build + start backend, separate processes = full launcher restarts): shortage with a disabled pay button, accept once, pay once (2355 -> 715 for 1640), continue and full restart start the same operation set without a second charge. Button callbacks were invoked; mouse clicks on window pixels were not.
+- `Documents\StarCraft II\Banks\GhostOpsScene.SC2Bank` existed before and was overwritten by a TRaynor01 scene test (2026-10-20 21:19); no backup exists, the old content is unknown.

@@ -196,9 +196,17 @@ the policy for loading an old mission after its result was accepted (practice / 
 Proposed queue (stages are assigned by the Owner; technical steps inside an assigned stage need no separate permission): CE-0 technical verification (result channel, resources at victory,
 construction events, save / load completeness, saving methods, operation set naming), CE-1 TRaynor02 remainder and report, CE-2 THanson01 purchases after the Owner's price / delivery decisions.
 
-2026-10-20 (later): **CE-0 DONE as a technical probe** (hidden dev presets only; results in docs/RESEARCH.md "CE-0" and contract section 14): real saves / loads of TRaynor02 and THanson01, Bank behaviour, map set for saves, resource counters, turret kit events. The mission plan of the next stages is docs/MISSION_ROADMAP.md (TRaynor02 -> TRaynor03 preparation first; THanson01 later). Nothing of the probe is in a playable profile.
+2026-10-20 (later): **CE-0 DONE as a technical probe (NOT closed as a whole: loading a save from the SC2 main menu was never tried - it needs the Owner's login)** (hidden dev presets only; results in docs/RESEARCH.md "CE-0" and contract section 14): real saves / loads of TRaynor02 and THanson01, Bank behaviour, map set for saves, resource counters, turret kit events. The mission plan of the next stages is docs/MISSION_ROADMAP.md (TRaynor02 -> TRaynor03 preparation first; THanson01 later). Nothing of the probe is in a playable profile.
 
 2026-10-20 (queue of docs/MISSION_ROADMAP.md): CE-0 DONE; **CE-1 implemented** (map journal, launcher-side campaign state with one atomic commit, campaign window of the launcher, unique per-operation
 map files); **TRaynor03 «Час икс» built as an EXPERIMENT** (pre-ordered garrison, two Ghosts, two missiles, victory = 20 game minutes AND all marked hatcheries, production lock, post-timer waves); scenes of the first three
 missions (portrait + text; clips exist only for the older short lines). Prices / limits / waves of TRaynor03 are experimental numbers, not Owner-approved. THanson01 economy (1000 / 500, turret kits, mercenaries)
-stays the following, separate stage. Statuses and checks: docs/MISSION_ROADMAP.md "Фактическое состояние". No remote is configured for the repository, so nothing is pushed.
+stays the following, separate stage. Statuses and checks: docs/MISSION_ROADMAP.md "Фактическое состояние". (Remote: created and pushed on 2026-10-21, see the next entry.)
+
+2026-10-21 (fifth task: remaining checks + publication): public repository https://github.com/indolass/starcraft2-ghost-ops created (no auto README), `main` pushed normally.
+**TRaynor03 real defence** tested with a scripted player (marines in bunkers, original SCVs mine, extra SCVs repair, Ghosts away; no healing / invulnerability / removal of enemies / extra money / disabled waves):
+the recommended 8/4/4/4 (1120) does NOT hold 20 minutes (the base falls at 12-18.6 min at garrison damage x4 / x8 / x12); 16/4/4/8 (1640) with garrison damage x8 held past the timer (1207.9 s; checked until 1321 s).
+EXPERIMENTAL tuning (not Owner-approved): garrison damage 4 -> 8, recommended and default order 8/4/4/4 -> 16/4/4/8, test budget 1500 -> 1700. Waves after zero: created, move, reach the perimeter, no uncontrolled accumulation.
+Campaign window passed with the REAL widgets and the REAL backend (shortage, accept once, pay once, continue and full restart without a second charge); TRaynor02 mining measured (~330 minerals per game minute with 8 SCVs, 12379 ore at the base);
+TRaynor03 missiles: cancel, load with remaining ammo and a two-Ghost race checked (2 launches in total). Not verified: a full human playthrough of TRaynor03 and TRaynor02, main-menu loading, any sound by ear. TRaynor03 has no clips; candidates listed in docs/MISSION_ROADMAP.md.
+Details: docs/MISSION_ROADMAP.md "Итог пятого задания".

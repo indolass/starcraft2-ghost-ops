@@ -21,7 +21,7 @@ void GhostOps_Scene_Log (string lp_text) {
     }
 
     if (go_sceneBank == null) {
-        go_sceneBank = BankLoad("GhostOpsScene", 1);
+        go_sceneBank = BankLoad("GhostOpsDevScene", 1);
     }
 
     go_sceneLogN += 1;

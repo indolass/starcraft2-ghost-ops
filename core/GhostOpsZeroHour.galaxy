@@ -63,7 +63,7 @@ void GhostOps_ZH_Log (string lp_text) {
         return;
     }
 
-    go_zhBank = BankLoad("GhostOpsZeroHour", 1);
+    go_zhBank = BankLoad("GhostOpsDevZeroHour", 1);
     go_zhLogN += 1;
     BankValueSetFromString(go_zhBank, "log", "e" + IntToString(go_zhLogN), FixedToString(GameGetMissionTime(), 2) + " " + lp_text);
     BankSave(go_zhBank);

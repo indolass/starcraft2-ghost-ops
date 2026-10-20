@@ -114,7 +114,7 @@ Mutalisk raids, victory 50 colonists, defeat at 20 dead colonists on Hard) is ke
 | **Convoy command** | button (screen dialog, top left under the objectives): *Конвой: сбор колонистов* (disabled) -> *ОТПРАВИТЬ КОНВОЙ* (enabled, ping + message) -> *Конвой в пути* (disabled). The original starts a trip in `gt_ConvoySpawned_Func`; the hook in front of its first action (`GhostOps_Hanson_Hold`) ends the function while the command is missing and remembers the trigger; the click (`GhostOps_Hanson_OnClick`: state 2 -> 3 first, then `TriggerExecute` of the remembered trigger) runs the original function from its beginning exactly once. No waiting thread (a load cannot cut it), no Stop orders. The colonists' gathering (`gt_Gathercolonistspriortoevacuation_Func`, hook `GhostOps_Hanson_Preparing`) is kept; the button is ready when the original says the convoy is ready. The dialog is created again after a load (`TriggerAddEventLoadGameDone`) |
 | **Turrets** | `hanson.turrets.list` (x, y, role base / houses / air), owner 4 (the settlement's player, so defeat rules are untouched); stock Missile Turret, repaired by SCVs (autocast), no new ones can be built. 15 turrets: base 8, houses 4, air approaches 3, all inside the settlement (the far north belongs to the Zerg: turrets there were killed by the map's Zerglings). The engine moves a turret to the nearest valid place, so the config holds the places the engine really gave |
 | **Raids** | the original late raids are kept (`gt_DoomsdayZergAttackWaves`: after the 6th trip on Hard, 8, then 12 + 2 Overseers, then 16 + 2 Overseers Mutalisks, driven by `gt_DoomsdayZergAI`) |
-| **Dev preset** | `sniper_dev` (hidden): `hanson.debug_log` writes `Documents\StarCraft II\Banks\GhostOpsHanson.SC2Bank`, `hanson.autotest.mode` runs a scripted check (1 Snipe, 2 lock / repair / refill, 3 command log, 4 command + automatic clicks, 5 raids on the turrets, 6 pathing map, 7 placement probe) |
+| **Dev preset** | `sniper_dev` (hidden): `hanson.debug_log` writes `Documents\StarCraft II\Banks\GhostOpsDevHanson.SC2Bank`, `hanson.autotest.mode` runs a scripted check (1 Snipe, 2 lock / repair / refill, 3 command log, 4 command + automatic clicks, 5 raids on the turrets, 6 pathing map, 7 placement probe) |
 
 ### The Outlaws (TRaynor02): tactical variant (experiment)
 
@@ -181,11 +181,25 @@ A full restart (*Перезапустить*) is free and gives the original pai
 operation you still want to continue: a save names the map by its path.
 
 **Prices and limits of TRaynor03 are experimental numbers** in `config/traynor03.json` (`zerohour.prices`, `limits`, `recommended`), not approved by the Owner: marine 40, bunker 75, turret 75, SCV 50
-minerals; recommended order 8 / 4 / 4 / 4 = 1120 minerals (the base price of a marine 50, bunker and turret 100 scaled by a factor; see the report in docs/MISSION_ROADMAP.md). A standalone test of the map
+minerals; recommended order 16 / 4 / 4 / 8 = 1640 minerals (it was 8 / 4 / 4 / 4 = 1120 until 2026-10-21; that kit did not hold the base for 20 minutes in the scripted-player defence test, details in docs/MISSION_ROADMAP.md) (the base price of a marine 50, bunker and turret 100 scaled by a factor; see the report in docs/MISSION_ROADMAP.md). A standalone test of the map
 never writes into the campaign.
 
 Limits: the voice lines of Raynor (TRaynor02, TRaynor03), Matt and the cut-off marines have no clips yet (portrait + text only); loading from the main menu, a full TRaynor03 playthrough by a human and
 the balance of the order are for the Owner to judge.
+
+## What this repository does NOT contain (and how to restore it locally)
+
+Published: Galaxy sources, build tools, launcher, configs, tests, docs and the audio **manifest** `assets/audio/SOURCES.md`. NOT published (git-ignored, never committed): the game, CASC data,
+Blizzard maps, saves, Banks, models, voice lab and the extracted voice WAVs (`assets/audio/**/*.wav`, Blizzard voice lines).
+
+To use it after a clone you need your own StarCraft II client 3.1.4 (the tools read the original campaign maps from it; set the game folder in the launcher or `--game-dir`) and Python 3.
+The build does not download or recreate anything: it patches the maps of YOUR installation.
+
+**Voice.** A clone has no sound clips. The WAV files listed in `assets/audio/SOURCES.md` come from a private voice lab (a separate local project, not part of this repository);
+the table there gives the lab path, the text (Whisper ASR, unchecked) and the sha256 of every file. To get the voice you must produce the same files yourself from your own game
+(cut whole original lines) and put them at the paths of the manifest; the build checks them. Without them the configs that import clips (`config/traynor01.json`, `config/traynor02.poc.json`) stop with
+"audio clip ...: file not found"; the configs without an `audio` key (TRaynor03, THanson01, TTychus01) build and play silently, with portrait + text only.
+A clone therefore does **not** give you a finished voice; no ready voice is promised.
 
 ## Licence
 

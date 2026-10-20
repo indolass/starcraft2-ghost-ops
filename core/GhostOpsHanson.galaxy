@@ -70,7 +70,7 @@ void GhostOps_Hanson_Log (string lp_text) {
     }
 
     if (go_hBank == null) {
-        go_hBank = BankLoad("GhostOpsHanson", 1);
+        go_hBank = BankLoad("GhostOpsDevHanson", 1);
     }
 
     go_hLogN += 1;

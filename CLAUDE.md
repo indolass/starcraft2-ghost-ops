@@ -33,7 +33,7 @@ Use `python tools/test_launch.py --mission M --preset P --seconds N [--keep] [--
 - Galaxy sources stay ASCII; visible texts go through the string table (`StringExternal`, `config/*.json` texts).
 - After any real launch read the matching new `Documents\StarCraft II\GameLogs\<time> ScriptError.txt`; the campaign-init
   "not authorized" lines are known noise of launches from the Maps folder, a compile error is not.
-- The dev-only preset `tactical_dev` (TRaynor02) writes `Documents\StarCraft II\Banks\GhostOpsTac.SC2Bank` and can script the nuclear
+- The dev-only preset `tactical_dev` (TRaynor02) writes `Documents\StarCraft II\Banks\GhostOpsDevTac.SC2Bank` and can script the nuclear
   strike test (`tactical.autotest.mode`); it is hidden from the GUI and never part of a playable build.
 
 ## Campaign, saves and probes (Owner rules, 2026-10-20)

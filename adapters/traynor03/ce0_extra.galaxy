@@ -11,10 +11,218 @@ string GhostOps_Ce0_Extra () {
 void GhostOps_Ce0_MissionStart () {
 }
 
+// DEV: the orders a player gives when he organises the defence (no healing, no invulnerability, no extra resources): Marines into the bunkers (2 per bunker),
+// the five stock SCVs mine, the extra SCVs repair damaged structures, the Ghosts leave the base. Losses are logged with the killer.
+trigger go_dfTick;
+trigger go_dfDied;
+int go_dfLoss;
+int go_dfRepairOrders;
+
+bool GhostOps_Ce0_DefDied (bool lp_test, bool lp_run) {
+    unit lv_u;
+    unit lv_k;
+    string lv_t;
+
+    if (!lp_run) {
+        return true;
+    }
+
+    lv_u = EventUnit();
+    if ((UnitGetOwner(lv_u) != 1) || (UnitGetType(lv_u) == "Nuke") || (UnitGetType(lv_u) == "Zergling")) {
+        return true;
+    }
+
+    go_dfLoss += 1;
+    lv_k = EventUnitDamageSourceUnit();
+    lv_t = "LOSS " + UnitGetType(lv_u) + " at " + FixedToString(PointGetX(UnitGetPosition(lv_u)), 0) + "," + FixedToString(PointGetY(UnitGetPosition(lv_u)), 0);
+    if (lv_k != null) {
+        lv_t = lv_t + " killer " + UnitGetType(lv_k) + " of player " + IntToString(UnitGetOwner(lv_k)) + " at " + FixedToString(PointGetX(UnitGetPosition(lv_k)), 0) + "," + FixedToString(PointGetY(UnitGetPosition(lv_k)), 0);
+    }
+
+    GhostOps_Ce0_Write("j", lv_t);
+    return true;
+}
+
+unit GhostOps_Ce0_DamagedStructure () {
+    unitgroup lv_g;
+    int lv_n;
+    int lv_i;
+    unit lv_u;
+    unit lv_best;
+    fixed lv_bestP;
+    fixed lv_p;
+
+    lv_g = UnitGroup(null, 1, RegionEntireMap(), UnitFilter((1 << c_targetFilterStructure), 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+    lv_n = UnitGroupCount(lv_g, c_unitCountAll);
+    lv_best = null;
+    lv_bestP = 99.0;
+    lv_i = 1;
+    while (lv_i <= lv_n) {
+        lv_u = UnitGroupUnit(lv_g, lv_i);
+        lv_p = UnitGetPropertyFixed(lv_u, c_unitPropLifePercent, c_unitPropCurrent);
+        if ((lv_p < lv_bestP) && (lv_p < 99.0) && (UnitGetType(lv_u) != "GhostAcademy")) {
+            lv_bestP = lv_p;
+            lv_best = lv_u;
+        }
+
+        lv_i += 1;
+    }
+
+    return lv_best;
+}
+
+bool GhostOps_Ce0_DefTick (bool lp_test, bool lp_run) {
+    unitgroup lv_g;
+    int lv_n;
+    int lv_i;
+    unit lv_s;
+    unit lv_t;
+    unit lv_m;
+
+    if (!lp_run) {
+        return true;
+    }
+
+    lv_g = UnitGroup("SCV", 1, RegionEntireMap(), GhostOps_Ce0_Live(), 0);
+    lv_n = UnitGroupCount(lv_g, c_unitCountAlive);
+    lv_i = 1;
+    while (lv_i <= lv_n) {
+        lv_s = UnitGroupUnit(lv_g, lv_i);
+        if (UnitOrderCount(lv_s) == 0) {
+            if (lv_i <= 5) {
+                lv_m = UnitGroupClosestToPoint(UnitGroup("MineralField", 0, RegionEntireMap(), GhostOps_Ce0_Live(), 0), UnitGetPosition(lv_s));
+                if (lv_m != null) {
+                    UnitIssueOrder(lv_s, OrderTargetingUnit(AbilityCommand("SCVHarvest", 0), lv_m), c_orderQueueReplace);
+                }
+            }
+            else {
+                lv_t = GhostOps_Ce0_DamagedStructure();
+                if (lv_t != null) {
+                    UnitIssueOrder(lv_s, OrderTargetingUnit(AbilityCommand("Repair", 0), lv_t), c_orderQueueReplace);
+                    go_dfRepairOrders += 1;
+                }
+            }
+        }
+
+        lv_i += 1;
+    }
+
+    return true;
+}
+
+// DEV: trace of the enemy fighters (players 2, 3, 4): all, near the defence zone, at the gather point of the post-timer waves, nearest one to the zone centre.
+trigger go_wvTick;
+
+bool GhostOps_Ce0_WvTick (bool lp_test, bool lp_run) {
+    int lv_p;
+    int lv_total;
+    int lv_zone;
+    int lv_gather;
+    int lv_i;
+    int lv_n;
+    unitgroup lv_g;
+    unit lv_u;
+    fixed lv_d;
+    fixed lv_best;
+    point lv_bestPos;
+
+    if (!lp_run) {
+        return true;
+    }
+
+    lv_total = 0;
+    lv_zone = 0;
+    lv_gather = 0;
+    lv_best = 9999.0;
+    lv_bestPos = Point(0.0, 0.0);
+    lv_p = 2;
+    while (lv_p <= 4) {
+        lv_g = UnitGroup(null, lv_p, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterStructure), (1 << (c_targetFilterDead - 32))), 0);
+        lv_n = UnitGroupCount(lv_g, c_unitCountAlive);
+        lv_total += lv_n;
+        lv_i = 1;
+        while (lv_i <= lv_n) {
+            lv_u = UnitGroupUnit(lv_g, lv_i);
+            lv_d = DistanceBetweenPoints(UnitGetPosition(lv_u), Point(go_tacZoneX, go_tacZoneY));
+            if (lv_d < 32.0) {
+                lv_zone += 1;
+            }
+
+            if (DistanceBetweenPoints(UnitGetPosition(lv_u), PointFromId(264)) < 14.0) {
+                lv_gather += 1;
+            }
+
+            if (lv_d < lv_best) {
+                lv_best = lv_d;
+                lv_bestPos = UnitGetPosition(lv_u);
+            }
+
+            lv_i += 1;
+        }
+
+        lv_p += 1;
+    }
+
+    GhostOps_Ce0_Write("j", "WV total=" + IntToString(lv_total) + " zone32=" + IntToString(lv_zone) + " gather14=" + IntToString(lv_gather) + " nearest=" + FixedToString(lv_best, 0) + " at " + FixedToString(PointGetX(lv_bestPos), 0) + "," + FixedToString(PointGetY(lv_bestPos), 0) + " gather=" + FixedToString(PointGetX(PointFromId(264)), 0) + "," + FixedToString(PointGetY(PointFromId(264)), 0));
+    return true;
+}
+
 bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
     int lv_i;
     unit lv_g1;
     unit lv_z;
+
+    if (lp_cmd == "defend") {
+        lv_g1 = UnitFromId(23);
+        lv_i = 1;
+        while (lv_i <= 16) {
+            lv_z = UnitGroupUnit(UnitGroup("Marine", 1, RegionEntireMap(), GhostOps_Ce0_Live(), 0), lv_i);
+            if (lv_z != null) {
+                if (((lv_i - 1) % 4) == 0) {
+                    UnitIssueOrder(UnitFromId(4), OrderTargetingUnit(AbilityCommand("BunkerTransport", 0), lv_z), c_orderQueueAddToEnd);
+                }
+                else if (((lv_i - 1) % 4) == 1) {
+                    UnitIssueOrder(UnitFromId(13), OrderTargetingUnit(AbilityCommand("BunkerTransport", 0), lv_z), c_orderQueueAddToEnd);
+                }
+                else if (((lv_i - 1) % 4) == 2) {
+                    UnitIssueOrder(UnitFromId(291), OrderTargetingUnit(AbilityCommand("BunkerTransport", 0), lv_z), c_orderQueueAddToEnd);
+                }
+                else {
+                    UnitIssueOrder(UnitFromId(298), OrderTargetingUnit(AbilityCommand("BunkerTransport", 0), lv_z), c_orderQueueAddToEnd);
+                }
+            }
+
+            lv_i += 1;
+        }
+
+        UnitIssueOrder(GhostOps_SquadUnit(0), OrderTargetingPoint(AbilityCommand("move", 0), PointWithOffset(UnitGetPosition(lv_g1), 12.0, 4.0)), c_orderQueueReplace);
+        UnitIssueOrder(GhostOps_SquadUnit(1), OrderTargetingPoint(AbilityCommand("move", 0), PointWithOffset(UnitGetPosition(lv_g1), 14.0, 2.0)), c_orderQueueReplace);
+        go_dfTick = TriggerCreate("GhostOps_Ce0_DefTick");
+        TriggerAddEventTimePeriodic(go_dfTick, 2.0, c_timeGame);
+        go_dfDied = TriggerCreate("GhostOps_Ce0_DefDied");
+        TriggerAddEventUnitDied(go_dfDied, null);
+        GhostOps_Ce0_Write("j", "DEFEND set: marines to the bunkers, 5 SCVs mine, the other SCVs repair, Ghosts away from the base; bunker order valid=" + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(UnitFromId(4), OrderTargetingUnit(AbilityCommand("BunkerTransport", 0), UnitGroupUnit(UnitGroup("Marine", 1, RegionEntireMap(), GhostOps_Ce0_Live(), 0), 1))))));
+        return true;
+    }
+
+    if (lp_cmd == "defstat") {
+        GhostOps_Ce0_Write("j", "DEFSTAT repair orders given " + IntToString(go_dfRepairOrders) + " losses " + IntToString(go_dfLoss) + " bunker cargo " + IntToString(UnitGroupCount(UnitCargoGroup(UnitFromId(4)), c_unitCountAll)) + "," + IntToString(UnitGroupCount(UnitCargoGroup(UnitFromId(13)), c_unitCountAll)) + "," + IntToString(UnitGroupCount(UnitCargoGroup(UnitFromId(291)), c_unitCountAll)) + "," + IntToString(UnitGroupCount(UnitCargoGroup(UnitFromId(298)), c_unitCountAll)));
+        return true;
+    }
+
+    if (lp_cmd == "wv") {
+        go_wvTick = TriggerCreate("GhostOps_Ce0_WvTick");
+        TriggerAddEventTimePeriodic(go_wvTick, 10.0, c_timeGame);
+        GhostOps_Ce0_Write("j", "WV trace on (every 10 s)");
+        return true;
+    }
+
+    if (lp_cmd == "sel") {
+        UnitClearSelection(1);
+        UnitSelect(GhostOps_SquadUnit(StringToInt(lp_a) - 1), 1, true);
+        GhostOps_Ce0_Write("j", "SELECTED ghost " + lp_a);
+        return true;
+    }
 
     if (lp_cmd == "zt") {
         // zt out|in: garrison weapon test. out = the zone is moved far away (every garrison Marine is outside), in = back to the real zone. A paused enemy Zergling next to the

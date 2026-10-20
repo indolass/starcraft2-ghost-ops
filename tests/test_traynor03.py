@@ -31,8 +31,8 @@ class ZeroHourConfig(unittest.TestCase):
     def test_recommended_order_cost_is_the_documented_experimental_number(self):
         adapter, cfg = resolved()
         z = cfg['zerohour']
-        self.assertEqual(z['recommended'], {'marines': 8, 'bunkers': 4, 'turrets': 4, 'scvs': 4})
-        self.assertEqual(build.zerohour_cost(cfg, z['recommended']), {'minerals': 1120, 'gas': 0})
+        self.assertEqual(z['recommended'], {'marines': 16, 'bunkers': 4, 'turrets': 4, 'scvs': 8})
+        self.assertEqual(build.zerohour_cost(cfg, z['recommended']), {'minerals': 1640, 'gas': 0})
         # nothing of the 1000 / 500 of THanson01 is charged here: only the chosen order has a price
         self.assertEqual(build.zerohour_cost(cfg, {'marines': 0, 'bunkers': 0, 'turrets': 0, 'scvs': 0}), {'minerals': 0, 'gas': 0})
 
@@ -40,7 +40,7 @@ class ZeroHourConfig(unittest.TestCase):
         adapter, cfg = resolved()
         t = cfg['tactical']
         self.assertEqual((t['nuke']['count'], t['nuke']['both_may_aim'], t['spotter_defeat']), (2, True, False))
-        self.assertEqual(t['garrison']['damage_multiplier'], 4)
+        self.assertEqual(t['garrison']['damage_multiplier'], 8)
         self.assertEqual(cfg['ghost_tuning']['ghost_life'], 45)
         gen = build.gen_tactical(cfg)
         self.assertIn('go_tacNukeCount = 2;', gen)
