@@ -1,0 +1,120 @@
+{
+ "note": "Recipes of the voice clips (read by tools/prepare_audio.py). Whole original ruRU lines of the installed game; sha256 = the file the author used (informational).",
+ "clips": [
+  {
+   "file": "assets/audio/traynor01/raynor_A.wav",
+   "casc_path": "campaigns\\liberty.sc2campaign\\ruru.sc2assets\\localizeddata\\sounds\\terranvo\\storymodevo\\tscene01raynor016.ogg",
+   "interval_s": [
+    1.2,
+    2.65
+   ],
+   "text": "Войска готовы к бою?",
+   "text_source": "ASR (Whisper large-v3), not human-checked",
+   "sha256": "5706edf7fe4b2948109958aeef614df6a38fb735ba97a20b2b14a07f8ca696eb"
+  },
+  {
+   "file": "assets/audio/traynor01/marine_B.wav",
+   "casc_path": "mods\\liberty.sc2mod\\ruru.sc2assets\\localizeddata\\sounds\\terranunitvo\\marine\\marine_help00.ogg",
+   "interval_s": [
+    0.2,
+    2.15
+   ],
+   "text": "Высылайте подмогу!",
+   "text_source": "ASR (Whisper large-v3), not human-checked",
+   "sha256": "a9aa48fe97035b6dd98fe1e8442a15e300986db3c6a3c671466652f97a1d4fe2"
+  },
+  {
+   "file": "assets/audio/traynor01/marine_A.wav",
+   "casc_path": "campaigns\\liberty.sc2campaign\\ruru.sc2assets\\localizeddata\\sounds\\terranvo\\campaignvo\\charambientmarine400004.ogg",
+   "interval_s": [
+    0.0,
+    1.0
+   ],
+   "text": "Доктора! Доктора!",
+   "text_source": "ASR (Whisper large-v3), not human-checked",
+   "sha256": "afb499167c160576b6d3db0e1d69e4baa87a7972a37858682d662904e95639a5"
+  },
+  {
+   "file": "assets/audio/traynor02/adjutant_alert.wav",
+   "casc_path": "campaigns\\liberty.sc2campaign\\ruru.sc2assets\\localizeddata\\sounds\\terranvo\\campaignvo\\ttychus01adjutant00010.ogg",
+   "interval_s": [
+    0.0,
+    0.7
+   ],
+   "text": "Тревога.",
+   "text_source": "ASR (Whisper large-v3), not human-checked",
+   "sha256": "4b84f8448d44f889dad77a9e1a3b4657ec9c22ab7362024da1d14dade7b16680"
+  },
+  {
+   "file": "assets/audio/traynor02/swann_B.wav",
+   "casc_path": "campaigns\\liberty.sc2campaign\\ruru.sc2assets\\localizeddata\\sounds\\terranvo\\campaignvo\\thanson03abriefingswann00003.ogg",
+   "interval_s": [
+    0.0,
+    2.46
+   ],
+   "text": "Я решил, что помощь тебе не помешает.",
+   "text_source": "ASR (Whisper large-v3), not human-checked",
+   "sha256": "c8589754210194fe1d4f70ce60a9021b55804cb89b207f7ced5d4e2a7fc2a4ab"
+  },
+  {
+   "file": "assets/audio/traynor02/ghost_ready00.wav",
+   "casc_path": "mods\\liberty.sc2mod\\ruru.sc2assets\\localizeddata\\sounds\\terranunitvo\\ghost\\ghost_ready00.ogg",
+   "interval_s": [
+    0.0,
+    2.07
+   ],
+   "text": "Призрак явился.",
+   "text_source": "ASR (Whisper large-v3), not human-checked",
+   "sha256": "90ee47333e3107cd9996ab69daacb4c4c65e8eb6c0dea6a278c54a6be235efb9"
+  },
+  {
+   "file": "assets/audio/traynor03/raynor_hold.wav",
+   "casc_path": "campaigns\\liberty.sc2campaign\\ruru.sc2assets\\localizeddata\\sounds\\terranvo\\campaignvo\\traynor03briefingraynor00007.ogg",
+   "text": "Дьявол. Нужно продержаться до прибытия наших.",
+   "text_source": "ASR (Whisper large-v3), not human-checked",
+   "sha256": "455dbd4309f028c0c4ba91d462f9957e1e06d04482a1bde9748137a40ca0ef14"
+  },
+  {
+   "file": "assets/audio/traynor03/horner_intro.wav",
+   "casc_path": "campaigns\\liberty.sc2campaign\\ruru.sc2assets\\localizeddata\\sounds\\terranvo\\campaignvo\\traynor03horner00006.ogg",
+   "text": "Командир, это Мэтт Хорнер. Держитесь, корабль на подходе.",
+   "text_source": "ASR (Whisper large-v3), not human-checked",
+   "sha256": "b31aeaf66093ed47a0bb2c934c1a03f3c936be9eb5495f9f2047262118c76843"
+  },
+  {
+   "file": "assets/audio/traynor03/horner_wait.wav",
+   "casc_path": "campaigns\\liberty.sc2campaign\\ruru.sc2assets\\localizeddata\\sounds\\terranvo\\campaignvo\\traynor03horner00012.ogg",
+   "text": "Карета подана. Есть кто живой?",
+   "text_source": "ASR (Whisper large-v3), not human-checked",
+   "sha256": "44545f710ace247d05fac61747fcf973b61dc8415f603d4c4445a19d9731a7b2"
+  },
+  {
+   "file": "assets/audio/traynor03/marine_mayday.wav",
+   "casc_path": "campaigns\\liberty.sc2campaign\\ruru.sc2assets\\localizeddata\\sounds\\terranvo\\campaignvo\\traynor03marine500005.ogg",
+   "text": "Срочно нужна помощь! Мы окружены! Кто-нибудь нас слышит?",
+   "text_source": "ASR (Whisper large-v3), not human-checked",
+   "sha256": "68586d11a03dfeb12ffc6628dbfdbb98b5144f63f0858d0fb9658136aa66de96"
+  },
+  {
+   "file": "assets/audio/traynor03/marine_mayday_alt.wav",
+   "casc_path": "campaigns\\liberty.sc2campaign\\ruru.sc2assets\\localizeddata\\sounds\\terranvo\\campaignvo\\traynor03marine800001.ogg",
+   "text": "На помощь! На помощь! Нас окружили зерги! Если можете, помогите!",
+   "text_source": "ASR (Whisper large-v3), not human-checked",
+   "sha256": "0b06433e518963465f26b77dbaae43b1319d9df740137318af2d617ae6619d54"
+  },
+  {
+   "file": "assets/audio/traynor03/marine_rescue.wav",
+   "casc_path": "campaigns\\liberty.sc2campaign\\ruru.sc2assets\\localizeddata\\sounds\\terranvo\\campaignvo\\traynor03marine500016.ogg",
+   "text": "Рады тебя видеть, Рейнар! Ждем приказаний!",
+   "text_source": "ASR (Whisper large-v3), not human-checked",
+   "sha256": "2d667a8c6465e95e69861683d2998b60bbe016a932284db04f569ff05d687b12"
+  },
+  {
+   "file": "assets/audio/traynor03/marine_rescue_alt.wav",
+   "casc_path": "campaigns\\liberty.sc2campaign\\ruru.sc2assets\\localizeddata\\sounds\\terranvo\\campaignvo\\traynor03marine700004.ogg",
+   "text": "Я уже думал, нам конец.",
+   "text_source": "ASR (Whisper large-v3), not human-checked",
+   "sha256": "e099f40700749d777da860569896d4a2bd7493134ea9a14fb73c6fdf0db633a9"
+  }
+ ]
+}

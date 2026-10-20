@@ -261,7 +261,7 @@ class StoryScene(unittest.TestCase):
         for forbidden in ('CameraPan', 'CinematicMode', 'CameraLock', 'SoundPlay', 'TriggerExecute(gt_'):
             self.assertNotIn(forbidden, a)
         # exactly the three agreed clips, each played by its own queued transmission with an explicit duration
-        self.assertEqual(sorted(set(re.findall(r'SoundLink\("(\w+)", 0\)', a))), ['GhostOpsAdjutantAlert', 'GhostOpsGhostReady', 'GhostOpsSwannHelp'])
+        self.assertEqual(sorted(set(re.findall(r'GhostOps_Voice\("(\w+)"\)', a))), ['GhostOpsAdjutantAlert', 'GhostOpsGhostReady', 'GhostOpsSwannHelp'])
         self.assertEqual(a.count('GhostOps_Scene_VoiceBegin();'), 3)
         self.assertEqual(a.count('GhostOps_Scene_VoiceEnd();'), 3)
         self.assertNotIn('TargetingPoint', a.split('GhostOps_Scene_GhostMsg')[1].split('void GhostOps_Scene_SendTransport')[0])

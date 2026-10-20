@@ -13,6 +13,8 @@ void GhostOps_Ce0_MissionStart () {
 
 // DEV: the orders a player gives when he organises the defence (no healing, no invulnerability, no extra resources): Marines into the bunkers (2 per bunker),
 // the five stock SCVs mine, the extra SCVs repair damaged structures, the Ghosts leave the base. Losses are logged with the killer.
+unit go_gsLast;
+
 trigger go_dfTick;
 trigger go_dfDied;
 int go_dfLoss;
@@ -221,6 +223,66 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
         UnitClearSelection(1);
         UnitSelect(GhostOps_SquadUnit(StringToInt(lp_a) - 1), 1, true);
         GhostOps_Ce0_Write("j", "SELECTED ghost " + lp_a);
+        return true;
+    }
+
+    if (lp_cmd == "gs") {
+        lv_i = 1;
+        while (lv_i <= 2) {
+            lv_g1 = GhostOps_SquadUnit(lv_i - 1);
+            if (lv_g1 != null) {
+                GhostOps_Ce0_Write("j", "GS " + IntToString(lv_i) + " energy=" + FixedToString(UnitGetPropertyFixed(lv_g1, c_unitPropEnergy, c_unitPropCurrent), 1) + " cloaked=" + IntToString(GhostOps_Ce0_B(UnitTestState(lv_g1, c_unitStateCloaked))) + " life=" + FixedToString(UnitGetPropertyFixed(lv_g1, c_unitPropLife, c_unitPropCurrent), 1));
+            }
+
+            lv_i += 1;
+        }
+
+        return true;
+    }
+
+    if (lp_cmd == "spawn") {
+        lv_g1 = GhostOps_SquadUnit(0);
+        UnitGroupLoopBegin(UnitCreate(1, lp_a, 0, 2, PointWithOffset(UnitGetPosition(lv_g1), StringToFixed(lp_b), 0.0), 0.0));
+        while (UnitGroupLoopCurrent() != null) {
+            go_gsLast = UnitGroupLoopCurrent();
+            UnitGroupLoopStep();
+        }
+
+        UnitGroupLoopEnd();
+        GhostOps_Ce0_Write("j", "SPAWNED " + lp_a + " of player 2 at dx " + lp_b);
+        return true;
+    }
+
+    if (lp_cmd == "snipe") {
+        UnitIssueOrder(GhostOps_SquadUnit(StringToInt(lp_a) - 1), OrderTargetingUnit(AbilityCommand("Snipe", 0), go_gsLast), c_orderQueueReplace);
+        GhostOps_Ce0_Write("j", "SNIPE ordered by ghost " + lp_a);
+        return true;
+    }
+
+    if (lp_cmd == "snipetest") {
+        lv_g1 = GhostOps_SquadUnit(0);
+        UnitSetPropertyFixed(lv_g1, c_unitPropEnergy, 9.0);
+        lv_i = GhostOps_Ce0_B(UnitOrderIsValid(lv_g1, OrderTargetingUnit(AbilityCommand("Snipe", 0), go_gsLast)));
+        UnitSetPropertyFixed(lv_g1, c_unitPropEnergy, 10.0);
+        GhostOps_Ce0_Write("j", "SNIPETEST valid at 9 energy=" + IntToString(lv_i) + ", valid at 10 energy=" + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(lv_g1, OrderTargetingUnit(AbilityCommand("Snipe", 0), go_gsLast)))) + ", catalog cost " + CatalogFieldValueGet(c_gameCatalogAbil, "Snipe", "Cost[0].Vital[Energy]", 1) + ", cloak buff energy regen mod " + CatalogFieldValueGet(c_gameCatalogBehavior, "GhostCloak", "Modification.VitalRegenArray[Energy]", 1) + ", unit regen " + CatalogFieldValueGet(c_gameCatalogUnit, "Ghost", "EnergyRegenRate", 1));
+        return true;
+    }
+
+    if (lp_cmd == "srebel") {
+        go_zhRebelCallSaid = false;
+        GhostOps_ZH_OnRebelCall(StringToInt(lp_a));
+        return true;
+    }
+
+    if (lp_cmd == "srescue") {
+        go_zhRescueSaid = false;
+        GhostOps_ZH_OnRescue(StringToInt(lp_a));
+        return true;
+    }
+
+    if (lp_cmd == "portrait") {
+        TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel(lp_a), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", null, null, null, 4.0, c_transmissionDurationSet, true);
+        GhostOps_Ce0_Write("j", "PORTRAIT " + lp_a);
         return true;
     }
 

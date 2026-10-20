@@ -90,7 +90,9 @@ void GhostOps_T1_OnOpeningLine (unit lp_raynor) {
     go_sceneDone = true;
     go_sceneRaynor = lp_raynor;
     GhostOps_Scene_Log("scene: started after the opening line");
-    GhostOps_Scene_Log("scene: clip lengths " + FixedToString(SoundLengthSync(go_sceneRaynorClip), 2) + " " + FixedToString(SoundLengthSync(go_sceneMarineBClip), 2) + " " + FixedToString(SoundLengthSync(go_sceneMarineAClip), 2));
+    if (!go_cfgNoVoice) {
+        GhostOps_Scene_Log("scene: clip lengths " + FixedToString(SoundLengthSync(go_sceneRaynorClip), 2) + " " + FixedToString(SoundLengthSync(go_sceneMarineBClip), 2) + " " + FixedToString(SoundLengthSync(go_sceneMarineAClip), 2));
+    }
     TriggerExecute(TriggerCreate("GhostOps_T1_SceneMsg"), true, false);
 }
 

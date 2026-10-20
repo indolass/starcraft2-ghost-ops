@@ -1,0 +1,4 @@
+# Optional: preparation of voice clips from the installed game (tools/prepare_audio.py).
+# pip install -r requirements-audio.txt --target tmp/thirdparty/audio
+soundfile>=0.12
+numpy>=1.26

@@ -32,6 +32,9 @@ fixed go_zhHornerDelay;
 fixed go_zhRaynorLen;
 fixed go_zhHornerLen;
 fixed go_zhRebelLen;
+string[8] go_zhVoiceId;           // clip ids of the scene lines (0 Raynor, 1 Horner, 2 Horner waits, 3 / 4 cut-off call, 5 / 6 rescue); empty / no voice build: no sound
+fixed[8] go_zhVoiceLen;
+int go_zhGroupHeard;
 fixed go_zhPingEvery;
 fixed go_zhLastPing;
 bool go_zhRebelCallSaid;
@@ -75,6 +78,29 @@ unitfilter GhostOps_ZH_Live () {
 
 void GhostOps_ZH_Say (string lp_nameKey, string lp_textKey) {
     UIDisplayMessage(PlayerGroupAll(), c_messageAreaSubtitle, StringExternal(lp_nameKey) + StringToText(": ") + StringExternal(lp_textKey));
+}
+
+// A scene line with a short ORIGINAL sound: its exact subtitle (the words of the clip) with its own sound; the separate explanation of the scenario follows as its own message.
+void GhostOps_ZH_VoiceBegin () {
+    if (!go_cfgNoVoice) {
+        libCamp_gf_SetAllSoundChannelVolumesCampaign(1);
+        libLbty_gf_PlayTransmissionCueSound(PlayerGroupAll());
+    }
+}
+
+void GhostOps_ZH_VoiceEnd () {
+    if (!go_cfgNoVoice) {
+        libCamp_gf_SetAllSoundChannelVolumesCampaign(2);
+    }
+}
+
+void GhostOps_ZH_Clip (int lp_index, string lp_nameKey, string lp_textKey, string lp_portrait) {
+    if (!go_cfgNoVoice) {
+        GhostOps_ZH_Log("clip " + go_zhVoiceId[lp_index] + " length " + FixedToString(SoundLengthSync(SoundLink(go_zhVoiceId[lp_index], 0)), 2) + " (subtitle step " + FixedToString(go_zhVoiceLen[lp_index], 1) + ")");
+    }
+
+    GhostOps_ZH_Say(lp_nameKey, lp_textKey);
+    TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel(lp_portrait), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", GhostOps_Voice(go_zhVoiceId[lp_index]), null, null, go_zhVoiceLen[lp_index], c_transmissionDurationSet, true);
 }
 
 void GhostOps_ZH_Directive (string lp_key) {
@@ -508,8 +534,11 @@ bool GhostOps_ZH_RaynorMsg (bool lp_testConds, bool lp_runActions) {
 
     TriggerQueueEnter();
     GhostOps_ZH_Log("scene: Raynor after the intro");
+    GhostOps_ZH_VoiceBegin();
+    GhostOps_ZH_Clip(0, "Param/Value/GhostOpsZH_RaynorName", "Param/Value/GhostOpsZH_RaynorClip", "RaynorCommanderPortrait");
     GhostOps_ZH_Say("Param/Value/GhostOpsZH_RaynorName", "Param/Value/GhostOpsZH_RaynorText");
     TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("RaynorCommanderPortrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", null, null, null, go_zhRaynorLen, c_transmissionDurationSet, true);
+    GhostOps_ZH_VoiceEnd();
     TriggerQueueExit();
     return true;
 }
@@ -521,8 +550,11 @@ bool GhostOps_ZH_HornerMsg (bool lp_testConds, bool lp_runActions) {
 
     TriggerQueueEnter();
     GhostOps_ZH_Log("scene: Horner explains the two tasks");
+    GhostOps_ZH_VoiceBegin();
+    GhostOps_ZH_Clip(1, "Param/Value/GhostOpsZH_HornerName", "Param/Value/GhostOpsZH_HornerClip", "HornerPortrait");
     GhostOps_ZH_Say("Param/Value/GhostOpsZH_HornerName", "Param/Value/GhostOpsZH_HornerText");
     TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("HornerPortrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", null, null, null, go_zhHornerLen, c_transmissionDurationSet, true);
+    GhostOps_ZH_VoiceEnd();
     TriggerQueueExit();
     return true;
 }
@@ -534,8 +566,11 @@ bool GhostOps_ZH_WaitMsg (bool lp_testConds, bool lp_runActions) {
 
     TriggerQueueEnter();
     GhostOps_ZH_Log("scene: the ship waits");
+    GhostOps_ZH_VoiceBegin();
+    GhostOps_ZH_Clip(2, "Param/Value/GhostOpsZH_HornerName", "Param/Value/GhostOpsZH_HornerWaitClip", "HornerPortrait");
     GhostOps_ZH_Say("Param/Value/GhostOpsZH_HornerName", "Param/Value/GhostOpsZH_HornerWaitText");
     TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("HornerPortrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", null, null, null, go_zhHornerLen, c_transmissionDurationSet, true);
+    GhostOps_ZH_VoiceEnd();
     TriggerQueueExit();
     return true;
 }
@@ -546,9 +581,19 @@ bool GhostOps_ZH_RebelMsg (bool lp_testConds, bool lp_runActions) {
     }
 
     TriggerQueueEnter();
-    GhostOps_ZH_Log("scene: first appeal of the cut-off group");
+    GhostOps_ZH_Log("scene: first appeal of the cut-off group (original line of group " + IntToString(go_zhGroupHeard) + " plays at the same time)");
+    GhostOps_ZH_VoiceBegin();
+    // the original plays one call per group (group 3 says its help call); this scene uses the OTHER short line so that nothing is said twice in a row
+    if (go_zhGroupHeard == 3) {
+        GhostOps_ZH_Clip(4, "Param/Value/GhostOpsZH_RebelName", "Param/Value/GhostOpsZH_RebelClipAlt", "Marine1Portrait");
+    }
+    else {
+        GhostOps_ZH_Clip(3, "Param/Value/GhostOpsZH_RebelName", "Param/Value/GhostOpsZH_RebelClip", "Marine1Portrait");
+    }
+
     GhostOps_ZH_Say("Param/Value/GhostOpsZH_RebelName", "Param/Value/GhostOpsZH_RebelText");
-    TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("MarineAPortrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", null, null, null, go_zhRebelLen, c_transmissionDurationSet, true);
+    TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("Marine1Portrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", null, null, null, go_zhRebelLen, c_transmissionDurationSet, true);
+    GhostOps_ZH_VoiceEnd();
     TriggerQueueExit();
     return true;
 }
@@ -559,29 +604,41 @@ bool GhostOps_ZH_RescueMsg (bool lp_testConds, bool lp_runActions) {
     }
 
     TriggerQueueEnter();
-    GhostOps_ZH_Log("scene: first rescue");
+    GhostOps_ZH_Log("scene: first rescue (original line of group " + IntToString(go_zhGroupHeard) + " plays at the same time)");
+    GhostOps_ZH_VoiceBegin();
+    // the original plays one rescued line per group (group 3 says its greeting); this scene uses the other short line
+    if (go_zhGroupHeard == 3) {
+        GhostOps_ZH_Clip(6, "Param/Value/GhostOpsZH_RebelName", "Param/Value/GhostOpsZH_RescueClipAlt", "Marine1Portrait");
+    }
+    else {
+        GhostOps_ZH_Clip(5, "Param/Value/GhostOpsZH_RebelName", "Param/Value/GhostOpsZH_RescueClip", "Marine1Portrait");
+    }
+
     GhostOps_ZH_Say("Param/Value/GhostOpsZH_RaynorName", "Param/Value/GhostOpsZH_RescueText");
     TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("RaynorCommanderPortrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", null, null, null, go_zhRebelLen, c_transmissionDurationSet, true);
+    GhostOps_ZH_VoiceEnd();
     TriggerQueueExit();
     return true;
 }
 
 // hooks in the three rebel intro functions and the three rescued functions of the original: said once
-void GhostOps_ZH_OnRebelCall () {
+void GhostOps_ZH_OnRebelCall (int lp_group) {
     if (!go_zhEnabled || go_zhRebelCallSaid) {
         return;
     }
 
     go_zhRebelCallSaid = true;
+    go_zhGroupHeard = lp_group;
     TriggerExecute(TriggerCreate("GhostOps_ZH_RebelMsg"), true, false);
 }
 
-void GhostOps_ZH_OnRescue () {
+void GhostOps_ZH_OnRescue (int lp_group) {
     if (!go_zhEnabled || go_zhRescueSaid) {
         return;
     }
 
     go_zhRescueSaid = true;
+    go_zhGroupHeard = lp_group;
     TriggerExecute(TriggerCreate("GhostOps_ZH_RescueMsg"), true, false);
 }
 

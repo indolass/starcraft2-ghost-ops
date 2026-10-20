@@ -1,10 +1,9 @@
 # Audio clips of the maps (copies from the voice lab, read only source)
 
-The clips are final results of `D:\AI-workspaces\games\starcraft2-ghost-ops-voice-lab` (a separate project; it is only read). Each is a whole original
-Blizzard line of the ruRU client cut at silence, no TTS, no cloning. Texts are **ASR (Whisper large-v3), not checked by a human**; nobody has listened to
-the files yet (quality, tone and volume are for the Owner). The WAV files are Blizzard voice lines, so they are kept LOCALLY ONLY and are git-ignored (`assets/audio/**/*.wav`); this file with the hashes is the manifest that
-recreates them from the voice lab; the build imports them into the
-modified map (`Assets\Sounds\GhostOps\<name>.wav`) and defines a `CSound` for each (config key `audio.clips`). The originals are not published.
+The clips are whole original lines (or one cut sentence) of the ruRU client, no TTS, no cloning. Their recipes (path in the game's storage, interval, fades, ASR text, hash of the file
+the author used) are in **`clips.json`** next to this file; `python tools/prepare_audio.py` recreates the files from the installed game (see README, "Voice"). Texts are **ASR (Whisper large-v3), not checked by a human**; nobody has listened to
+the files yet (quality, tone and volume are for the Owner). The WAV files are Blizzard voice lines, so they are kept LOCALLY ONLY and are git-ignored (`assets/audio/**/*.wav`); the build imports them into the
+modified map (`Assets\Sounds\GhostOps\<name>.wav`) and defines a `CSound` for each (config key `audio.clips`). The originals are not published. The "lab package" column below is the author's private working copy and is NOT needed to reproduce anything.
 
 | our file | lab package / file | text (ASR) | length | sha256 (= lab manifest) | original |
 |---|---|---|---|---|---|
@@ -17,3 +16,20 @@ modified map (`Assets\Sounds\GhostOps\<name>.wav`) and defines a `CSound` for ea
 
 Not used on purpose: the other Swann candidates (`swann_A`, `swann_C` has a join), the other 11 Ghost lines (the nuclear-strike line "Обозначаю цель" in particular),
 the lab's `preview_*` files. Replacing a clip later = replace the file here (same name) or change its entry in `audio.clips` of the config; nothing else.
+
+## TRaynor03 (added 2026-10-21): short whole lines before the explanatory texts
+
+Rule: the short original sound with its own exact subtitle first, THEN the separate explanatory text of the scenario (the explanations are not rewritten to the clips). Portraits stay and use the talking animation.
+No line is repeated right after the same line of the original conversation: the original plays one cut-off call and one rescued line per group; the scene uses the other clip of the pair.
+
+| our file | recipe (`clips.json`) | text (ASR) | length | used in |
+|---|---|---|---|---|
+| `traynor03/raynor_hold.wav` | `traynor03briefingraynor00007` | «Дьявол. Нужно продержаться до прибытия наших.» | 3.62 s | Raynor after the intro |
+| `traynor03/horner_intro.wav` | `traynor03horner00006` | «Командир, это Мэтт Хорнер. Держитесь, корабль на подходе.» | 4.12 s | Matt explains the two tasks |
+| `traynor03/horner_wait.wav` | `traynor03horner00012` | «Карета подана. Есть кто живой?» | 2.44 s | Matt, the ship waits (after the timer) |
+| `traynor03/marine_mayday.wav` | `traynor03marine500005` | «Срочно нужна помощь! Мы окружены! Кто-нибудь нас слышит?» | 4.51 s | the cut-off group's appeal (groups 1, 2) |
+| `traynor03/marine_mayday_alt.wav` | `traynor03marine800001` | «На помощь! На помощь! Нас окружили зерги! Если можете, помогите!» | 5.43 s | the appeal (group 3, whose own line is the one above) |
+| `traynor03/marine_rescue.wav` | `traynor03marine500016` | «Рады тебя видеть, Рейнар! Ждем приказаний!» | 2.69 s | the first rescue (groups 1, 2) |
+| `traynor03/marine_rescue_alt.wav` | `traynor03marine700004` | «Я уже думал, нам конец.» | 1.88 s | the first rescue (group 3) |
+
+Hashes: see `clips.json` (the files produced by `prepare_audio.py` in a clean checkout were compared: byte-identical except `adjutant_alert.wav`, which differs in a few bits).

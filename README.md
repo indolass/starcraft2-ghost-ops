@@ -1,16 +1,21 @@
 # StarCraft II: Ghost Ops
 
-An open mod for *Wings of Liberty* (client 3.1.4) that lets you play the original campaign
-missions as tactical special operations: a squad of operatives (Nova first) is added to the
-mission, and your regular army deals more damage (x2/x3, configurable) so you can concentrate on the operatives. Original scenario, waves,
-timers and victory stay as Blizzard made them.
+An open mod for *Wings of Liberty* (client 3.1.4) that turns original campaign missions into special operations for a few operatives (Ghosts). Maps are never shipped:
+a build reads **your own** copy of the original map and injects the Ghost Ops code. Each mission has its own variant (see "The first three missions and the campaign link" and the mission sections below);
+the squad, the rules and what is changed differ per mission:
 
-**Status: P0 accepted for testing, P0.1/P1 in progress.** See [ROADMAP.md](ROADMAP.md). Implemented:
-squad of Nova + two standard Ghosts + two Medics (free permanent cloak, hold fire from the start,
-hold fire / weapons free for everybody), BaseSupport army bonus, a Hard-difficulty check message,
-missions *The Outlaws* (tactical variant, experiment), *Smash and Grab* and (candidate for the game check) *Liberation Day* with three named Ghost Ops variants (easy / hard / extreme experiment, see below). A mission registry and the `MissionPressure` design
-are in ROADMAP.md / docs; no time-pressure change is implemented yet.
-Added 2026-10-20 (experiments): the campaign link and *Zero Hour* (TRaynor03), see "The first three missions and the campaign link" below. Other missions are not implemented.
+| mission | what the variant is | squad |
+|---|---|---|
+| *Liberation Day* (TRaynor01) | profiles easy / hard / extreme (experiments); a short scene with the wounded squad | 2 Ghosts (easy, hard), 1 Ghost (extreme) |
+| *The Outlaws* (TRaynor02) | tactical variant (experiment): the Ghosts arrive by transport, a nuclear strike aimed by the Spotter; the death of the Spotter before the launch is added as a defeat | 2 Ghosts |
+| *Zero Hour* (TRaynor03) | experiment: a pre-ordered garrison (bought with the campaign remainder), virus (garrison weapons work only inside the base circle), two missiles, victory = 20 game minutes AND all marked hatcheries, waves go on after the timer | 2 Ghosts with a free permanent cloak |
+| *Evacuation* (THanson01) | sniper cover (experiment): manual convoy command, one Ghost with a free permanent cloak | 1 Ghost |
+| older prototype configurations (TRaynor02 `prototype`, TTychus01) | squad of Nova + two Ghosts + two Medics with a free permanent cloak and an army damage bonus (x2 / x3) | Nova, 2 Ghosts, 2 Medics |
+
+Original scenario, waves and victory stay as Blizzard made them **except where a mission variant says otherwise** (TRaynor03 changes the victory condition and adds waves after the timer; TRaynor02 adds a defeat;
+the experimental prices, limits, multipliers and waves of the newer variants are the developer's numbers, not approved by the Owner). The 20-minute timer of TRaynor03 is the constant of the original map: other values are not supported by the current implementation yet.
+A general time-pressure design (`MissionPressure`) exists only as a design in ROADMAP.md / docs; nothing of it is implemented. Nothing here is a confirmed full playthrough: see the open items in
+[docs/MISSION_ROADMAP.md](docs/MISSION_ROADMAP.md). Status and history: [ROADMAP.md](ROADMAP.md).
 
 ## How it works
 
@@ -167,7 +172,7 @@ Plan and statuses: [docs/MISSION_ROADMAP.md](docs/MISSION_ROADMAP.md); economy a
 |---|---|---|
 | *Liberation Day* (TRaynor01) | launcher card, profiles easy / hard / extreme | unchanged balance; the wounded-squad scene now ends with Raynor's closing words (portrait + text) |
 | *The Outlaws* (TRaynor02) | launcher card *Тактический*; or the campaign window | the accepted tactical variant; Raynor explains that resources are kept for the next operations (text only); the victory writes a **result proposal** (remainder, report) |
-| *Zero Hour* (TRaynor03) | launcher card *Час икс* (standalone test, recommended order, no campaign) or the campaign window | pre-ordered garrison, two Ghosts, two missiles, victory = 20 game minutes AND every marked hatchery destroyed |
+| *Zero Hour* (TRaynor03) | launcher card *Час икс* (standalone test, recommended order, no campaign) or the campaign window | pre-ordered garrison, two Ghosts with a free permanent cloak (energy regenerates under the cloak, Snipe still costs 10), two missiles, victory = 20 game minutes AND every marked hatchery destroyed; short original lines of Raynor, Matt and the marines before the explanatory texts (voice mode, see "Voice") |
 
 **Campaign window** (launcher button *Кампания: Вне закона → Час икс*): the stock of the campaign, step 1 *Вне закона* (no purchases; start / continue a saved attempt / free restart / refuse), the
 map's result shown as a proposal with the report (start, mined, found, derived net of spending, passed remainder) that you confirm ONCE, step 2 *Час икс*: the order form (marines, bunkers,
@@ -184,8 +189,8 @@ operation you still want to continue: a save names the map by its path.
 minerals; recommended order 16 / 4 / 4 / 8 = 1640 minerals (it was 8 / 4 / 4 / 4 = 1120 until 2026-10-21; that kit did not hold the base for 20 minutes in the scripted-player defence test, details in docs/MISSION_ROADMAP.md) (the base price of a marine 50, bunker and turret 100 scaled by a factor; see the report in docs/MISSION_ROADMAP.md). A standalone test of the map
 never writes into the campaign.
 
-Limits: the voice lines of Raynor (TRaynor02, TRaynor03), Matt and the cut-off marines have no clips yet (portrait + text only); loading from the main menu, a full TRaynor03 playthrough by a human and
-the balance of the order are for the Owner to judge.
+**TRaynor03 balance fixed until the Owner's review (2026-10-21):** 16 marines / 4 bunkers / 4 turrets / 8 repair SCVs = 1640 minerals, garrison damage x8; no further automatic tuning of the kit or the multiplier is planned.
+Full playability of TRaynor03 is NOT confirmed: loading from the main menu, a full playthrough by a human and the balance of the order are for the Owner to judge. The voice of Raynor in TRaynor02 and the explanatory texts have no clips (portrait + text only).
 
 ## What this repository does NOT contain (and how to restore it locally)
 
@@ -195,11 +200,21 @@ Blizzard maps, saves, Banks, models, voice lab and the extracted voice WAVs (`as
 To use it after a clone you need your own StarCraft II client 3.1.4 (the tools read the original campaign maps from it; set the game folder in the launcher or `--game-dir`) and Python 3.
 The build does not download or recreate anything: it patches the maps of YOUR installation.
 
-**Voice.** A clone has no sound clips. The WAV files listed in `assets/audio/SOURCES.md` come from a private voice lab (a separate local project, not part of this repository);
-the table there gives the lab path, the text (Whisper ASR, unchecked) and the sha256 of every file. To get the voice you must produce the same files yourself from your own game
-(cut whole original lines) and put them at the paths of the manifest; the build checks them. Without them the configs that import clips (`config/traynor01.json`, `config/traynor02.poc.json`) stop with
-"audio clip ...: file not found"; the configs without an `audio` key (TRaynor03, THanson01, TTychus01) build and play silently, with portrait + text only.
-A clone therefore does **not** give you a finished voice; no ready voice is promised.
+### Voice (clips are prepared locally; a build without added voice exists)
+
+A clone has **no sound clips**: they are Blizzard voice lines and are never committed (`assets/audio/**/*.wav` is git-ignored). What is published is the recipe list `assets/audio/clips.json`
+(whole original ruRU line, its path in the game's storage, the interval, the ASR text, the hash of the file the author used) and the manifest `assets/audio/SOURCES.md`.
+
+Two ways to build, both explicit:
+
+1. **With the voice (normal mode).** Prepare the clips from YOUR installed game (needs the same CascLib DLL as the map extraction, docs/EXTRACT_MAP.md, and `pip install -r requirements-audio.txt --target tmp\thirdparty\audio`):
+   `python tools/prepare_audio.py` (`--check` only reports which files are missing; `--game-dir` / `--casc` choose the game folder and the DLL). It cuts the listed interval, applies a 3 ms fade-in and a 15 ms fade-out, keeps the original level and writes 16-bit WAV files.
+   Five of the six older clips come out byte-identical to the author's files; one may differ in a few bits (reported as "hash differs", not an error). Nothing of the author's private voice lab is needed.
+2. **Without added voice.** `python tools/build.py build|install|launch --mission M --preset P --no-voice` (launcher: Settings, "Без добавленной озвучки"). No clip is imported or played; portraits (with their talking animation),
+   subtitles, explanatory texts, the order of the scenes and the mechanics stay unchanged. The map file gets the suffix `_novoice` (it never overwrites the voiced map).
+
+In the normal mode a missing clip is **never skipped silently**: the build stops with "audio clip ...: file not found" and a message that names both ways. The remaining manual step: the clip texts are Whisper ASR
+(not human-checked) and nobody has listened to the clips yet; the in-game sound of the new TRaynor03 lines was not heard by the author (the process was muted in tests).
 
 ## Licence
 

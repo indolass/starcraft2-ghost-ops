@@ -210,3 +210,8 @@ EXPERIMENTAL tuning (not Owner-approved): garrison damage 4 -> 8, recommended an
 Campaign window passed with the REAL widgets and the REAL backend (shortage, accept once, pay once, continue and full restart without a second charge); TRaynor02 mining measured (~330 minerals per game minute with 8 SCVs, 12379 ore at the base);
 TRaynor03 missiles: cancel, load with remaining ammo and a two-Ghost race checked (2 launches in total). Not verified: a full human playthrough of TRaynor03 and TRaynor02, main-menu loading, any sound by ear. TRaynor03 has no clips; candidates listed in docs/MISSION_ROADMAP.md.
 Details: docs/MISSION_ROADMAP.md "Итог пятого задания".
+
+2026-10-21 (sixth task: pre-playthrough corrections): TRaynor03 cloak fixed to the agreed permanent free cloak (regeneration 20/s, Snipe 10; measured in the game); seven short original lines of Raynor, Matt and the marines now
+precede the explanatory texts of the TRaynor03 scenes (portrait with the talking animation stays; a wrong empty marine portrait was replaced); explicit voice-free build (`--no-voice`, launcher setting, `_novoice` map file), an explained
+error for a missing clip and a reproducible local clip preparation (`tools/prepare_audio.py`, `assets/audio/clips.json`) tested on a clean copy of the checkout; README introduction rewritten to the current implementation; TRaynor03 balance fixed
+at 16/4/4/8 (1640), garrison x8 until the Owner's review (no more automatic tuning). Full playability of TRaynor03 is NOT confirmed; sound was not heard by ear. Details: docs/MISSION_ROADMAP.md "Итог шестого задания".

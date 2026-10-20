@@ -23,6 +23,7 @@ string[6] go_cfgSquadType;
 bool go_cfgStartHoldFire;
 bool go_cfgGhostPermanentCloak;
 bool go_cfgGhostStartCloaked;
+bool go_cfgNoVoice;                  // build without added voice: GhostOps_Voice() returns no sound
 bool go_cfgShowDifficulty;
 int go_cfgExpectedDifficulty;
 int go_cfgFragileCount;
@@ -49,6 +50,15 @@ void GhostOps_ApplyAbilityRestrictions (int lp_player);
 //--------------------------------------------------------------------------------------------------
 // Setup
 //--------------------------------------------------------------------------------------------------
+// The voice clips of the maps go through this (SoundLink is a soundlink): a build without added voice (--no-voice) gets no sound (the portrait, the subtitle and the text stay).
+soundlink GhostOps_Voice (string lp_id) {
+    if (go_cfgNoVoice) {
+        return null;
+    }
+
+    return SoundLink(lp_id, 0);
+}
+
 string GhostOps_BehaviorFor (int lp_multiplier) {
     if (lp_multiplier == 2) {
         return "DamageDealtDouble";

@@ -111,7 +111,7 @@ def grab_window(win, path):
     return True
 
 
-def run(mission, preset, seconds, keep=False, width=1024, height=768, shot=None, shot_at=20):
+def run(mission, preset, seconds, keep=False, width=1024, height=768, shot=None, shot_at=20, no_voice=False):
     report = {}
     if sc2_pids():
         print('StarCraft II is already running (not ours): the test launch is refused, the game is not touched')
@@ -121,7 +121,7 @@ def run(mission, preset, seconds, keep=False, width=1024, height=768, shot=None,
     x, y, w, h = monitors.test_window_rect(mon, width, height)
     report['monitor'] = repr(mon)
     report['second_monitor'] = second
-    args = argparse.Namespace(mission=mission, preset=preset, source=None, multiplier=None, diag=False, print_only=False, start=True)
+    args = argparse.Namespace(mission=mission, preset=preset, source=None, multiplier=None, diag=False, print_only=False, start=True, no_voice=no_voice)
     rc = build.prepare(args)
     if rc != 0:
         print('prepare failed', rc)
@@ -164,7 +164,7 @@ def run(mission, preset, seconds, keep=False, width=1024, height=768, shot=None,
     if not keep:
         subprocess.run(['taskkill', '/PID', str(pid), '/T', '/F'], capture_output=True)
         print('closed our own test game, pid', pid)
-        if str(preset or '').endswith('_dev'):  # a developer map never stays in the Owner's map list
+        if str(preset or '').endswith('_dev') or no_voice:  # a developer map (or the test copy without voice) never stays in the Owner's map list
             time.sleep(2)
             build.uninstall_key(build.key_for(adapter, name), 'dev map')
     return 0, report
@@ -175,13 +175,14 @@ def main(argv=None):
     p.add_argument('--mission', default='traynor02')
     p.add_argument('--preset', default='tactical_dev')
     p.add_argument('--seconds', type=int, default=100)
+    p.add_argument('--no-voice', dest='no_voice', action='store_true', help='test the explicit build without added voice (its map is uninstalled afterwards)')
     p.add_argument('--keep', action='store_true')
     p.add_argument('--width', type=int, default=1024)
     p.add_argument('--height', type=int, default=768)
     p.add_argument('--shot', help='save one screenshot of the test window (only if nothing covers it)')
     p.add_argument('--shot-at', type=int, default=20, help='seconds after the start')
     a = p.parse_args(argv)
-    rc, _ = run(a.mission, a.preset, a.seconds, a.keep, a.width, a.height, a.shot, a.shot_at)
+    rc, _ = run(a.mission, a.preset, a.seconds, a.keep, a.width, a.height, a.shot, a.shot_at, a.no_voice)
     return rc
 
 

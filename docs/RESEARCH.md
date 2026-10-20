@@ -264,7 +264,7 @@ Side effect to know: every run of a map from `Maps\GhostOps` (and every load) re
   when the last target dies (checked: the original victory runs exactly once, a result proposal is written once).
 - The scripted waves (`gt_AttackWaves*`) end after about 15 minutes; a small separate handler (`GhostOps_ZH_PostWave`, interval 120 game seconds, at most 40 active enemy units) keeps
   moderate pressure after the timer.
-- Portrait models of the installed campaign data: `RaynorCommanderPortrait`, `HornerPortrait` (Matt), `SwannPortrait`, `MarineAPortrait`, `GhostPortrait`, `AdjutantPortrait`; each has a
+- Portrait models of the installed campaign data: `RaynorCommanderPortrait`, `HornerPortrait` (Matt), `SwannPortrait`, `Marine1Portrait` (`MarineAPortrait` / `MarineBPortrait` show an EMPTY frame in the TRaynor03 map), `GhostPortrait`, `AdjutantPortrait`; each has a
   facial animation set; `TransmissionSend(..., "Talk", ...)` plays it also WITHOUT a sound clip (frame differences of the mouth region of Raynor's portrait were about twice those of the
   forehead during a text-only transmission, mouth open / closed visible in two frames).
 - Two missiles (both Ghosts may aim): the first launch re-arms the academy for free (state 8, ready 1.1 s later), a second launch ends the chain (`launches` = 2, `nukes` 0), a third
@@ -286,3 +286,10 @@ Side effect to know: every run of a map from `Maps\GhostOps` (and every load) re
 - TRaynor02 mining: 8 SCVs mined 3275 minerals in 622 game seconds (~330 per game minute), 12379 ore in the 8 patches at the base at the start.
 - Campaign window (real CustomTkinter widgets, real build + start backend, separate processes = full launcher restarts): shortage with a disabled pay button, accept once, pay once (2355 -> 715 for 1640), continue and full restart start the same operation set without a second charge. Button callbacks were invoked; mouse clicks on window pixels were not.
 - `Documents\StarCraft II\Banks\GhostOpsScene.SC2Bank` existed before and was overwritten by a TRaynor01 scene test (2026-10-20 21:19); no backup exists, the old content is unknown.
+
+## 2026-10-21 (sixth task): cloak, TRaynor03 voice, voice-free build
+
+- TRaynor03 cloak: `PermanentCloakGhost` upgrade (the way of THanson01 / TTychus01) + regen 20 + `cloak_net_per_second` 20 (cloak modification 0); measured in the game: ~20 energy per second under the cloak, Snipe cost 10 (order valid at 10, invalid at 9), two Roaches next to a cloaked Ghost do nothing for ~16 s, an Overseer makes them fight, a loaded save keeps the cloak and the regeneration.
+- The original TRaynor03 plays one cut-off call and one rescued line per rebel group (`TRaynor03Marine700003 / 800001 / 500005` and `...700004 / 800002 / 500016`), Raynor's lines at the 10 / 5 / 1 minute warnings, Matt's at the last minute and at the victory; the added scene lines avoid the one that plays at the same moment.
+- `SoundLink` returns a `soundlink`, not a string; `TransmissionSend` accepts `null` as "no sound" (the build without voice relies on it).
+- `tools/prepare_audio.py` reproduces the clips from the installed game (CASC read, cut, fades, 16-bit WAV); 12 of 13 files came out byte-identical to the author's files.

@@ -7,8 +7,8 @@
       "Ghost"
     ],
     "start_hold_fire": false,
-    "ghost_permanent_cloak": false,
-    "ghost_start_cloaked": false
+    "ghost_permanent_cloak": true,
+    "ghost_start_cloaked": true
   },
   "base_support": {
     "damage_multiplier": 1
@@ -31,7 +31,7 @@
     "energy_max": 100,
     "regen_per_second": 20,
     "cloak_activation_cost": 0,
-    "cloak_net_per_second": -10,
+    "cloak_net_per_second": 20,
     "ghost_life": 45,
     "snipe": {
       "cost": 10,
@@ -375,9 +375,67 @@
       "Tip3Text": {
         "ru": "Нужно одновременно: дождаться корабля (20 игровых минут) и уничтожить все отмеченные инкубаторы. Если цели остались, корабль ждёт, а миссия продолжается.",
         "en": "Both are needed: wait for the ship (20 game minutes) AND destroy every marked hatchery. If targets remain the ship waits and the mission goes on."
+      },
+      "RaynorClip": {
+        "ru": "Дьявол. Нужно продержаться до прибытия наших.",
+        "en": "Damn. We have to hold out until our people arrive."
+      },
+      "HornerClip": {
+        "ru": "Командир, это Мэтт Хорнер. Держитесь, корабль на подходе.",
+        "en": "Commander, this is Matt Horner. Hold on, the ship is on its way."
+      },
+      "HornerWaitClip": {
+        "ru": "Карета подана. Есть кто живой?",
+        "en": "Your carriage is here. Anyone alive down there?"
+      },
+      "RebelClip": {
+        "ru": "Срочно нужна помощь! Мы окружены! Кто-нибудь нас слышит?",
+        "en": "We need help right now! We are surrounded! Can anybody hear us?"
+      },
+      "RebelClipAlt": {
+        "ru": "На помощь! На помощь! Нас окружили зерги! Если можете, помогите!",
+        "en": "Help! Help! The Zerg have us surrounded! If you can hear us, help!"
+      },
+      "RescueClip": {
+        "ru": "Рады тебя видеть, Рейнар! Ждем приказаний!",
+        "en": "Good to see you, Raynor! Awaiting orders!"
+      },
+      "RescueClipAlt": {
+        "ru": "Я уже думал, нам конец.",
+        "en": "I thought we were done for."
       }
     },
-    "lock_production": true
+    "lock_production": true,
+    "voice": {
+      "raynor": {
+        "clip": "GhostOpsZhRaynorHold",
+        "seconds": 4.0
+      },
+      "horner": {
+        "clip": "GhostOpsZhHornerIntro",
+        "seconds": 4.6
+      },
+      "horner_wait": {
+        "clip": "GhostOpsZhHornerWait",
+        "seconds": 3.0
+      },
+      "rebel": {
+        "clip": "GhostOpsZhMarineMayday",
+        "seconds": 5.0
+      },
+      "rebel_alt": {
+        "clip": "GhostOpsZhMarineMaydayAlt",
+        "seconds": 5.9
+      },
+      "rescue": {
+        "clip": "GhostOpsZhMarineRescue",
+        "seconds": 3.2
+      },
+      "rescue_alt": {
+        "clip": "GhostOpsZhMarineRescueAlt",
+        "seconds": 2.4
+      }
+    }
   },
   "default_preset": "standard",
   "presets": {
@@ -424,5 +482,37 @@
         }
       }
     }
+  },
+  "audio": {
+    "clips": [
+      {
+        "id": "GhostOpsZhRaynorHold",
+        "source": "assets/audio/traynor03/raynor_hold.wav"
+      },
+      {
+        "id": "GhostOpsZhHornerIntro",
+        "source": "assets/audio/traynor03/horner_intro.wav"
+      },
+      {
+        "id": "GhostOpsZhHornerWait",
+        "source": "assets/audio/traynor03/horner_wait.wav"
+      },
+      {
+        "id": "GhostOpsZhMarineMayday",
+        "source": "assets/audio/traynor03/marine_mayday.wav"
+      },
+      {
+        "id": "GhostOpsZhMarineMaydayAlt",
+        "source": "assets/audio/traynor03/marine_mayday_alt.wav"
+      },
+      {
+        "id": "GhostOpsZhMarineRescue",
+        "source": "assets/audio/traynor03/marine_rescue.wav"
+      },
+      {
+        "id": "GhostOpsZhMarineRescueAlt",
+        "source": "assets/audio/traynor03/marine_rescue_alt.wav"
+      }
+    ]
   }
 }

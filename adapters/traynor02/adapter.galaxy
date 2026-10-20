@@ -112,11 +112,13 @@ bool GhostOps_Scene_AlertMsg (bool lp_testConds, bool lp_runActions) {
     TriggerQueueEnter();
     go_scBusy = true;
     GhostOps_Tac_Log("scene: alert message on screen");
-    GhostOps_Tac_Log("scene: clip lengths " + FixedToString(SoundLengthSync(SoundLink("GhostOpsAdjutantAlert", 0)), 2) + " " + FixedToString(SoundLengthSync(SoundLink("GhostOpsSwannHelp", 0)), 2) + " " + FixedToString(SoundLengthSync(SoundLink("GhostOpsGhostReady", 0)), 2));
+    if (!go_cfgNoVoice) {
+        GhostOps_Tac_Log("scene: clip lengths " + FixedToString(SoundLengthSync(GhostOps_Voice("GhostOpsAdjutantAlert")), 2) + " " + FixedToString(SoundLengthSync(GhostOps_Voice("GhostOpsSwannHelp")), 2) + " " + FixedToString(SoundLengthSync(GhostOps_Voice("GhostOpsGhostReady")), 2));
+    }
     GhostOps_Scene_VoiceBegin();
     // the clip says "Alert." (its subtitle is exactly that); the explanation is a separate message of the same speaker, one second later
     GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsTac_AlertTitle"), StringExternal("Param/Value/GhostOpsTac_AlertClip"));
-    TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("AdjutantPortrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", SoundLink("GhostOpsAdjutantAlert", 0), null, null, 1.0, c_transmissionDurationSet, true);
+    TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("AdjutantPortrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", GhostOps_Voice("GhostOpsAdjutantAlert"), null, null, 1.0, c_transmissionDurationSet, true);
     GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsTac_AlertTitle"), StringExternal("Param/Value/GhostOpsTac_AlertText"));
     TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("AdjutantPortrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", null, null, null, go_tacStoryAlertLen, c_transmissionDurationSet, true);
     go_scBusy = false;
@@ -162,7 +164,7 @@ bool GhostOps_Scene_SwannMsg (bool lp_testConds, bool lp_runActions) {
     GhostOps_Tac_Log("scene: Swann message on screen");
     GhostOps_Scene_VoiceBegin();
     GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsTac_SwannName"), StringExternal("Param/Value/GhostOpsTac_SwannText"));
-    TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("SwannPortrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", SoundLink("GhostOpsSwannHelp", 0), null, null, go_tacStorySwannLen, c_transmissionDurationSet, true);
+    TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("SwannPortrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", GhostOps_Voice("GhostOpsSwannHelp"), null, null, go_tacStorySwannLen, c_transmissionDurationSet, true);
     GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsTac_SwannName"), StringExternal("Param/Value/GhostOpsTac_SwannExplain"));
     TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("SwannPortrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", null, null, null, go_tacStoryArrivalLen, c_transmissionDurationSet, true);
     GhostOps_Scene_VoiceEnd();
@@ -181,7 +183,7 @@ bool GhostOps_Scene_GhostMsg (bool lp_testConds, bool lp_runActions) {
     GhostOps_Tac_Log("scene: Ghost line on screen");
     GhostOps_Scene_VoiceBegin();
     GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsTac_GhostName"), StringExternal("Param/Value/GhostOpsTac_GhostText"));
-    TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("GhostPortrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", SoundLink("GhostOpsGhostReady", 0), null, null, go_tacStoryGhostLen, c_transmissionDurationSet, true);
+    TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("GhostPortrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", GhostOps_Voice("GhostOpsGhostReady"), null, null, go_tacStoryGhostLen, c_transmissionDurationSet, true);
     GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsTac_GhostName"), StringExternal("Param/Value/GhostOpsTac_GhostExplain"));
     TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("GhostPortrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", null, null, null, go_tacStoryGhostLen, c_transmissionDurationSet, true);
     GhostOps_Scene_VoiceEnd();

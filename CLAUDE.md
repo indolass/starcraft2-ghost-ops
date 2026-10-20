@@ -42,5 +42,5 @@ Use `python tools/test_launch.py --mission M --preset P --seconds N [--keep] [--
   saves named `CE0_*` that are deleted afterwards). A test budget of a standalone map test is never written into the campaign.
 - `tools/ce0_session.py stop` uninstalls the preset's map: use `--keep-map` for any map that is not a hidden dev map. The CE-0 probe (`ce0` key) exists only in hidden `*_dev` presets.
 - A started operation's map file is immutable (unique name per operation); do not rebuild over it and do not delete it while a save may depend on it.
-- Game voice WAVs stay local (git-ignored); only the manifest `assets/audio/SOURCES.md` is published. No commit of the voice lab tree, installs, CASC data, original maps, saves or Banks.
+- Game voice WAVs stay local (git-ignored); only the manifest `assets/audio/SOURCES.md` and the recipes `assets/audio/clips.json` are published (`python tools/prepare_audio.py` recreates the clips from the installed game; `--no-voice` builds without added voice, the map file gets `_novoice`; a test copy of it is never left in `Maps\GhostOps`). No commit of the voice lab tree, installs, CASC data, original maps, saves or Banks.
 - Documentation separates: implemented and confirmed / agreed / architectural requirement / open question / technical check. Experimental numbers (prices, limits, waves) are never called Owner-approved.

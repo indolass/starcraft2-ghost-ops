@@ -42,32 +42,32 @@
     {
       "function": "gt_RebelMarines01Intro_Func",
       "after": "libNtve_gf_ShowHideUnit(gv_rebelMarinesBeacon01, true);",
-      "call": "GhostOps_ZH_OnRebelCall();"
+      "call": "GhostOps_ZH_OnRebelCall(1);"
     },
     {
       "function": "gt_RebelMarines02Intro_Func",
       "after": "libNtve_gf_ShowHideUnit(gv_rebelMarinesBeacon02, true);",
-      "call": "GhostOps_ZH_OnRebelCall();"
+      "call": "GhostOps_ZH_OnRebelCall(2);"
     },
     {
       "function": "gt_RebelMarines03Intro_Func",
       "after": "libNtve_gf_ShowHideUnit(gv_rebelMarinesBeacon03, true);",
-      "call": "GhostOps_ZH_OnRebelCall();"
+      "call": "GhostOps_ZH_OnRebelCall(3);"
     },
     {
       "function": "gt_RebelMarines01Rescued_Func",
       "after": "gv_rebelFightersRescued += 1;",
-      "call": "GhostOps_ZH_OnRescue();"
+      "call": "GhostOps_ZH_OnRescue(1);"
     },
     {
       "function": "gt_RebelMarines02Rescued_Func",
       "after": "gv_rebelFightersRescued += 1;",
-      "call": "GhostOps_ZH_OnRescue();"
+      "call": "GhostOps_ZH_OnRescue(2);"
     },
     {
       "function": "gt_RebelMarines03Rescued_Func",
       "after": "gv_rebelFightersRescued += 1;",
-      "call": "GhostOps_ZH_OnRescue();"
+      "call": "GhostOps_ZH_OnRescue(3);"
     }
   ],
   "campaign_hooks": [

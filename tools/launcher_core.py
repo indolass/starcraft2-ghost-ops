@@ -71,9 +71,11 @@ def profiles_of(mission_id):
              'experimental': bool(p.get('experimental'))} for n, p in presets.items() if not p.get('hidden')]
 
 
-def installed_map_info(mission_id, preset, game_dir=None):
+def installed_map_info(mission_id, preset, game_dir=None, no_voice=False):
     """(path, installed?) of the map a start of this mission / profile uses (Maps\\GhostOps of the game folder)."""
     adapter = build.load_adapter(mission_id)
+    if no_voice:
+        adapter = dict(adapter, _novoice=True)
     root = game_dir or DEFAULT_GAME_DIR
     path = os.path.join(root, 'Maps', 'GhostOps', build.output_name(adapter, preset))
     return path, os.path.isfile(path)
@@ -183,7 +185,7 @@ def tactical_lines(cfg):
 class Settings:
     def __init__(self, path=SETTINGS_PATH):
         self.path = path
-        self.data = {'game_dir': DEFAULT_GAME_DIR, 'mission': DEFAULT_MISSION, 'profiles': {}}
+        self.data = {'game_dir': DEFAULT_GAME_DIR, 'mission': DEFAULT_MISSION, 'profiles': {}, 'no_voice': False}
         self.load()
 
     def load(self):
@@ -205,6 +207,10 @@ class Settings:
     @property
     def game_dir(self):
         return self.data['game_dir']
+
+    @property
+    def no_voice(self):
+        return bool(self.data.get('no_voice'))
 
     def mission(self):
         m = self.data.get('mission')
@@ -247,9 +253,11 @@ def log(message, path=LOG_PATH):
 class BuildBackend:
     """The real thing: calls tools/build.py. Tests replace it with a fake."""
 
+    no_voice = False  # the explicit variant without added voice (a setting of the launcher)
+
     def args(self, mission, preset):
         return argparse.Namespace(mission=mission, preset=preset, source=None, multiplier=None, diag=False,
-                                  print_only=False, start=True)
+                                  print_only=False, start=True, no_voice=self.no_voice)
 
     def sc2_running(self):
         return build.sc2_running()
@@ -302,6 +310,8 @@ class Launcher:
         buf = io.StringIO()
         try:
             self.backend.configure(self.settings.game_dir)
+            if hasattr(self.backend, 'no_voice'):
+                self.backend.no_voice = self.settings.no_voice
             problem = game_dir_problem(self.settings.game_dir) if isinstance(self.backend, BuildBackend) else None
             if problem:
                 return self._finish(Result(False, problem, 'error'))
@@ -319,6 +329,9 @@ class Launcher:
                 rc = self.backend.prepare(mission_id, preset, lambda stage: note(stage))
                 if rc == 7:
                     return self._finish(Result(False, 'StarCraft II уже запущена. Закройте игру самостоятельно и повторите.', 'busy-game', buf.getvalue()))
+                if rc != 0 and 'prepare_audio' in buf.getvalue():
+                    return self._finish(Result(False, 'Не найдены файлы озвучки: клипы не входят в репозиторий. Подготовьте их из установленной игры (python tools\\prepare_audio.py, см. README, раздел «Voice») '
+                                               'или включите в настройках «Без добавленной озвучки»: портреты, тексты и порядок сцен останутся.', 'error', buf.getvalue()))
                 if rc != 0:
                     why = [ln.strip() for ln in buf.getvalue().splitlines() if re.search(r'INVALID|FAIL|error|refus|MUST', ln, re.I) or ln.startswith('  tactical')]
                     return self._finish(Result(False, 'Не удалось подготовить карту (код %s).%s' % (rc, (' ' + ' | '.join(why[:2])) if why else ''), 'error', buf.getvalue()))

@@ -218,7 +218,7 @@ def build_app():
             self.subtitle_label.configure(text=m['subtitle'])
             self.status_badge.configure(text=m['status'], fg_color=ACCENT_DARK if m['status'] == 'Играбельно' else '#5a4a1f',
                                         text_color=TEXT if m['status'] == 'Играбельно' else AMBER)
-            path, there = core.installed_map_info(self.mission, self.preset, self.settings.game_dir)
+            path, there = core.installed_map_info(self.mission, self.preset, self.settings.game_dir, self.settings.no_voice)
             self.description_label.configure(text=m['description'] + '\n\nКарта: %s%s' % (path, '' if there else '  (будет собрана и установлена при запуске)'))
             if mission_key(self.mission) not in self.images:
                 from PIL import Image  # noqa: F401
@@ -422,7 +422,15 @@ def build_app():
                 return win
             cls = gui_campaign.make_window_class(ctk, dict(BG=BG, PANEL=PANEL, CARD=CARD, LINE=LINE, ACCENT=ACCENT, ACCENT_HOVER=ACCENT_HOVER, TEXT=TEXT, MUTED=MUTED,
                                                            AMBER=AMBER, RED=RED, GREEN=GREEN, FONT=FONT))
-            self.campaign_window = cls(self)
+            import campaign_flow
+            settings = self.settings
+
+            class LiveBackend(campaign_flow.BuildCampaignBackend):
+                @property
+                def no_voice(self):  # read at every launch: the setting may be changed while the window is open
+                    return settings.no_voice
+
+            self.campaign_window = cls(self, flow=campaign_flow.CampaignFlow(LiveBackend()))
             return self.campaign_window
 
         def open_log(self):
@@ -435,8 +443,8 @@ def build_app():
         def open_settings(self):
             win = ctk.CTkToplevel(self, fg_color=BG)
             win.title('Настройки')
-            win.geometry('620x300')
-            win.minsize(520, 260)
+            win.geometry('620x360')
+            win.minsize(520, 320)
             win.transient(self)
             win.grid_columnconfigure(0, weight=1)
             ctk.CTkLabel(win, text='Путь к установленной игре', font=(FONT, 15, 'bold'), text_color=TEXT, anchor='w').grid(row=0, column=0, columnspan=2, sticky='ew', padx=20, pady=(18, 4))
@@ -451,14 +459,20 @@ def build_app():
                 if d:
                     var.set(os.path.normpath(d))
 
+            voice_var = ctk.BooleanVar(value=self.settings.no_voice)
+            ctk.CTkCheckBox(win, text='Без добавленной озвучки (портреты, тексты и порядок сцен остаются; карта с суффиксом _novoice)', variable=voice_var, font=(FONT, 13),
+                            text_color=TEXT).grid(row=5, column=0, columnspan=2, sticky='w', padx=20, pady=(14, 0))
+
             def save():
                 problem = core.game_dir_problem(var.get())
                 if problem:
                     note.configure(text=problem, text_color=RED)
                     return
                 self.settings.data['game_dir'] = var.get()
+                self.settings.data['no_voice'] = bool(voice_var.get())
                 self.settings.save()
                 self.status.configure(text='Игра: %s' % var.get())
+                self._refresh()
                 win.destroy()
 
             ctk.CTkButton(win, text='Выбрать папку…', width=140, height=36, font=(FONT, 13), command=choose).grid(row=1, column=1, padx=(0, 20))

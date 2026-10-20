@@ -72,8 +72,8 @@ class GhostTuning(unittest.TestCase):
             self.assertNotIn(forbidden, text)
 
     def test_validation(self):
-        for key, bad in (('energy_max', 0), ('regen_per_second', -1), ('cloak_net_per_second', 5),
-                         ('cloak_net_per_second', 0.5), ('energy_start', 150), ('cloak_activation_cost', True)):
+        for key, bad in (('energy_max', 0), ('regen_per_second', -1), ('cloak_net_per_second', 25),
+                         ('cloak_net_per_second', 'fast'), ('energy_start', 150), ('cloak_activation_cost', True)):
             c = json.loads(json.dumps(self.cfg))
             c['ghost_tuning'][key] = bad
             self.assertTrue(build.validate_config(c), (key, bad))

@@ -60,8 +60,10 @@ HANSON_TEXT_KEYS = ('BtnPreparing', 'BtnReady', 'BtnActive', 'ReadyMsg', 'SentMs
 HANSON_ROLES = ('base', 'houses', 'air')
 ZH_TEXT_PREFIX = 'Param/Value/GhostOpsZH_'
 ZH_TEXT_KEYS = ('ObjTitle', 'ObjText', 'AllDestroyed', 'RaynorName', 'RaynorText', 'HornerName', 'HornerText', 'HornerWaitText', 'RebelName', 'RebelText', 'RescueText',
+                'RaynorClip', 'HornerClip', 'HornerWaitClip', 'RebelClip', 'RebelClipAlt', 'RescueClip', 'RescueClipAlt',
                 'Tip1Title', 'Tip1Text', 'Tip2Title', 'Tip2Text', 'Tip3Title', 'Tip3Text')
 ZH_ORDER_ITEMS = ('marines', 'bunkers', 'turrets', 'scvs')
+ZH_VOICE_KEYS = ('raynor', 'horner', 'horner_wait', 'rebel', 'rebel_alt', 'rescue', 'rescue_alt')  # index order of go_zhVoiceId
 SCENE_TEXT_KEYS = ('RaynorName', 'RaynorLine', 'MarineName', 'MarineBLine', 'MarineALine', 'Explain', 'Closing')
 
 
@@ -154,7 +156,7 @@ def validate_zerohour(cfg):
     errs = []
     if not isinstance(z, dict):
         return ['zerohour must be an object']
-    known = {'order', 'limits', 'prices', 'recommended', 'test_budget', 'arrival_minutes', 'targets', 'ping_every', 'ghost_spawn', 'post_arrival', 'scene', 'texts', 'debug_log', 'lock_production'}
+    known = {'order', 'limits', 'prices', 'recommended', 'test_budget', 'arrival_minutes', 'targets', 'ping_every', 'ghost_spawn', 'post_arrival', 'scene', 'texts', 'debug_log', 'lock_production', 'voice'}
     for k in z:
         if k not in known:
             errs.append('zerohour.%s is not supported' % k)
@@ -201,6 +203,17 @@ def validate_zerohour(cfg):
     for k, (lo, hi) in {'intro_delay': (1, 120), 'horner_delay': (0, 120), 'raynor_seconds': (3, 40), 'horner_seconds': (3, 40), 'rebel_seconds': (3, 40)}.items():
         if not _num(sc.get(k)) or not lo <= sc[k] <= hi:
             errs.append('zerohour.scene.%s must be a number in %s..%s' % (k, lo, hi))
+    vo = z.get('voice', {})
+    if not isinstance(vo, dict) or set(vo) != set(ZH_VOICE_KEYS):
+        errs.append('zerohour.voice must have exactly the keys %s' % (ZH_VOICE_KEYS,))
+    else:
+        ids = {c['id'] for c in (cfg.get('audio') or {}).get('clips', [])}
+        for k in ZH_VOICE_KEYS:
+            v = vo[k]
+            if not isinstance(v, dict) or not _num(v.get('seconds')) or not 0.5 <= v['seconds'] <= 20:
+                errs.append('zerohour.voice.%s.seconds must be a number 0.5..20 (the length of the subtitle step)' % k)
+            if not isinstance(v, dict) or (v.get('clip') not in ids and not cfg.get('_no_voice')):
+                errs.append('zerohour.voice.%s.clip must name a clip from audio.clips' % k)
     texts = z.get('texts', {})
     if set(texts) != set(ZH_TEXT_KEYS):
         errs.append('zerohour.texts must have exactly the keys %s' % (ZH_TEXT_KEYS,))
@@ -336,7 +349,8 @@ def validate_audio(a):
             errs.append('audio clip %s: source must look like assets/audio/<dir>/<name>.wav (got %r)' % (c['id'], src))
             continue
         if not os.path.isfile(os.path.join(ROOT, *src.split('/'))):
-            errs.append('audio clip %s: file not found: %s' % (c['id'], src))
+            errs.append('audio clip %s: file not found: %s. The voice clips are not part of the repository: prepare them from your installed game (python tools/prepare_audio.py, '
+                        'see README "Voice") or build without added voice (--no-voice; launcher: option "Без добавленной озвучки")' % (c['id'], src))
         elif read(os.path.join(ROOT, *src.split('/')))[:4] != b'RIFF':
             errs.append('audio clip %s: %s is not a WAV file' % (c['id'], src))
         if c['id'] in ids or os.path.basename(src).lower() in names:
@@ -358,7 +372,7 @@ def validate_scene(cfg):
             errs.append('scene.%s must be a number %g..%g' % (k, lo, hi))
     ids = {c['id'] for c in (cfg.get('audio') or {}).get('clips', [])}
     for k in ('raynor_clip', 'marine_b_clip', 'marine_a_clip'):
-        if s.get(k) not in ids:
+        if s.get(k) not in ids and not cfg.get('_no_voice'):
             errs.append('scene.%s must name a clip from audio.clips' % k)
     texts = s.get('texts')
     if not isinstance(texts, dict) or set(texts) != set(SCENE_TEXT_KEYS):
@@ -439,7 +453,7 @@ def validate_ghost_tuning(gt):
     sn = gt.get('snipe', {})
     ranges = {
         'energy_start': (0, 500), 'energy_max': (1, 500), 'regen_per_second': (0, 100),
-        'cloak_activation_cost': (0, 200), 'cloak_net_per_second': (-100, 0),
+        'cloak_activation_cost': (0, 200), 'cloak_net_per_second': (-100, 100),
     }
     for k, (lo, hi) in ranges.items():
         if not _num(gt.get(k)) or not lo <= gt[k] <= hi:
@@ -456,6 +470,8 @@ def validate_ghost_tuning(gt):
     ra = gt.get('remove_abilities', [])
     if not isinstance(ra, list) or any(x not in GHOST_ABIL_INDEX for x in ra) or len(set(ra)) != len(ra):
         errs.append('ghost_tuning.remove_abilities must be distinct entries of %s' % sorted(GHOST_ABIL_INDEX))
+    if not errs and gt['cloak_net_per_second'] > gt['regen_per_second']:
+        errs.append('ghost_tuning.cloak_net_per_second must not exceed regen_per_second (the cloak can only cost energy; equal = a free cloak)')
     if not errs and gt['energy_start'] > gt['energy_max']:
         errs.append('ghost_tuning.energy_start must not exceed energy_max')
     return errs
@@ -596,6 +612,7 @@ def gen_config(cfg):
     lines += ['    go_cfgStartHoldFire = %s;' % b(op['start_hold_fire']),
               '    go_cfgGhostPermanentCloak = %s;' % b(op['ghost_permanent_cloak']),
               '    go_cfgGhostStartCloaked = %s;' % b(op['ghost_start_cloaked']),
+              '    go_cfgNoVoice = %s;' % b(cfg.get('_no_voice')),
               '    go_cfgShowDifficulty = %s;' % b(cfg['difficulty']['show_message']),
               '    go_cfgExpectedDifficulty = %d;' % cfg['difficulty']['expected'],
               '    go_cfgShowTuning = %s;' % b(bool(cfg.get('ghost_tuning'))),
@@ -679,9 +696,9 @@ def gen_scene(cfg):
         '    go_sceneMarineBLen = %.1f;' % s['marine_b_seconds'],
         '    go_sceneMarineALen = %.1f;' % s['marine_a_seconds'],
         '    go_sceneClosingLen = %.1f;' % s['closing_seconds'],
-        '    go_sceneRaynorClip = SoundLink("%s", 0);' % s['raynor_clip'],
-        '    go_sceneMarineBClip = SoundLink("%s", 0);' % s['marine_b_clip'],
-        '    go_sceneMarineAClip = SoundLink("%s", 0);' % s['marine_a_clip'],
+        '    go_sceneRaynorClip = %s;' % ('null' if cfg.get('_no_voice') else 'SoundLink("%s", 0)' % s['raynor_clip']),
+        '    go_sceneMarineBClip = %s;' % ('null' if cfg.get('_no_voice') else 'SoundLink("%s", 0)' % s['marine_b_clip']),
+        '    go_sceneMarineAClip = %s;' % ('null' if cfg.get('_no_voice') else 'SoundLink("%s", 0)' % s['marine_a_clip']),
         '    go_sceneDebug = %s;' % b(s.get('debug_log')),
         '}', ''])
 
@@ -728,6 +745,9 @@ def gen_zerohour(cfg):
              '    go_zhHornerLen = %.1f;' % sc['horner_seconds'], '    go_zhRebelLen = %.1f;' % sc['rebel_seconds']]
     for i, t in enumerate(z['targets']):
         lines.append('    go_zhTargetId[%d] = %d;' % (i, t))
+    for i, k in enumerate(ZH_VOICE_KEYS):
+        lines.append('    go_zhVoiceId[%d] = "%s";' % (i, '' if cfg.get('_no_voice') else z['voice'][k]['clip']))
+        lines.append('    go_zhVoiceLen[%d] = %.1f;' % (i, z['voice'][k]['seconds']))
     lines += ['}', '']
     return chr(10).join(lines)
 
@@ -942,7 +962,7 @@ def preset_names(raw):
     return list(raw.get('presets', {}))
 
 
-def resolve_config(adapter, preset=None, diag=False):
+def resolve_config(adapter, preset=None, diag=False, no_voice=False):
     """Returns (merged config, preset name or None). Missions without presets ignore nothing: an explicit
     preset for them is an error, an unknown preset name is an error (never a silent fallback)."""
     raw = load_json(adapter['config'])
@@ -965,6 +985,9 @@ def resolve_config(adapter, preset=None, diag=False):
                           'message_en': presets[name].get('message_en', presets[name]['message'])}
     if diag:
         cfg = deep_merge(cfg, {'difficulty': {'show_message': True}})
+    if no_voice:  # explicit variant without added voice: no clip is imported or played, portraits / texts / order of the scenes are unchanged
+        cfg = {k: v for k, v in cfg.items() if k != 'audio'}
+        cfg['_no_voice'] = True
     return cfg, name
 
 
@@ -1009,7 +1032,11 @@ def load_json_file(path):
 
 def context(args):
     adapter = load_adapter(args.mission)
-    cfg, preset = resolve_config(adapter, getattr(args, 'preset', None), getattr(args, 'diag', False))
+    no_voice = bool(getattr(args, 'no_voice', False))
+    cfg, preset = resolve_config(adapter, getattr(args, 'preset', None), getattr(args, 'diag', False), no_voice)
+    if no_voice:
+        adapter = json.loads(json.dumps(adapter))
+        adapter['_novoice'] = True
     plan_path = getattr(args, 'plan', None)
     if plan_path:
         plan = load_plan(plan_path)
@@ -1029,7 +1056,7 @@ def context(args):
 
 
 def key_for(adapter, preset):
-    return adapter['mission'] + ('_' + preset if preset else '') + ('__' + adapter['_op'] if adapter.get('_op') else '')
+    return adapter['mission'] + ('_' + preset if preset else '') + ('__' + adapter['_op'] if adapter.get('_op') else '') + ('_novoice' if adapter.get('_novoice') else '')
 
 
 def output_name(adapter, preset):
@@ -1039,6 +1066,8 @@ def output_name(adapter, preset):
         stem = '%s_%s' % (stem, preset)
     if adapter.get('_op'):  # an operation of the campaign: its own unique file, never overwritten by a later build (contract 14.2, step 4)
         stem = '%s__%s' % (stem, adapter['_op'])
+    if adapter.get('_novoice'):
+        stem += '_novoice'
     return stem + ext
 
 
@@ -1406,6 +1435,7 @@ def main(argv=None):
     p.add_argument('--plan', help='an operation plan (JSON written by the launcher): builds the unique map file of that operation')
     p.add_argument('--preset', help='balance profile of the mission (TRaynor01: easy, hard); default: the mission default')
     p.add_argument('--diag', action='store_true', help='show the detailed in-game diagnostic message in this build')
+    p.add_argument('--no-voice', dest='no_voice', action='store_true', help='explicit variant WITHOUT added voice: no clip is imported or played (portraits, texts, order of the scenes and mechanics are kept); its own map file name ends with _novoice')
     p.add_argument('--print-only', dest='print_only', action='store_true', help='launch: only print the SC2 command')
     p.add_argument('--start', action='store_true', help='launch: prepare and start the game also for missions without profiles')
     p.add_argument('--multiplier', type=int, choices=[1, 2, 3], help='override base_support.damage_multiplier for this build')

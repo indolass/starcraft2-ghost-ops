@@ -171,6 +171,7 @@ class CampaignFlow:
 
     def _launch(self, op_id, mission, preset, plan_path, intent, progress):
         args = _args(mission, preset, plan_path)
+        args.no_voice = bool(getattr(self.backend, 'no_voice', False))  # the explicit variant without added voice (launcher setting)
         if self.backend.sc2_running():
             return False, 'StarCraft II уже запущена. Закройте игру самостоятельно и повторите: запускатель её не закрывает.', op_id
         # the journal of the PREVIOUS launch is read first: a victory proposal that was not confirmed yet must never be lost with the archived Bank file
