@@ -50,6 +50,260 @@ void GhostOps_ApplyAbilityRestrictions (int lp_player);
 //--------------------------------------------------------------------------------------------------
 // Setup
 //--------------------------------------------------------------------------------------------------
+// Talk drivers: SILENT clips whose only job is the mouth of a portrait (a portrait moves its lips only while a sound with a lip-sync animation plays).
+// Groups: 0 Raynor, 1 Swann, 2 Horner, 3 marine, 4 Adjutant, 5 Ghost (the same order as TALK_GROUPS in tools/build.py). Not voice: kept in a build without added voice.
+string[24] go_talkId;
+fixed[24] go_talkLen;
+int[8] go_talkFirst;
+int[8] go_talkCount;
+int go_talkTurn;
+
+// The portrait of lp_model talks for lp_total seconds: a chain of silent lip-sync pieces of the speaker group, the last one shortened to fit.
+void GhostOps_Talk (string lp_model, int lp_group, fixed lp_total) {
+    fixed lv_left;
+    fixed lv_len;
+    int lv_k;
+
+    lv_left = lp_total;
+    if (go_talkCount[lp_group] == 0) {
+        TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel(lp_model), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", null, null, null, lv_left, c_transmissionDurationSet, true);
+        return;
+    }
+
+    while (lv_left > 0.3) {
+        lv_k = go_talkFirst[lp_group] + (go_talkTurn % go_talkCount[lp_group]);
+        go_talkTurn += 1;
+        lv_len = go_talkLen[lv_k];
+        if ((lv_left - lv_len) < 1.2) {
+            lv_len = lv_left;
+        }
+
+        TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel(lp_model), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", SoundLink(go_talkId[lv_k], 0), null, null, lv_len, c_transmissionDurationSet, true);
+        lv_left -= lv_len;
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+// Status panel of the specialists (independent of the selection): one row per Ghost with the name / role, the state and an energy bar.
+// States (real, from the current energy and the real net change per second under the cloak - no separate timer):
+//   "<name> - cloak: N s" (game seconds; orange at about 3 s, red at 1 s), "Cloak: infinity" (a free permanent cloak),
+//   "aiming - the cloak drain is paused" (set by the tactical module), "Recovery: P%" (cloak off, energy not full), "ready", "died".
+// Configuration: GhostOps_ApplyPanelConfig (generated). Without the config key "panel" the panel does not exist.
+//--------------------------------------------------------------------------------------------------
+unit GhostOps_SquadUnit (int lp_index);
+bool go_pnEnabled;
+int go_pnCount;
+fixed go_pnNet;                  // net energy change per second under the cloak (negative = the cloak costs energy)
+fixed go_pnRegen;
+bool go_pnPermanent;
+bool go_pnHold;                  // the strike channel pauses the cloak drain (written by the tactical module)
+int go_pnGrenades;               // charges left of the armor-piercing grenade (written by the tactical module); -1 = the mission has none
+int go_pnGrenadeSlot;            // squad index of the grenadier
+int go_pnHoldSlot;               // squad index of the unit whose cloak drain is paused (the Spotter)
+trigger go_pnLoadTrig;
+int go_pnDialog;
+int[6] go_pnLabel;
+int[6] go_pnBar;
+int go_pnFoot;
+bool go_pnBuilt;
+trigger go_pnTrig;
+
+void GhostOps_ApplyPanelConfig ();
+
+// The cloak is ON (the ability is toggled on): true also while an enemy detector shows the unit (the cloak state flag alone goes false then, the buff stays and keeps costing energy).
+bool GhostOps_CloakOn (unit lp_unit) {
+    if (lp_unit == null) {
+        return false;
+    }
+
+    return UnitHasBehavior(lp_unit, "GhostCloak") || UnitTestState(lp_unit, c_unitStateCloaked);
+}
+
+text GhostOps_Panel_Color (string lp_rgb, text lp_text) {
+    return StringToText("<c val=" + "\"" + lp_rgb + "\"" + ">") + lp_text + StringToText("</c>");
+}
+
+void GhostOps_Panel_Build () {
+    int lv_i;
+    int lv_h;
+
+    if (go_pnBuilt) {
+        return;
+    }
+
+    go_pnBuilt = true;
+    lv_h = (46 * go_pnCount) + 30;
+    DialogCreate(560, lv_h, c_anchorTopRight, 14, 118, false);
+    go_pnDialog = DialogLastCreated();
+    DialogSetImage(go_pnDialog, "Assets\\Textures\\ui_ingame_blackmask.dds");
+    DialogSetImageVisible(go_pnDialog, true);
+    DialogSetTransparency(go_pnDialog, 35.0);
+    DialogSetVisible(go_pnDialog, PlayerGroupAll(), true);
+    lv_i = 0;
+    while (lv_i < go_pnCount) {
+        DialogControlCreate(go_pnDialog, c_triggerControlTypeLabel);
+        go_pnLabel[lv_i] = DialogControlLastCreated();
+        DialogControlSetSize(go_pnLabel[lv_i], PlayerGroupAll(), 544, 26);
+        DialogControlSetPosition(go_pnLabel[lv_i], PlayerGroupAll(), c_anchorTopLeft, 8, 4 + (46 * lv_i));
+        DialogControlSetPropertyAsString(go_pnLabel[lv_i], c_triggerControlPropertyStyle, PlayerGroupAll(), "MissionTimePanel");
+        DialogControlCreate(go_pnDialog, c_triggerControlTypeProgressBar);
+        go_pnBar[lv_i] = DialogControlLastCreated();
+        DialogControlSetSize(go_pnBar[lv_i], PlayerGroupAll(), 544, 12);
+        DialogControlSetPosition(go_pnBar[lv_i], PlayerGroupAll(), c_anchorTopLeft, 8, 30 + (46 * lv_i));
+        DialogControlSetPropertyAsFixed(go_pnBar[lv_i], c_triggerControlPropertyMinValue, PlayerGroupAll(), 0.0);
+        DialogControlSetPropertyAsFixed(go_pnBar[lv_i], c_triggerControlPropertyMaxValue, PlayerGroupAll(), 100.0);
+        lv_i += 1;
+    }
+
+    DialogControlCreate(go_pnDialog, c_triggerControlTypeLabel);
+    go_pnFoot = DialogControlLastCreated();
+    DialogControlSetSize(go_pnFoot, PlayerGroupAll(), 544, 20);
+    DialogControlSetPosition(go_pnFoot, PlayerGroupAll(), c_anchorTopLeft, 8, 6 + (46 * go_pnCount));
+    DialogControlSetPropertyAsString(go_pnFoot, c_triggerControlPropertyStyle, PlayerGroupAll(), "AlertItem");
+    DialogControlSetPropertyAsText(go_pnFoot, c_triggerControlPropertyText, PlayerGroupAll(), GhostOps_Panel_Color("9aa6b8", StringExternal("Param/Value/GhostOpsPanel_Footer")));
+}
+
+// A loaded game destroys the dialogs of the script: the panel is built again by the next tick.
+bool GhostOps_Panel_Loaded (bool lp_testConds, bool lp_runActions) {
+    if (!lp_runActions) {
+        return true;
+    }
+
+    if (go_pnBuilt) {
+        DialogDestroy(go_pnDialog);
+        go_pnBuilt = false;
+    }
+
+    return true;
+}
+
+bool GhostOps_Panel_Tick (bool lp_testConds, bool lp_runActions) {
+    int lv_i;
+    unit lv_u;
+    fixed lv_e;
+    fixed lv_m;
+    fixed lv_rem;
+    text lv_line;
+    string lv_rgb;
+    bool lv_any;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    lv_any = false;
+    lv_i = 0;
+    while (lv_i < go_pnCount) {
+        if (GhostOps_SquadUnit(lv_i) != null) {
+            lv_any = true;
+        }
+
+        lv_i += 1;
+    }
+
+    if (!lv_any) {
+        return true;
+    }
+
+    GhostOps_Panel_Build();
+    lv_i = 0;
+    while (lv_i < go_pnCount) {
+        lv_u = GhostOps_SquadUnit(lv_i);
+        lv_rgb = "ffffff";
+        if (lv_u == null) {
+            DialogControlSetVisible(go_pnLabel[lv_i], PlayerGroupAll(), false);
+            DialogControlSetVisible(go_pnBar[lv_i], PlayerGroupAll(), false);
+        }
+        else if (!UnitIsAlive(lv_u)) {
+            DialogControlSetVisible(go_pnLabel[lv_i], PlayerGroupAll(), true);
+            DialogControlSetVisible(go_pnBar[lv_i], PlayerGroupAll(), true);
+            DialogControlSetPropertyAsFixed(go_pnBar[lv_i], c_triggerControlPropertyValue, PlayerGroupAll(), 0.0);
+            lv_line = GhostOps_Panel_Color("808080", StringExternal("Param/Value/GhostOpsPanel_Name" + IntToString(lv_i)) + StringToText(" - ") + StringExternal("Param/Value/GhostOpsPanel_Dead"));
+            DialogControlSetPropertyAsText(go_pnLabel[lv_i], c_triggerControlPropertyText, PlayerGroupAll(), lv_line);
+        }
+        else {
+            DialogControlSetVisible(go_pnLabel[lv_i], PlayerGroupAll(), true);
+            DialogControlSetVisible(go_pnBar[lv_i], PlayerGroupAll(), true);
+            lv_e = UnitGetPropertyFixed(lv_u, c_unitPropEnergy, c_unitPropCurrent);
+            lv_m = UnitGetPropertyFixed(lv_u, c_unitPropEnergyMax, c_unitPropCurrent);
+            if (lv_m < 1.0) {
+                lv_m = 1.0;
+            }
+
+            DialogControlSetPropertyAsFixed(go_pnBar[lv_i], c_triggerControlPropertyValue, PlayerGroupAll(), (100.0 * lv_e) / lv_m);
+            if (GhostOps_CloakOn(lv_u)) {
+                if (go_pnPermanent || (go_pnNet >= 0.0)) {
+                    lv_line = StringExternal("Param/Value/GhostOpsPanel_Infinite");
+                }
+                else if (go_pnHold && (lv_i == go_pnHoldSlot)) {
+                    lv_line = StringExternal("Param/Value/GhostOpsPanel_Hold");
+                    lv_rgb = "6fd0ff";
+                }
+                else {
+                    lv_rem = lv_e / (0.0 - go_pnNet);
+                    if (lv_rem <= 1.0) {
+                        lv_rgb = "ff4040";
+                    }
+                    else if (lv_rem <= 3.0) {
+                        lv_rgb = "ffa030";
+                    }
+
+                    lv_line = StringExternal("Param/Value/GhostOpsPanel_Cloak") + StringToText(": ") + IntToText(FixedToInt(lv_rem + 0.99)) + StringToText(" ") + StringExternal("Param/Value/GhostOpsPanel_Seconds");
+                }
+            }
+            else if (lv_e >= (lv_m - 0.5)) {
+                lv_line = StringExternal("Param/Value/GhostOpsPanel_Ready");
+            }
+            else {
+                lv_line = StringExternal("Param/Value/GhostOpsPanel_Regen") + StringToText(": ") + IntToText(FixedToInt((100.0 * lv_e) / lv_m)) + StringToText("%");
+            }
+
+            lv_line = StringExternal("Param/Value/GhostOpsPanel_Name" + IntToString(lv_i)) + StringToText(" - ") + lv_line;
+            if ((go_pnGrenades >= 0) && (lv_i == go_pnGrenadeSlot)) {
+                lv_line = lv_line + StringToText("  |  ") + StringExternal("Param/Value/GhostOpsPanel_Grenades") + StringToText(": ") + IntToText(go_pnGrenades);
+            }
+
+            DialogControlSetPropertyAsText(go_pnLabel[lv_i], c_triggerControlPropertyText, PlayerGroupAll(), GhostOps_Panel_Color(lv_rgb, lv_line));
+        }
+
+        lv_i += 1;
+    }
+
+    return true;
+}
+
+void GhostOps_Panel_Start () {
+    GhostOps_ApplyPanelConfig();
+    if (!go_pnEnabled) {
+        return;
+    }
+
+    go_pnTrig = TriggerCreate("GhostOps_Panel_Tick");
+    TriggerAddEventTimePeriodic(go_pnTrig, 0.25, c_timeGame);
+    go_pnLoadTrig = TriggerCreate("GhostOps_Panel_Loaded");
+    TriggerAddEventLoadGameDone(go_pnLoadTrig);
+}
+
+// One short original line with its own sound (and the lip-sync of the original line); a build without added voice shows the same step with a silent talk animation.
+void GhostOps_ClipStep (string lp_model, int lp_group, string lp_clip, fixed lp_seconds) {
+    if (go_cfgNoVoice) {
+        GhostOps_Talk(lp_model, lp_group, lp_seconds);
+        return;
+    }
+
+    TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel(lp_model), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", SoundLink(lp_clip, 0), null, null, lp_seconds, c_transmissionDurationSet, true);
+}
+
+// The same with a ready sound link (a scene that keeps its clips in variables).
+void GhostOps_ClipStepLink (string lp_model, int lp_group, soundlink lp_link, fixed lp_seconds) {
+    if (go_cfgNoVoice) {
+        GhostOps_Talk(lp_model, lp_group, lp_seconds);
+        return;
+    }
+
+    TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel(lp_model), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", lp_link, null, null, lp_seconds, c_transmissionDurationSet, true);
+}
+
 // The voice clips of the maps go through this (SoundLink is a soundlink): a build without added voice (--no-voice) gets no sound (the portrait, the subtitle and the text stay).
 soundlink GhostOps_Voice (string lp_id) {
     if (go_cfgNoVoice) {
@@ -343,6 +597,7 @@ void GhostOps_SetDamageMultiplier (int lp_multiplier) {
 
 // Starts the periodic scan.
 void GhostOps_Start () {
+    GhostOps_Panel_Start();
     go_scanTrigger = TriggerCreate("GhostOps_ScanTick");
     TriggerAddEventTimePeriodic(go_scanTrigger, 1.0, c_timeGame);
     GhostOps_ScanAll();

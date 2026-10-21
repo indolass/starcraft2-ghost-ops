@@ -101,27 +101,27 @@ class Profiles(unittest.TestCase):
 
     def test_separate_files_and_manifests(self):
         names = {p: build.output_name(ADAPTER, p) for p in ('easy', 'hard')}
-        self.assertEqual(names, {'easy': 'GhostOps_TRaynor01_easy.SC2Map', 'hard': 'GhostOps_TRaynor01_hard.SC2Map'})
+        self.assertEqual(names, {'easy': 'GhostOps_TRaynor01_r2_easy.SC2Map', 'hard': 'GhostOps_TRaynor01_r2_hard.SC2Map'})
         keys = {build.key_for(ADAPTER, p) for p in ('easy', 'hard')}
         self.assertEqual(len(keys), 2)
         self.assertEqual(len({build.build_manifest_path(k) for k in keys}), 2)
         self.assertEqual(len({build.install_manifest_path(k) for k in keys}), 2)
         self.assertEqual(len({build.paths(ADAPTER, None, p)[1] for p in ('easy', 'hard')}), 2)
         # missions without profiles keep their file names
-        self.assertEqual(build.output_name(build.load_adapter('traynor02'), None), 'GhostOps_TRaynor02.SC2Map')
+        self.assertEqual(build.output_name(build.load_adapter('traynor02'), None), 'GhostOps_TRaynor02_r2.SC2Map')
         self.assertEqual(build.output_name(build.load_adapter('ttychus01'), None), 'GhostOps_TTychus01.SC2Map')
 
     def test_launch_command_points_to_the_chosen_file(self):
         for p in ('easy', 'hard'):
             cfg, name = build.resolve_config(ADAPTER, p)
             cmd, dest = build.launch_command(ADAPTER, cfg, name)
-            self.assertTrue(dest.endswith('GhostOps_TRaynor01_%s.SC2Map' % p))
+            self.assertTrue(dest.endswith('GhostOps_TRaynor01_r2_%s.SC2Map' % p))
             self.assertIn(dest, cmd)
             self.assertIn('-difficulty 3', cmd)
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
             self.assertEqual(build.main(['launch', '--mission', 'traynor01', '--preset', 'hard', '--print-only']), 0)
-        self.assertIn('GhostOps_TRaynor01_hard.SC2Map', buf.getvalue())
+        self.assertIn('GhostOps_TRaynor01_r2_hard.SC2Map', buf.getvalue())
         self.assertNotIn('_easy', buf.getvalue())
 
     def test_script_stays_ascii_and_profile_text_goes_to_the_string_table(self):
@@ -175,11 +175,13 @@ class ExtremeProfile(unittest.TestCase):
     def test_extreme_differs_from_hard_only_by_one_ghost_life_and_cooldown(self):
         h, x = flatten(self.hard), flatten(self.extreme)
         changed = sorted(k for k in set(h) | set(x) if h.get(k) != x.get(k))
-        self.assertEqual(changed, ['ghost_tuning.ghost_life', 'ghost_tuning.snipe.cooldown', 'operatives.squad',
-                                   'profile.label', 'profile.message', 'profile.message_en', 'profile.name'])
+        self.assertEqual(changed, ['ghost_tuning.ghost_life', 'ghost_tuning.snipe.cooldown', 'ghost_tuning.snipe.cost', 'operatives.squad',
+                                   'panel.texts.Name0.en', 'panel.texts.Name0.ru', 'profile.label', 'profile.message', 'profile.message_en', 'profile.name'])
         self.assertEqual(self.extreme['operatives']['squad'], ['Ghost'])
         self.assertEqual(self.extreme['ghost_tuning']['ghost_life'], 45)
-        self.assertEqual(self.extreme['ghost_tuning']['snipe']['cooldown'], 10)
+        self.assertEqual(self.extreme['ghost_tuning']['snipe']['cooldown'], 8)  # 2026-10-21 (was 10)
+        self.assertEqual(self.extreme['ghost_tuning']['snipe']['cost'], 0)  # no energy cost (hard keeps 10)
+        self.assertEqual(self.hard['ghost_tuning']['snipe']['cost'], 10)
         self.assertEqual(self.hard['ghost_tuning']['snipe']['cooldown'], 5)
 
     def test_easy_and_hard_keep_their_balance(self):
@@ -210,7 +212,7 @@ class ExtremeProfile(unittest.TestCase):
     def test_three_profiles_have_three_separate_files(self):
         names = {p: build.output_name(ADAPTER, p) for p in ('easy', 'hard', 'extreme')}
         self.assertEqual(len(set(names.values())), 3)
-        self.assertEqual(names['extreme'], 'GhostOps_TRaynor01_extreme.SC2Map')
+        self.assertEqual(names['extreme'], 'GhostOps_TRaynor01_r2_extreme.SC2Map')
         self.assertEqual(len({build.install_manifest_path(build.key_for(ADAPTER, p)) for p in names}), 3)
         self.assertEqual(len({build.build_manifest_path(build.key_for(ADAPTER, p)) for p in names}), 3)
 

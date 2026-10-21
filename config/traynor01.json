@@ -59,16 +59,25 @@
     "clips": [
       {
         "id": "GhostOpsRaynorTroopsReady",
-        "source": "assets/audio/traynor01/raynor_A.wav"
+        "source": "assets/audio/traynor01/raynor_A.wav",
+        "facial": "Raynor_What03"
       },
       {
         "id": "GhostOpsMarineSendHelp",
-        "source": "assets/audio/traynor01/marine_B.wav"
+        "source": "assets/audio/traynor01/marine_B.wav",
+        "facial": "Marine_Help00"
       },
       {
         "id": "GhostOpsMarineDoctors",
-        "source": "assets/audio/traynor01/marine_A.wav"
+        "source": "assets/audio/traynor01/marine_A.wav",
+        "facial": "Marine_Yes13"
       }
+    ],
+    "talk": [
+      {"id": "GhostOpsTalkRaynor1", "facial": "TRaynor01Raynor00003", "seconds": 3.1, "group": "raynor"},
+      {"id": "GhostOpsTalkRaynor2", "facial": "TRaynor01Raynor00011", "seconds": 3.1, "group": "raynor"},
+      {"id": "GhostOpsTalkRaynor3", "facial": "TRaynor01Raynor00043", "seconds": 2.9, "group": "raynor"},
+      {"id": "GhostOpsTalkRaynor4", "facial": "TRaynor01Raynor00044", "seconds": 2.8, "group": "raynor"}
     ]
   },
   "scene": {
@@ -112,6 +121,22 @@
       }
     },
     "closing_seconds": 11.0
+  },
+  "panel": {
+    "enabled": true,
+    "texts": {
+      "Name0": {"ru": "Призрак 1", "en": "Ghost 1"},
+      "Name1": {"ru": "Призрак 2", "en": "Ghost 2"},
+      "Dead": {"ru": "погиб", "en": "dead"},
+      "Infinite": {"ru": "Маскировка: ∞", "en": "Cloak: infinite"},
+      "Cloak": {"ru": "маскировка", "en": "cloak"},
+      "Seconds": {"ru": "с", "en": "s"},
+      "Regen": {"ru": "Восстановление", "en": "Recovery"},
+      "Hold": {"ru": "Наведение: расход на паузе", "en": "Aiming - cloak drain paused"},
+      "Ready": {"ru": "готов", "en": "ready"},
+      "Grenades": {"ru": "Гранаты", "en": "Grenades"},
+      "Footer": {"ru": "Время — игровые секунды", "en": "Time in game seconds"}
+    }
   },
   "default_preset": "easy",
   "presets": {
@@ -172,10 +197,10 @@
       "label": "Экстремальный",
       "message": "Ghost Ops — Экстремальный",
       "message_en": "Ghost Ops - Extreme",
-      "card": "Один призрак, 45 здоровья. Перезарядка точного выстрела 10 секунд",
+      "card": "Один призрак, 45 здоровья. Snipe: перезарядка 8 секунд, без расхода энергии",
       "details": [
         "Один призрак, 45 здоровья (начальное и максимальное)",
-        "Snipe: перезарядка 10 секунд",
+        "Snipe: перезарядка 8 секунд, расход энергии 0 (работает при нулевой энергии)",
         "Остальное как в сложном варианте"
       ],
       "experimental": true,
@@ -188,7 +213,13 @@
         "ghost_tuning": {
           "ghost_life": 45,
           "snipe": {
-            "cooldown": 10
+            "cost": 0,
+            "cooldown": 8
+          }
+        },
+        "panel": {
+          "texts": {
+            "Name0": {"ru": "Призрак", "en": "Ghost"}
           }
         }
       }

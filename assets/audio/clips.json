@@ -115,6 +115,20 @@
    "text": "Я уже думал, нам конец.",
    "text_source": "ASR (Whisper large-v3), not human-checked",
    "sha256": "e099f40700749d777da860569896d4a2bd7493134ea9a14fb73c6fdf0db633a9"
+  },
+  {
+   "file": "assets/audio/traynor02/raynor_damn.wav",
+   "casc_path": "campaigns\\liberty.sc2campaign\\ruru.sc2assets\\localizeddata\\sounds\\terranvo\\campaignvo\\ttychus01raynor00012.ogg",
+   "text": "Какого...",
+   "text_source": "ASR (Whisper large-v3), not human-checked",
+   "sha256": "ae871f3cdd2679b64758ed3acadcc322a87ff1ea94f14d8a2d5bae5f06c42539"
+  },
+  {
+   "file": "assets/audio/traynor02/raynor_onward.wav",
+   "casc_path": "campaigns\\liberty.sc2campaign\\ruru.sc2assets\\localizeddata\\sounds\\terranvo\\campaignvo\\ttychus03raynor00011.ogg",
+   "text": "Идем дальше, парни.",
+   "text_source": "ASR (Whisper large-v3), not human-checked",
+   "sha256": "264acb190a664592e64afdce9e639518c7408340e5cdf64c4022d89f0c148cd5"
   }
  ]
 }

@@ -1,4 +1,6 @@
 // CE-0 probe: TRaynor02 specific state and commands (development only; compiled only with the config key "ce0").
+void GhostOps_Scene_OnRebelsRescued ();
+
 bool GhostOps_Ce0_Alive (unit lp_u) {
     if (lp_u == null) {
         return false;
@@ -23,7 +25,223 @@ string GhostOps_Ce0_Extra () {
 void GhostOps_Ce0_MissionStart () {
 }
 
+// Bunker test: an enemy Bunker with two enemy Marines inside; the Operative throws the grenade at it; the log shows what happens second by second.
+bool GhostOps_Ce0_BunkerTest (bool lp_testConds, bool lp_runActions) {
+    unit lv_bunker;
+    unitgroup lv_marines;
+    int lv_i;
+    point lv_pos;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    lv_pos = PointWithOffset(UnitGetPosition(go_tacOperative), 8.0, 0.0);
+    UnitCreate(1, "Bunker", 0, 2, lv_pos, 270.0);
+    lv_bunker = UnitLastCreated();
+    UnitCreate(2, "Marine", 0, 2, PointWithOffset(lv_pos, 0.0, -2.0), 270.0);
+    lv_marines = UnitLastCreatedGroup();
+    UnitGroupLoopBegin(lv_marines);
+    while (UnitGroupLoopCurrent() != null) {
+        UnitIssueOrder(UnitGroupLoopCurrent(), OrderTargetingUnit(AbilityCommand("smart", 0), lv_bunker), c_orderQueueReplace);
+        UnitGroupLoopStep();
+    }
+
+    UnitGroupLoopEnd();
+    Wait(5.0, c_timeGame);
+    GhostOps_Ce0_Write("j", "BT before: bunker life " + FixedToString(UnitGetPropertyFixed(lv_bunker, c_unitPropLife, c_unitPropCurrent), 0) + " cargo " + IntToString(UnitGroupCount(UnitCargoGroup(lv_bunker), c_unitCountAlive)) + " marines alive " + IntToString(UnitGroupCount(lv_marines, c_unitCountAlive)));
+    UnitIssueOrder(go_tacOperative, OrderTargetingPoint(AbilityCommand("GhostOpsArmorPiercing", 0), lv_pos), c_orderQueueReplace);
+    lv_i = 0;
+    while (lv_i < 14) {
+        Wait(0.5, c_timeGame);
+        lv_i += 1;
+        GhostOps_Ce0_Write("j", "BT +" + IntToString(lv_i) + " half-s: bunker alive " + IntToString(GhostOps_Ce0_B(GhostOps_Ce0_Alive(lv_bunker))) + " marines alive " + IntToString(UnitGroupCount(lv_marines, c_unitCountAlive)) + " ammo " + IntToString(go_tacGrenadeAmmo) + " op life " + FixedToString(UnitGetPropertyFixed(go_tacOperative, c_unitPropLife, c_unitPropCurrent), 0));
+    }
+
+    return true;
+}
+
+// Grenade test 2: three enemy Hellions in a cluster, two enemy Marines and an enemy SCV beside them (all on hold position); own Marine too. One grenade, then the log.
+bool GhostOps_Ce0_GrenadeTest (bool lp_testConds, bool lp_runActions) {
+    unitgroup lv_h;
+    unitgroup lv_m;
+    unitgroup lv_s;
+    unitgroup lv_own;
+    point lv_pos;
+    int lv_i;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    lv_pos = PointWithOffset(UnitGetPosition(go_tacOperative), 8.0, 0.0);
+    UnitCreate(3, "Hellion", 0, 2, lv_pos, 270.0);
+    lv_h = UnitLastCreatedGroup();
+    UnitCreate(2, "Marine", 0, 2, PointWithOffset(lv_pos, 0.0, 1.2), 270.0);
+    lv_m = UnitLastCreatedGroup();
+    UnitCreate(1, "SCV", 0, 2, PointWithOffset(lv_pos, 0.0, -1.2), 270.0);
+    lv_s = UnitLastCreatedGroup();
+    UnitCreate(1, "Marine", 0, 1, PointWithOffset(lv_pos, 1.2, 0.0), 270.0);
+    lv_own = UnitLastCreatedGroup();
+    UnitGroupLoopBegin(lv_h);
+    while (UnitGroupLoopCurrent() != null) {
+        UnitIssueOrder(UnitGroupLoopCurrent(), Order(AbilityCommand("move", 2)), c_orderQueueReplace);
+        UnitGroupLoopStep();
+    }
+
+    UnitGroupLoopEnd();
+    UnitGroupLoopBegin(lv_m);
+    while (UnitGroupLoopCurrent() != null) {
+        UnitIssueOrder(UnitGroupLoopCurrent(), Order(AbilityCommand("move", 2)), c_orderQueueReplace);
+        UnitGroupLoopStep();
+    }
+
+    UnitGroupLoopEnd();
+    Wait(1.0, c_timeGame);
+    GhostOps_Ce0_Write("j", "GT before: hellions " + IntToString(UnitGroupCount(lv_h, c_unitCountAlive)) + " marines " + IntToString(UnitGroupCount(lv_m, c_unitCountAlive)) + " scv " + IntToString(UnitGroupCount(lv_s, c_unitCountAlive)) + " own marine " + IntToString(UnitGroupCount(lv_own, c_unitCountAlive)));
+    UnitIssueOrder(go_tacOperative, OrderTargetingPoint(AbilityCommand("GhostOpsArmorPiercing", 0), lv_pos), c_orderQueueReplace);
+    Wait(3.0, c_timeGame);
+    GhostOps_Ce0_Write("j", "GT after: hellions " + IntToString(UnitGroupCount(lv_h, c_unitCountAlive)) + " enemy marines " + IntToString(UnitGroupCount(lv_m, c_unitCountAlive)) + " scv " + IntToString(UnitGroupCount(lv_s, c_unitCountAlive)) + " own marine " + IntToString(UnitGroupCount(lv_own, c_unitCountAlive)) + " ammo " + IntToString(go_tacGrenadeAmmo)
+        + " | second shot valid " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(go_tacOperative, OrderTargetingPoint(AbilityCommand("GhostOpsArmorPiercing", 0), lv_pos)))) + " spotter valid " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(go_tacSpotter, OrderTargetingPoint(AbilityCommand("GhostOpsArmorPiercing", 0), lv_pos)))));
+    return true;
+}
+
+// Cancel test: the grenade is ordered and the order is replaced by "stop" before the shot; the charge must stay.
+bool GhostOps_Ce0_CancelTest (bool lp_testConds, bool lp_runActions) {
+    point lv_pos;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    lv_pos = PointWithOffset(UnitGetPosition(go_tacOperative), 8.0, 0.0);
+    GhostOps_Ce0_Write("j", "CT ammo before " + IntToString(go_tacGrenadeAmmo));
+    UnitIssueOrder(go_tacOperative, OrderTargetingPoint(AbilityCommand("GhostOpsArmorPiercing", 0), lv_pos), c_orderQueueReplace);
+    Wait(0.25, c_timeGame);
+    UnitIssueOrder(go_tacOperative, Order(AbilityCommand("stop", 0)), c_orderQueueReplace);
+    Wait(2.5, c_timeGame);
+    GhostOps_Ce0_Write("j", "CT ammo after the cancelled order " + IntToString(go_tacGrenadeAmmo));
+    return true;
+}
+
+// Snipe test: energy 0 for both Ghosts, independent cooldowns (the data of TRaynor02 tactical: cost 0, cooldown 5).
+bool GhostOps_Ce0_SnipeTest (bool lp_testConds, bool lp_runActions) {
+    unitgroup lv_m;
+    unit[6] lv_t;
+    int lv_i;
+    point lv_pos;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    lv_pos = PointWithOffset(UnitGetPosition(go_tacOperative), 9.0, 0.0);
+    lv_i = 0;
+    while (lv_i < 6) {
+        UnitCreate(1, "Marine", 0, 2, PointWithOffset(lv_pos, 0.0, IntToFixed(lv_i) - 2.5), 270.0);
+        lv_t[lv_i] = UnitLastCreated();
+        UnitIssueOrder(lv_t[lv_i], Order(AbilityCommand("move", 2)), c_orderQueueReplace);
+        UnitSetPropertyFixed(lv_t[lv_i], c_unitPropLife, 200.0);
+        UnitSetPropertyFixed(lv_t[lv_i], c_unitPropLifeMax, 200.0);
+        lv_i += 1;
+    }
+
+    UnitSetPropertyFixed(go_tacSpotter, c_unitPropEnergy, 0.0);
+    UnitSetPropertyFixed(go_tacOperative, c_unitPropEnergy, 0.0);
+    UnitIssueOrder(go_tacSpotter, OrderTargetingUnit(AbilityCommand("Snipe", 0), lv_t[4]), c_orderQueueReplace);
+    UnitIssueOrder(go_tacOperative, OrderTargetingUnit(AbilityCommand("Snipe", 0), lv_t[5]), c_orderQueueReplace);
+    Wait(1.2, c_timeGame);
+    GhostOps_Ce0_Write("j", "SN both ordered at 0 energy in the same instant: targets 4 / 5 life " + FixedToString(UnitGetPropertyFixed(lv_t[4], c_unitPropLife, c_unitPropCurrent), 0) + " / " + FixedToString(UnitGetPropertyFixed(lv_t[5], c_unitPropLife, c_unitPropCurrent), 0) + " energies " + FixedToString(UnitGetPropertyFixed(go_tacSpotter, c_unitPropEnergy, c_unitPropCurrent), 1) + " / " + FixedToString(UnitGetPropertyFixed(go_tacOperative, c_unitPropEnergy, c_unitPropCurrent), 1));
+    UnitSetPropertyFixed(go_tacSpotter, c_unitPropEnergy, 0.0);
+    UnitSetPropertyFixed(go_tacOperative, c_unitPropEnergy, 0.0);
+    GhostOps_Ce0_Write("j", "SN at EXACTLY 0 energy: ghost1 valid " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(go_tacSpotter, OrderTargetingUnit(AbilityCommand("Snipe", 0), lv_t[0])))) + " ghost2 valid " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(go_tacOperative, OrderTargetingUnit(AbilityCommand("Snipe", 0), lv_t[1])))) + " energy " + FixedToString(UnitGetPropertyFixed(go_tacSpotter, c_unitPropEnergy, c_unitPropCurrent), 1));
+    Wait(0.6, c_timeGame);
+    GhostOps_Ce0_Write("j", "SN energy " + FixedToString(UnitGetPropertyFixed(go_tacSpotter, c_unitPropEnergy, c_unitPropCurrent), 1) + "/" + FixedToString(UnitGetPropertyFixed(go_tacOperative, c_unitPropEnergy, c_unitPropCurrent), 1) + " (0 energy, regen 20/s is not on a cloak-free unit? see value)");
+    GhostOps_Ce0_Write("j", "SN t0: ghost1 valid " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(go_tacSpotter, OrderTargetingUnit(AbilityCommand("Snipe", 0), lv_t[0])))));
+    UnitIssueOrder(go_tacSpotter, OrderTargetingUnit(AbilityCommand("Snipe", 0), lv_t[0]), c_orderQueueReplace);
+    Wait(1.0, c_timeGame);
+    GhostOps_Ce0_Write("j", "SN t+1: target0 life " + FixedToString(UnitGetPropertyFixed(lv_t[0], c_unitPropLife, c_unitPropCurrent), 0) + " | ghost2 valid " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(go_tacOperative, OrderTargetingUnit(AbilityCommand("Snipe", 0), lv_t[1])))) + " ghost1 again valid " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(go_tacSpotter, OrderTargetingUnit(AbilityCommand("Snipe", 0), lv_t[2])))));
+    UnitIssueOrder(go_tacOperative, OrderTargetingUnit(AbilityCommand("Snipe", 0), lv_t[1]), c_orderQueueReplace);
+    Wait(1.0, c_timeGame);
+    GhostOps_Ce0_Write("j", "SN t+2: target1 life " + FixedToString(UnitGetPropertyFixed(lv_t[1], c_unitPropLife, c_unitPropCurrent), 0) + " | ghost1 valid (cooldown 5 s, 2 s used) " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(go_tacSpotter, OrderTargetingUnit(AbilityCommand("Snipe", 0), lv_t[2])))));
+    Wait(3.6, c_timeGame);
+    GhostOps_Ce0_Write("j", "SN t+5.6: ghost1 valid " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(go_tacSpotter, OrderTargetingUnit(AbilityCommand("Snipe", 0), lv_t[2])))) + " ghost2 valid (cooldown from t+1) " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(go_tacOperative, OrderTargetingUnit(AbilityCommand("Snipe", 0), lv_t[3])))));
+    UnitIssueOrder(go_tacSpotter, OrderTargetingUnit(AbilityCommand("Snipe", 0), lv_t[2]), c_orderQueueReplace);
+    Wait(1.0, c_timeGame);
+    GhostOps_Ce0_Write("j", "SN end: target2 life " + FixedToString(UnitGetPropertyFixed(lv_t[2], c_unitPropLife, c_unitPropCurrent), 0) + " energy " + FixedToString(UnitGetPropertyFixed(go_tacSpotter, c_unitPropEnergy, c_unitPropCurrent), 1));
+    return true;
+}
+
+// Wave trace (dev): every 20 s the fighters of the Dominion players 2 and 5: all, near the rebel base, near our base, near the wave gather point, the nearest one to our base, and the Barracks.
+trigger go_wvTick;
+
+bool GhostOps_Ce0_WvTick (bool lp_testConds, bool lp_runActions) {
+    int lv_p;
+    int lv_n;
+    int lv_i;
+    int lv_total;
+    int lv_reb;
+    int lv_home;
+    int lv_gat;
+    unitgroup lv_g;
+    unit lv_u;
+    fixed lv_d;
+    fixed lv_best;
+    unit lv_b;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    lv_total = 0;
+    lv_reb = 0;
+    lv_home = 0;
+    lv_gat = 0;
+    lv_best = 9999.0;
+    lv_p = 2;
+    while (lv_p <= 5) {
+        if ((lv_p == 2) || (lv_p == 5)) {
+            lv_g = UnitGroup(null, lv_p, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterStructure), (1 << (c_targetFilterDead - 32))), 0);
+            lv_n = UnitGroupCount(lv_g, c_unitCountAlive);
+            lv_total += lv_n;
+            lv_i = 1;
+            while (lv_i <= lv_n) {
+                lv_u = UnitGroupUnit(lv_g, lv_i);
+                if (DistanceBetweenPoints(UnitGetPosition(lv_u), Point(41.5, 26.5)) < 20.0) {
+                    lv_reb += 1;
+                }
+
+                lv_d = DistanceBetweenPoints(UnitGetPosition(lv_u), Point(go_tacZoneX, go_tacZoneY));
+                if (lv_d < 30.0) {
+                    lv_home += 1;
+                }
+
+                if (lv_d < lv_best) {
+                    lv_best = lv_d;
+                }
+
+                if (DistanceBetweenPoints(UnitGetPosition(lv_u), PointFromId(292)) < 14.0) {
+                    lv_gat += 1;
+                }
+
+                lv_i += 1;
+            }
+        }
+
+        lv_p += 1;
+    }
+
+    lv_b = UnitFromId(149);
+    GhostOps_Ce0_Write("j", "WV fighters total=" + IntToString(lv_total) + " near rebel base=" + IntToString(lv_reb) + " near our base=" + IntToString(lv_home) + " at wave gather point=" + IntToString(lv_gat) + " nearest to our base=" + FixedToString(lv_best, 0) + " | barracks " + UnitGetType(lv_b) + " owner " + IntToString(UnitGetOwner(lv_b)) + " at " + FixedToString(PointGetX(UnitGetPosition(lv_b)), 0) + "," + FixedToString(PointGetY(UnitGetPosition(lv_b)), 0) + " alive " + IntToString(GhostOps_Ce0_B(GhostOps_Ce0_Alive(lv_b))));
+    return true;
+}
+
 bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
+    unitgroup lv_g;
+    string lv_t;
+    int lv_i;
+    unit lv_u;
+
     if (lp_cmd == "aim") {
         // the spotter aims the strike at a point 11 cells north of himself, away from the base (his own blast radius is 8; he does not move)
         UnitIssueOrder(go_tacSpotter, OrderTargetingPoint(AbilityCommand("TacNukeStrike", 0), PointWithOffset(UnitGetPosition(go_tacSpotter), 0.0, -11.0)), c_orderQueueReplace);
@@ -34,6 +252,221 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
     if (lp_cmd == "cancel") {
         UnitIssueOrder(go_tacSpotter, Order(AbilityCommand("TacNukeStrike", 1)), c_orderQueueReplace);
         GhostOps_Ce0_Write("j", "CANCEL ordered");
+        return true;
+    }
+
+    if (lp_cmd == "txo") {
+        libCamp_gf_SetAllSoundChannelVolumesCampaign(1);
+        libCamp_gf_SendTransmissionCampaign(null, SoundLink(lp_a, 0), c_transmissionDurationAdd, 0.0, true);
+        libCamp_gf_SetAllSoundChannelVolumesCampaign(2);
+        GhostOps_Ce0_Write("j", "TX original " + lp_a);
+        return true;
+    }
+
+    if (lp_cmd == "txm") {
+        TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel(lp_a), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), lp_b, null, null, null, 5.0, c_transmissionDurationSet, true);
+        GhostOps_Ce0_Write("j", "TX model " + lp_a + " anim " + lp_b);
+        return true;
+    }
+
+    if (lp_cmd == "msg") {
+        UIDisplayMessage(PlayerGroupAll(), c_messageAreaSubtitle, StringToText("Raynor: standard text sample of the subtitle area, long enough to wrap around the screen width maybe twice for the size comparison here."));
+        UIDisplayMessage(PlayerGroupAll(), c_messageAreaSubtitle, StringToText("<s val=" + "\"" + lp_a + "\"" + ">Raynor: styled text sample " + lp_a + ", long enough to wrap around the screen width maybe twice for the size comparison here.</s>"));
+        return true;
+    }
+
+    if (lp_cmd == "sel") {
+        UnitClearSelection(1);
+        if (lp_a == "1") {
+            UnitSelect(go_tacSpotter, 1, true);
+        }
+        else if (lp_a == "2") {
+            UnitSelect(go_tacOperative, 1, true);
+        }
+        else {
+            UnitSelect(go_tacSpotter, 1, true);
+            UnitSelect(go_tacOperative, 1, true);
+        }
+
+        return true;
+    }
+
+    if (lp_cmd == "gs") {
+        GhostOps_Ce0_Write("j", "GS spotter energy=" + FixedToString(UnitGetPropertyFixed(go_tacSpotter, c_unitPropEnergy, c_unitPropCurrent), 1) + " cloaked=" + IntToString(GhostOps_Ce0_B(UnitTestState(go_tacSpotter, c_unitStateCloaked))) + " cloakbuff=" + IntToString(GhostOps_Ce0_B(UnitHasBehavior(go_tacSpotter, "GhostCloak"))) + " hold=" + IntToString(GhostOps_Ce0_B(UnitHasBehavior(go_tacSpotter, "GhostOpsAimHold"))) + " channel=" + IntToString(GhostOps_Ce0_B(go_tacChannel)) + " life=" + FixedToString(UnitGetPropertyFixed(go_tacSpotter, c_unitPropLife, c_unitPropCurrent), 1)
+            + " | operative energy=" + FixedToString(UnitGetPropertyFixed(go_tacOperative, c_unitPropEnergy, c_unitPropCurrent), 1) + " cloaked=" + IntToString(GhostOps_Ce0_B(UnitTestState(go_tacOperative, c_unitStateCloaked))) + " life=" + FixedToString(UnitGetPropertyFixed(go_tacOperative, c_unitPropLife, c_unitPropCurrent), 1) + " | ammo=" + IntToString(go_tacGrenadeAmmo) + " state=" + IntToString(go_tacState));
+        return true;
+    }
+
+    if (lp_cmd == "spawn") {
+        // spawn <type> <player>: 3 units 8 cells east of the Operative
+        UnitGroupLoopBegin(UnitCreate(3, lp_a, 0, 2, PointWithOffset(UnitGetPosition(go_tacOperative), StringToFixed(lp_b), 0.0), 270.0));
+        while (UnitGroupLoopCurrent() != null) {
+            UnitGroupLoopStep();
+        }
+
+        UnitGroupLoopEnd();
+        GhostOps_Ce0_Write("j", "SPAWNED 3 " + lp_a + " of player " + lp_b + " 8 cells east of the Operative");
+        return true;
+    }
+
+    if (lp_cmd == "ap") {
+        // the Operative throws the grenade at a point (dx, dy) from himself
+        UnitIssueOrder(go_tacOperative, OrderTargetingPoint(AbilityCommand("GhostOpsArmorPiercing", 0), PointWithOffset(UnitGetPosition(go_tacOperative), StringToFixed(lp_a), StringToFixed(lp_b))), c_orderQueueReplace);
+        GhostOps_Ce0_Write("j", "AP ordered at " + lp_a + "," + lp_b + " valid-ammo=" + IntToString(go_tacGrenadeAmmo));
+        return true;
+    }
+
+    if (lp_cmd == "en") {
+        lv_g = UnitGroup(null, 2, RegionCircle(UnitGetPosition(go_tacOperative), 22.0), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+        lv_t = "";
+        lv_i = 1;
+        while ((lv_i <= UnitGroupCount(lv_g, c_unitCountAlive)) && (lv_i <= 14)) {
+            lv_t = lv_t + UnitGetType(UnitGroupUnit(lv_g, lv_i)) + ":" + FixedToString(UnitGetPropertyFixed(UnitGroupUnit(lv_g, lv_i), c_unitPropLife, c_unitPropCurrent), 0) + " ";
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", "EN count " + IntToString(UnitGroupCount(lv_g, c_unitCountAlive)) + ": " + lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "bunker") {
+        UnitCreate(1, "Bunker", 0, 2, PointWithOffset(UnitGetPosition(go_tacOperative), StringToFixed(lp_a), 0.0), 270.0);
+        lv_u = UnitLastCreated();
+        UnitCreate(2, "Marine", 0, 2, PointWithOffset(UnitGetPosition(go_tacOperative), StringToFixed(lp_a), -3.0), 270.0);
+        UnitGroupLoopBegin(UnitLastCreatedGroup());
+        while (UnitGroupLoopCurrent() != null) {
+            UnitIssueOrder(lv_u, OrderTargetingUnit(AbilityCommand("BunkerTransport", 0), UnitGroupLoopCurrent()), c_orderQueueAddToEnd);
+            UnitGroupLoopStep();
+        }
+
+        UnitGroupLoopEnd();
+        GhostOps_Ce0_Write("j", "BUNKER created, life " + FixedToString(UnitGetPropertyFixed(lv_u, c_unitPropLife, c_unitPropCurrent), 0) + " max " + FixedToString(UnitGetPropertyFixed(lv_u, c_unitPropLifeMax, c_unitPropCurrent), 0));
+        return true;
+    }
+
+    if (lp_cmd == "mv") {
+        UnitIssueOrder(go_tacOperative, OrderTargetingPoint(AbilityCommand("move", 0), PointWithOffset(UnitGetPosition(go_tacOperative), StringToFixed(lp_a), StringToFixed(lp_b))), c_orderQueueReplace);
+        GhostOps_Ce0_Write("j", "MOVE ordered by " + lp_a + "," + lp_b + " from " + FixedToString(PointGetX(UnitGetPosition(go_tacOperative)), 0) + "," + FixedToString(PointGetY(UnitGetPosition(go_tacOperative)), 0));
+        return true;
+    }
+
+    if (lp_cmd == "pos") {
+        GhostOps_Ce0_Write("j", "POS operative " + FixedToString(PointGetX(UnitGetPosition(go_tacOperative)), 1) + "," + FixedToString(PointGetY(UnitGetPosition(go_tacOperative)), 1) + " spotter " + FixedToString(PointGetX(UnitGetPosition(go_tacSpotter)), 1) + "," + FixedToString(PointGetY(UnitGetPosition(go_tacSpotter)), 1));
+        return true;
+    }
+
+    if (lp_cmd == "tp") {
+        UnitSetPosition(go_tacOperative, Point(StringToFixed(lp_a), StringToFixed(lp_b)), false);
+        GhostOps_Ce0_Write("j", "TELEPORT operative to " + lp_a + "," + lp_b);
+        return true;
+    }
+
+    if (lp_cmd == "tp1") {
+        UnitSetPosition(go_tacSpotter, Point(StringToFixed(lp_a), StringToFixed(lp_b)), false);
+        GhostOps_Ce0_Write("j", "TELEPORT spotter to " + lp_a + "," + lp_b);
+        return true;
+    }
+
+    if (lp_cmd == "zr") {
+        go_tacZoneR = StringToFixed(lp_a);
+        GhostOps_Ce0_Write("j", "ZONE radius set to " + lp_a);
+        return true;
+    }
+
+    if (lp_cmd == "bt") {
+        TriggerExecute(TriggerCreate("GhostOps_Ce0_BunkerTest"), true, false);
+        return true;
+    }
+
+    if (lp_cmd == "gt") {
+        TriggerExecute(TriggerCreate("GhostOps_Ce0_GrenadeTest"), true, false);
+        return true;
+    }
+
+    if (lp_cmd == "ct") {
+        TriggerExecute(TriggerCreate("GhostOps_Ce0_CancelTest"), true, false);
+        return true;
+    }
+
+    if (lp_cmd == "aim2") {
+        GhostOps_Ce0_Write("j", "AIM2 valid=" + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(go_tacSpotter, OrderTargetingPoint(AbilityCommand("TacNukeStrike", 0), PointWithOffset(UnitGetPosition(go_tacSpotter), StringToFixed(lp_a), StringToFixed(lp_b)))))) + " visible=" + IntToString(GhostOps_Ce0_B(VisIsVisibleForPlayer(1, PointWithOffset(UnitGetPosition(go_tacSpotter), StringToFixed(lp_a), StringToFixed(lp_b))))));
+        UnitIssueOrder(go_tacSpotter, OrderTargetingPoint(AbilityCommand("TacNukeStrike", 0), PointWithOffset(UnitGetPosition(go_tacSpotter), StringToFixed(lp_a), StringToFixed(lp_b))), c_orderQueueReplace);
+        GhostOps_Ce0_Write("j", "AIM2 ordered by " + lp_a + "," + lp_b);
+        return true;
+    }
+
+    if (lp_cmd == "cl") {
+        UnitIssueOrder(go_tacSpotter, Order(AbilityCommand("GhostCloak", StringToInt(lp_a))), c_orderQueueReplace);
+        GhostOps_Ce0_Write("j", "CLOAK order " + lp_a + " (0 on, 1 off)");
+        return true;
+    }
+
+    if (lp_cmd == "cat") {
+        GhostOps_Ce0_Write("j", "CAT nuke range " + CatalogFieldValueGet(c_gameCatalogAbil, "TacNukeStrike", "Range", 1) + " flags " + CatalogFieldValueGet(c_gameCatalogAbil, "TacNukeStrike", "Flags[RequireTargetVision]", 1) + " | AP range " + CatalogFieldValueGet(c_gameCatalogAbil, "GhostOpsArmorPiercing", "Range", 1) + " | snipe cd " + CatalogFieldValueGet(c_gameCatalogAbil, "Snipe", "Cost[0].Cooldown.TimeUse", 1) + " cost " + CatalogFieldValueGet(c_gameCatalogAbil, "Snipe", "Cost[0].Vital[Energy]", 1) + " | nuke effect " + CatalogFieldValueGet(c_gameCatalogAbil, "TacNukeStrike", "Effect[0]", 1));
+        return true;
+    }
+
+    if (lp_cmd == "cat2") {
+        GhostOps_Ce0_Write("j", "CAT2 Range[0]=" + CatalogFieldValueGet(c_gameCatalogAbil, "TacNukeStrike", "Range[0]", 1) + " Range=" + CatalogFieldValueGet(c_gameCatalogAbil, "TacNukeStrike", "Range", 1) + " snipe Range=" + CatalogFieldValueGet(c_gameCatalogAbil, "Snipe", "Range", 1) + " snipe Range[0]=" + CatalogFieldValueGet(c_gameCatalogAbil, "Snipe", "Range[0]", 1) + " EMP Range=" + CatalogFieldValueGet(c_gameCatalogAbil, "EMP", "Range", 1) + " Calldown=" + CatalogFieldValueGet(c_gameCatalogAbil, "TacNukeStrike", "CalldownEffect", 1) + " AP Range[0]=" + CatalogFieldValueGet(c_gameCatalogAbil, "GhostOpsArmorPiercing", "Range[0]", 1) + " AP CastIntro=" + CatalogFieldValueGet(c_gameCatalogAbil, "GhostOpsArmorPiercing", "CastIntroTime", 1) + " nuke abil FinishTime=" + CatalogFieldValueGet(c_gameCatalogAbil, "TacNukeStrike", "FinishTime", 1));
+        return true;
+    }
+
+    if (lp_cmd == "aimop") {
+        GhostOps_Ce0_Write("j", "AIMOP valid=" + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(go_tacSpotter, OrderTargetingPoint(AbilityCommand("TacNukeStrike", 0), UnitGetPosition(go_tacOperative))))) + " visible=" + IntToString(GhostOps_Ce0_B(VisIsVisibleForPlayer(1, UnitGetPosition(go_tacOperative)))) + " distance " + FixedToString(DistanceBetweenPoints(UnitGetPosition(go_tacSpotter), UnitGetPosition(go_tacOperative)), 1));
+        UnitIssueOrder(go_tacSpotter, OrderTargetingPoint(AbilityCommand("TacNukeStrike", 0), UnitGetPosition(go_tacOperative)), c_orderQueueReplace);
+        return true;
+    }
+
+    if (lp_cmd == "aimb") {
+        GhostOps_Ce0_Write("j", "AIMB valid=" + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(go_tacSpotter, OrderTargetingPoint(AbilityCommand("TacNukeStrike", 0), Point(34.5, 76.5))))) + " visible=" + IntToString(GhostOps_Ce0_B(VisIsVisibleForPlayer(1, Point(34.5, 76.5)))) + " spotter distance " + FixedToString(DistanceBetweenPoints(UnitGetPosition(go_tacSpotter), Point(34.5, 76.5)), 1) + " operative distance " + FixedToString(DistanceBetweenPoints(UnitGetPosition(go_tacOperative), Point(34.5, 76.5)), 1));
+        UnitIssueOrder(go_tacSpotter, OrderTargetingPoint(AbilityCommand("TacNukeStrike", 0), Point(34.5, 76.5)), c_orderQueueReplace);
+        return true;
+    }
+
+    if (lp_cmd == "clo") {
+        UnitIssueOrder(go_tacOperative, Order(AbilityCommand("GhostCloak", StringToInt(lp_a))), c_orderQueueReplace);
+        return true;
+    }
+
+    if (lp_cmd == "sn") {
+        TriggerExecute(TriggerCreate("GhostOps_Ce0_SnipeTest"), true, false);
+        return true;
+    }
+
+    if (lp_cmd == "own149") {
+        // simulate the hand-over of the rebel Barracks (map object 149) to the player
+        UnitSetOwner(UnitFromId(149), 1, true);
+        GhostOps_Ce0_Write("j", "OWN149 type " + UnitGetType(UnitFromId(149)) + " owner " + IntToString(UnitGetOwner(UnitFromId(149))) + " at " + FixedToString(PointGetX(UnitGetPosition(UnitFromId(149))), 1) + "," + FixedToString(PointGetY(UnitGetPosition(UnitFromId(149))), 1));
+        return true;
+    }
+
+    if (lp_cmd == "lift") {
+        GhostOps_Ce0_Write("j", "LIFT valid before the scene's tech rule " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(UnitFromId(149), Order(AbilityCommand("BarracksLiftOff", 0))))));
+        UnitIssueOrder(UnitFromId(149), Order(AbilityCommand("BarracksLiftOff", 0)), c_orderQueueReplace);
+        return true;
+    }
+
+    if (lp_cmd == "liftstate") {
+        GhostOps_Ce0_Write("j", "LIFTSTATE type " + UnitGetType(UnitFromId(149)) + " flying " + IntToString(GhostOps_Ce0_B(UnitFilterMatch(UnitFromId(149), 1, UnitFilter((1 << c_targetFilterAir), 0, 0, 0)))) + " orders " + IntToString(UnitOrderCount(UnitFromId(149))) + " landvalid " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(UnitFromId(149), OrderTargetingPoint(AbilityCommand("BarracksLand", 0), Point(100.0, 30.0))))));
+        return true;
+    }
+
+    if (lp_cmd == "hint") {
+        GhostOps_Scene_OnRebelsRescued();
+        GhostOps_Ce0_Write("j", "HINT requested, said=" + IntToString(GhostOps_Ce0_B(go_tacHintSaid)));
+        return true;
+    }
+
+    if (lp_cmd == "wv") {
+        go_wvTick = TriggerCreate("GhostOps_Ce0_WvTick");
+        TriggerAddEventTimePeriodic(go_wvTick, 20.0, c_timeGame);
+        GhostOps_Ce0_Write("j", "WV trace on (every 20 s)");
+        return true;
+    }
+
+    if (lp_cmd == "flyhome") {
+        UnitIssueOrder(UnitFromId(149), OrderTargetingPoint(AbilityCommand("move", 0), Point(93.0, 36.0)), c_orderQueueReplace);
+        GhostOps_Ce0_Write("j", "BARRACKS ordered to fly to our base");
         return true;
     }
 

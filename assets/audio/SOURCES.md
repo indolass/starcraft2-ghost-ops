@@ -31,5 +31,9 @@ No line is repeated right after the same line of the original conversation: the 
 | `traynor03/marine_mayday_alt.wav` | `traynor03marine800001` | «На помощь! На помощь! Нас окружили зерги! Если можете, помогите!» | 5.43 s | the appeal (group 3, whose own line is the one above) |
 | `traynor03/marine_rescue.wav` | `traynor03marine500016` | «Рады тебя видеть, Рейнар! Ждем приказаний!» | 2.69 s | the first rescue (groups 1, 2) |
 | `traynor03/marine_rescue_alt.wav` | `traynor03marine700004` | «Я уже думал, нам конец.» | 1.88 s | the first rescue (group 3) |
+| `traynor02/raynor_damn.wav` | - | «Какого...» (Raynor after the alarm; ASR, unchecked) | see `clips.json` | `ttychus01raynor00012`, recipe in `clips.json` | TRaynor02, Raynor scene after the Adjutant alarm |
+| `traynor02/raynor_onward.wav` | - | «Идем дальше, парни.» (ASR, unchecked) | see `clips.json` | `ttychus03raynor00011`, recipe in `clips.json` | TRaynor02, rebel-rescue hint scene |
 
 Hashes: see `clips.json` (the files produced by `prepare_audio.py` in a clean checkout were compared: byte-identical except `adjutant_alert.wav`, which differs in a few bits).
+
+Seventh task: `clips.json` entries may carry `facial` (the original sound id inside the portrait's `.fxa`) and the config `audio.talk` lists silent lip-sync drivers (generated silent WAV, FacialAnim of an original line); no new Blizzard audio beyond the two rows above.

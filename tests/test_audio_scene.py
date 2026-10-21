@@ -51,9 +51,11 @@ class AudioImport(unittest.TestCase):
     def test_catalog_entry_and_member_name(self):
         cfg, _ = build.resolve_config(AD1, 'easy')
         frag = build.catalog_fragments(cfg)['SoundData.xml']
-        self.assertEqual(len(re.findall(r'<CSound id="GhostOps\w+" parent="SM_Old">', frag)), 3)
+        # 3 voice clips + 4 silent talk drivers (they only drive the mouth of a portrait; they are no voice)
+        self.assertEqual(len(re.findall(r'<CSound id="GhostOps\w+" parent="SM_Old">', frag)), 7)
+        self.assertEqual(frag.count('FacialAnim="'), 7)  # every clip carries the lip-sync animation of an original line
         self.assertIn('File="Assets' + chr(92) + 'Sounds' + chr(92) + 'GhostOps' + chr(92) + 'raynor_A.wav"', frag)
-        self.assertEqual(build.patch_unitdata(build.NEW_CATALOG, frag).count('<CSound'), 3)
+        self.assertEqual(build.patch_unitdata(build.NEW_CATALOG, frag).count('<CSound'), 7)
         # only the playable variant carries the clips: the old TRaynor02 prototype stays silent
         proto, _ = build.resolve_config(AD2, 'prototype')
         self.assertNotIn('SoundData.xml', build.catalog_fragments(proto))
@@ -65,8 +67,8 @@ class AudioImport(unittest.TestCase):
         ns = argparse.Namespace(mission='traynor01', preset='easy', diag=False, multiplier=None, source=None)
         self.assertEqual(build.cmd_build(ns), 0)
         man = json.loads(build.read(build.build_manifest_path('traynor01_easy'), 'r'))
-        self.assertEqual(len(man['audio']), 3)
-        arc = sc2mpq.Archive(build.read(os.path.join(ROOT, 'dist', 'GhostOps_TRaynor01_easy.SC2Map')))
+        self.assertEqual(len(man['audio']), 7)  # 3 voice clips + 4 silent talk drivers
+        arc = sc2mpq.Archive(build.read(os.path.join(ROOT, 'dist', 'GhostOps_TRaynor01_r2_easy.SC2Map')))
         for a in man['audio']:
             self.assertEqual(build.sha256(arc.read(a['member'])), a['sha256'])
 
@@ -104,10 +106,11 @@ class WoundedSquadScene(unittest.TestCase):
         order = [body.index(x) for x in ('go_sceneRaynorClip, ', 'go_sceneMarineBClip, ', 'go_sceneMarineAClip, ')]
         self.assertEqual(order, sorted(order))
         self.assertEqual(body.count('Wait(go_scenePause, c_timeReal);'), 2)
-        self.assertEqual(body.count('c_transmissionDurationSet, true);'), 4)  # three clips + Raynor's closing words; each waits: nothing overlaps
+        self.assertEqual(body.count('GhostOps_ClipStepLink('), 3)  # the three clips; every step waits for its transmission: nothing overlaps
+        self.assertEqual(body.count('GhostOps_Talk('), 1)  # Raynor's closing words: the portrait talks (silent lip-sync drivers)
         self.assertEqual(body.count('TriggerQueueEnter();'), body.count('TriggerQueueExit();'))
-        self.assertIn('Marine1Portrait', body)
-        self.assertIn('Marine2Portrait', body)  # two different soldiers
+        self.assertIn('RaynorMarinePortrait', body)
+        self.assertEqual(body.count('"MarinePortrait"'), 2)  # the portrait whose lip-sync animations hold the marine lines (Marine_Help00)
         hook = a.split('void GhostOps_T1_OnOpeningLine')[1].split('void GhostOps_OnMissionStart')[0]
         self.assertLess(hook.index('go_sceneDone) {'), hook.index('go_sceneDone = true;'))
         self.assertEqual(a.count('TriggerCreate("GhostOps_T1_SceneMsg")'), 1)

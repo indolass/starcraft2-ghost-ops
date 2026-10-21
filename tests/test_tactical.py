@@ -54,11 +54,11 @@ class TacticalConfig(unittest.TestCase):
         self.assertEqual(self.tac['army']['fragile_units'] if 'army' in self.tac else [], [])
         self.assertEqual((gt['ghost_life'], gt['energy_start'], gt['energy_max'], gt['regen_per_second']), (45, 100, 100, 20))
         self.assertEqual((gt['cloak_activation_cost'], gt['cloak_net_per_second']), (0, -10))
-        self.assertEqual(gt['snipe'], {'cost': 10, 'damage': 45, 'cast_time': 0.3, 'cooldown': 7})
+        self.assertEqual(gt['snipe'], {'cost': 0, 'damage': 45, 'cast_time': 0.3, 'cooldown': 5})  # 2026-10-21: no energy cost, 5 s per Ghost (was 10 / 7)
         self.assertEqual(gt['remove_abilities'], ['EMP'])
         self.assertEqual(t['garrison']['damage_multiplier'], 20)
         self.assertEqual(t['trained_marine'], {'life': 1, 'can_attack': False})  # 1/1 and no weapon at all (no x0.1 any more)
-        self.assertEqual(t['story'], {'first_delay': 15, 'second_delay': 15, 'alert_seconds': 14, 'swann_seconds': 6, 'arrival_seconds': 10, 'ghost_seconds': 5, 'raynor_delay': 2, 'raynor_seconds': 11})
+        self.assertEqual(t['story'], {'first_delay': 15, 'second_delay': 15, 'alert_seconds': 14, 'swann_seconds': 3, 'arrival_seconds': 10, 'ghost_seconds': 7, 'raynor_delay': 2, 'raynor_seconds': 11})
         self.assertEqual((t['nuke']['aim_time'], t['nuke']['flight_time']), (12, 6))
         # the explosion keeps the stock damage, radii and falloff: nothing of ours in the config
         for k in ('damage', 'structure_bonus', 'areas'):
@@ -90,7 +90,7 @@ class TacticalData(unittest.TestCase):
     def test_every_fragment_is_well_formed_and_unit_overrides_are_local(self):
         for name, frag in self.frags.items():
             ET.fromstring('<Catalog>' + frag + '</Catalog>')
-        self.assertEqual(sorted(self.frags), ['AbilData.xml', 'BehaviorData.xml', 'EffectData.xml', 'RequirementData.xml', 'SoundData.xml', 'UnitData.xml'])
+        self.assertEqual(sorted(self.frags), ['AbilData.xml', 'BehaviorData.xml', 'ButtonData.xml', 'EffectData.xml', 'RequirementData.xml', 'SoundData.xml', 'UnitData.xml'])
 
     def test_weapon_behaviors_and_ghost_academy(self):
         beh = self.frags['BehaviorData.xml']
@@ -117,7 +117,9 @@ class TacticalData(unittest.TestCase):
         self.assertIn('id="GhostOpsNukeFlight"', eff)
         # the blast itself is the installed game's own: no override of damage, radii or falloff
         self.assertNotIn('NukeDamage"', eff.replace('<ExpireEffect value="NukeDetonate"/>', ''))
-        self.assertNotIn('AreaArray', eff)
+        # the only area of the fragments is the grenade's own search; the nuke's damage areas are not touched
+        self.assertEqual(eff.count('AreaArray'), 1)
+        self.assertIn('GhostOpsAPSearch', eff)
         self.assertNotIn('FinalEffect', eff)  # the stock chain spends the missile; the module arms it again after a cancel
         abil = self.frags['AbilData.xml']
         self.assertIn('<FinishTime value="0"/>', abil)
@@ -142,7 +144,7 @@ class TacticalModule(unittest.TestCase):
             self.assertTrue(block.isascii(), preset)
             self.assertEqual(galaxy_lint.lint(block), [], preset)
         names = {h['call'].split('(')[0] for h in build.hook_list(ADAPTER)}
-        self.assertEqual(names, {'GhostOps_OnMissionStart', 'GhostOps_Tac_OnRescue', 'GhostOps_Tac_OnVictory', 'GhostOps_Tac_OnDefeat'})
+        self.assertEqual(names, {'GhostOps_OnMissionStart', 'GhostOps_Tac_OnRescue', 'GhostOps_Tac_OnVictory', 'GhostOps_Tac_OnDefeat', 'GhostOps_Scene_OnRebelsRescued'})
 
     def test_production_build_has_no_test_code_and_no_debug_log(self):
         cfg, _ = build.resolve_config(ADAPTER, 'tactical')
@@ -158,7 +160,7 @@ class TacticalModule(unittest.TestCase):
     def test_texts_in_the_module_exist_in_the_string_table(self):
         used = set(re.findall(r'Param/Value/GhostOpsTac_(\w+)', module_text()))
         self.assertTrue(used)
-        self.assertTrue(used <= set(build.TAC_TEXT_KEYS), used - set(build.TAC_TEXT_KEYS))
+        self.assertTrue(used <= set(build.TAC_TEXT_KEYS) | set(build.TAC_EXTRA_TEXT_KEYS), used - set(build.TAC_TEXT_KEYS))
         cfg, _ = build.resolve_config(ADAPTER, 'tactical')
         entries = build.text_entries(cfg)
         for loc in ('ruRU', 'enUS'):
@@ -257,13 +259,15 @@ class StoryScene(unittest.TestCase):
         a = self.adapter_text()
         used = set(re.findall(r'Param/Value/GhostOpsTac_(\w+)', a))
         self.assertTrue({'AlertTitle', 'AlertText', 'SwannName', 'SwannText', 'ArrivalText', 'ObjectiveTitle', 'ObjectiveText'} <= used)
-        self.assertTrue(used <= set(build.TAC_TEXT_KEYS), used - set(build.TAC_TEXT_KEYS))
+        self.assertTrue(used <= set(build.TAC_TEXT_KEYS) | set(build.TAC_EXTRA_TEXT_KEYS), used - set(build.TAC_TEXT_KEYS))
         for forbidden in ('CameraPan', 'CinematicMode', 'CameraLock', 'SoundPlay', 'TriggerExecute(gt_'):
             self.assertNotIn(forbidden, a)
-        # exactly the three agreed clips, each played by its own queued transmission with an explicit duration
-        self.assertEqual(sorted(set(re.findall(r'GhostOps_Voice\("(\w+)"\)', a))), ['GhostOpsAdjutantAlert', 'GhostOpsGhostReady', 'GhostOpsSwannHelp'])
-        self.assertEqual(a.count('GhostOps_Scene_VoiceBegin();'), 3)
-        self.assertEqual(a.count('GhostOps_Scene_VoiceEnd();'), 3)
+        # the five short original lines (Adjutant, Raynor after the alarm, Swann, Ghost, Raynor at the hand-over of the rebels), each a clip step with an explicit duration;
+        # the explanations follow as separate talk steps (silent lip-sync drivers)
+        self.assertEqual(sorted(set(re.findall(r'GhostOps_ClipStep\("\w+", \d, "(\w+)"', a))), ['GhostOpsAdjutantAlert', 'GhostOpsGhostReady', 'GhostOpsRaynorDamn', 'GhostOpsRaynorTogether', 'GhostOpsSwannHelp'])
+        self.assertEqual(a.count('GhostOps_Scene_VoiceBegin();'), 5)
+        self.assertEqual(a.count('GhostOps_Scene_VoiceEnd();'), 5)
+        self.assertEqual(a.count('GhostOps_Talk('), 6)
         self.assertNotIn('TargetingPoint', a.split('GhostOps_Scene_GhostMsg')[1].split('void GhostOps_Scene_SendTransport')[0])
         # the Ghost line is said once for the pair: the guard is set before the thread starts, and nothing else triggers it
         self.assertEqual(a.count('GhostOps_Scene_GhostMsg"'), 1)
@@ -273,9 +277,10 @@ class StoryScene(unittest.TestCase):
         self.assertIn('TriggerQueueEnter();', a)  # behind the original talk, never over it
         self.assertEqual(a.count('TriggerQueueEnter();'), a.count('TriggerQueueExit();'))
         self.assertEqual(a.count('null, StringExternal("Param/Value/GhostOpsTac_'), 0)  # every transmission has its clip
-        self.assertIn('go_tacStoryAlertLen, c_transmissionDurationSet', a)
-        self.assertIn('go_tacStorySwannLen, c_transmissionDurationSet', a)
-        self.assertIn('go_tacStoryGhostLen, c_transmissionDurationSet', a)
+        # the lengths of the steps come from the configuration (the talk steps and the clip step of Swann)
+        self.assertIn('GhostOps_Talk("AdjutantPortrait_L", 4, go_tacStoryAlertLen)', a)
+        self.assertIn('go_tacStorySwannLen)', a)
+        self.assertIn('GhostOps_Talk("GhostPortrait", 5, go_tacStoryGhostLen)', a)
 
     def test_ghosts_come_only_by_transport_and_only_once(self):
         a = self.adapter_text()
@@ -347,7 +352,7 @@ class TacticalLauncher(unittest.TestCase):
         profiles = launcher_core.profiles_of('traynor02')
         self.assertEqual([(p['name'], p['label'], p['experimental']) for p in profiles], [('tactical', 'Тактический', True)])
         text = '\n'.join(launcher_core.detail_lines('traynor02', 'tactical'))
-        for needle in ('×20', 'зоне обороны', 'атаковать не могут', 'транспорте', 'Наводчик и Оперативник', '45/45', 'перезарядка 7', 'одна ракета', '12 с', '6 с', 'штатные'):
+        for needle in ('×20', 'зоне обороны', 'атаковать не могут', 'транспорте', 'Наводчик и Оперативник', '45/45', 'перезарядка 5', 'одна ракета', '12 с', '6 с', 'штатные', 'дальность наведения 24', 'Бронебойная граната', 'Панель призраков'):
             self.assertIn(needle, text)
         mission = launcher_core.mission_info('traynor02')
         self.assertNotIn('Нова', mission['description'])

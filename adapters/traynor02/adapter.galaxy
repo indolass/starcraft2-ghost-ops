@@ -104,6 +104,8 @@ void GhostOps_Scene_AddTips (int lp_from, int lp_to) {
 void GhostOps_Scene_SendTransport ();
 
 // Messages queue behind the original talk (TriggerQueueEnter) and never interrupt it.
+// Every scene: a short ORIGINAL line with its own sound and its exact subtitle (the portrait speaks it with the lip-sync of the original line), then the separate explanation of
+// the scenario (the portrait keeps talking: a chain of silent lip-sync drivers, see GhostOps_Talk). Explanations are shown in a larger style (text keys, tools/build.py).
 bool GhostOps_Scene_AlertMsg (bool lp_testConds, bool lp_runActions) {
     if (!lp_runActions) {
         return true;
@@ -112,15 +114,12 @@ bool GhostOps_Scene_AlertMsg (bool lp_testConds, bool lp_runActions) {
     TriggerQueueEnter();
     go_scBusy = true;
     GhostOps_Tac_Log("scene: alert message on screen");
-    if (!go_cfgNoVoice) {
-        GhostOps_Tac_Log("scene: clip lengths " + FixedToString(SoundLengthSync(GhostOps_Voice("GhostOpsAdjutantAlert")), 2) + " " + FixedToString(SoundLengthSync(GhostOps_Voice("GhostOpsSwannHelp")), 2) + " " + FixedToString(SoundLengthSync(GhostOps_Voice("GhostOpsGhostReady")), 2));
-    }
     GhostOps_Scene_VoiceBegin();
-    // the clip says "Alert." (its subtitle is exactly that); the explanation is a separate message of the same speaker, one second later
+    // the clip says "Alert." (its subtitle is exactly that); the explanation is a separate message of the same speaker
     GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsTac_AlertTitle"), StringExternal("Param/Value/GhostOpsTac_AlertClip"));
-    TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("AdjutantPortrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", GhostOps_Voice("GhostOpsAdjutantAlert"), null, null, 1.0, c_transmissionDurationSet, true);
+    GhostOps_ClipStep("AdjutantPortrait_L", 4, "GhostOpsAdjutantAlert", 1.0);
     GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsTac_AlertTitle"), StringExternal("Param/Value/GhostOpsTac_AlertText"));
-    TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("AdjutantPortrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", null, null, null, go_tacStoryAlertLen, c_transmissionDurationSet, true);
+    GhostOps_Talk("AdjutantPortrait_L", 4, go_tacStoryAlertLen);
     go_scBusy = false;
     if (go_tacScStage == 1) {
         go_tacScStage = 2;
@@ -134,7 +133,7 @@ bool GhostOps_Scene_AlertMsg (bool lp_testConds, bool lp_runActions) {
     return true;
 }
 
-// Raynor's explanation (portrait and text, no new audio): queued behind the original talk, inside the pause before Swann; said once.
+// Raynor after the alarm: a short line of his own, then the explanation (queued behind the original talk, inside the pause before Swann; said once).
 bool GhostOps_Scene_RaynorMsg (bool lp_testConds, bool lp_runActions) {
     if (!lp_runActions) {
         return true;
@@ -142,8 +141,12 @@ bool GhostOps_Scene_RaynorMsg (bool lp_testConds, bool lp_runActions) {
 
     TriggerQueueEnter();
     GhostOps_Tac_Log("scene: Raynor message on screen");
+    GhostOps_Scene_VoiceBegin();
+    GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsTac_RaynorName"), StringExternal("Param/Value/GhostOpsTac_RaynorClip"));
+    GhostOps_ClipStep("RaynorCommanderPortrait", 0, "GhostOpsRaynorDamn", 1.6);
     GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsTac_RaynorName"), StringExternal("Param/Value/GhostOpsTac_RaynorText"));
-    TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("RaynorCommanderPortrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", null, null, null, go_tacStoryRaynorLen, c_transmissionDurationSet, true);
+    GhostOps_Talk("RaynorCommanderPortrait", 0, go_tacStoryRaynorLen);
+    GhostOps_Scene_VoiceEnd();
     GhostOps_Tac_Log("scene: Raynor message finished");
     TriggerQueueExit();
     return true;
@@ -164,16 +167,16 @@ bool GhostOps_Scene_SwannMsg (bool lp_testConds, bool lp_runActions) {
     GhostOps_Tac_Log("scene: Swann message on screen");
     GhostOps_Scene_VoiceBegin();
     GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsTac_SwannName"), StringExternal("Param/Value/GhostOpsTac_SwannText"));
-    TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("SwannPortrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", GhostOps_Voice("GhostOpsSwannHelp"), null, null, go_tacStorySwannLen, c_transmissionDurationSet, true);
+    GhostOps_ClipStep("SwannPortrait", 1, "GhostOpsSwannHelp", go_tacStorySwannLen);
     GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsTac_SwannName"), StringExternal("Param/Value/GhostOpsTac_SwannExplain"));
-    TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("SwannPortrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", null, null, null, go_tacStoryArrivalLen, c_transmissionDurationSet, true);
+    GhostOps_Talk("SwannPortrait", 1, go_tacStoryArrivalLen);
     GhostOps_Scene_VoiceEnd();
     GhostOps_Tac_Log("scene: Swann message finished");
     TriggerQueueExit();
     return true;
 }
 
-// One short Ghost line when the unloading is over; said once for the pair (go_tacGhostSaid is set by the caller, before this runs).
+// One short Ghost line when the unloading is over; said once for the pair (go_tacGhostSaid is set by the caller, before this runs). The explanation: the Operative's two armor-piercing charges.
 bool GhostOps_Scene_GhostMsg (bool lp_testConds, bool lp_runActions) {
     if (!lp_runActions) {
         return true;
@@ -183,13 +186,88 @@ bool GhostOps_Scene_GhostMsg (bool lp_testConds, bool lp_runActions) {
     GhostOps_Tac_Log("scene: Ghost line on screen");
     GhostOps_Scene_VoiceBegin();
     GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsTac_GhostName"), StringExternal("Param/Value/GhostOpsTac_GhostText"));
-    TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("GhostPortrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", GhostOps_Voice("GhostOpsGhostReady"), null, null, go_tacStoryGhostLen, c_transmissionDurationSet, true);
+    GhostOps_ClipStep("GhostPortrait", 5, "GhostOpsGhostReady", 2.6);
     GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsTac_GhostName"), StringExternal("Param/Value/GhostOpsTac_GhostExplain"));
-    TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("GhostPortrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", null, null, null, go_tacStoryGhostLen, c_transmissionDurationSet, true);
+    GhostOps_Talk("GhostPortrait", 5, go_tacStoryGhostLen);
     GhostOps_Scene_VoiceEnd();
     GhostOps_Tac_Log("scene: Ghost line finished");
     TriggerQueueExit();
     return true;
+}
+
+// The rebels were handed over (the original dialogue is over, this scene is queued behind it): Raynor says what to do with the rescued units and the Barracks.
+// The home base is shown on the minimap, then the Barracks; nothing is moved for the player.
+unit GhostOps_Scene_RebelBarracks () {
+    unitgroup lv_g;
+    int lv_n;
+    int lv_i;
+    unit lv_u;
+    unit lv_best;
+    fixed lv_d;
+    fixed lv_bestD;
+
+    lv_g = UnitGroup("Barracks", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+    lv_n = UnitGroupCount(lv_g, c_unitCountAlive);
+    lv_best = null;
+    lv_bestD = -1.0;
+    lv_i = 1;
+    while (lv_i <= lv_n) {
+        lv_u = UnitGroupUnit(lv_g, lv_i);
+        lv_d = DistanceBetweenPoints(UnitGetPosition(lv_u), Point(go_tacZoneX, go_tacZoneY));
+        if (lv_d > lv_bestD) {
+            lv_bestD = lv_d;
+            lv_best = lv_u;
+        }
+
+        lv_i += 1;
+    }
+
+    if ((lv_best == null) || (lv_bestD < (go_tacZoneR + 4.0))) {
+        return null;
+    }
+
+    // the lift-off and the landing are standard abilities of the Barracks: make sure the campaign tech rules do not hide them
+    TechTreeAbilityAllow(1, AbilityCommand("BarracksLiftOff", 0), true);
+    TechTreeAbilityAllow(1, AbilityCommand("BarracksLand", 0), true);
+    return lv_best;
+}
+
+bool GhostOps_Scene_RebelHintMsg (bool lp_testConds, bool lp_runActions) {
+    unit lv_barracks;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    TriggerQueueEnter();
+    GhostOps_Tac_Log("scene: rebel hint, the original talk is over");
+    lv_barracks = GhostOps_Scene_RebelBarracks();
+    GhostOps_Scene_VoiceBegin();
+    GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsTac_RaynorName"), StringExternal("Param/Value/GhostOpsTac_RebelClip"));
+    GhostOps_ClipStep("RaynorCommanderPortrait", 0, "GhostOpsRaynorTogether", 1.8);
+    GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsTac_RaynorName"), StringExternal("Param/Value/GhostOpsTac_RebelHint1"));
+    MinimapPing(PlayerGroupAll(), Point(go_tacZoneX, go_tacZoneY), go_tacHintPing, Color(0.00, 100.00, 40.00));
+    GhostOps_Talk("RaynorCommanderPortrait", 0, go_tacHintFirstLen);
+    if (lv_barracks != null) {
+        GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsTac_RaynorName"), StringExternal("Param/Value/GhostOpsTac_RebelHint2"));
+        MinimapPing(PlayerGroupAll(), UnitGetPosition(lv_barracks), go_tacHintPing, Color(100.00, 70.00, 0.00));
+        GhostOps_Talk("RaynorCommanderPortrait", 0, go_tacHintSecondLen);
+    }
+
+    GhostOps_Scene_VoiceEnd();
+    GhostOps_Tac_Log("scene: rebel hint finished");
+    TriggerQueueExit();
+    return true;
+}
+
+// Hook of the original hand-over dialogue (gt_RebelsRescuedQ): once, after the original lines.
+void GhostOps_Scene_OnRebelsRescued () {
+    if (!go_tacEnabled || !go_tacHints || go_tacHintSaid) {
+        return;
+    }
+
+    go_tacHintSaid = true;
+    TriggerExecute(TriggerCreate("GhostOps_Scene_RebelHintMsg"), true, false);
 }
 
 // The transport with the two Ghosts (the only way the squad reaches the map in this variant).

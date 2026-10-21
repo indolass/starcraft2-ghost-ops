@@ -81,13 +81,13 @@ variant. If a map ever opens to an empty black screen, read `Documents\StarCraft
 | Raynor01 / own Marines | 45/45 HP / 1/1 HP | same | same |
 | Ghost energy | 100/100, +20/s outside cloak | same | same |
 | Cloak | free to start, net -10/s | same | same |
-| Snipe | 10 energy, 45 damage (ignores armour), 0.3 s cast, range 10 | same | same |
-| **Snipe cooldown** | **none** | **5 game seconds, per Ghost** | **10 game seconds** |
+| Snipe | 10 energy, 45 damage (ignores armour), 0.3 s cast, range 10 | same | **cost 0** (works at zero energy), otherwise the same |
+| **Snipe cooldown** | **none** | **5 game seconds, per Ghost** | **8 game seconds** (was 10; 2026-10-21, unconfirmed) |
 | EMP / nuclear strike | removed | same | same |
 | Status | Owner considers it playable | Owner: "сложно, но проходимо" (balance judgement) | experimental; the last balance change, still needs an in-game confirmation |
 
 Balance tuning of the first mission is finished on this set (easy / hard / extreme as above); the last change (extreme: one Ghost,
-45/45, Snipe cooldown 10 s) is not yet confirmed in the game. No further balance changes are planned for TRaynor01.
+45/45, Snipe cooldown 8 s and cost 0 since the seventh task, was 10 s) is not yet confirmed in the game. A status panel (energy bar, state, remaining cloak time) is shown in the missions 1-2. The new maps are `GhostOps_TRaynor01_r2_<profile>` (see below).
 
 Known limits of the launcher: it only lists missions this project can really start (*Вне закона* has one profile, *Тактический*;
 *Smash and Grab* is a prototype with its single existing way of starting, no invented profiles); the mission picture is the map's own minimap
@@ -163,6 +163,14 @@ game goes on from the same stage, never shows a finished message again and never
 
 Test launches of the game by the tools (not the Owner's launch) follow the rules in `CLAUDE.md`: second monitor, 1024x768 window, no sound,
 own PID only.
+
+**Seventh task (2026-10-21, experimental numbers, NOT Owner-approved; the Owner checks the balance):** new maps `GhostOps_TRaynor02_r2_tactical.SC2Map` (and
+`GhostOps_TRaynor01_r2_{easy,hard,extreme}`): the old-named maps stay untouched for started playthroughs. Changes: Snipe cost 0 and cooldown 5 s (old 7 s) for both
+Ghosts; nuke aim range 24 (old 12), and while the strike is really being aimed (effect `NukePersistent`, not the walk to the point) the cloak drain is paused (buff
+`GhostOpsAimHold`; detectors still see him); the Operative's *Бронебойная граната* (2 charges, 500 damage in radius 2.0, range 9, prep 0.8 s, no energy; only enemy
+ground vehicles and structures, one hit destroys the intact entrance bunker); once-only rebel-rescue scene (clip + two explanations, minimap pings, Barracks lift-off
+re-allowed); Raynor clip after the Adjutant alarm; the Ghost landing line about the two charges; larger explanation text; status panel; portraits move their mouth during
+clips and explanations (silent lip-sync drivers, see `docs/MISSION_ROADMAP.md`, seventh task).
 
 ### The first three missions and the campaign link (2026-10-20, experiment)
 

@@ -91,8 +91,8 @@ class CoreSquad(unittest.TestCase):
         self.assertIn('UnitGetType(lv_unit) == "Ghost"', t)  # only standard ghosts get the cloak order
         # one shot, not a periodic order loop
         self.assertIn('TriggerAddEventTimeElapsed(go_startStateTrigger', self.code)
-        # periodic triggers: the BaseSupport scan and the (config-gated) difficulty message only
-        self.assertEqual(self.code.count('TriggerAddEventTimePeriodic'), 3)
+        # periodic triggers: the BaseSupport scan, the (config-gated) difficulty message and the (config-gated) status panel only
+        self.assertEqual(self.code.count('TriggerAddEventTimePeriodic'), 4)
         self.assertNotIn('TriggerAddEventTimePeriodic(go_startStateTrigger', self.code)
 
     def test_operatives_never_get_the_army_bonus(self):

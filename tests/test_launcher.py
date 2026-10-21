@@ -89,7 +89,8 @@ class ProfilesTests(unittest.TestCase):
     def test_details_show_exact_numbers(self):
         extreme = '\n'.join(lc.detail_lines('traynor01', 'extreme'))
         self.assertIn('Призраки: 1, здоровье 45/45', extreme)
-        self.assertIn('Перезарядка Snipe: 10 с', extreme)
+        self.assertIn('Перезарядка Snipe: 8 с', extreme)
+        self.assertIn('Snipe: 0 энергии', extreme)
         self.assertNotIn('отдельно', extreme)
         self.assertIn('Призраки: 2, здоровье 100/100', '\n'.join(lc.detail_lines('traynor01', 'hard')))
         self.assertIn('5 с у каждого призрака отдельно', '\n'.join(lc.detail_lines('traynor01', 'hard')))

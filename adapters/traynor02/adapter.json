@@ -3,7 +3,7 @@
   "mission": "traynor02",
   "title": "The Outlaws",
   "source_map_file": "TRaynor02.SC2Map",
-  "output_map_file": "GhostOps_TRaynor02.SC2Map",
+  "output_map_file": "GhostOps_TRaynor02_r2.SC2Map",
   "script_member": "MapScript.galaxy",
   "adapter_source": "adapters/traynor02/adapter.galaxy",
   "config": "config/traynor02.poc.json",
@@ -20,6 +20,11 @@
       "function": "gt_RebelsCompleteQ_Func",
       "after": "libNtve_gf_RescueUnit(UnitGroupLoopCurrent(), gv_pLAYER_01_USER, true);",
       "call": "GhostOps_Tac_OnRescue(UnitGroupLoopCurrent());"
+    },
+    {
+      "function": "gt_RebelsRescuedQ_Func",
+      "after": "libCamp_gf_SetAllSoundChannelVolumesCampaign(2);",
+      "call": "GhostOps_Scene_OnRebelsRescued();"
     },
     {
       "function": "gt_VictoryDominionOutpostCompleted_Func",

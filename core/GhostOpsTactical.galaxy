@@ -66,6 +66,20 @@ trigger go_tacEffectTrig;
 trigger go_tacCreatedTrig;
 trigger go_tacSpotterDiedTrig;
 trigger go_tacAcademyDiedTrig;
+bool go_tacAimHold;            // the cloak drain is paused while the strike channel runs (TRaynor02)
+bool go_tacChannel;            // the Spotter is channelling the strike right now (saved with the game): set by the channel effect, never by the approach
+bool go_tacGrenade;            // the Operative's armor-piercing grenade (TRaynor02)
+int go_tacGrenadeMax;
+int go_tacGrenadeAmmo;         // charges left (saved with the game)
+bool go_tacHints;              // hints when the rebels are handed over (TRaynor02)
+bool go_tacHintSaid;           // said once (saved with the game)
+fixed go_tacHintDelay;
+fixed go_tacHintFirstLen;
+fixed go_tacHintSecondLen;
+fixed go_tacHintPing;
+fixed go_tacHintGap;
+trigger go_tacHoldTrig;
+trigger go_tacGrenadeTrig;
 
 void GhostOps_ApplyTacticalConfig ();
 void GhostOps_TacTest_Start ();
@@ -390,6 +404,12 @@ bool GhostOps_Tac_LoadedTick (bool lp_testConds, bool lp_runActions) {
         GhostOps_Tac_DrawRoles();
     }
 
+    if (go_tacGrenade && GhostOps_Tac_Alive(go_tacSpotter) && GhostOps_Tac_Alive(go_tacOperative)) {
+        UnitAbilityEnable(go_tacSpotter, "GhostOpsArmorPiercing", false);
+        UnitAbilityEnable(go_tacOperative, "GhostOpsArmorPiercing", go_tacGrenadeAmmo > 0);
+        go_pnGrenades = go_tacGrenadeAmmo;
+    }
+
     GhostOps_Tac_Log("loaded game: tags drawn again | stage " + IntToString(go_tacScStage) + " state " + IntToString(go_tacState) + " ghosts " + IntToString(UnitGroupCount(UnitGroup("Ghost", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive))
         + " nukes " + IntToString(UnitGroupCount(UnitGroup("Nuke", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive)) + " dropships " + IntToString(UnitGroupCount(UnitGroup("SpecialOpsDropship", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive)));
     return true;
@@ -501,6 +521,10 @@ bool GhostOps_Tac_AbilTick (bool lp_testConds, bool lp_runActions) {
 
     // stage 5 is the cancel of the channel (measured in the installed game): the stock chain spends the missile,
     // so the one missile is armed again for free. A launch never reaches this branch (state 4 by then).
+    if (lv_stage == 5) {
+        go_tacChannel = false;
+    }
+
     if ((lv_stage == 5) && (go_tacState == 3)) {
         go_tacState = 7;
         go_tacArmTries = 0;
@@ -529,6 +553,16 @@ bool GhostOps_Tac_EffectTick (bool lp_testConds, bool lp_runActions) {
         return true;
     }
 
+    if (lv_effect == "NukePersistent") {
+        // the channel itself (not the order and not the walk to the target) is the aiming
+        go_tacChannel = true;
+        GhostOps_Tac_Log("channel started");
+    }
+
+    if (lv_effect == "GhostOpsNukeFlight") {
+        go_tacChannel = false;
+    }
+
     if ((lv_effect == "GhostOpsNukeFlight") && ((go_tacState < 4) || (go_tacState == 7) || (go_tacState == 8))) {
         go_tacLaunches += 1;
         GhostOps_Tac_Say("Param/Value/GhostOpsTac_Launched");
@@ -553,6 +587,68 @@ bool GhostOps_Tac_EffectTick (bool lp_testConds, bool lp_runActions) {
 
     if ((lv_effect == "NukeDamage") && (go_tacState == 4)) {
         go_tacState = 5;
+    }
+
+    return true;
+}
+
+// Aiming: while the Spotter channels the strike and his cloak is on, the cloak drain is paused (buff GhostOpsAimHold: net change 0, so the energy neither drains nor
+// recovers). Detectors still see him. The pause ends with the launch, the cancel, or any other order that interrupts the channel; walking to the target is not aiming.
+bool GhostOps_Tac_HoldTick (bool lp_testConds, bool lp_runActions) {
+    bool lv_want;
+    order lv_order;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    if (!GhostOps_Tac_Alive(go_tacSpotter)) {
+        go_pnHold = false;
+        return true;
+    }
+
+    if (go_tacChannel) {
+        // the channel is over when the Spotter no longer executes the strike (another order, death of the channel by the engine)
+        if (UnitOrderCount(go_tacSpotter) == 0) {
+            go_tacChannel = false;
+        }
+        else {
+            lv_order = UnitOrder(go_tacSpotter, 0);
+            if (AbilityCommandGetAbility(OrderGetAbilityCommand(lv_order)) != "TacNukeStrike") {
+                go_tacChannel = false;
+            }
+        }
+    }
+
+    lv_want = go_tacChannel && GhostOps_CloakOn(go_tacSpotter);
+    if (lv_want && !UnitHasBehavior(go_tacSpotter, "GhostOpsAimHold")) {
+        UnitBehaviorAdd(go_tacSpotter, "GhostOpsAimHold", go_tacSpotter, 1);
+        GhostOps_Tac_Log("aim hold on");
+    }
+
+    if (!lv_want && UnitHasBehavior(go_tacSpotter, "GhostOpsAimHold")) {
+        UnitBehaviorRemove(go_tacSpotter, "GhostOpsAimHold", 1);
+        GhostOps_Tac_Log("aim hold off");
+    }
+
+    go_pnHold = UnitHasBehavior(go_tacSpotter, "GhostOpsAimHold");
+    return true;
+}
+
+// The armor-piercing grenade: a charge is spent once, when the launch effect is really used (an order that is cancelled before the shot costs nothing, a miss gives nothing back).
+bool GhostOps_Tac_GrenadeTick (bool lp_testConds, bool lp_runActions) {
+    if (!lp_runActions) {
+        return true;
+    }
+
+    if (go_tacGrenadeAmmo > 0) {
+        go_tacGrenadeAmmo -= 1;
+    }
+
+    go_pnGrenades = go_tacGrenadeAmmo;
+    GhostOps_Tac_Log("grenade shot, charges left " + IntToString(go_tacGrenadeAmmo));
+    if ((go_tacGrenadeAmmo <= 0) && GhostOps_Tac_Alive(go_tacOperative)) {
+        UnitAbilityEnable(go_tacOperative, "GhostOpsArmorPiercing", false);
     }
 
     return true;
@@ -607,6 +703,21 @@ void GhostOps_Tac_OnGhostsDelivered (unit lp_spotter, unit lp_operative) {
         UnitSetState(go_tacSpotter, c_unitStateTooltipable, true);
         UnitSetInfoText(go_tacOperative, StringExternal("Param/Value/GhostOpsTac_RoleOperative"), StringExternal("Param/Value/GhostOpsTac_InfoOperative"), StringExternal("Param/Value/GhostOpsTac_InfoOperative"));
         UnitSetState(go_tacOperative, c_unitStateTooltipable, true);
+    }
+
+    if (go_tacAimHold) {
+        go_tacHoldTrig = TriggerCreate("GhostOps_Tac_HoldTick");
+        TriggerAddEventTimePeriodic(go_tacHoldTrig, 0.25, c_timeGame);
+        go_pnHoldSlot = 0;
+    }
+
+    if (go_tacGrenade) {
+        go_tacGrenadeAmmo = go_tacGrenadeMax;
+        go_pnGrenades = go_tacGrenadeAmmo;
+        go_pnGrenadeSlot = 1;
+        UnitAbilityEnable(go_tacSpotter, "GhostOpsArmorPiercing", false);
+        go_tacGrenadeTrig = TriggerCreate("GhostOps_Tac_GrenadeTick");
+        TriggerAddEventPlayerEffectUsed(go_tacGrenadeTrig, 1, "GhostOpsAPLaunch");
     }
 
     if (go_tacSpotterDefeat) {

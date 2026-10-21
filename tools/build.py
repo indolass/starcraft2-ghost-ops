@@ -16,6 +16,7 @@ import json
 import os
 import re
 import shutil
+import struct
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
@@ -47,6 +48,12 @@ TAC_TEXT_PREFIX = 'Param/Value/GhostOpsTac_'
 TAC_TEXT_KEYS = ('ZoneLeft', 'RoleSpotter', 'RoleOperative', 'InfoSpotter', 'InfoOperative', 'NukeReady', 'Aiming', 'AimCancelled', 'Launched',
                  'SpotterLost', 'SpotterLostAfter', 'AcademyLost', 'AlertTitle', 'AlertText', 'SwannName', 'SwannText', 'GhostName', 'GhostText', 'ArrivalText',
                  'ObjectiveTitle', 'ObjectiveText', 'Tip1Title', 'Tip1Text', 'Tip2Title', 'Tip2Text', 'Tip3Title', 'Tip3Text', 'Tip4Title', 'Tip4Text', 'AlertClip', 'RaynorName', 'RaynorText', 'SwannExplain', 'GhostExplain', 'RoleGhost', 'InfoGhost')
+# Optional texts of the added features (grenade, rebel hints, Raynor's clip subtitle); only written when present in the config
+TAC_EXTRA_TEXT_KEYS = ('RaynorClip', 'GrenadeName', 'GrenadeTip', 'RebelHint1', 'RebelHint2', 'RebelClip')
+# Explanations are shown in a larger style (about +30% over the subtitle area font): <s val="AlertDisplay"> (measured in the game)
+EXPLAIN_STYLE = ('<s val=' + chr(34) + 'AlertDisplay' + chr(34) + '>', '</s>')
+TAC_EXPLAIN_KEYS = ('AlertText', 'RaynorText', 'SwannExplain', 'GhostExplain', 'RebelHint1', 'RebelHint2')
+SCENE_EXPLAIN_KEYS = ('Explain', 'Closing')
 # AbilArray indexes of the Ghost Academy in the merged campaign data (Liberty mod + Liberty campaign):
 # BuildInProgress 0, que5 1, ArmSiloWithNuke 2, GhostAcademyResearch 3, MercCompoundResearch 4, HeroArmNuke 5, SpectreNukeSiloArmMagazine 6
 ACADEMY_REMOVED_ABILS = (3, 4, 5, 6)
@@ -54,6 +61,7 @@ ACADEMY_REMOVED_ABILS = (3, 4, 5, 6)
 # a CSound entry with the clip id makes it playable with SoundLink("<id>", 0).
 AUDIO_DIR = 'Assets' + chr(92) + 'Sounds' + chr(92) + 'GhostOps' + chr(92)
 AUDIO_ID = re.compile(r'GhostOps[A-Za-z0-9]{3,40}')
+TALK_GROUPS = ('raynor', 'swann', 'horner', 'marine', 'adjutant', 'ghost')  # index = group number of GhostOps_Talk() in core/GhostOpsCore.galaxy
 SCENE_TEXT_PREFIX = 'Param/Value/GhostOpsScene_'
 HANSON_TEXT_PREFIX = 'Param/Value/GhostOpsH_'
 HANSON_TEXT_KEYS = ('BtnPreparing', 'BtnReady', 'BtnActive', 'ReadyMsg', 'SentMsg')
@@ -63,6 +71,8 @@ ZH_TEXT_KEYS = ('ObjTitle', 'ObjText', 'AllDestroyed', 'RaynorName', 'RaynorText
                 'RaynorClip', 'HornerClip', 'HornerWaitClip', 'RebelClip', 'RebelClipAlt', 'RescueClip', 'RescueClipAlt',
                 'Tip1Title', 'Tip1Text', 'Tip2Title', 'Tip2Text', 'Tip3Title', 'Tip3Text')
 ZH_ORDER_ITEMS = ('marines', 'bunkers', 'turrets', 'scvs')
+PANEL_TEXT_KEYS = ('Dead', 'Infinite', 'Cloak', 'Seconds', 'Regen', 'Hold', 'Ready', 'Grenades', 'Footer')  # plus Name0 .. Name<squad - 1>
+PANEL_TEXT_PREFIX = 'Param/Value/GhostOpsPanel_'
 ZH_VOICE_KEYS = ('raynor', 'horner', 'horner_wait', 'rebel', 'rebel_alt', 'rescue', 'rescue_alt')  # index order of go_zhVoiceId
 SCENE_TEXT_KEYS = ('RaynorName', 'RaynorLine', 'MarineName', 'MarineBLine', 'MarineALine', 'Explain', 'Closing')
 
@@ -135,6 +145,8 @@ def validate_config(cfg):
         errs.append('nukes_granted must be 0 in this version')
     if cfg.get('tactical') is not None:
         errs += validate_tactical(cfg)
+    if cfg.get('panel') is not None:
+        errs += validate_panel(cfg)
     if cfg.get('audio') is not None:
         errs += validate_audio(cfg['audio'])
     if cfg.get('scene') is not None:
@@ -334,9 +346,24 @@ def audio_clips(cfg):
             for c in (cfg.get('audio') or {}).get('clips', [])]
 
 
+def talk_clips(cfg):
+    """[(id, member, facial animation name, seconds)]: SILENT clips that only drive the mouth of a portrait. A portrait animates its mouth only while a sound with a
+    FacialAnim (the lip-sync animation of an original line, kept in the portrait's .fxa) plays; a transmission without a sound shows an almost still face.
+    They are no voice: a build without added voice keeps them."""
+    return [(c['id'], AUDIO_DIR + c['id'] + '.wav', c['facial'], c['seconds']) for c in (cfg.get('audio') or {}).get('talk', [])]
+
+
+def silent_wav(seconds, rate=22050):
+    n = int(rate * seconds)
+    return (b'RIFF' + struct.pack('<I', 36 + n * 2) + b'WAVEfmt ' + struct.pack('<IHHIIHH', 16, 1, 1, rate, rate * 2, 2, 16) + b'data' + struct.pack('<I', n * 2) + bytes(n * 2))
+
+
 def validate_audio(a):
     errs = []
+    errs += validate_talk(a)
     clips = a.get('clips') if isinstance(a, dict) else None
+    if clips is None and a.get('talk'):
+        return errs  # a build without added voice keeps only the silent talk drivers
     if not isinstance(clips, list) or not clips:
         return ['audio.clips must be a non-empty list of {"id", "source"}']
     ids, names = set(), set()
@@ -357,6 +384,16 @@ def validate_audio(a):
             errs.append('audio clip %s: id or file name used twice' % c['id'])
         ids.add(c['id'])
         names.add(os.path.basename(src).lower())
+        if 'facial' in c and not re.fullmatch(r'[A-Za-z0-9_]{3,60}', str(c['facial'])):
+            errs.append('audio clip %s: facial must be the name of a facial animation' % c['id'])
+    return errs
+
+
+def validate_talk(a):
+    errs = []
+    for c in a.get('talk', []) if isinstance(a, dict) else []:
+        if not isinstance(c, dict) or not AUDIO_ID.fullmatch(str(c.get('id', ''))) or not re.fullmatch(r'[A-Za-z0-9_]{3,60}', str(c.get('facial', ''))) or not _num(c.get('seconds')) or not 0.5 <= c['seconds'] <= 30 or c.get('group') not in TALK_GROUPS:
+            errs.append('audio.talk entries need id (GhostOps...), facial (animation name), seconds 0.5..30 and group %s (got %r)' % (TALK_GROUPS, c))
     return errs
 
 
@@ -434,16 +471,66 @@ def validate_tactical(cfg):
         errs.append('tactical.nuke.both_may_aim and tactical.spotter_defeat must be boolean')
     if not num(n.get('range'), 1, 30):
         errs.append('tactical.nuke.range must be 1..30')
+    if 'aim_cloak_hold' in n and not isinstance(n['aim_cloak_hold'], bool):
+        errs.append('tactical.nuke.aim_cloak_hold must be boolean')
+    if 'require_vision' in n and not isinstance(n['require_vision'], bool):
+        errs.append('tactical.nuke.require_vision must be boolean (the strike point must be visible)')
+    if n.get('aim_cloak_hold') and (cfg.get('ghost_tuning') or {}).get('cloak_net_per_second', 0) >= 0:
+        errs.append('tactical.nuke.aim_cloak_hold needs a cloak that costs energy (ghost_tuning.cloak_net_per_second < 0)')
+    gr = t.get('grenade')
+    if gr is not None:
+        if not isinstance(gr, dict) or not isinstance(gr.get('enabled'), bool):
+            errs.append('tactical.grenade.enabled must be boolean')
+        else:
+            if not isinstance(gr.get('charges'), int) or isinstance(gr.get('charges'), bool) or not 1 <= gr['charges'] <= 6:
+                errs.append('tactical.grenade.charges must be an integer 1..6')
+            for k, (lo, hi) in {'damage': (1, 3000), 'radius': (0.5, 6), 'range': (3, 20), 'prep_time': (0, 3)}.items():
+                if not num(gr.get(k), lo, hi):
+                    errs.append('tactical.grenade.%s must be a number %s..%s' % (k, lo, hi))
+            if gr['enabled'] and cfg['operatives'].get('squad') != ['Ghost', 'Ghost']:
+                errs.append('tactical.grenade needs the two-Ghost squad (the second Ghost is the Operative)')
+            for k in ('GrenadeName', 'GrenadeTip'):
+                if gr['enabled'] and k not in t.get('texts', {}):
+                    errs.append('tactical.texts.%s is needed by the grenade' % k)
+    rh = t.get('rebel_hints')
+    if rh is not None:
+        if not isinstance(rh, dict) or not isinstance(rh.get('enabled'), bool):
+            errs.append('tactical.rebel_hints.enabled must be boolean')
+        else:
+            for k, (lo, hi) in {'delay': (0, 30), 'first_seconds': (3, 40), 'second_seconds': (3, 40), 'ping_seconds': (1, 20), 'gap': (0, 30)}.items():
+                if not num(rh.get(k), lo, hi):
+                    errs.append('tactical.rebel_hints.%s must be a number %s..%s' % (k, lo, hi))
     texts = t.get('texts', {})
     for k in TAC_TEXT_KEYS:
         v = texts.get(k)
         if not isinstance(v, dict) or not all(isinstance(v.get(l), str) and v[l] and '\n' not in v[l] for l in ('ru', 'en')):
+            errs.append('tactical.texts.%s needs non-empty single-line ru and en texts' % k)
+    for k in TAC_EXTRA_TEXT_KEYS:
+        v = texts.get(k)
+        if v is not None and (not isinstance(v, dict) or not all(isinstance(v.get(l), str) and v[l] and '\n' not in v[l] for l in ('ru', 'en'))):
             errs.append('tactical.texts.%s needs non-empty single-line ru and en texts' % k)
     return errs
 
 
 def _num(v):
     return isinstance(v, (int, float)) and not isinstance(v, bool)
+
+
+def validate_panel(cfg):
+    """The status panel of the specialists (config key "panel", core/GhostOpsCore.galaxy)."""
+    p = cfg['panel']
+    if not isinstance(p, dict) or not isinstance(p.get('enabled'), bool):
+        return ['panel.enabled must be boolean']
+    errs = []
+    texts = p.get('texts', {})
+    need = list(PANEL_TEXT_KEYS) + ['Name%d' % i for i in range(len(cfg['operatives']['squad']))]
+    if p['enabled'] and not set(need) <= set(texts):
+        errs.append('panel.texts must have at least the keys %s' % (need,))
+    for k in need:
+        v = texts.get(k)
+        if p['enabled'] and (not isinstance(v, dict) or not all(isinstance(v.get(l), str) and v[l] and chr(10) not in v[l] for l in ('ru', 'en'))):
+            errs.append('panel.texts.%s needs non-empty single-line ru and en texts' % k)
+    return errs
 
 
 def validate_ghost_tuning(gt):
@@ -521,7 +608,7 @@ def ghost_tuning_fragments(gt):
     }
 
 
-def tactical_fragments(t):
+def tactical_fragments(t, gt=None):
     """Catalog overrides of the tactical variant (map local): two weapon behaviors, the Ghost Academy and
     the missile, and the changed chain of the nuclear strike. Times are game seconds."""
     g = lambda v: '%g' % v  # noqa: E731
@@ -541,6 +628,32 @@ def tactical_fragments(t):
             '    </CBehaviorBuff>',
         ]
 
+    gr = t.get('grenade') or {}
+    hold = ((-gt['cloak_net_per_second']) if gt and t['nuke'].get('aim_cloak_hold') else 0)
+    extra_beh = []
+    if hold > 0:
+        # while the strike channel runs the cloak drain is cancelled: net change under the cloak = cloak_net, so +(-cloak_net) makes it exactly 0 (the energy neither drains nor recovers)
+        extra_beh = ['    <CBehaviorBuff id="GhostOpsAimHold">', '        <InfoFlags index="Hidden" value="1"/>', '        <Modification>',
+                     '            <VitalRegenArray index="Energy" value="%s"/>' % g(hold), '        </Modification>', '    </CBehaviorBuff>']
+    abil_extra, button, effects = [], [], []
+    if gr.get('enabled'):
+        abil_extra = ['    <CAbilEffectTarget id="GhostOpsArmorPiercing">', '        <EditorCategories value="Race:Terran,AbilityorEffectType:Units"/>',
+                      '        <Effect index="0" value="GhostOpsAPLaunch"/>', '        <Range value="%s"/>' % g(gr['range']), '        <CastIntroTime value="%s"/>' % g(gr['prep_time']),
+                      '        <CursorEffect value="GhostOpsAPSearch"/>', '        <CmdButtonArray index="Execute" DefaultButtonFace="GhostOpsArmorPiercing"/>',
+                      '    </CAbilEffectTarget>']
+        button = ['    <CButton id="GhostOpsArmorPiercing">', '        <Icon value="Assets' + chr(92) + 'Textures' + chr(92) + 'btn-ability-terran-punishergrenade-color.dds"/>',
+                  '        <AlertIcon value="Assets' + chr(92) + 'Textures' + chr(92) + 'btn-ability-terran-punishergrenade-color.dds"/>', '        <EditorCategories value="Race:Terran"/>', '    </CButton>']
+        effects = ['    <CEffectLaunchMissile id="GhostOpsAPLaunch">', '        <EditorCategories value="Race:Terran"/>', '        <ImpactEffect value="GhostOpsAPSearch"/>',
+                   '        <ImpactLocation Value="TargetPoint"/>', '        <AmmoUnit value="PunisherGrenadesLMWeapon"/>', '    </CEffectLaunchMissile>',
+                   '    <CEffectEnumArea id="GhostOpsAPSearch">', '        <EditorCategories value="Race:Terran"/>', '        <LaunchLocation Value="TargetPoint"/>', '        <ImpactLocation Value="TargetPoint"/>',
+                   '        <AreaArray Radius="%s" Effect="GhostOpsAPDamage"/>' % g(gr['radius']),
+                   # ground enemy MACHINES and STRUCTURES only: Mechanical and not Biological (an SCV is both and stays out), no air, no own / allied / neutral units, no missiles
+                   '        <SearchFilters value="Ground,Mechanical,Visible;Player,Ally,Neutral,Biological,Air,Missile,Stasis,Dead,Hidden,Invulnerable"/>', '    </CEffectEnumArea>',
+                   '    <CEffectDamage id="GhostOpsAPDamage">', '        <EditorCategories value="Race:Terran"/>', '        <Kind value="Splash"/>', '        <Amount value="%s"/>' % g(gr['damage']), '        <Flags index="Notification" value="1"/>',
+                   '        <ResponseFlags index="Acquire" value="1"/>', '    </CEffectDamage>']
+    ghost_unit = (['    <CUnit id="Ghost">', '        <AbilArray Link="GhostOpsArmorPiercing"/>', '        <CardLayouts index="0">',
+                   '            <LayoutButtons Face="GhostOpsArmorPiercing" Type="AbilCmd" AbilCmd="GhostOpsArmorPiercing,Execute" Row="1" Column="1"/>', '        </CardLayouts>', '    </CUnit>']
+                  if gr.get('enabled') else [])
     return {
         'UnitData.xml': nl.join(
             ['    <CUnit id="GhostAcademy">']
@@ -549,8 +662,9 @@ def tactical_fragments(t):
                '    <CUnit id="Nuke">',
                '        <CostResource index="Minerals" value="0"/>',
                '        <CostResource index="Vespene" value="0"/>',
-               '    </CUnit>', '']),
-        'BehaviorData.xml': nl.join(behavior('GhostOpsGarrisonDamage', gm) + ['']),
+               '    </CUnit>'] + ghost_unit + ['']),
+        'BehaviorData.xml': nl.join(behavior('GhostOpsGarrisonDamage', gm) + extra_beh + ['']),
+        'ButtonData.xml': nl.join(button + ['']) if button else '',
         'RequirementData.xml': nl.join([
             '    <CRequirement id="TrainNuke">',
             '        <NodeArray index="Use" Link="Not866976074CountUnitNukeQueuedOrBetterAtUnit"/>',
@@ -561,9 +675,10 @@ def tactical_fragments(t):
             '        <InfoArray index="Ammo1" Time="%s"/>' % g(t['academy']['arm_time']),
             '    </CAbilArmMagazine>',
             '    <CAbilEffectTarget id="TacNukeStrike">',
-            '        <Range value="%s"/>' % g(n['range']),
+            '        <Range index="0" value="%s"/>' % g(n['range']),
             '        <FinishTime value="0"/>',
-            '    </CAbilEffectTarget>', '']),
+        ] + (['        <Flags index="RequireTargetVision" value="1"/>'] if n.get('require_vision') else []) + [
+            '    </CAbilEffectTarget>'] + abil_extra + ['']),
         'EffectData.xml': nl.join([
             '    <CEffectCreatePersistent id="NukePersistent">',
             '        <InitialDelay value="0"/>',
@@ -578,8 +693,28 @@ def tactical_fragments(t):
             '    <CEffectCreatePersistent id="NukeDetonate">',
             '        <InitialDelay value="0"/>',
             '    </CEffectCreatePersistent>',
-        ]),
+        ] + effects),
     }
+
+
+def merge_same_id(xml, tag, ident):
+    """One element per id in a fragment: the inner lines of a second <tag id=ident> block move into the first (the game layers the fragment on the original data; two blocks of one id would be two layers)."""
+    start = '<%s id="%s">' % (tag, ident)
+    end = '</%s>' % tag
+    first = xml.find(start)
+    if first < 0:
+        return xml
+    pos = xml.find(start, first + len(start))
+    while pos >= 0:
+        stop = xml.index(end, pos)
+        inner = xml[pos + len(start):stop]
+        line_start = xml.rfind(chr(10), 0, pos) + 1
+        line_end = xml.index(chr(10), stop) + 1 if chr(10) in xml[stop:] else len(xml)
+        xml = xml[:line_start] + xml[line_end:]
+        first_end = xml.index(end, first)
+        xml = xml[:first_end] + inner.strip(chr(10)) + chr(10) + '    ' + xml[first_end:]
+        pos = xml.find(start, first + len(start))
+    return xml
 
 
 def catalog_fragments(cfg):
@@ -591,12 +726,18 @@ def catalog_fragments(cfg):
         for name, frag in ghost_tuning_fragments(cfg['ghost_tuning']).items():
             frags[name] = frags.get(name, '') + frag
     if cfg.get('tactical'):
-        for name, frag in tactical_fragments(cfg['tactical']).items():
-            frags[name] = frags.get(name, '') + frag
-    clips = audio_clips(cfg)
-    if clips:
-        frags['SoundData.xml'] = frags.get('SoundData.xml', '') + chr(10).join(
-            '    <CSound id="%s" parent="SM_Old">%s        <Mode value="2D"/>%s        <AssetArray File="%s"/>%s    </CSound>' % (cid, chr(10), chr(10), member, chr(10)) for cid, _, member in clips) + chr(10)
+        for name, frag in tactical_fragments(cfg['tactical'], cfg.get('ghost_tuning')).items():
+            if frag:
+                frags[name] = frags.get(name, '') + frag
+    if 'UnitData.xml' in frags:
+        frags['UnitData.xml'] = merge_same_id(frags['UnitData.xml'], 'CUnit', 'Ghost')
+    facial = {c['id']: c['facial'] for c in (cfg.get('audio') or {}).get('clips', []) if c.get('facial')}
+    sounds = ['    <CSound id="%s" parent="SM_Old">%s        <Mode value="2D"/>%s        <AssetArray File="%s"%s/>%s    </CSound>' % (
+        cid, chr(10), chr(10), member, (' FacialAnim="%s"' % facial[cid]) if cid in facial else '', chr(10)) for cid, _, member in audio_clips(cfg)]
+    sounds += ['    <CSound id="%s" parent="SM_Old">%s        <Mode value="2D"/>%s        <AssetArray File="%s" FacialAnim="%s"/>%s    </CSound>' % (
+        tid, chr(10), chr(10), member, fa, chr(10)) for tid, member, fa, _ in talk_clips(cfg)]
+    if sounds:
+        frags['SoundData.xml'] = frags.get('SoundData.xml', '') + chr(10).join(sounds) + chr(10)
     return frags
 
 
@@ -613,6 +754,8 @@ def gen_config(cfg):
               '    go_cfgGhostPermanentCloak = %s;' % b(op['ghost_permanent_cloak']),
               '    go_cfgGhostStartCloaked = %s;' % b(op['ghost_start_cloaked']),
               '    go_cfgNoVoice = %s;' % b(cfg.get('_no_voice')),
+              ] + talk_lines(cfg) + [
+
               '    go_cfgShowDifficulty = %s;' % b(cfg['difficulty']['show_message']),
               '    go_cfgExpectedDifficulty = %d;' % cfg['difficulty']['expected'],
               '    go_cfgShowTuning = %s;' % b(bool(cfg.get('ghost_tuning'))),
@@ -629,6 +772,36 @@ def gen_config(cfg):
         lines.append('    TechTreeAbilityAllow(lp_player, AbilityCommand("%s", 0), false);' % ab)
     lines += ['}', '']
     return chr(10).join(lines)
+
+
+def talk_lines(cfg):
+    """Constants of the talk drivers: silent lip-sync clips per speaker group (GhostOps_Talk chains them while a portrait explains something)."""
+    talk = (cfg.get('audio') or {}).get('talk', [])
+    lines = []
+    idx = 0
+    for gi, g in enumerate(TALK_GROUPS):
+        members = [t for t in talk if t['group'] == g]
+        lines.append('    go_talkFirst[%d] = %d;' % (gi, idx))
+        lines.append('    go_talkCount[%d] = %d;' % (gi, len(members)))
+        for t in members:
+            lines.append('    go_talkId[%d] = "%s";' % (idx, t['id']))
+            lines.append('    go_talkLen[%d] = %.1f;' % (idx, t['seconds']))
+            idx += 1
+    return lines
+
+
+def gen_panel(cfg):
+    """GhostOps_ApplyPanelConfig(): the status panel of the specialists (disabled without the config key "panel")."""
+    p = cfg.get('panel') or {}
+    gt = cfg.get('ghost_tuning') or {}
+    b = lambda v: 'true' if v else 'false'  # noqa: E731
+    on = bool(p.get('enabled'))
+    return chr(10).join(['// Generated panel configuration', 'void GhostOps_ApplyPanelConfig () {', '    go_pnEnabled = %s;' % b(on),
+                         '    go_pnCount = %d;' % len(cfg['operatives']['squad']),
+                         '    go_pnNet = %.3f;' % (gt['cloak_net_per_second'] if gt else -0.9),
+                         '    go_pnRegen = %.3f;' % (gt['regen_per_second'] if gt else 0.5625),
+                         '    go_pnPermanent = %s;' % b(cfg['operatives']['ghost_permanent_cloak']),
+                         '    go_pnGrenades = -1;', '    go_pnGrenadeSlot = 1;', '    go_pnHoldSlot = 0;', '}', '']) + chr(10)
 
 
 def gen_tactical(cfg):
@@ -662,6 +835,15 @@ def gen_tactical(cfg):
         '    go_tacSpotterDefeat = %s;' % b(t.get('spotter_defeat', True)),
         '    go_tacStoryRaynorDelay = %.1f;' % t['story']['raynor_delay'],
         '    go_tacStoryRaynorLen = %.1f;' % t['story']['raynor_seconds'],
+        '    go_tacAimHold = %s;' % b(t['nuke'].get('aim_cloak_hold')),
+        '    go_tacGrenade = %s;' % b((t.get('grenade') or {}).get('enabled')),
+        '    go_tacGrenadeMax = %d;' % (t.get('grenade') or {}).get('charges', 0),
+        '    go_tacHints = %s;' % b((t.get('rebel_hints') or {}).get('enabled')),
+        '    go_tacHintDelay = %.1f;' % (t.get('rebel_hints') or {}).get('delay', 0),
+        '    go_tacHintFirstLen = %.1f;' % (t.get('rebel_hints') or {}).get('first_seconds', 8),
+        '    go_tacHintSecondLen = %.1f;' % (t.get('rebel_hints') or {}).get('second_seconds', 6),
+        '    go_tacHintPing = %.1f;' % (t.get('rebel_hints') or {}).get('ping_seconds', 5),
+        '    go_tacHintGap = %.1f;' % (t.get('rebel_hints') or {}).get('gap', 6),
         '}', '']
     return chr(10).join(lines)
 
@@ -892,9 +1074,21 @@ def text_entries(cfg):
     t = cfg.get('tactical')
     if t:
         for loc, lang in (('ruRU', 'ru'), ('enUS', 'en')):
-            for k in TAC_TEXT_KEYS:
+            for k in TAC_TEXT_KEYS + tuple(k for k in TAC_EXTRA_TEXT_KEYS if k in t['texts']):
                 v = t['texts'][k][lang].replace('{aim_time}', '%g' % t['nuke']['aim_time']).replace('{flight_time}', '%g' % t['nuke']['flight_time'])
+                if k in TAC_EXPLAIN_KEYS:
+                    v = EXPLAIN_STYLE[0] + v + EXPLAIN_STYLE[1]
                 out.setdefault(loc, []).append((TAC_TEXT_PREFIX + k, v))
+            if t.get('grenade'):
+                g = t['texts']
+                out.setdefault(loc, []).append(('Button/Name/GhostOpsArmorPiercing', g['GrenadeName'][lang]))
+                out.setdefault(loc, []).append(('Button/Tooltip/GhostOpsArmorPiercing', g['GrenadeTip'][lang]))
+                out.setdefault(loc, []).append(('Button/Hotkey/GhostOpsArmorPiercing', 'E'))
+    pn = cfg.get('panel')
+    if pn and pn.get('enabled'):
+        for loc, lang in (('ruRU', 'ru'), ('enUS', 'en')):
+            for k, v in pn['texts'].items():
+                out.setdefault(loc, []).append((PANEL_TEXT_PREFIX + k, v[lang]))
     hs = cfg.get('hanson')
     if hs:
         for loc, lang in (('ruRU', 'ru'), ('enUS', 'en')):
@@ -909,7 +1103,10 @@ def text_entries(cfg):
     if sc:
         for loc, lang in (('ruRU', 'ru'), ('enUS', 'en')):
             for k in SCENE_TEXT_KEYS:
-                out.setdefault(loc, []).append((SCENE_TEXT_PREFIX + k, sc['texts'][k][lang]))
+                v = sc['texts'][k][lang]
+                if k == 'Closing':  # the explanation is shown in the larger style (the Explain text is a directive and is large already)
+                    v = EXPLAIN_STYLE[0] + v + EXPLAIN_STYLE[1]
+                out.setdefault(loc, []).append((SCENE_TEXT_PREFIX + k, v))
     return out
 
 
@@ -933,7 +1130,7 @@ def build_block(adapter, cfg):
         extra += gen_ce0(cfg) + '\n'
     if cfg.get('campaign'):
         extra += gen_campaign(cfg) + '\n'
-    return core.rstrip() + '\n\n' + gen_config(cfg) + '\n' + extra + ad
+    return core.rstrip() + '\n\n' + gen_config(cfg) + '\n' + gen_panel(cfg) + '\n' + extra + ad
 
 
 def needs_nova_patch(cfg):
@@ -985,8 +1182,11 @@ def resolve_config(adapter, preset=None, diag=False, no_voice=False):
                           'message_en': presets[name].get('message_en', presets[name]['message'])}
     if diag:
         cfg = deep_merge(cfg, {'difficulty': {'show_message': True}})
+    raw_audio = cfg.get('audio')
     if no_voice:  # explicit variant without added voice: no clip is imported or played, portraits / texts / order of the scenes are unchanged
         cfg = {k: v for k, v in cfg.items() if k != 'audio'}
+        if (raw_audio or {}).get('talk'):
+            cfg['audio'] = {'talk': raw_audio['talk']}  # silent mouth drivers are not voice
         cfg['_no_voice'] = True
     return cfg, name
 
@@ -1162,6 +1362,11 @@ def cmd_build(args):
         arc.set_file(member, wav)
         new_members.append(member)
         manifest['audio'].append({'id': cid, 'member': member, 'source': os.path.relpath(srcfile, ROOT).replace(chr(92), '/'), 'sha256': sha256(wav)})
+    for tid, member, fa, secs in talk_clips(cfg):
+        wav = silent_wav(secs)
+        arc.set_file(member, wav)
+        new_members.append(member)
+        manifest['audio'].append({'id': tid, 'member': member, 'source': 'silent:%g' % secs, 'sha256': sha256(wav)})
     if new_members:
         arc.update_listfile(new_members)
     manifest['text_patches'] = []

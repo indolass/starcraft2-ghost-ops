@@ -36,23 +36,16 @@ void GhostOps_Scene_Say (text lp_speaker, text lp_line) {
 }
 
 bool GhostOps_T1_SceneMsg (bool lp_testConds, bool lp_runActions) {
-    transmissionsource lv_raynor;
-
     if (!lp_runActions) {
         return true;
     }
 
     TriggerQueueEnter();
-    lv_raynor = TransmissionSourceFromModel(null);
-    if (go_sceneRaynor != null) {
-        lv_raynor = TransmissionSourceFromUnit(go_sceneRaynor, true, false, "Talk");
-    }
-
     GhostOps_Scene_Log("scene: Raynor line on screen");
     libCamp_gf_SetAllSoundChannelVolumesCampaign(1);
     libLbty_gf_PlayTransmissionCueSound(PlayerGroupAll());
     GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsScene_RaynorName"), StringExternal("Param/Value/GhostOpsScene_RaynorLine"));
-    TransmissionSend(PlayerGroupAll(), lv_raynor, libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", go_sceneRaynorClip, null, null, go_sceneRaynorLen, c_transmissionDurationSet, true);
+    GhostOps_ClipStepLink("RaynorMarinePortrait", 0, go_sceneRaynorClip, go_sceneRaynorLen);
     libCamp_gf_SetAllSoundChannelVolumesCampaign(2);
     GhostOps_Scene_Log("scene: Raynor line finished");
     Wait(go_scenePause, c_timeReal);
@@ -61,7 +54,7 @@ bool GhostOps_T1_SceneMsg (bool lp_testConds, bool lp_runActions) {
     libCamp_gf_SetAllSoundChannelVolumesCampaign(1);
     libLbty_gf_PlayTransmissionCueSound(PlayerGroupAll());
     GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsScene_MarineName"), StringExternal("Param/Value/GhostOpsScene_MarineBLine"));
-    TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("Marine1Portrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", go_sceneMarineBClip, null, null, go_sceneMarineBLen, c_transmissionDurationSet, true);
+    GhostOps_ClipStepLink("MarinePortrait", 3, go_sceneMarineBClip, go_sceneMarineBLen);
     libCamp_gf_SetAllSoundChannelVolumesCampaign(2);
     GhostOps_Scene_Log("scene: Marine B line finished");
     Wait(go_scenePause, c_timeReal);
@@ -69,12 +62,12 @@ bool GhostOps_T1_SceneMsg (bool lp_testConds, bool lp_runActions) {
     libCamp_gf_SetAllSoundChannelVolumesCampaign(1);
     libLbty_gf_PlayTransmissionCueSound(PlayerGroupAll());
     GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsScene_MarineName"), StringExternal("Param/Value/GhostOpsScene_MarineALine"));
-    TransmissionSend(PlayerGroupAll(), TransmissionSourceFromModel("Marine2Portrait"), libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", go_sceneMarineAClip, null, null, go_sceneMarineALen, c_transmissionDurationSet, true);
+    GhostOps_ClipStepLink("MarinePortrait", 3, go_sceneMarineAClip, go_sceneMarineALen);
     libCamp_gf_SetAllSoundChannelVolumesCampaign(2);
     GhostOps_Scene_Log("scene: Marine A line finished");
     // Raynor's closing words: portrait and text only (no new audio); the explanation stays in the task / subtitle area
     GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsScene_RaynorName"), StringExternal("Param/Value/GhostOpsScene_Closing"));
-    TransmissionSend(PlayerGroupAll(), lv_raynor, libNtve_gf_CinematicPortrait(libNtve_ge_CinematicPortraitPosition_CenterLeft), "Talk", null, null, null, go_sceneClosingLen, c_transmissionDurationSet, true);
+    GhostOps_Talk("RaynorMarinePortrait", 0, go_sceneClosingLen);
     GhostOps_Scene_Log("scene: Raynor closing words finished");
     TriggerQueueExit();
     return true;

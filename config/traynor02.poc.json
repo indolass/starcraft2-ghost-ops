@@ -53,7 +53,10 @@
         "Обученные морпехи: 1 здоровье, атаковать не могут",
         "Спасённые повстанцы: обычные морпехи и медики",
         "Два призрака 45/45 прилетают на транспорте через несколько десятков секунд после начала: Наводчик и Оперативник, невосполнимые",
-        "Одна ядерная ракета, только у Наводчика: наведение 12 с, отход 6 с",
+        "Snipe: перезарядка 5 с у каждого призрака отдельно, энергия не расходуется",
+        "Одна ядерная ракета, только у Наводчика: дальность наведения 24 (была 12), наведение 12 с, отход 6 с; во время наведения расход маскировки приостановлен",
+        "Оперативник: «Бронебойная граната», 2 заряда на миссию — разрушает вражескую наземную технику и здания (не пехоту, не воздух)",
+        "Панель призраков (энергия и маскировка), подсказки при спасении повстанцев",
         "Смерть Наводчика до запуска — поражение; после запуска ракета долетает",
         "Нова, медики и усиление армии не используются"
       ],
@@ -62,15 +65,102 @@
           "clips": [
             {
               "id": "GhostOpsAdjutantAlert",
-              "source": "assets/audio/traynor02/adjutant_alert.wav"
+              "source": "assets/audio/traynor02/adjutant_alert.wav",
+              "facial": "TTychus01Adjutant00010"
             },
             {
               "id": "GhostOpsSwannHelp",
-              "source": "assets/audio/traynor02/swann_B.wav"
+              "source": "assets/audio/traynor02/swann_B.wav",
+              "facial": "THanson03ABriefingSwann00003"
             },
             {
               "id": "GhostOpsGhostReady",
-              "source": "assets/audio/traynor02/ghost_ready00.wav"
+              "source": "assets/audio/traynor02/ghost_ready00.wav",
+              "facial": "Ghost_Ready00"
+            },
+            {
+              "id": "GhostOpsRaynorDamn",
+              "source": "assets/audio/traynor02/raynor_damn.wav",
+              "facial": "TTychus01Raynor00012"
+            },
+            {
+              "id": "GhostOpsRaynorTogether",
+              "source": "assets/audio/traynor02/raynor_onward.wav",
+              "facial": "TTychus03Raynor00011"
+            }
+          ],
+          "talk": [
+            {
+              "id": "GhostOpsTalkRaynor1",
+              "facial": "THanson02Raynor00011",
+              "seconds": 3.3,
+              "group": "raynor"
+            },
+            {
+              "id": "GhostOpsTalkRaynor2",
+              "facial": "TTosh03ARaynor00004",
+              "seconds": 3.3,
+              "group": "raynor"
+            },
+            {
+              "id": "GhostOpsTalkRaynor3",
+              "facial": "TTychus04Raynor00021",
+              "seconds": 3.1,
+              "group": "raynor"
+            },
+            {
+              "id": "GhostOpsTalkRaynor4",
+              "facial": "THanson02Raynor00013",
+              "seconds": 3.0,
+              "group": "raynor"
+            },
+            {
+              "id": "GhostOpsTalkSwann1",
+              "facial": "THanson02Swann00001",
+              "seconds": 8.7,
+              "group": "swann"
+            },
+            {
+              "id": "GhostOpsTalkSwann2",
+              "facial": "THanson01Swann00046",
+              "seconds": 7.4,
+              "group": "swann"
+            },
+            {
+              "id": "GhostOpsTalkAdjutant1",
+              "facial": "TRaynor02Adjutant00006",
+              "seconds": 4.2,
+              "group": "adjutant"
+            },
+            {
+              "id": "GhostOpsTalkAdjutant2",
+              "facial": "TRaynor02Adjutant00031",
+              "seconds": 3.4,
+              "group": "adjutant"
+            },
+            {
+              "id": "GhostOpsTalkAdjutant3",
+              "facial": "TRaynor02Adjutant00001",
+              "seconds": 3.3,
+              "group": "adjutant"
+            },
+            {
+              "id": "GhostOpsTalkGhost1",
+              "facial": "Ghost_What02",
+              "seconds": 2.3,
+              "group": "ghost"
+            },
+            {
+              "id": "GhostOpsTalkGhost2",
+              "facial": "Ghost_Yes09",
+              "seconds": 2.2,
+              "group": "ghost"
+            },
+            {
+              "id": "GhostOpsTalkGhost3",
+              "facial": "Ghost_Attack03",
+              "seconds": 2.6,
+              "group": "ghost"
             }
           ]
         },
@@ -98,10 +188,10 @@
           "cloak_net_per_second": -10,
           "ghost_life": 45,
           "snipe": {
-            "cost": 10,
+            "cost": 0,
             "damage": 45,
             "cast_time": 0.3,
-            "cooldown": 7
+            "cooldown": 5
           },
           "remove_abilities": [
             "EMP"
@@ -134,7 +224,9 @@
           "nuke": {
             "aim_time": 12,
             "flight_time": 6,
-            "range": 12
+            "range": 24,
+            "aim_cloak_hold": true,
+            "require_vision": true
           },
           "texts": {
             "ZoneLeft": {
@@ -270,8 +362,8 @@
               "en": "These two were never connected to the infected network. Their gear is fine. I prepared one nuclear missile - the Spotter is marked. Look after him, Jim: nobody can replace him before the launch."
             },
             "GhostExplain": {
-              "ru": "Повстанцы поблизости ещё держатся. Их оружие исправно — помогут добить противника после удара.",
-              "en": "The rebels nearby are still holding. Their weapons work: they will help finish the enemy after the strike."
+              "ru": "У Оперативника два бронебойных заряда. Берегите их для техники и укреплений — против пехоты они бесполезны.",
+              "en": "The Operative has two armor-piercing charges. Save them for vehicles and fortifications: they are useless against infantry."
             },
             "RoleGhost": {
               "ru": "Призрак",
@@ -280,21 +372,110 @@
             "InfoGhost": {
               "ru": "Постоянная маскировка и Snipe. Может навести ядерный удар; общий запас — две ракеты на операцию. Заменить призрака нельзя.",
               "en": "Permanent cloak and Snipe. May aim the nuclear strike; two missiles for the whole operation. A Ghost cannot be replaced."
+            },
+            "RaynorClip": {
+              "ru": "Какого...",
+              "en": "What the..."
+            },
+            "RebelClip": {
+              "ru": "Идем дальше, парни.",
+              "en": "Let us move on, boys."
+            },
+            "RebelHint1": {
+              "ru": "Эти ребята не заражены. Их оружие поможет нам пробиться к вражеским бункерам, но подкреплений больше нет. Здесь они долго не продержатся — отведите отряд на нашу базу, под защиту гарнизона.",
+              "en": "These guys are not infected. Their weapons will help us break through to the enemy bunkers, but there are no more reinforcements. They will not last long here: take the squad to our base, under the protection of the garrison."
+            },
+            "RebelHint2": {
+              "ru": "Казарму тоже забирайте: поднимите её в воздух и перегоните на нашу базу.",
+              "en": "Take the Barracks too: lift it off and fly it to our base."
+            },
+            "GrenadeName": {
+              "ru": "Бронебойная граната",
+              "en": "Armor-piercing grenade"
+            },
+            "GrenadeTip": {
+              "ru": "Бронебойная граната: разрушает вражескую наземную технику и здания в небольшой области. Пехоту, воздух, своих и союзников не задевает. Два заряда на миссию, без пополнения; энергия не расходуется. Только у Оперативника.",
+              "en": "Armor-piercing grenade: destroys enemy ground vehicles and buildings in a small area. Infantry, air units, own and allied units are not hurt. Two charges per mission, no refill; no energy cost. Operative only."
             }
           },
           "story": {
             "first_delay": 15,
             "second_delay": 15,
             "alert_seconds": 14,
-            "swann_seconds": 6,
+            "swann_seconds": 3,
             "arrival_seconds": 10,
-            "ghost_seconds": 5,
+            "ghost_seconds": 7,
             "raynor_delay": 2,
             "raynor_seconds": 11
+          },
+          "grenade": {
+            "enabled": true,
+            "charges": 2,
+            "damage": 500,
+            "radius": 2.0,
+            "range": 9.0,
+            "prep_time": 0.8
+          },
+          "rebel_hints": {
+            "enabled": true,
+            "delay": 0,
+            "first_seconds": 13,
+            "second_seconds": 6,
+            "ping_seconds": 6,
+            "gap": 0
           }
         },
         "campaign": {
           "operation_id": "STANDALONE"
+        },
+        "panel": {
+          "enabled": true,
+          "texts": {
+            "Name0": {
+              "ru": "Наводчик",
+              "en": "Spotter"
+            },
+            "Name1": {
+              "ru": "Оперативник",
+              "en": "Operative"
+            },
+            "Dead": {
+              "ru": "погиб",
+              "en": "dead"
+            },
+            "Infinite": {
+              "ru": "Маскировка: ∞",
+              "en": "Cloak: infinite"
+            },
+            "Cloak": {
+              "ru": "маскировка",
+              "en": "cloak"
+            },
+            "Seconds": {
+              "ru": "с",
+              "en": "s"
+            },
+            "Regen": {
+              "ru": "Восстановление",
+              "en": "Recovery"
+            },
+            "Hold": {
+              "ru": "Наведение: расход на паузе",
+              "en": "Aiming - cloak drain paused"
+            },
+            "Ready": {
+              "ru": "готов",
+              "en": "ready"
+            },
+            "Grenades": {
+              "ru": "Гранаты",
+              "en": "Grenades"
+            },
+            "Footer": {
+              "ru": "Время — игровые секунды",
+              "en": "Time in game seconds"
+            }
+          }
         }
       }
     },
