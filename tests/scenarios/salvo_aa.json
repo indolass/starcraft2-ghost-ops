@@ -1,0 +1,91 @@
+{
+ "name": "salvo_aa",
+ "mission": "traynor03",
+ "preset": "defence_next_dev",
+ "why": "anti-air keeps firing during the ground salvo",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "cmd",
+   "text": "bld 5 8"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "bld 5 12"
+  },
+  {
+   "op": "until",
+   "grep": "spent B 0 T 2",
+   "cmd": "dst",
+   "every": 4,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "salvon"
+  },
+  {
+   "op": "cmd",
+   "text": "nofoe"
+  },
+  {
+   "op": "cmd",
+   "text": "pausem"
+  },
+  {
+   "op": "cmd",
+   "text": "amset -10 0"
+  },
+  {
+   "op": "cmd",
+   "text": "amgrid 2.4"
+  },
+  {
+   "op": "cmd",
+   "text": "amov 0 -3"
+  },
+  {
+   "op": "cmd",
+   "text": "amlog"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "cmd",
+   "text": "amsv 1"
+  },
+  {
+   "op": "sleep",
+   "s": 12
+  },
+  {
+   "op": "expect",
+   "regex": "AML t=",
+   "note": "timeline: grid damage and the overlord life every 0.4 s (read the numbers)"
+  },
+  {
+   "op": "expect",
+   "regex": "AML t=[01]\\.\\d grid hit [1-9]",
+   "note": "ground damage during the first 2 s"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

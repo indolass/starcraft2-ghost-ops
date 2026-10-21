@@ -1,0 +1,220 @@
+{
+ "name": "salvo_hotkey",
+ "mission": "traynor03",
+ "preset": "defence_next_dev",
+ "why": "hotkey A, unlock by the real scene, other units, several turrets",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "cmd",
+   "text": "bld 5 8"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "bld 5 12"
+  },
+  {
+   "op": "until",
+   "grep": "spent B 0 T 2",
+   "cmd": "dst",
+   "every": 3,
+   "timeout": 150
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "cmd",
+   "text": "amset -10 0"
+  },
+  {
+   "op": "cmd",
+   "text": "dst"
+  },
+  {
+   "op": "cmd",
+   "text": "amsv 1"
+  },
+  {
+   "op": "cmd",
+   "text": "selt 1"
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "shot",
+   "file": "hk_0_locked.png"
+  },
+  {
+   "op": "expect",
+   "regex": "DST2 landing \\d+ marines \\d+ ghosts \\d+ \\| salvo 0 scene 0",
+   "note": "before the Swann scene the salvo is off"
+  },
+  {
+   "op": "expect",
+   "regex": "AMSV turret 1 valid before 0",
+   "note": "the order is not valid before the unlock"
+  },
+  {
+   "op": "cmd",
+   "text": "nofoe"
+  },
+  {
+   "op": "cmd",
+   "text": "pausem"
+  },
+  {
+   "op": "cmd",
+   "text": "amgrid 4.0"
+  },
+  {
+   "op": "until",
+   "grep": "DST2 .* salvo 1 scene 1",
+   "cmd": "dst",
+   "every": 4,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "selt 1"
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "shot",
+   "file": "hk_1_unlocked.png"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "A"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "shot",
+   "file": "hk_2_after_A.png"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "shot",
+   "file": "hk_3_after_cancel.png"
+  },
+  {
+   "op": "cmd",
+   "text": "selm Marine"
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "shot",
+   "file": "hk_4_marine.png"
+  },
+  {
+   "op": "cmd",
+   "text": "selm Ghost"
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "shot",
+   "file": "hk_5_ghost.png"
+  },
+  {
+   "op": "cmd",
+   "text": "selall"
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "shot",
+   "file": "hk_6_two_turrets.png"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "cmd",
+   "text": "amlog"
+  },
+  {
+   "op": "cmd",
+   "text": "amsvall"
+  },
+  {
+   "op": "sleep",
+   "s": 9
+  },
+  {
+   "op": "cmd",
+   "text": "amr 2.5"
+  },
+  {
+   "op": "cmd",
+   "text": "amsv 1"
+  },
+  {
+   "op": "cmd",
+   "text": "amsv 2"
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "expect",
+   "regex": "AMSVALL group order given to 2 turrets",
+   "note": "one group order to two turrets"
+  },
+  {
+   "op": "expect",
+   "regex": "AMR dummies",
+   "note": "total damage: about one salvo (2730 for this grid) or two"
+  },
+  {
+   "op": "expect",
+   "regex": "AMSV turret [12] valid before",
+   "note": "which turrets are on cooldown after the group order"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

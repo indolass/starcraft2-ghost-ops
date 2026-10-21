@@ -9,6 +9,8 @@ Steps (every one is bounded; nothing loops forever):
   key KEYS...                posted keys into OUR window ("keys": ["ESC"])
   cmd TEXT [wait]            a probe command typed into the game chat
   sleep S
+  click X Y                  posted left click into OUR window (client coordinates)
+  move X Y                   posted mouse-move into OUR window (client coordinates)
   until GREP [cmd] [every] [timeout]   repeat `cmd` until the regexp GREP appears in the journal lines after the last mark (fails the scenario on timeout)
   mark                       remember the end of the journal (later `expect` / `until` look only after it)
   expect REGEX [absent]      the regexp must (or, with absent, must not) match a journal line after the mark; the matching lines go to the result
@@ -99,6 +101,14 @@ class Scenario:
         self.chat(s['text'], s.get('wait', 1.5))
         self.record('cmd', text=s['text'])
 
+    def op_move(self, s):
+        sc2_ui.move(ce0_session.load_state()['pid'], s['x'], s['y'])
+        self.record('move', x=s['x'], y=s['y'])
+
+    def op_click(self, s):
+        sc2_ui.click(ce0_session.load_state()['pid'], s['x'], s['y'])
+        self.record('click', x=s['x'], y=s['y'])
+
     def op_sleep(self, s):
         time.sleep(s['s'])
         self.record('sleep', s=s['s'])
@@ -129,7 +139,7 @@ class Scenario:
         good = (not hits) if s.get('absent') else bool(hits)
         if not good:
             self.ok = False
-        self.record('expect', regex=s['regex'], absent=bool(s.get('absent')), ok=good, lines=hits[-5:], note=s.get('note', ''))
+        self.record('expect', regex=s['regex'], absent=bool(s.get('absent')), ok=good, lines=hits[-40:], note=s.get('note', ''))
 
     def _menu(self, mode, name):
         pid = ce0_session.load_state()['pid']
@@ -167,8 +177,9 @@ class Scenario:
         self.record('load', name=s['name'])
 
     def op_shot(self, s):
-        ok = sc2_ui.shot(ce0_session.load_state()['pid'], s['file'])
-        self.record('shot', file=s['file'], ok=bool(ok))
+        path = s['file'] if os.path.isabs(s['file']) else os.path.join(os.path.dirname(self.result_path), s['file'])  # next to the result, in the job directory
+        ok = sc2_ui.shot(ce0_session.load_state()['pid'], path)
+        self.record('shot', file=path, ok=bool(ok))
 
     def op_stop(self, s):
         ce0_session.cmd_stop(argparse.Namespace(keep_map=True, hard=False))

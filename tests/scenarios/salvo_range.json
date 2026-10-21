@@ -1,0 +1,112 @@
+{
+ "name": "salvo_range",
+ "mission": "traynor03",
+ "preset": "defence_next_dev",
+ "why": "range limit and no cooldown for an invalid order",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "cmd",
+   "text": "bld 5 8"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "bld 5 12"
+  },
+  {
+   "op": "until",
+   "grep": "spent B 0 T 2",
+   "cmd": "dst",
+   "every": 4,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "salvon"
+  },
+  {
+   "op": "cmd",
+   "text": "nofoe"
+  },
+  {
+   "op": "cmd",
+   "text": "pausem"
+  },
+  {
+   "op": "cmd",
+   "text": "amset -10 0"
+  },
+  {
+   "op": "cmd",
+   "text": "amgrid 3.0"
+  },
+  {
+   "op": "cmd",
+   "text": "amset -14 0"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "cmd",
+   "text": "amsv 1"
+  },
+  {
+   "op": "sleep",
+   "s": 4
+  },
+  {
+   "op": "cmd",
+   "text": "amset -10 0"
+  },
+  {
+   "op": "cmd",
+   "text": "amsv 1"
+  },
+  {
+   "op": "sleep",
+   "s": 6
+  },
+  {
+   "op": "cmd",
+   "text": "amr 2.5"
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "expect",
+   "regex": "AMSV turret 1 valid before . distance 14",
+   "note": "order at distance 14 (range 11): see what the game says"
+  },
+  {
+   "op": "expect",
+   "regex": "AMSV turret 1 valid before 1 distance 10",
+   "note": "the cooldown was NOT spent by the out-of-range order"
+  },
+  {
+   "op": "expect",
+   "regex": "AMR dummies \\d+ damaged [1-9]\\d* ",
+   "note": "the in-range salvo landed"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

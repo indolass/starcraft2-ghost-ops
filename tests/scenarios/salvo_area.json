@@ -1,0 +1,122 @@
+{
+ "name": "salvo_area",
+ "mission": "traynor03",
+ "preset": "defence_next_dev",
+ "why": "impact area / no overreach / cooldown",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "cmd",
+   "text": "bld 5 8"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "bld 5 12"
+  },
+  {
+   "op": "until",
+   "grep": "spent B 0 T 2",
+   "cmd": "dst",
+   "every": 4,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "salvon"
+  },
+  {
+   "op": "cmd",
+   "text": "nofoe"
+  },
+  {
+   "op": "cmd",
+   "text": "pausem"
+  },
+  {
+   "op": "cmd",
+   "text": "amset -10 0"
+  },
+  {
+   "op": "cmd",
+   "text": "amgrid 4.0"
+  },
+  {
+   "op": "cmd",
+   "text": "amlog"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "cmd",
+   "text": "amsv 1"
+  },
+  {
+   "op": "cmd",
+   "text": "amsv 1"
+  },
+  {
+   "op": "sleep",
+   "s": 9
+  },
+  {
+   "op": "cmd",
+   "text": "amr 2.5"
+  },
+  {
+   "op": "cmd",
+   "text": "amr 2.9"
+  },
+  {
+   "op": "cmd",
+   "text": "amhist"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "expect",
+   "regex": "AMR dummies \\d+ damaged [1-9]\\d* ",
+   "note": "the salvo hit enemies in the area"
+  },
+  {
+   "op": "expect",
+   "regex": "damaged beyond 2\\.9: 0 ",
+   "note": "nothing beyond the shown radius + the body radius of a Zergling (0.375) was damaged (SC2 area effects include the body of a unit)"
+  },
+  {
+   "op": "expect",
+   "regex": "AMSV turret 1 valid before 0",
+   "note": "the second order during the cooldown is not valid"
+  },
+  {
+   "op": "expect",
+   "regex": "AMHIST",
+   "note": "hit histogram"
+  },
+  {
+   "op": "expect",
+   "regex": "AML t=",
+   "note": "timeline of the salvo"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

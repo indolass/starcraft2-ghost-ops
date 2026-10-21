@@ -1,0 +1,211 @@
+{
+ "name": "salvo_click",
+ "mission": "traynor03",
+ "preset": "defence_next_dev",
+ "why": "real UI path: hotkey A, standard targeting, click, cancel",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "cmd",
+   "text": "bld 5 8"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "bld 5 12"
+  },
+  {
+   "op": "until",
+   "grep": "spent B 0 T 2",
+   "cmd": "dst",
+   "every": 4,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "salvon"
+  },
+  {
+   "op": "cmd",
+   "text": "nofoe"
+  },
+  {
+   "op": "cmd",
+   "text": "pausem"
+  },
+  {
+   "op": "cmd",
+   "text": "amset -6 0"
+  },
+  {
+   "op": "cmd",
+   "text": "amgrid 5.0"
+  },
+  {
+   "op": "cmd",
+   "text": "selt 1"
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "A"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "shot",
+   "file": "click_0_after_A.png"
+  },
+  {
+   "op": "move",
+   "x": 220,
+   "y": 350
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "shot",
+   "file": "click_1_aiming.png"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "click",
+   "x": 220,
+   "y": 350
+  },
+  {
+   "op": "sleep",
+   "s": 4
+  },
+  {
+   "op": "until",
+   "grep": "AMR dummies",
+   "cmd": "amr 2.5",
+   "every": 3,
+   "timeout": 40
+  },
+  {
+   "op": "until",
+   "grep": "AMVAL turret 1 ready",
+   "cmd": "amval 1",
+   "every": 3,
+   "timeout": 40
+  },
+  {
+   "op": "expect",
+   "regex": "AMR dummies \\d+ damaged \\d+ totaldmg \\d{1,3} ",
+   "note": "A, cancel (Esc), click: no salvo was fired (a few hundred damage can come from the Ghosts shooting a dummy)"
+  },
+  {
+   "op": "expect",
+   "regex": "AMVAL turret 1 ready 1",
+   "note": "cancelling spent no salvo / cooldown"
+  },
+  {
+   "op": "cmd",
+   "text": "selt 1"
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "key",
+   "keys": [
+    "A"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "click",
+   "x": 220,
+   "y": 350
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "shot",
+   "file": "click_2_after_fire.png"
+  },
+  {
+   "op": "until",
+   "grep": "AMVAL turret 1 ready",
+   "cmd": "amval 1",
+   "every": 3,
+   "timeout": 40
+  },
+  {
+   "op": "until",
+   "grep": "AMR dummies",
+   "cmd": "amr 2.5",
+   "every": 3,
+   "timeout": 40
+  },
+  {
+   "op": "expect",
+   "regex": "AMR dummies \\d+ damaged \\d+ totaldmg \\d{4,} ",
+   "note": "A, click on the area: a salvo landed (thousands of damage; fired through the hotkey and the standard targeting)"
+  },
+  {
+   "op": "expect",
+   "regex": "AMVAL turret 1 ready 0",
+   "note": "the cooldown is running right after the hotkey salvo"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

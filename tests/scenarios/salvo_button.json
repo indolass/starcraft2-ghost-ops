@@ -1,0 +1,119 @@
+{
+ "name": "salvo_button",
+ "mission": "traynor03",
+ "preset": "defence_next_dev",
+ "why": "the panel button starts the same mechanism",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "cmd",
+   "text": "bld 5 8"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "bld 5 12"
+  },
+  {
+   "op": "until",
+   "grep": "spent B 0 T 2",
+   "cmd": "dst",
+   "every": 4,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "salvon"
+  },
+  {
+   "op": "cmd",
+   "text": "nofoe"
+  },
+  {
+   "op": "cmd",
+   "text": "pausem"
+  },
+  {
+   "op": "cmd",
+   "text": "amset -6 0"
+  },
+  {
+   "op": "cmd",
+   "text": "amgrid 5.0"
+  },
+  {
+   "op": "cmd",
+   "text": "selt 1"
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "click",
+   "x": 975,
+   "y": 626
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "shot",
+   "file": "button_0_after_button.png"
+  },
+  {
+   "op": "click",
+   "x": 220,
+   "y": 350
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "until",
+   "grep": "AMVAL turret 1 ready",
+   "cmd": "amval 1",
+   "every": 3,
+   "timeout": 40
+  },
+  {
+   "op": "until",
+   "grep": "AMR dummies",
+   "cmd": "amr 2.5",
+   "every": 3,
+   "timeout": 40
+  },
+  {
+   "op": "expect",
+   "regex": "AMR dummies \\d+ damaged \\d+ totaldmg \\d{4,} ",
+   "note": "button click + area click: a salvo landed"
+  },
+  {
+   "op": "expect",
+   "regex": "AMVAL turret 1 ready 0",
+   "note": "cooldown running"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

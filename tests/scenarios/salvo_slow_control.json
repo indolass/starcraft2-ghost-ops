@@ -1,0 +1,98 @@
+{
+ "name": "salvo_slow_control",
+ "mission": "traynor03",
+ "preset": "defence_next_slow_dev",
+ "why": "control for the save/load run",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "cmd",
+   "text": "bld 5 8"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "bld 5 12"
+  },
+  {
+   "op": "until",
+   "grep": "spent B 0 T 2",
+   "cmd": "dst",
+   "every": 4,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "salvon"
+  },
+  {
+   "op": "cmd",
+   "text": "nofoe"
+  },
+  {
+   "op": "cmd",
+   "text": "pausem"
+  },
+  {
+   "op": "cmd",
+   "text": "amset -10 0"
+  },
+  {
+   "op": "cmd",
+   "text": "amgrid 3.5"
+  },
+  {
+   "op": "cmd",
+   "text": "amlog"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "cmd",
+   "text": "amsv 1"
+  },
+  {
+   "op": "sleep",
+   "s": 22
+  },
+  {
+   "op": "cmd",
+   "text": "amr 2.5"
+  },
+  {
+   "op": "cmd",
+   "text": "amhist"
+  },
+  {
+   "op": "cmd",
+   "text": "amsv 1"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "expect",
+   "regex": "AMR dummies",
+   "note": "totals without save / load"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

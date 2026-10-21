@@ -282,6 +282,12 @@ def validate_defence(cfg):
             errs.append('defence.salvo.%s must be a number %s..%s' % (k, lo, hi))
     if not isinstance(sv.get('missiles'), int) or isinstance(sv.get('missiles'), bool) or not 1 <= sv['missiles'] <= 12:
         errs.append('defence.salvo.missiles must be an integer 1..12')
+    if 'hotkey' in sv and not (isinstance(sv['hotkey'], str) and len(sv['hotkey']) == 1 and sv['hotkey'].isalpha() and sv['hotkey'].isupper()):
+        errs.append('defence.salvo.hotkey must be one capital letter (the standard-layout hotkey of the button)')
+    if 'spread' in sv and (not _num(sv['spread']) or not 0 <= sv['spread'] <= 6):
+        errs.append('defence.salvo.spread must be a number 0..6 (radius of the circle of impact points; 0 = every missile hits the centre)')
+    if _num(sv.get('radius')) and _num(sv.get('spread', 0)) and sv.get('radius', 0) + sv.get('spread', 0) > 8:
+        errs.append('defence.salvo.radius + spread (the whole area the pointer shows) must not exceed 8')
     wv = d.get('waves', {})
     if not _num(wv.get('power')) or not 1 <= wv['power'] <= 2:
         errs.append('defence.waves.power must be 1 (share) or 2 (share squared)')
@@ -402,6 +408,18 @@ def _wrap_first_arg(body, call, grp, default_group):
     return ''.join(res)
 
 
+def salvo_pattern(n, spread):
+    """Impact points of the missiles of one salvo relative to the aimed point: the sunflower pattern (golden angle) inside a circle of radius `spread` - the same points every
+    time (no random numbers, nothing to save or to repeat after a load); spread 0 = every missile at the centre."""
+    import math
+    pts = []
+    for k in range(n):
+        r = spread * math.sqrt((k + 0.5) / n)
+        a = k * 2.399963229728653
+        pts.append((r * math.cos(a), r * math.sin(a)))
+    return pts
+
+
 def defence_fragments(d):
     """Catalog overrides of the defence variant (map local): Bunker / Missile Turret are free to build for the kit logic and need only the Command Center, the turret gets
     the manual ground salvo (separate Ghost Ops data; the weapon of every other Missile Turret of the game is not touched)."""
@@ -409,12 +427,17 @@ def defence_fragments(d):
     sv = d['salvo']
     nl = chr(10)
     periods = ['            <PeriodicPeriodArray value="0"/>'] + ['            <PeriodicPeriodArray value="%s"/>' % g(sv['interval']) for _ in range(sv['missiles'] - 1)]
+    offsets = ['        <PeriodicOffsetArray value="%s,%s"/>' % (g(round(x, 3)), g(round(y, 3))) for x, y in salvo_pattern(sv['missiles'], sv.get('spread', 0))]
+    aim = sv['radius'] + sv.get('spread', 0)  # the whole area the pointer shows: the circle of impact points plus the blast radius of one missile
     return {
         'UnitData.xml': nl.join([
             '    <CUnit id="Bunker">', '        <CostResource index="Minerals" value="0"/>', '    </CUnit>',
             '    <CUnit id="MissileTurret">', '        <CostResource index="Minerals" value="0"/>', '        <AbilArray Link="GhostOpsTurretSalvo"/>',
             '        <CardLayouts index="0">',
-            '            <LayoutButtons Face="GhostOpsTurretSalvo" Type="AbilCmd" AbilCmd="GhostOpsTurretSalvo,Execute" Row="1" Column="1"/>',
+            # hotkey A: the button takes the place of the stock "Attack" button of the turret card (index 3 of the stock layout of the Liberty data; the `attack` ability stays in the
+            # unit, so the automatic fire does not change) and aliases the standard "Attack" hotkey; any other hotkey: an extra button, the stock card stays
+            ('            <LayoutButtons index="3" Face="GhostOpsTurretSalvo" Type="AbilCmd" AbilCmd="GhostOpsTurretSalvo,Execute" Row="0" Column="4"/>' if sv.get('hotkey') == 'A'
+             else '            <LayoutButtons Face="GhostOpsTurretSalvo" Type="AbilCmd" AbilCmd="GhostOpsTurretSalvo,Execute" Row="1" Column="1"/>'),
             '        </CardLayouts>', '    </CUnit>', '']),
         'AbilData.xml': nl.join([
             '    <CAbilBuild id="TerranBuild">',
@@ -423,19 +446,31 @@ def defence_fragments(d):
             '    </CAbilBuild>',
             '    <CAbilEffectTarget id="GhostOpsTurretSalvo">', '        <EditorCategories value="Race:Terran,AbilityorEffectType:Units"/>',
             '        <Effect index="0" value="GhostOpsSalvoMain"/>', '        <Range value="%s"/>' % g(sv['range']), '        <Arc value="360"/>', '        <CastIntroTime value="0"/>',
-            '        <Flags index="RequireTargetVision" value="1"/>', '        <CursorEffect value="GhostOpsSalvoSearch"/>',
+            '        <Flags index="RequireTargetVision" value="1"/>', '        <CursorEffect value="GhostOpsSalvoAim"/>',
             '        <Cost index="0">', '            <Cooldown TimeUse="%s"/>' % g(sv['cooldown']), '        </Cost>',
             '        <CmdButtonArray index="Execute" DefaultButtonFace="GhostOpsTurretSalvo"/>', '    </CAbilEffectTarget>', '']),
+        'ActorData.xml': nl.join([
+            # the pointer of the ability, the way the Odin's Barrage does it (OdinBarrageCursorModel / CursorSplat / Range): the splat takes its radius from CursorEffect, the range
+            # indicator from the ability Range; the explosion model is the stock one of the Odin's Barrage (BarrageModel = the Thor missile impact)
+            '    <CActorModel id="GhostOpsSalvoCursorModel" parent="TerranCursorModel" abil="GhostOpsTurretSalvo"/>',
+            '    <CActorSplat id="GhostOpsSalvoCursorSplat" parent="TerranCursorSplat" abil="GhostOpsTurretSalvo"/>',
+            '    <CActorRange id="GhostOpsSalvoRange" parent="RangeAbil" abil="GhostOpsTurretSalvo"/>',
+            '    <CActorModel id="GhostOpsSalvoImpact" parent="ModelAnimationStyleOneShot">', '        <Model value="BarrageModel"/>', '        <HostSiteOps Ops="SOpTargetPoint"/>',
+            '        <On Terms="Effect.GhostOpsSalvoSearch.Impact" Send="Create"/>', '    </CActorModel>', '']),
         'ButtonData.xml': nl.join([
             '    <CButton id="GhostOpsTurretSalvo">', '        <Icon value="Assets' + chr(92) + 'Textures' + chr(92) + 'btn-command-attack.dds"/>',
-            '        <EditorCategories value="Race:Terran"/>', '    </CButton>', '']),
+            '        <EditorCategories value="Race:Terran"/>'] + (['        <HotkeyAlias value="Attack"/>'] if sv.get('hotkey') == 'A' else []) + ['    </CButton>', '']),
         'EffectData.xml': nl.join([
             '    <CEffectCreatePersistent id="GhostOpsSalvoMain">', '        <EditorCategories value="Race:Terran"/>', '        <WhichLocation Value="TargetPoint"/>',
-            '        <PeriodCount value="%d"/>' % sv['missiles'], '        <PeriodicEffectArray value="GhostOpsSalvoLaunch"/>'] + periods + ['    </CEffectCreatePersistent>',
+            '        <PeriodCount value="%d"/>' % sv['missiles'], '        <PeriodicEffectArray value="GhostOpsSalvoLaunch"/>'] + periods + offsets + ['    </CEffectCreatePersistent>',
             '    <CEffectLaunchMissile id="GhostOpsSalvoLaunch">', '        <EditorCategories value="Race:Terran"/>', '        <ImpactEffect value="GhostOpsSalvoSearch"/>',
             '        <ImpactLocation Value="TargetPoint"/>', '        <AmmoUnit value="LongboltMissileWeapon"/>', '    </CEffectLaunchMissile>',
             '    <CEffectEnumArea id="GhostOpsSalvoSearch">', '        <EditorCategories value="Race:Terran"/>', '        <LaunchLocation Value="TargetPoint"/>', '        <ImpactLocation Value="TargetPoint"/>',
             '        <AreaArray Radius="%s" Effect="GhostOpsSalvoDamage"/>' % g(sv['radius']),
+            '        <SearchFilters value="Ground,Visible;Player,Ally,Neutral,Air,Missile,Stasis,Dead,Hidden,Invulnerable"/>', '    </CEffectEnumArea>',
+            # only the pointer of the ability reads this effect (CursorEffect): its radius is the whole area of possible damage; it is never executed
+            '    <CEffectEnumArea id="GhostOpsSalvoAim">', '        <EditorCategories value="Race:Terran"/>',
+            '        <AreaArray Radius="%s" Effect="GhostOpsSalvoDamage"/>' % g(aim),
             '        <SearchFilters value="Ground,Visible;Player,Ally,Neutral,Air,Missile,Stasis,Dead,Hidden,Invulnerable"/>', '    </CEffectEnumArea>',
             '    <CEffectDamage id="GhostOpsSalvoDamage">', '        <EditorCategories value="Race:Terran"/>', '        <Kind value="Splash"/>', '        <Amount value="%s"/>' % g(sv['damage']),
             '        <Flags index="Notification" value="1"/>', '        <ResponseFlags index="Acquire" value="1"/>', '    </CEffectDamage>', '']),
@@ -1368,7 +1403,7 @@ def text_entries(cfg):
                 out.setdefault(loc, []).append((DEF_TEXT_PREFIX + k, v))
             out.setdefault(loc, []).append(('Button/Name/GhostOpsTurretSalvo', df['texts']['SalvoName'][lang]))
             out.setdefault(loc, []).append(('Button/Tooltip/GhostOpsTurretSalvo', df['texts']['SalvoTip'][lang]))
-            out.setdefault(loc, []).append(('Button/Hotkey/GhostOpsTurretSalvo', 'G'))
+            out.setdefault(loc, []).append(('Button/Hotkey/GhostOpsTurretSalvo', df['salvo'].get('hotkey', 'G')))
     pn = cfg.get('panel')
     if pn and pn.get('enabled'):
         for loc, lang in (('ruRU', 'ru'), ('enUS', 'en')):
@@ -1961,6 +1996,11 @@ def start_detached(command, owner=False):
     return 0 if test_launch.launch_test_game(command) else 8
 
 
+def cmd_prepare(args):
+    """Build + verify + install of the profile exactly as the launcher does (a protected Owner version is kept as it is). Used by the test queue in a fresh process."""
+    return prepare(args)
+
+
 def cmd_launch(args):
     adapter, cfg, preset = context(args)
     command, dest = launch_command(adapter, cfg, preset)
@@ -1980,7 +2020,7 @@ def cmd_launch(args):
 
 def main(argv=None):
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument('command', choices=['build', 'verify', 'install', 'uninstall', 'launch'])
+    p.add_argument('command', choices=['build', 'verify', 'install', 'uninstall', 'launch', 'prepare'])
     p.add_argument('--mission', default='traynor02')
     p.add_argument('--source')
     p.add_argument('--plan', help='an operation plan (JSON written by the launcher): builds the unique map file of that operation')

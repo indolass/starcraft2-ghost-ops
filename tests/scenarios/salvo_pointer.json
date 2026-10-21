@@ -1,0 +1,123 @@
+{
+ "name": "salvo_pointer",
+ "mission": "traynor03",
+ "preset": "defence_next_dev",
+ "why": "pointer visible while aiming, gone after cancel",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "cmd",
+   "text": "bld 5 8"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "bld 5 12"
+  },
+  {
+   "op": "until",
+   "grep": "spent B 0 T 2",
+   "cmd": "dst",
+   "every": 4,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "salvon"
+  },
+  {
+   "op": "cmd",
+   "text": "nofoe"
+  },
+  {
+   "op": "cmd",
+   "text": "pausem"
+  },
+  {
+   "op": "cmd",
+   "text": "amset -10 0"
+  },
+  {
+   "op": "cmd",
+   "text": "amgrid 0"
+  },
+  {
+   "op": "cmd",
+   "text": "selt 1"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "shot",
+   "file": "pointer_0_selected.png"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "G"
+   ]
+  },
+  {
+   "op": "move",
+   "x": 470,
+   "y": 330
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "shot",
+   "file": "pointer_1_aiming.png"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "shot",
+   "file": "pointer_2_cancelled.png"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "cmd",
+   "text": "amsv 1"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "expect",
+   "regex": "AMSV turret 1 valid before 1",
+   "note": "cancelling the aiming spent no salvo and no cooldown"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

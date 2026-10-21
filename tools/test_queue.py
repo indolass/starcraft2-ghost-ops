@@ -59,20 +59,20 @@ def sleep(sec):
 
 
 def prepare_build(job):
-    """Build + verify + install of the job's map (a hidden dev preset); returns 0 or an error code."""
-    import argparse as ap
-    import build
-    args = ap.Namespace(mission=job['mission'], preset=job['preset'], source=None, multiplier=None, diag=False, print_only=False, start=True, plan=None, no_voice=False)
-    return build.prepare(args)
+    """Build + verify + install of the job's map (a hidden dev preset) in a FRESH process (the runner lives long: it must never run stale build code); returns 0 or a code."""
+    r = subprocess.run([sys.executable, os.path.join(HERE, 'build.py'), 'prepare', '--mission', job['mission'], '--preset', job['preset']], cwd=ROOT, capture_output=True, text=True)
+    try:
+        os.makedirs(os.path.dirname(job['log']), exist_ok=True)
+        with open(job['log'], 'a', encoding='utf-8', errors='replace') as f:
+            f.write('# prepare (exit %s)' % r.returncode + chr(10) + ((r.stdout or '')[-3000:] + (r.stderr or '')[-1000:]) + chr(10))
+    except OSError:
+        pass
+    return r.returncode
 
 
 def cleanup_build(job):
     """A development map never stays in the Owner's map list (a protected map is never removed: build.uninstall_key refuses)."""
-    import argparse as ap
-    import build
-    args = ap.Namespace(mission=job['mission'], preset=job['preset'], source=None, multiplier=None, diag=False, print_only=False, start=True, plan=None, no_voice=False)
-    adapter, cfg, name = build.context(args)
-    build.uninstall_key(build.key_for(adapter, name), 'queue dev map')
+    subprocess.run([sys.executable, os.path.join(HERE, 'build.py'), 'uninstall', '--mission', job['mission'], '--preset', job['preset']], cwd=ROOT, capture_output=True, text=True)
 
 
 # ---------------------------------------------------------------- queue file

@@ -58,6 +58,16 @@ def click(pid, x, y):
     user32.PostMessageW(hwnd, WM_LBUTTONUP, 0, lp)
 
 
+def move(pid, x, y):
+    """A posted mouse-move (client coordinates): the pointer of a targeted ability follows it when the game reads the posted position; the real cursor is not touched."""
+    hwnd = window(pid)[0]
+    lp = (y << 16) | (x & 0xFFFF)
+    for dx in (-6, -3, 0):
+        user32.PostMessageW(hwnd, WM_MOUSEMOVE, 0, ((y << 16) | ((x + dx) & 0xFFFF)))
+        time.sleep(0.05)
+    user32.PostMessageW(hwnd, WM_MOUSEMOVE, 0, lp)
+
+
 def type_text(pid, text):
     hwnd = window(pid)[0]
     for ch in text:

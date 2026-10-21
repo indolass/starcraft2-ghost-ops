@@ -1,0 +1,103 @@
+{
+ "name": "salvo_friendly",
+ "mission": "traynor03",
+ "preset": "defence_next_dev",
+ "why": "no friendly damage (no enemy attacks)",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "cmd",
+   "text": "bld 5 8"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "bld 5 12"
+  },
+  {
+   "op": "until",
+   "grep": "spent B 0 T 2",
+   "cmd": "dst",
+   "every": 4,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "salvon"
+  },
+  {
+   "op": "cmd",
+   "text": "nofoe"
+  },
+  {
+   "op": "cmd",
+   "text": "pausem"
+  },
+  {
+   "op": "cmd",
+   "text": "amset -10 0"
+  },
+  {
+   "op": "cmd",
+   "text": "fr -10 0"
+  },
+  {
+   "op": "cmd",
+   "text": "amgrid 2.4"
+  },
+  {
+   "op": "cmd",
+   "text": "frr"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "cmd",
+   "text": "amsv 1"
+  },
+  {
+   "op": "sleep",
+   "s": 8
+  },
+  {
+   "op": "cmd",
+   "text": "frr"
+  },
+  {
+   "op": "cmd",
+   "text": "amr 2.5"
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "expect",
+   "regex": "FRR enemyUnitsOnMap \\d+ \\| SCV=45/45 SCV=45/45 Marine=1/1 Marine=1/1 Marine=1/1 SupplyDepot=350/350",
+   "note": "own SCVs, Marines and the building are unhurt"
+  },
+  {
+   "op": "expect",
+   "regex": "AMR dummies \\d+ damaged [1-9]\\d* ",
+   "note": "enemy dummies at the same place were hit"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

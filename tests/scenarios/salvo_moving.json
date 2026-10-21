@@ -1,0 +1,99 @@
+{
+ "name": "salvo_moving",
+ "mission": "traynor03",
+ "preset": "defence_next_dev",
+ "why": "moving enemies can avoid the hits",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "cmd",
+   "text": "bld 5 8"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "bld 5 12"
+  },
+  {
+   "op": "until",
+   "grep": "spent B 0 T 2",
+   "cmd": "dst",
+   "every": 4,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "salvon"
+  },
+  {
+   "op": "cmd",
+   "text": "nofoe"
+  },
+  {
+   "op": "cmd",
+   "text": "pausem"
+  },
+  {
+   "op": "cmd",
+   "text": "amset -10 0"
+  },
+  {
+   "op": "cmd",
+   "text": "amgrid 1.4"
+  },
+  {
+   "op": "cmd",
+   "text": "ammov"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "cmd",
+   "text": "amsv 1"
+  },
+  {
+   "op": "sleep",
+   "s": 8
+  },
+  {
+   "op": "cmd",
+   "text": "ammr"
+  },
+  {
+   "op": "cmd",
+   "text": "amr 2.5"
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "expect",
+   "regex": "AMMR moving dummies life",
+   "note": "moving dummies (3000 life each): compare with the static ones in AMR"
+  },
+  {
+   "op": "expect",
+   "regex": "AMR dummies",
+   "note": "static dummies at the centre of the area"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

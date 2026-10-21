@@ -119,6 +119,7 @@ unitgroup go_frG;
 unit go_frBld;
 unit go_szD;
 trigger go_nofoeTick;
+unitgroup go_dumG;
 
 bool GhostOps_Ce0_NofoeTick (bool lp_test, bool lp_run) {
     int lv_p;
@@ -133,7 +134,7 @@ bool GhostOps_Ce0_NofoeTick (bool lp_test, bool lp_run) {
         lv_g = UnitGroup(null, lv_p, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterStructure), (1 << (c_targetFilterDead - 32))), 0);
         UnitGroupLoopBegin(lv_g);
         while (UnitGroupLoopCurrent() != null) {
-            if (UnitGroupLoopCurrent() != go_szD) {
+            if ((UnitGroupLoopCurrent() != go_szD) && !UnitGroupHasUnit(go_dumG, UnitGroupLoopCurrent())) {
                 UnitRemove(UnitGroupLoopCurrent());
             }
 
@@ -668,6 +669,10 @@ bool GhostOps_Ce0_DefCmd (string lp_cmd, string lp_a, string lp_b) {
 
     if (lp_cmd == "nofoe") {
         // every 0.25 s all enemy non-structure units (except the dummy) are removed: nothing but the salvo can hurt the own units
+        if (go_dumG == null) {
+            go_dumG = UnitGroupEmpty();
+        }
+
         go_nofoeTick = TriggerCreate("GhostOps_Ce0_NofoeTick");
         TriggerAddEventTimePeriodic(go_nofoeTick, 0.25, c_timeGame);
         GhostOps_Ce0_Write("j", "NOFOE running");
@@ -728,6 +733,294 @@ bool GhostOps_Ce0_DefCmd (string lp_cmd, string lp_a, string lp_b) {
     return false;
 }
 
+// the aimed-salvo probe commands (area, impact points, friendly units, anti-air during the salvo): separate function, see DefCmd
+point go_amP;
+unitgroup go_amG;
+unitgroup go_amMov;
+unit go_amOv;
+trigger go_amTick;
+int go_amN;
+fixed go_amT0;
+
+bool GhostOps_Ce0_AmTick (bool lp_test, bool lp_run) {
+    int lv_hit;
+    int lv_dmg;
+    fixed lv_l;
+    string lv_t;
+
+    if (!lp_run) {
+        return true;
+    }
+
+    lv_hit = 0;
+    lv_dmg = 0;
+    UnitGroupLoopBegin(go_amG);
+    while (UnitGroupLoopCurrent() != null) {
+        lv_l = UnitGetPropertyFixed(UnitGroupLoopCurrent(), c_unitPropLife, c_unitPropCurrent);
+        if (lv_l < 2999.5) {
+            lv_hit += 1;
+            lv_dmg += FixedToInt(3000.0 - lv_l);
+        }
+
+        UnitGroupLoopStep();
+    }
+
+    UnitGroupLoopEnd();
+    lv_t = "AML t=" + FixedToString(GameGetMissionTime() - go_amT0, 1) + " grid hit " + IntToString(lv_hit) + " dmg " + IntToString(lv_dmg);
+    if (go_amOv != null) {
+        lv_t = lv_t + " overlord " + FixedToString(UnitGetPropertyFixed(go_amOv, c_unitPropLife, c_unitPropCurrent), 0);
+    }
+
+    GhostOps_Ce0_Write("j", lv_t);
+    go_amN += 1;
+    if (go_amN >= 24) {
+        TriggerDestroy(TriggerGetCurrent());
+    }
+
+    return true;
+}
+
+bool GhostOps_Ce0_AimCmd (string lp_cmd, string lp_a, string lp_b) {
+    string lv_t;
+    int lv_i;
+    int lv_j;
+    int lv_n;
+    int lv_hit;
+    int lv_dmg;
+    int lv_out;
+    int lv_in;
+    fixed lv_d;
+    fixed lv_maxd;
+    fixed lv_l;
+    fixed lv_x;
+    fixed lv_y;
+    unit lv_u;
+    unitgroup lv_g;
+
+    if (lp_cmd == "amset") {
+        lv_g = UnitGroup("MissileTurret", 1, RegionEntireMap(), GhostOps_DEF_Live(), 0);
+        go_amP = PointWithOffset(UnitGetPosition(UnitGroupUnit(lv_g, 1)), StringToFixed(lp_a), StringToFixed(lp_b));
+        GhostOps_Ce0_Write("j", "AMSET aim point " + FixedToString(PointGetX(go_amP), 2) + "," + FixedToString(PointGetY(go_amP), 2) + " turrets " + IntToString(UnitGroupCount(lv_g, c_unitCountAlive)));
+        return true;
+    }
+
+    if (lp_cmd == "amgrid") {
+        // enemy dummies (Zergling, 3000 life, paused) on a 0.75 grid inside the radius a around the aim point: where the damage lands and where it does not
+        go_amG = UnitGroupEmpty();
+        go_dumG = UnitGroupEmpty();
+        lv_x = -6.0;
+        while (lv_x <= 6.01) {
+            lv_y = -6.0;
+            while (lv_y <= 6.01) {
+                if (SquareRoot((lv_x * lv_x) + (lv_y * lv_y)) <= StringToFixed(lp_a)) {
+                    UnitCreate(1, "Zergling", 0, 2, PointWithOffset(go_amP, lv_x, lv_y), 270.0);
+                    lv_u = UnitLastCreated();
+                    UnitSetPropertyFixed(lv_u, c_unitPropLifeMax, 3000.0);
+                    UnitSetPropertyFixed(lv_u, c_unitPropLife, 3000.0);
+                    libNtve_gf_PauseUnit(lv_u, true);
+                    UnitGroupAdd(go_amG, lv_u);
+                    UnitGroupAdd(go_dumG, lv_u);
+                }
+
+                lv_y += 0.75;
+            }
+
+            lv_x += 0.75;
+        }
+
+        GhostOps_Ce0_Write("j", "AMGRID dummies " + IntToString(UnitGroupCount(go_amG, c_unitCountAlive)));
+        return true;
+    }
+
+    if (lp_cmd == "amr") {
+        // report: a = the whole radius the pointer shows; counts of damaged dummies, total damage, farthest damaged dummy, damaged beyond the radius, undamaged inside it
+        lv_hit = 0;
+        lv_dmg = 0;
+        lv_out = 0;
+        lv_in = 0;
+        lv_maxd = 0.0;
+        lv_n = 0;
+        UnitGroupLoopBegin(go_amG);
+        while (UnitGroupLoopCurrent() != null) {
+            lv_l = UnitGetPropertyFixed(UnitGroupLoopCurrent(), c_unitPropLife, c_unitPropCurrent);
+            lv_d = DistanceBetweenPoints(UnitGetPosition(UnitGroupLoopCurrent()), go_amP);
+            if (lv_l < 2999.5) {
+                lv_hit += 1;
+                lv_dmg += FixedToInt(3000.0 - lv_l);
+                if (lv_d > lv_maxd) {
+                    lv_maxd = lv_d;
+                }
+
+                if (lv_d > StringToFixed(lp_a)) {
+                    lv_out += 1;
+                }
+            }
+            else {
+                if (lv_d <= StringToFixed(lp_a)) {
+                    lv_in += 1;
+                }
+            }
+
+            lv_n += 1;
+            UnitGroupLoopStep();
+        }
+
+        UnitGroupLoopEnd();
+        GhostOps_Ce0_Write("j", "AMR dummies " + IntToString(lv_n) + " damaged " + IntToString(lv_hit) + " totaldmg " + IntToString(lv_dmg) + " farthest damaged " + FixedToString(lv_maxd, 2) + " damaged beyond " + lp_a + ": " + IntToString(lv_out) + " undamaged inside: " + IntToString(lv_in));
+        return true;
+    }
+
+    if (lp_cmd == "amhist") {
+        // how many dummies took 30 / 60 / 90 / 120 / 150 damage (missile hits)
+        lv_t = "AMHIST";
+        lv_j = 1;
+        while (lv_j <= 6) {
+            lv_n = 0;
+            UnitGroupLoopBegin(go_amG);
+            while (UnitGroupLoopCurrent() != null) {
+                lv_dmg = FixedToInt(3000.0 - UnitGetPropertyFixed(UnitGroupLoopCurrent(), c_unitPropLife, c_unitPropCurrent) + 0.5);
+                if (lv_dmg == (30 * lv_j)) {
+                    lv_n += 1;
+                }
+
+                UnitGroupLoopStep();
+            }
+
+            UnitGroupLoopEnd();
+            lv_t = lv_t + " x" + IntToString(lv_j) + "=" + IntToString(lv_n);
+            lv_j += 1;
+        }
+
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "amsv") {
+        // the salvo of turret a (1-based) at the aim point
+        lv_g = UnitGroup("MissileTurret", 1, RegionEntireMap(), GhostOps_DEF_Live(), 0);
+        lv_u = UnitGroupUnit(lv_g, StringToInt(lp_a));
+        lv_t = "AMSV turret " + lp_a + " valid before " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(lv_u, OrderTargetingPoint(AbilityCommand("GhostOpsTurretSalvo", 0), go_amP)))) + " distance " + FixedToString(DistanceBetweenPoints(UnitGetPosition(lv_u), go_amP), 1);
+        UnitIssueOrder(lv_u, OrderTargetingPoint(AbilityCommand("GhostOpsTurretSalvo", 0), go_amP), c_orderQueueReplace);
+        go_amT0 = GameGetMissionTime();
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "amov") {
+        // an enemy Overlord (air, 3000 life, paused) at the offset (a, b) from the first turret
+        lv_g = UnitGroup("MissileTurret", 1, RegionEntireMap(), GhostOps_DEF_Live(), 0);
+        UnitCreate(1, "Overlord", 0, 2, PointWithOffset(UnitGetPosition(UnitGroupUnit(lv_g, 1)), StringToFixed(lp_a), StringToFixed(lp_b)), 270.0);
+        go_amOv = UnitLastCreated();
+        UnitSetPropertyFixed(go_amOv, c_unitPropLifeMax, 3000.0);
+        UnitSetPropertyFixed(go_amOv, c_unitPropLife, 3000.0);
+        libNtve_gf_PauseUnit(go_amOv, true);
+        UnitGroupAdd(go_dumG, go_amOv);
+        GhostOps_Ce0_Write("j", "AMOV overlord placed life 3000");
+        return true;
+    }
+
+    if (lp_cmd == "amlog") {
+        // samples the dummies (and the overlord) every 0.4 s, 24 times: the timeline of the salvo
+        go_amN = 0;
+        go_amTick = TriggerCreate("GhostOps_Ce0_AmTick");
+        TriggerAddEventTimePeriodic(go_amTick, 0.4, c_timeGame);
+        return true;
+    }
+
+    if (lp_cmd == "ammov") {
+        // 6 enemy Zerglings (3000 life) at the aim point that start walking away (east, 16 cells) at once
+        go_amMov = UnitGroupEmpty();
+        lv_i = 0;
+        while (lv_i < 6) {
+            UnitCreate(1, "Zergling", 0, 2, PointWithOffset(go_amP, 0.0, (IntToFixed(lv_i) * 0.5) - 1.25), 270.0);
+            lv_u = UnitLastCreated();
+            UnitSetPropertyFixed(lv_u, c_unitPropLifeMax, 3000.0);
+            UnitSetPropertyFixed(lv_u, c_unitPropLife, 3000.0);
+            UnitGroupAdd(go_amMov, lv_u);
+            UnitGroupAdd(go_dumG, lv_u);
+            lv_i += 1;
+        }
+
+        UnitGroupIssueOrder(go_amMov, OrderTargetingPoint(AbilityCommand("move", 0), PointWithOffset(go_amP, 16.0, 0.0)), c_orderQueueReplace);
+        GhostOps_Ce0_Write("j", "AMMOV 6 moving dummies");
+        return true;
+    }
+
+    if (lp_cmd == "ammr") {
+        lv_t = "AMMR moving dummies life";
+        UnitGroupLoopBegin(go_amMov);
+        while (UnitGroupLoopCurrent() != null) {
+            lv_t = lv_t + " " + FixedToString(UnitGetPropertyFixed(UnitGroupLoopCurrent(), c_unitPropLife, c_unitPropCurrent), 0) + "@" + FixedToString(DistanceBetweenPoints(UnitGetPosition(UnitGroupLoopCurrent()), go_amP), 1);
+            UnitGroupLoopStep();
+        }
+
+        UnitGroupLoopEnd();
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "amval") {
+        // validity of the salvo order of turret a (1-based) at the aim point WITHOUT issuing it (cooldown state: 0 = cooling down or locked, 1 = ready)
+        lv_g = UnitGroup("MissileTurret", 1, RegionEntireMap(), GhostOps_DEF_Live(), 0);
+        lv_u = UnitGroupUnit(lv_g, StringToInt(lp_a));
+        GhostOps_Ce0_Write("j", "AMVAL turret " + lp_a + " ready " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(lv_u, OrderTargetingPoint(AbilityCommand("GhostOpsTurretSalvo", 0), go_amP)))) + " game time " + FixedToString(GameGetMissionTime(), 1));
+        return true;
+    }
+
+    if (lp_cmd == "selt") {
+        // selects turret a (1-based) of the player and puts the camera over it (the pointer test needs the turret selected)
+        lv_g = UnitGroup("MissileTurret", 1, RegionEntireMap(), GhostOps_DEF_Live(), 0);
+        lv_u = UnitGroupUnit(lv_g, StringToInt(lp_a));
+        UnitSelect(lv_u, 1, true);
+        CameraPan(1, UnitGetPosition(lv_u), 0.0, -1, 10.0, false);
+        GhostOps_Ce0_Write("j", "SELT turret " + lp_a + " selected, camera on it");
+        return true;
+    }
+
+    if (lp_cmd == "selm") {
+        // selects one own Marine (a = Marine, b is ignored) or one Ghost (a = Ghost): the panel of other units must be unchanged
+        lv_g = UnitGroup(lp_a, 1, RegionEntireMap(), GhostOps_DEF_Live(), 0);
+        lv_u = UnitGroupUnit(lv_g, 1);
+        UnitSelect(lv_u, 1, true);
+        CameraPan(1, UnitGetPosition(lv_u), 0.0, -1, 10.0, false);
+        GhostOps_Ce0_Write("j", "SELM " + lp_a + " selected");
+        return true;
+    }
+
+    if (lp_cmd == "selall") {
+        // selects every Missile Turret of the player
+        lv_g = UnitGroup("MissileTurret", 1, RegionEntireMap(), GhostOps_DEF_Live(), 0);
+        UnitGroupSelect(lv_g, 1, true);
+        CameraPan(1, UnitGetPosition(UnitGroupUnit(lv_g, 1)), 0.0, -1, 10.0, false);
+        GhostOps_Ce0_Write("j", "SELALL " + IntToString(UnitGroupCount(lv_g, c_unitCountAlive)) + " turrets selected");
+        return true;
+    }
+
+    if (lp_cmd == "amsvall") {
+        // ONE group order of all turrets at the aim point (what a command given to several selected turrets does)
+        lv_g = UnitGroup("MissileTurret", 1, RegionEntireMap(), GhostOps_DEF_Live(), 0);
+        UnitGroupIssueOrder(lv_g, OrderTargetingPoint(AbilityCommand("GhostOpsTurretSalvo", 0), go_amP), c_orderQueueReplace);
+        go_amT0 = GameGetMissionTime();
+        GhostOps_Ce0_Write("j", "AMSVALL group order given to " + IntToString(UnitGroupCount(lv_g, c_unitCountAlive)) + " turrets");
+        return true;
+    }
+
+    if (lp_cmd == "pausem") {
+        lv_g = UnitGroup("Marine", 1, RegionEntireMap(), GhostOps_DEF_Live(), 0);
+        UnitGroupLoopBegin(lv_g);
+        while (UnitGroupLoopCurrent() != null) {
+            libNtve_gf_PauseUnit(UnitGroupLoopCurrent(), true);
+            UnitGroupLoopStep();
+        }
+
+        UnitGroupLoopEnd();
+        GhostOps_Ce0_Write("j", "PAUSEM own marines paused");
+        return true;
+    }
+
+    return false;
+}
+
 bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
     int lv_i;
     unit lv_g1;
@@ -736,6 +1029,10 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
     unitgroup lv_g;
 
     if (GhostOps_Ce0_DefCmd(lp_cmd, lp_a, lp_b)) {
+        return true;
+    }
+
+    if (GhostOps_Ce0_AimCmd(lp_cmd, lp_a, lp_b)) {
         return true;
     }
 

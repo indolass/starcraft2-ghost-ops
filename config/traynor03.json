@@ -733,7 +733,21 @@
       "details": [
         "Только для разработки: версия Owner остаётся прежней"
       ],
-      "overrides": {}
+      "overrides": {
+        "defence": {
+          "salvo": {
+            "radius": 1.5,
+            "spread": 1.0,
+            "hotkey": "A"
+          },
+          "texts": {
+            "SalvoTip": {
+              "ru": "Наземный залп: укажите область в пределах дальности - круг на земле показывает весь охват обстрела. Ракеты падают по очереди в разные точки круга; враги, ушедшие из него, не пострадают. Один приказ - один залп, у каждой турели своя перезарядка, свои не задеваются, ресурсы не тратятся. Против воздуха турель стреляет сама.",
+              "en": "Ground salvo: choose an area within range - the circle on the ground shows the whole area of the barrage. The missiles land one after another at different points of the circle; enemies that leave it are not hit. One order is one salvo, every turret has its own cooldown, your units are never hurt, nothing is spent. Against air the turret fires by itself."
+            }
+          }
+        }
+      }
     },
     "defence_next_dev": {
       "label": "Оборона и диверсии, следующая сборка (проба)",
@@ -765,6 +779,25 @@
             "Bunker",
             "MissileTurret"
           ]
+        }
+      }
+    },
+    "defence_next_slow_dev": {
+      "label": "Оборона и диверсии, следующая сборка (проба, медленный залп)",
+      "message": "Ghost Ops - defence (dev)",
+      "message_en": "Ghost Ops - defence (dev)",
+      "hidden": true,
+      "extends": "defence_next_dev",
+      "card": "Служебный запуск с пробой",
+      "details": [
+        "Только для проверки сохранения во время залпа: ракета раз в 3 с, перезарядка 60 с"
+      ],
+      "overrides": {
+        "defence": {
+          "salvo": {
+            "interval": 3,
+            "cooldown": 60
+          }
         }
       }
     }

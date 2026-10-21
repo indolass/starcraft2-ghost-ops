@@ -72,5 +72,47 @@ class DefenceBuild(unittest.TestCase):
         self.assertIn('libNtve_gf_CreateUnitsAtPoint2(2, "Marine"', out)
 
 
+class AimedSalvo(unittest.TestCase):
+    def setUp(self):
+        _, self.cfg = resolved('defence_next')
+        self.frag = build.defence_fragments(self.cfg['defence'])
+
+    def test_pattern_is_reproducible_and_inside_the_circle(self):
+        a = build.salvo_pattern(5, 1.0)
+        self.assertEqual(a, build.salvo_pattern(5, 1.0))
+        self.assertTrue(all((x * x + y * y) ** 0.5 <= 1.0 + 1e-9 for x, y in a))
+        self.assertEqual(build.salvo_pattern(3, 0), [(0.0, 0.0)] * 3)  # spread 0: every missile at the centre (the old behaviour)
+
+    def test_pointer_shows_the_whole_area_and_the_pointer_actors_exist(self):
+        sv = self.cfg['defence']['salvo']
+        self.assertIn('<AreaArray Radius="%g" Effect="GhostOpsSalvoDamage"/>' % (sv['radius'] + sv['spread']), self.frag['EffectData.xml'])
+        self.assertIn('<CursorEffect value="GhostOpsSalvoAim"/>', self.frag['AbilData.xml'])
+        for a in ('CActorSplat id="GhostOpsSalvoCursorSplat"', 'CActorModel id="GhostOpsSalvoCursorModel"', 'CActorRange id="GhostOpsSalvoRange"', 'BarrageModel'):
+            self.assertIn(a, self.frag['ActorData.xml'])
+        self.assertEqual(self.frag['EffectData.xml'].count('PeriodicOffsetArray'), sv['missiles'])
+        self.assertNotIn('Reveal', self.frag['EffectData.xml'])  # the pointer / salvo never reveals anything (the Odin's Barrage does)
+
+    def test_hotkey_a_replaces_the_attack_button_of_the_turret_card_only(self):
+        self.assertIn('HotkeyAlias value="Attack"', self.frag['ButtonData.xml'])
+        self.assertIn('index="3" Face="GhostOpsTurretSalvo"', self.frag['UnitData.xml'])
+        self.assertIn('Row="0" Column="4"', self.frag['UnitData.xml'])
+        self.assertNotIn('<AbilArray Link="attack"/>', self.frag['UnitData.xml'])  # the stock attack ability (automatic fire) is not removed
+        self.assertNotIn('MissileTurret', self.frag['AbilData.xml'])
+
+    def test_old_salvo_config_is_unchanged(self):
+        _, old = resolved('defence')
+        frag = build.defence_fragments(old['defence'])
+        self.assertNotIn('HotkeyAlias', frag['ButtonData.xml'])
+        self.assertIn('Row="1" Column="1"', frag['UnitData.xml'])
+
+    def test_validation(self):
+        bad = copy.deepcopy(self.cfg)
+        bad['defence']['salvo']['hotkey'] = 'ab'
+        self.assertTrue(build.validate_defence(bad))
+        bad = copy.deepcopy(self.cfg)
+        bad['defence']['salvo']['spread'] = 7
+        self.assertTrue(build.validate_defence(bad))
+
+
 if __name__ == '__main__':
     unittest.main()

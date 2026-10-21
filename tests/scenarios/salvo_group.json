@@ -1,0 +1,113 @@
+{
+ "name": "salvo_group",
+ "mission": "traynor03",
+ "preset": "defence_next_dev",
+ "why": "one group order, both turrets in range: who fires",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "cmd",
+   "text": "bld 5 8"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "bld 5 12"
+  },
+  {
+   "op": "until",
+   "grep": "spent B 0 T 2",
+   "cmd": "dst",
+   "every": 4,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "salvon"
+  },
+  {
+   "op": "cmd",
+   "text": "nofoe"
+  },
+  {
+   "op": "cmd",
+   "text": "pausem"
+  },
+  {
+   "op": "cmd",
+   "text": "amset -6 0"
+  },
+  {
+   "op": "cmd",
+   "text": "amgrid 4.0"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "cmd",
+   "text": "amsvall"
+  },
+  {
+   "op": "cmd",
+   "text": "amval 1"
+  },
+  {
+   "op": "cmd",
+   "text": "amval 2"
+  },
+  {
+   "op": "sleep",
+   "s": 5
+  },
+  {
+   "op": "cmd",
+   "text": "amr 2.5"
+  },
+  {
+   "op": "cmd",
+   "text": "amhist"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "expect",
+   "regex": "AMSVALL",
+   "note": "one group order to both turrets"
+  },
+  {
+   "op": "expect",
+   "regex": "AMR dummies",
+   "note": "total damage: 2730 = one salvo, 5460 = both turrets fired"
+  },
+  {
+   "op": "expect",
+   "regex": "AMHIST",
+   "note": "histogram (5 hits max per salvo)"
+  },
+  {
+   "op": "expect",
+   "regex": "AMVAL turret [12] ready",
+   "note": "readiness of each turret right after the group order: the one that fired is cooling down (0)"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}
