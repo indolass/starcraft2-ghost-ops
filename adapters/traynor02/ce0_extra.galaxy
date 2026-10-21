@@ -613,6 +613,17 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
         return true;
     }
 
+    if (lp_cmd == "killm") {
+        // kills one Marine of the player (a lost test fighter), logs how many are left
+        lv_g = UnitGroup("Marine", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+        if (UnitGroupCount(lv_g, c_unitCountAlive) > 0) {
+            UnitKill(UnitGroupUnit(lv_g, 1));
+        }
+
+        GhostOps_Ce0_Write("j", "KILLM marines before " + IntToString(UnitGroupCount(lv_g, c_unitCountAlive)) + " (one was killed if > 0)");
+        return true;
+    }
+
     if (lp_cmd == "ct") {
         TriggerExecute(TriggerCreate("GhostOps_Ce0_CancelTest"), true, false);
         return true;
