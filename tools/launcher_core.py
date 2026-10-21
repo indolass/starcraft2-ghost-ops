@@ -365,3 +365,46 @@ class Launcher:
             on_done(self.run(mission_id, preset, on_stage))
         threading.Thread(target=work, daemon=True).start()
         return True
+
+
+def queue_summary(st=None):
+    """Compact status of the queue of in-game tests (tools/test_queue.py) for the launcher: None when there is nothing to show, else
+    {'text', 'job', 'state', 'actions': ['cancel', 'resume', 'open_log']}. Read only; an unreadable queue is simply not shown."""
+    try:
+        if st is None:
+            import test_queue
+            st = test_queue.status(refresh=False)
+    except Exception:  # noqa: BLE001
+        return None
+    jobs = st.get('jobs') or []
+    if not jobs:
+        return None
+    waiting = [j for j in jobs if j['state'] in ('waiting', 'preparing', 'running', 'interrupted')]
+    j = waiting[0] if waiting else jobs[-1]
+    names = {'waiting': 'ожидает', 'preparing': 'готовится к запуску', 'running': 'выполняет тест', 'done': 'завершён', 'cancelled': 'отменён', 'error': 'ошибка',
+             'interrupted': 'прерван (состояние неизвестно)'}
+    text = 'Тест %s «%s» - %s - %s / %s: %s' % (j['id'], j['label'], names.get(j['state'], j['state']), j['mission'], j['preset'], j.get('phase', ''))
+    if len(waiting) > 1:
+        text += '  (ещё в очереди: %d)' % (len(waiting) - 1)
+    if j['state'] in ('done', 'cancelled', 'error'):
+        text += '  Итог: %s. Журнал: %s' % (j.get('result', ''), j.get('log', ''))
+    if j['state'] in ('waiting', 'preparing', 'running') and not st.get('runner_alive'):
+        text += '  [процесс очереди не работает]'
+    actions = []
+    if j['state'] in ('waiting', 'preparing', 'running', 'interrupted'):
+        actions.append('cancel')
+    if j['state'] == 'interrupted':
+        actions.append('resume')
+    if j.get('log'):
+        actions.append('open_log')
+    return {'text': text, 'job': j['id'], 'state': j['state'], 'actions': actions, 'log': j.get('log', '')}
+
+
+def queue_action(action, job_id):
+    """Cancel or resume of one queued test (the game of the Owner is never touched: the runner closes only its own verified test game)."""
+    import test_queue
+    if action == 'cancel':
+        test_queue.request_cancel(job_id)
+    elif action == 'resume':
+        test_queue.resume(job_id)
+        test_queue.start_detached()

@@ -722,6 +722,51 @@
           ]
         }
       }
+    },
+    "defence_next": {
+      "label": "Оборона и диверсии (следующая сборка, разработка)",
+      "message": "Ghost Ops - defence (next)",
+      "message_en": "Ghost Ops - defence (next)",
+      "hidden": true,
+      "extends": "defence",
+      "card": "Следующая сборка профиля «Оборона и диверсии»: отдельный файл карты; версия Owner (defence) не меняется",
+      "details": [
+        "Только для разработки: версия Owner остаётся прежней"
+      ],
+      "overrides": {}
+    },
+    "defence_next_dev": {
+      "label": "Оборона и диверсии, следующая сборка (проба)",
+      "message": "Ghost Ops - defence (dev)",
+      "message_en": "Ghost Ops - defence (dev)",
+      "hidden": true,
+      "extends": "defence_next",
+      "card": "Служебный запуск с пробой",
+      "details": [
+        "Только для разработки"
+      ],
+      "overrides": {
+        "tactical": {
+          "debug_log": true
+        },
+        "zerohour": {
+          "debug_log": true
+        },
+        "defence": {
+          "debug_log": true
+        },
+        "ce0": {
+          "operation_id": "CE0-TR03D",
+          "census_types": [
+            "Ghost",
+            "Marine",
+            "Medic",
+            "SCV",
+            "Bunker",
+            "MissileTurret"
+          ]
+        }
+      }
     }
   },
   "audio": {

@@ -202,10 +202,48 @@ def build_app():
 
             self.status = ctk.CTkLabel(self, text='', font=(FONT, 12), text_color=MUTED, anchor='w')
             self.status.grid(row=1, column=0, columnspan=2, sticky='ew', padx=22, pady=(0, 8))
+            # compact status of the queue of prepared in-game tests (hidden when there is none): what waits, which build, the stage, the result and the log
+            self.qframe = ctk.CTkFrame(self, fg_color=CARD, corner_radius=8)
+            self.qlabel = ctk.CTkLabel(self.qframe, text='', font=(FONT, 12), text_color=TEXT, anchor='w', justify='left', wraplength=760)
+            self.qlabel.grid(row=0, column=0, sticky='ew', padx=10, pady=6)
+            self.qframe.grid_columnconfigure(0, weight=1)
+            self.qbuttons = ctk.CTkFrame(self.qframe, fg_color='transparent')
+            self.qbuttons.grid(row=0, column=1, padx=6)
+            self._qsummary = None
+            self.after(1500, self._queue_poll)
             self.right = right
             self._resize_job = None
             self.bind('<Configure>', self._schedule_resize, add='+')
             self.scroll._parent_canvas.bind('<Configure>', lambda e: self._schedule_resize(), add='+')
+
+        # ------------------------------------------------------------------ queue of in-game tests
+        def _queue_poll(self):
+            try:
+                summary = core.queue_summary()
+            except Exception:  # noqa: BLE001
+                summary = None
+            if summary != self._qsummary:
+                self._qsummary = summary
+                for w in self.qbuttons.winfo_children():
+                    w.destroy()
+                if summary is None:
+                    self.qframe.grid_remove()
+                else:
+                    self.qlabel.configure(text=summary['text'])
+                    labels = {'cancel': 'Отменить', 'resume': 'Возобновить', 'open_log': 'Журнал'}
+                    for i, act in enumerate(summary['actions']):
+                        ctk.CTkButton(self.qbuttons, text=labels[act], width=100, height=26, font=(FONT, 12),
+                                      command=lambda a=act, s=summary: self._queue_click(a, s)).grid(row=0, column=i, padx=3)
+                    self.qframe.grid(row=2, column=0, columnspan=2, sticky='ew', padx=22, pady=(0, 8))
+            self.after(3000, self._queue_poll)
+
+        def _queue_click(self, action, summary):
+            if action == 'open_log':
+                if summary.get('log') and os.path.exists(summary['log']):
+                    os.startfile(summary['log'])
+                return
+            core.queue_action(action, summary['job'])
+            self._qsummary = None
 
         # ------------------------------------------------------------------ rendering
         def _refresh(self):

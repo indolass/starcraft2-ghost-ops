@@ -97,6 +97,8 @@ def launch_test_game(command, width=1024, height=768, mute_seconds=900):
         return None
     subprocess.Popen(['powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', os.path.join(HERE, 'mute_process.ps1'),
                       '-ProcessId', str(pid), '-Seconds', str(mute_seconds)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    import isolation
+    isolation.record_owned(pid, 'launch_test_game')
     win = place_window(pid, (x, y, w, h))
     try:
         facts = verify_window(win, mon, w, h) if win else {'ok': False}

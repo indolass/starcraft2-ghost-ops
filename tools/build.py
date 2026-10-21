@@ -25,6 +25,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 import sc2mpq  # noqa: E402
+import isolation  # noqa: E402
 import galaxy_lint  # noqa: E402
 
 SC2_DIR = os.environ.get('GHOSTOPS_SC2_DIR', r'E:\Games\StarCraft II')
@@ -1457,11 +1458,17 @@ def resolve_config(adapter, preset=None, diag=False, no_voice=False):
         if name not in presets:
             raise ConfigError('unknown preset "%s" for %s; available: %s' % (name, adapter['mission'], ', '.join(presets)))
         base = {k: v for k, v in raw.items() if k not in ('presets', 'default_preset')}
-        parent = presets[name].get('extends')
-        if parent is not None and parent not in presets:
-            raise ConfigError('preset "%s" extends unknown preset "%s"' % (name, parent))
-        cfg = deep_merge(base, presets[parent].get('overrides', {})) if parent else base
-        cfg = deep_merge(cfg, presets[name].get('overrides', {}))
+        chain, cur = [], name  # the whole chain of "extends" (a hidden development preset may extend another development preset)
+        while cur is not None:
+            if cur not in presets:
+                raise ConfigError('preset "%s" extends unknown preset "%s"' % (chain[-1] if chain else name, cur))
+            if cur in chain:
+                raise ConfigError('preset "%s" extends itself' % cur)
+            chain.append(cur)
+            cur = presets[cur].get('extends')
+        cfg = base
+        for link in reversed(chain):
+            cfg = deep_merge(cfg, presets[link].get('overrides', {}))
         cfg['profile'] = {'name': name, 'label': presets[name]['label'], 'message': presets[name]['message'],
                           'message_en': presets[name].get('message_en', presets[name]['message'])}
     if diag:
@@ -1792,6 +1799,11 @@ def install_key(adapter, preset, args):
     if os.path.exists(dest):
         print('target exists and was not installed by us: %s' % dest)
         return 6
+    try:
+        isolation.check_change(dest, 'overwritten')
+    except isolation.Protected as e:
+        print('refused: %s' % e)
+        return 6
     created_dir = not os.path.isdir(dest_dir)
     os.makedirs(dest_dir, exist_ok=True)
     shutil.copyfile(out, dest)
@@ -1813,6 +1825,11 @@ def uninstall_key(key, label):
         print('nothing installed by this project for %s' % label)
         return 0
     rec = json.loads(read(mp, 'r'))
+    try:
+        isolation.check_change(rec['file'], 'removed')
+    except isolation.Protected as e:
+        print('refused: %s' % e)
+        return 6
     if os.path.exists(rec['file']):
         if sha256(read(rec['file'])) != rec['sha256']:
             print('installed file was modified since install; not deleting: %s' % rec['file'])
@@ -1850,6 +1867,12 @@ def ensure_installed(args):
     mp = install_manifest_path(key)
     if os.path.exists(mp):
         rec = json.loads(read(mp, 'r'))
+        if os.path.exists(rec['file']) and isolation.is_protected(rec['file']):
+            if sha256(read(rec['file'])) == sha256(read(out)):
+                print('already installed and identical: %s' % rec['file'])
+                return 0
+            print('refused: %s is a protected version of the Owner and differs from this build; it is kept as it is' % rec['file'])
+            return 6
         if os.path.exists(rec['file']) and sha256(read(rec['file'])) == sha256(read(out)):
             print('already installed and identical: %s' % rec['file'])
             return 0
@@ -1867,6 +1890,16 @@ def prepare(args, progress=None):
     if sc2_running():
         print('StarCraft II is already running: close it first (this launcher never closes your game).')
         return 7
+    adapter0, cfg0, preset0 = context(args)
+    kept = os.path.join(SC2_DIR, 'Maps', 'GhostOps', output_name(adapter0, preset0))
+    if os.path.isfile(kept) and isolation.is_protected(kept):
+        # the Owner's version: started as it is, never rebuilt, never replaced (CLI, launcher and campaign window all come here)
+        reg = isolation.load()[isolation.key(kept)]
+        if sha256(read(kept)) != reg['sha256']:
+            print('refused: the installed %s differs from the registered Owner version; nothing is changed' % os.path.basename(kept))
+            return 6
+        print('Owner version kept as it is (not rebuilt): %s' % kept)
+        return 0
     note('build')
     rc = cmd_build(args)
     if rc != 0:
@@ -1920,6 +1953,9 @@ def start_detached(command, owner=False):
     there is no other), muted (our process only), never full screen, never raised; the actual mode / size / monitor of the window are verified afterwards and a
     window that does not comply is closed (our own pid only)."""
     if owner and not os.environ.get('GHOSTOPS_TEST'):
+        m = re.search(r'-run "([^"]+[.]SC2Map)"', command, re.I)
+        if m and os.path.isfile(m.group(1)) and os.path.dirname(m.group(1)).lower() == isolation.MAPS_DIR.lower():
+            isolation.protect(m.group(1), "started by the Owner's normal launch")  # a save may be bound to it from now on
         return _raw_start(command)
     import test_launch
     return 0 if test_launch.launch_test_game(command) else 8

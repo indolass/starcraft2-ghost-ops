@@ -31,10 +31,11 @@ import build  # noqa: E402
 import monitors  # noqa: E402
 import sc2_ui  # noqa: E402
 import test_launch  # noqa: E402
+import isolation  # noqa: E402
 
 ROOT = build.ROOT
 DOCS = test_launch.DOCS
-STATE = os.path.join(ROOT, 'tmp', 'ce0', 'session.json')
+STATE = os.environ.get('GHOSTOPS_SESSION_STATE') or os.path.join(ROOT, 'tmp', 'ce0', 'session.json')  # a queue job has its own state file
 BANKS = os.path.join(DOCS, 'Banks')
 
 
@@ -110,7 +111,7 @@ def cmd_start(a):
     subprocess.Popen(['powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', os.path.join(HERE, 'mute_process.ps1'),
                       '-ProcessId', str(pid), '-Seconds', str(a.mute_seconds)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     win = test_launch.place_window(pid, (x, y, w, h))
-    st = {'pid': pid, 'mission': a.mission, 'preset': name, 'started': t0, 'map': dest, 'second_monitor': second,
+    st = {'created': isolation.process_created(pid), 'pid': pid, 'mission': a.mission, 'preset': name, 'started': t0, 'map': dest, 'second_monitor': second,
           'window': win and win['rect'], 'command': command, 'operation': adapter.get('_op')}
     save_state(st)
     print('test game pid %d on %s (%s); window %s' % (pid, mon.device, 'second monitor' if second else 'PRIMARY: no second monitor', win and win['rect']))
@@ -180,8 +181,11 @@ def cmd_stop(a):
     st = load_state()
     pids = test_launch.sc2_pids()
     if st['pid'] in pids:
-        subprocess.run(['taskkill', '/PID', str(st['pid']), '/T', '/F'], capture_output=True)
-        print('closed our own test game, pid', st['pid'])
+        if isolation.is_owned(st['pid']) and (not st.get('created') or st['created'] == isolation.process_created(st['pid'])):
+            isolation.close_owned(st['pid'])
+            print('closed our own test game, pid', st['pid'])
+        else:
+            print('pid %d is not the test game of this session any more (creation time / owner record differ): NOT closed' % st['pid'])
     else:
         print('our test game is not running any more')
     if not a.keep_map:

@@ -114,6 +114,76 @@ bool GhostOps_Ce0_DefTick (bool lp_test, bool lp_run) {
 
 // DEV: trace of the enemy fighters (players 2, 3, 4): all, near the defence zone, at the gather point of the post-timer waves, nearest one to the zone centre.
 trigger go_wvTick;
+trigger go_wvpTick;
+unitgroup go_frG;
+unit go_frBld;
+unit go_szD;
+trigger go_nofoeTick;
+
+bool GhostOps_Ce0_NofoeTick (bool lp_test, bool lp_run) {
+    int lv_p;
+    unitgroup lv_g;
+
+    if (!lp_run) {
+        return true;
+    }
+
+    lv_p = 2;
+    while (lv_p <= 5) {
+        lv_g = UnitGroup(null, lv_p, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterStructure), (1 << (c_targetFilterDead - 32))), 0);
+        UnitGroupLoopBegin(lv_g);
+        while (UnitGroupLoopCurrent() != null) {
+            if (UnitGroupLoopCurrent() != go_szD) {
+                UnitRemove(UnitGroupLoopCurrent());
+            }
+
+            UnitGroupLoopStep();
+        }
+
+        UnitGroupLoopEnd();
+        lv_p += 1;
+    }
+
+    return true;
+}
+
+bool GhostOps_Ce0_WvpTick (bool lp_test, bool lp_run) {
+    int lv_p;
+    int lv_i;
+    int lv_n;
+    int lv_zone;
+    int lv_hatch;
+    unitgroup lv_g;
+    string lv_t;
+
+    if (!lp_run) {
+        return true;
+    }
+
+    lv_t = "WVP";
+    lv_p = 2;
+    while (lv_p <= 4) {
+        lv_g = UnitGroup(null, lv_p, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterStructure), (1 << (c_targetFilterDead - 32))), 0);
+        lv_n = UnitGroupCount(lv_g, c_unitCountAlive);
+        lv_zone = 0;
+        lv_i = 1;
+        while (lv_i <= lv_n) {
+            if (DistanceBetweenPoints(UnitGetPosition(UnitGroupUnit(lv_g, lv_i)), Point(go_tacZoneX, go_tacZoneY)) < 40.0) {
+                lv_zone += 1;
+            }
+
+            lv_i += 1;
+        }
+
+        lv_hatch = UnitGroupCount(UnitGroup("Hatchery", lv_p, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive);
+        lv_hatch += UnitGroupCount(UnitGroup("Lair", lv_p, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive);
+        lv_t = lv_t + " P" + IntToString(lv_p) + " units " + IntToString(lv_n) + " near " + IntToString(lv_zone) + " hatch " + IntToString(lv_hatch) + " |";
+        lv_p += 1;
+    }
+
+    GhostOps_Ce0_Write("j", lv_t);
+    return true;
+}
 
 bool GhostOps_Ce0_WvTick (bool lp_test, bool lp_run) {
     int lv_p;
@@ -177,6 +247,7 @@ unit go_szOv;
 bool GhostOps_Ce0_DefCmd (string lp_cmd, string lp_a, string lp_b) {
     string lv_t;
     int lv_i;
+    int lv_k;
     unit lv_u;
     unitgroup lv_g;
     point lv_p;
@@ -535,6 +606,110 @@ bool GhostOps_Ce0_DefCmd (string lp_cmd, string lp_a, string lp_b) {
         }
 
         GhostOps_Ce0_Write("j", "KG killed targets of player " + lp_a + " (b=" + lp_b + ")");
+        return true;
+    }
+
+    if (lp_cmd == "wvp") {
+        go_wvpTick = TriggerCreate("GhostOps_Ce0_WvpTick");
+        TriggerAddEventTimePeriodic(go_wvpTick, 15.0, c_timeGame);
+        return true;
+    }
+
+    if (lp_cmd == "fr") {
+        // own units in the area of a salvo, no enemies: 2 SCV, 3 Marine, 1 Barracks (finished) at the offset (a, b) from the first turret; fr1 = lives at once
+        lv_g = UnitGroup("MissileTurret", 1, RegionEntireMap(), GhostOps_DEF_Live(), 0);
+        lv_u = UnitGroupUnit(lv_g, 1);
+        lv_p = PointWithOffset(UnitGetPosition(lv_u), StringToFixed(lp_a), StringToFixed(lp_b));
+        go_frG = UnitGroupEmpty();
+        UnitCreate(2, "SCV", 0, 1, lv_p, 270.0);
+        UnitGroupAddUnitGroup(go_frG, UnitLastCreatedGroup());
+        UnitCreate(3, "Marine", 0, 1, PointWithOffset(lv_p, 1.0, 1.0), 270.0);
+        UnitGroupAddUnitGroup(go_frG, UnitLastCreatedGroup());
+        UnitCreate(1, "SupplyDepot", 0, 1, PointWithOffset(lv_p, -1.0, -1.0), 270.0);
+        go_frBld = UnitLastCreated();
+        UnitGroupAdd(go_frG, go_frBld);
+        UnitGroupLoopBegin(go_frG);
+        while (UnitGroupLoopCurrent() != null) {
+            libNtve_gf_PauseUnit(UnitGroupLoopCurrent(), true);
+            UnitGroupLoopStep();
+        }
+
+        UnitGroupLoopEnd();
+        GhostOps_Ce0_Write("j", "FR placed " + IntToString(UnitGroupCount(go_frG, c_unitCountAlive)) + " own units at " + FixedToString(PointGetX(lv_p), 1) + "," + FixedToString(PointGetY(lv_p), 1) + " enemies near " + IntToString(UnitGroupCount(UnitGroup(null, 2, RegionCircle(lv_p, 12.0), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive) + UnitGroupCount(UnitGroup(null, 3, RegionCircle(lv_p, 12.0), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive) + UnitGroupCount(UnitGroup(null, 4, RegionCircle(lv_p, 12.0), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive)));
+        return true;
+    }
+
+    if (lp_cmd == "szd") {
+        // one enemy dummy (Zergling, 3000 life, paused) at the offset (a, b) from the first turret; every own Marine is paused so nothing else shoots
+        lv_g = UnitGroup("MissileTurret", 1, RegionEntireMap(), GhostOps_DEF_Live(), 0);
+        lv_u = UnitGroupUnit(lv_g, 1);
+        lv_p = PointWithOffset(UnitGetPosition(lv_u), StringToFixed(lp_a), StringToFixed(lp_b));
+        UnitCreate(1, "Zergling", 0, 2, lv_p, 270.0);
+        go_szD = UnitLastCreated();
+        UnitSetPropertyFixed(go_szD, c_unitPropLifeMax, 3000.0);
+        UnitSetPropertyFixed(go_szD, c_unitPropLife, 3000.0);
+        libNtve_gf_PauseUnit(go_szD, true);
+        lv_g = UnitGroup("Marine", 1, RegionEntireMap(), GhostOps_DEF_Live(), 0);
+        UnitGroupLoopBegin(lv_g);
+        while (UnitGroupLoopCurrent() != null) {
+            libNtve_gf_PauseUnit(UnitGroupLoopCurrent(), true);
+            UnitGroupLoopStep();
+        }
+
+        UnitGroupLoopEnd();
+        GhostOps_Ce0_Write("j", "SZD dummy placed at " + FixedToString(PointGetX(lv_p), 1) + "," + FixedToString(PointGetY(lv_p), 1) + " life " + FixedToString(UnitGetPropertyFixed(go_szD, c_unitPropLife, c_unitPropCurrent), 0));
+        return true;
+    }
+
+    if (lp_cmd == "szdr") {
+        GhostOps_Ce0_Write("j", "SZDR dummy life " + FixedToString(UnitGetPropertyFixed(go_szD, c_unitPropLife, c_unitPropCurrent), 0));
+        return true;
+    }
+
+    if (lp_cmd == "nofoe") {
+        // every 0.25 s all enemy non-structure units (except the dummy) are removed: nothing but the salvo can hurt the own units
+        go_nofoeTick = TriggerCreate("GhostOps_Ce0_NofoeTick");
+        TriggerAddEventTimePeriodic(go_nofoeTick, 0.25, c_timeGame);
+        GhostOps_Ce0_Write("j", "NOFOE running");
+        return true;
+    }
+
+    if (lp_cmd == "cleane") {
+        // kills every non-structure unit of the Zerg players 2..5 (an enemy-free scene)
+        lv_i = 2;
+        while (lv_i <= 5) {
+            lv_g = UnitGroup(null, lv_i, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterStructure), (1 << (c_targetFilterDead - 32))), 0);
+            UnitGroupLoopBegin(lv_g);
+            while (UnitGroupLoopCurrent() != null) {
+                UnitRemove(UnitGroupLoopCurrent());
+                UnitGroupLoopStep();
+            }
+
+            UnitGroupLoopEnd();
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", "CLEANE enemy units removed");
+        return true;
+    }
+
+    if (lp_cmd == "frr") {
+        lv_i = 0;
+        lv_k = 2;
+        while (lv_k <= 5) {
+            lv_i += UnitGroupCount(UnitGroup(null, lv_k, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterStructure), (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive);
+            lv_k += 1;
+        }
+
+        lv_t = "FRR enemyUnitsOnMap " + IntToString(lv_i) + " |";
+        UnitGroupLoopBegin(go_frG);
+        while (UnitGroupLoopCurrent() != null) {
+            lv_t = lv_t + " " + UnitGetType(UnitGroupLoopCurrent()) + "=" + FixedToString(UnitGetPropertyFixed(UnitGroupLoopCurrent(), c_unitPropLife, c_unitPropCurrent), 0) + "/" + FixedToString(UnitGetPropertyFixed(UnitGroupLoopCurrent(), c_unitPropLifeMax, c_unitPropCurrent), 0);
+            UnitGroupLoopStep();
+        }
+
+        UnitGroupLoopEnd();
+        GhostOps_Ce0_Write("j", lv_t);
         return true;
     }
 
