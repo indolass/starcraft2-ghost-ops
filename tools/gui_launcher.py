@@ -589,6 +589,10 @@ def main(argv=None):
             ctk.set_widget_scaling(factor)
             ctk.set_window_scaling(factor)
         app = App()
+        if '--mission' in argv:  # open on a given mission / profile (the choice is remembered like any click)
+            app.select_mission(argv[argv.index('--mission') + 1])
+            if '--profile' in argv:
+                app.select_profile(argv[argv.index('--profile') + 1])
         if snapshot_dir:
             run_snapshots(app, ctk, snapshot_dir)
         app.mainloop()
