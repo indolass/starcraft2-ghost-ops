@@ -44,7 +44,7 @@ def run_one(name, map_path):
     mons = monitors.list_monitors()
     mon, _ = monitors.test_monitor(mons)
     x, y, w, h = monitors.test_window_rect(mon, 1024, 768)
-    cmd = '"%s" -run "%s" -displaymode 0 -windowwidth %d -windowheight %d -windowx %d -windowy %d' % (
+    cmd = ('"%s" -run "%s" ' + os.environ.get('PROBE_EXTRA', '') + ' -displaymode 0 -windowwidth %d -windowheight %d -windowx %d -windowy %d') % (
         os.path.join(build.SC2_DIR, 'Support64', 'SC2Switcher_x64.exe'), map_path, w, h, x, y)
     build.start_detached(cmd)
     pid = test_launch.wait_new_pid(before)
@@ -57,7 +57,10 @@ def run_one(name, map_path):
     shot = os.path.join(OUT, 'save_lock_probe_%s.png' % name)
     sc2_ui.shot(pid, shot)
     sc2_ui.key(pid, ['ESC'], 0.5)
-    res = {'map': name, 'pid': pid, 'lock_pixels': lock_visible(Image.open(shot)), 'screenshot': shot}
+    import hashlib
+    res = {'map': name, 'path': map_path, 'sha256': hashlib.sha256(open(map_path, 'rb').read()).hexdigest(), 'command': cmd, 'pid': pid,
+           'exe': subprocess.run(['powershell', '-NoProfile', '-Command', '(Get-Process -Id %d).Path' % pid], capture_output=True, text=True).stdout.strip(),
+           'lock_pixels': lock_visible(Image.open(shot)), 'screenshot': shot}
     subprocess.run(['taskkill', '/PID', str(pid), '/F'], capture_output=True)   # OUR pid only
     time.sleep(3)
     return res
@@ -69,6 +72,13 @@ def main():
         return 9
     os.makedirs(OUT, exist_ok=True)
     results = []
+    extra = [a.split('=', 1) for a in sys.argv[1:] if '=' in a]
+    for nm, pth in extra:
+        results.append(run_one(nm, pth))
+    if extra:
+        json.dump(results, open(os.path.join(OUT, 'save_lock_probe.json'), 'w'), indent=2)
+        print(json.dumps(results, indent=2))
+        return 0
     ours = os.path.join(build.SC2_DIR, 'Maps', 'GhostOps', 'GhostOps_TRaynor02_r2_tactical.SC2Map')
     results.append(run_one('ours_r2_tactical', ours))
     os.makedirs(PROBE_DIR, exist_ok=True)
