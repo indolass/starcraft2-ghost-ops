@@ -92,7 +92,7 @@ class CampaignFlow:
         z = cfg.get('zerohour')
         if not z:
             return None
-        return {'limits': z['limits'], 'prices': z['prices'], 'recommended': z['recommended'], 'default': z['order'], 'items': build.ZH_ORDER_ITEMS,
+        return {'limits': z['limits'], 'prices': z['prices'], 'recommended': z['recommended'], 'default': z['order'], 'items': build.ZH_ORDER_ITEMS, 'min': dict(z.get('min', {})),
                 'recommended_cost': build.zerohour_cost(cfg, z['recommended']), 'test_budget': z['test_budget']}
 
     def quote(self, mission, preset, order):
@@ -108,8 +108,9 @@ class CampaignFlow:
             else:
                 for k in info['items']:
                     v = order[k]
-                    if not isinstance(v, int) or isinstance(v, bool) or not 0 <= v <= info['limits'][k]:
-                        errors.append('%s: допустимо 0..%d' % (ORDER_LABELS[k], info['limits'][k]))
+                    lo = info['min'].get(k, 0)
+                    if not isinstance(v, int) or isinstance(v, bool) or not lo <= v <= info['limits'][k]:
+                        errors.append('%s: допустимо %d..%d' % (ORDER_LABELS[k], lo, info['limits'][k]) + (' (первые шесть морпехов входят в заказ)' if k == 'marines' and lo >= 6 else ''))
                 if not errors:
                     adapter = build.load_adapter(mission)
                     cfg, _ = build.resolve_config(adapter, preset)

@@ -16,7 +16,8 @@ void GhostOps_OnMissionStart () {
     GhostOps_SetPlayerCovered(1, true);
     GhostOps_ZH_Start();
     GhostOps_Tac_Start();
-    if (go_zhEnabled) {
+    if (go_zhEnabled && !go_defEnabled) {
+        // (the defence variant delivers its Ghosts by pod: core/GhostOpsDefence.galaxy)
         GhostOps_ZH_CaptureBunkerCargo();
         GhostOps_SpawnOperatives(1, Point(go_zhGhostX, go_zhGhostY));
         GhostOps_Tac_OnGhostsDelivered(GhostOps_SquadUnit(0), GhostOps_SquadUnit(1));

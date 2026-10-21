@@ -68,7 +68,7 @@ def profiles_of(mission_id):
     if not presets:
         return []
     return [{'name': n, 'label': p['label'], 'card': p.get('card', ''), 'details': p.get('details', []),
-             'experimental': bool(p.get('experimental'))} for n, p in presets.items() if not p.get('hidden')]
+             'experimental': bool(p.get('experimental')), 'badge': p.get('badge', '')} for n, p in presets.items() if not p.get('hidden')]
 
 
 def installed_map_info(mission_id, preset, game_dir=None, no_voice=False):

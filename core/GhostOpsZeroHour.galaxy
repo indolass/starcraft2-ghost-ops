@@ -12,6 +12,7 @@
 //   - the scenes (portrait + text, queued behind the original talks) and the target counter.
 // Everything saved with the game is a global of this module: a loaded game continues with the same order, scene stage and target state.
 //==================================================================================================
+bool go_defEnabled;             // the "defence" variant (core/GhostOpsDefence.galaxy; stubs in the generated config when the build has none)
 bool go_zhEnabled;
 bool go_zhStarted;
 bool go_zhVictoryDone;
@@ -59,6 +60,11 @@ string[32] go_zhLockSeen;
 trigger go_zhSceneTick;
 
 void GhostOps_ApplyZeroHourConfig ();
+void GhostOps_ApplyDefenceConfig ();
+void GhostOps_DEF_Start ();
+void GhostOps_DEF_ApplyStock ();
+int GhostOps_DEF_Scale (int lp_player, int lp_qty);
+int GhostOps_DEF_PostSide (int lp_start);
 void GhostOps_ZH_PostWave ();
 
 void GhostOps_ZH_Log (string lp_text) {
@@ -154,6 +160,16 @@ void GhostOps_ZH_ApplyOrder () {
     int lv_removed;
 
     lv_cc = UnitFromId(23);
+    if (go_defEnabled) {
+        // the defence variant: no stock troops / fortifications at all; extra SCVs as ordered; the rest is delivered / built by the player (core/GhostOpsDefence.galaxy)
+        GhostOps_DEF_ApplyStock();
+        if (go_zhOrdScvs > 0) {
+            UnitCreate(go_zhOrdScvs, "SCV", 0, 1, PointWithOffset(UnitGetPosition(lv_cc), -3.0, 6.0), 270.0);
+        }
+
+        return;
+    }
+
     // Marines of the player: the 24 stock Marines of the map
     lv_g = UnitGroupCopy(UnitGroup("Marine", 1, RegionEntireMap(), GhostOps_ZH_Live(), 0));
     // the Marines that stand inside the four stock bunkers are Marines of the map too (not found by the region search)
@@ -331,7 +347,11 @@ void GhostOps_ZH_LockFixed () {
     lv_types[15] = "Medic";
     lv_i = 0;
     while (lv_i < 16) {
-        TechTreeUnitAllow(1, lv_types[lv_i], false);
+        // the defence variant: Bunker (8) and Missile Turret (7) are switched by the kit tick of its own module
+        if (!(go_defEnabled && ((lv_i == 7) || (lv_i == 8)))) {
+            TechTreeUnitAllow(1, lv_types[lv_i], false);
+        }
+
         lv_i += 1;
     }
 }
@@ -513,13 +533,21 @@ void GhostOps_ZH_PostWave () {
     }
 
     lv_side = 2 + (go_zhWaveSide % 3);
+    if (go_defEnabled) {
+        lv_side = GhostOps_DEF_PostSide(go_zhWaveSide);
+        if (lv_side < 0) {
+            GhostOps_ZH_Log("post wave skipped: every group is destroyed");
+            return;
+        }
+    }
+
     go_zhWaveSide += 1;
     AIAttackWaveSetTargetPlayer(lv_side, PlayerGroupSingle(1));
     AIAttackWaveSetGatherPoint(lv_side, PointFromId(264));
     AIAttackWaveAddWaypoint(lv_side, PointFromId(378), false);
-    AIAttackWaveAddUnits4(go_zhPostZerglings, go_zhPostZerglings, go_zhPostZerglings, go_zhPostZerglings, "Zergling");
-    AIAttackWaveAddUnits4(go_zhPostHydras, go_zhPostHydras, go_zhPostHydras, go_zhPostHydras, "Hydralisk");
-    AIAttackWaveAddUnits4(go_zhPostRoaches, go_zhPostRoaches, go_zhPostRoaches, go_zhPostRoaches, "Roach");
+    AIAttackWaveAddUnits4(GhostOps_DEF_Scale(lv_side, go_zhPostZerglings), GhostOps_DEF_Scale(lv_side, go_zhPostZerglings), GhostOps_DEF_Scale(lv_side, go_zhPostZerglings), GhostOps_DEF_Scale(lv_side, go_zhPostZerglings), "Zergling");
+    AIAttackWaveAddUnits4(GhostOps_DEF_Scale(lv_side, go_zhPostHydras), GhostOps_DEF_Scale(lv_side, go_zhPostHydras), GhostOps_DEF_Scale(lv_side, go_zhPostHydras), GhostOps_DEF_Scale(lv_side, go_zhPostHydras), "Hydralisk");
+    AIAttackWaveAddUnits4(GhostOps_DEF_Scale(lv_side, go_zhPostRoaches), GhostOps_DEF_Scale(lv_side, go_zhPostRoaches), GhostOps_DEF_Scale(lv_side, go_zhPostRoaches), GhostOps_DEF_Scale(lv_side, go_zhPostRoaches), "Roach");
     AIAttackWaveSend(lv_side, 120, false);
     GhostOps_ZH_Log("post wave sent by player " + IntToString(lv_side) + ", active enemy units " + IntToString(lv_active));
 }
@@ -684,8 +712,13 @@ void GhostOps_ZH_Start () {
         return;
     }
 
+    GhostOps_ApplyDefenceConfig();
     GhostOps_ZH_Log("start; order marines " + IntToString(go_zhOrdMarines) + " bunkers " + IntToString(go_zhOrdBunkers) + " turrets " + IntToString(go_zhOrdTurrets) + " scvs " + IntToString(go_zhOrdScvs));
     GhostOps_ZH_ApplyOrder();
+    if (go_defEnabled) {
+        GhostOps_DEF_Start();
+    }
+
     go_zhDead = 0;
     lv_i = 0;
     while (lv_i < go_zhTargetCount) {
@@ -693,9 +726,11 @@ void GhostOps_ZH_Start () {
         lv_i += 1;
     }
 
-    HelpPanelAddTip(PlayerGroupAll(), StringExternal("Param/Value/GhostOpsZH_Tip1Title"), StringExternal("Param/Value/GhostOpsZH_Tip1Text"), StringExternal("Param/Value/GhostOpsZH_Tip1Title"), "Assets\\Textures\\ui_icon_attention.dds");
-    HelpPanelAddTip(PlayerGroupAll(), StringExternal("Param/Value/GhostOpsZH_Tip2Title"), StringExternal("Param/Value/GhostOpsZH_Tip2Text"), StringExternal("Param/Value/GhostOpsZH_Tip2Title"), "Assets\\Textures\\ui_icon_attention.dds");
-    HelpPanelAddTip(PlayerGroupAll(), StringExternal("Param/Value/GhostOpsZH_Tip3Title"), StringExternal("Param/Value/GhostOpsZH_Tip3Text"), StringExternal("Param/Value/GhostOpsZH_Tip3Title"), "Assets\\Textures\\ui_icon_attention.dds");
+    if (!go_defEnabled) {
+        HelpPanelAddTip(PlayerGroupAll(), StringExternal("Param/Value/GhostOpsZH_Tip1Title"), StringExternal("Param/Value/GhostOpsZH_Tip1Text"), StringExternal("Param/Value/GhostOpsZH_Tip1Title"), "Assets\\Textures\\ui_icon_attention.dds");
+        HelpPanelAddTip(PlayerGroupAll(), StringExternal("Param/Value/GhostOpsZH_Tip2Title"), StringExternal("Param/Value/GhostOpsZH_Tip2Text"), StringExternal("Param/Value/GhostOpsZH_Tip2Title"), "Assets\\Textures\\ui_icon_attention.dds");
+        HelpPanelAddTip(PlayerGroupAll(), StringExternal("Param/Value/GhostOpsZH_Tip3Title"), StringExternal("Param/Value/GhostOpsZH_Tip3Text"), StringExternal("Param/Value/GhostOpsZH_Tip3Title"), "Assets\\Textures\\ui_icon_attention.dds");
+    }
     ObjectiveCreate(StringExternal("Param/Value/GhostOpsZH_ObjTitle"), StringExternal("Param/Value/GhostOpsZH_ObjText"), c_objectiveStateActive, true);
     go_zhObjective = ObjectiveLastCreated();
     GhostOps_ZH_ObjectiveText();
@@ -709,6 +744,8 @@ void GhostOps_ZH_Start () {
 
     go_zhTick = TriggerCreate("GhostOps_ZH_Tick");
     TriggerAddEventTimePeriodic(go_zhTick, 1.0, c_timeGame);
-    go_zhSceneTick = TriggerCreate("GhostOps_ZH_SceneTick");
-    TriggerAddEventTimePeriodic(go_zhSceneTick, 0.5, c_timeGame);
+    if (!go_defEnabled) {
+        go_zhSceneTick = TriggerCreate("GhostOps_ZH_SceneTick");
+        TriggerAddEventTimePeriodic(go_zhSceneTick, 0.5, c_timeGame);
+    }
 }

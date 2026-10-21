@@ -198,6 +198,8 @@ construction events, save / load completeness, saving methods, operation set nam
 
 2026-10-20 (later): **CE-0 DONE as a technical probe (NOT closed as a whole: loading a save from the SC2 main menu was never tried - it needs the Owner's login)** (hidden dev presets only; results in docs/RESEARCH.md "CE-0" and contract section 14): real saves / loads of TRaynor02 and THanson01, Bank behaviour, map set for saves, resource counters, turret kit events. The mission plan of the next stages is docs/MISSION_ROADMAP.md (TRaynor02 -> TRaynor03 preparation first; THanson01 later). Nothing of the probe is in a playable profile.
 
+2026-10-21 (later): **TRaynor03 «Оборона и диверсии» (preset `defence`) implemented as an EXPERIMENT** (player-built kit bunkers / turrets, pod landing, manual ground salvo, wave weakening by marked incubator groups, Matt message with a short target reveal); separate map `GhostOps_TRaynor03_defence`, the previous *Zero Hour* untouched. Real-game checks and limits: `docs/MISSION_ROADMAP.md` 7.8. No full playthrough yet; numbers are not Owner-approved.
+
 2026-10-20 (queue of docs/MISSION_ROADMAP.md): CE-0 DONE; **CE-1 implemented** (map journal, launcher-side campaign state with one atomic commit, campaign window of the launcher, unique per-operation
 map files); **TRaynor03 «Час икс» built as an EXPERIMENT** (pre-ordered garrison, two Ghosts, two missiles, victory = 20 game minutes AND all marked hatcheries, production lock, post-timer waves); scenes of the first three
 missions (portrait + text; clips exist only for the older short lines). Prices / limits / waves of TRaynor03 are experimental numbers, not Owner-approved. THanson01 economy (1000 / 500, turret kits, mercenaries)

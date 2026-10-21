@@ -38,7 +38,8 @@ def make_window_class(ctk, pal):
             self.busy = False
             self.watching = False
             self.pending = []
-            self.order = dict(self.flow.order_info('traynor03', 'standard')['recommended'])
+            self.t3 = 'defence'  # the variant of the second step: 'defence' (new, experimental) or 'standard' (the previous Zero Hour)
+            self.order = dict(self.flow.order_info('traynor03', self.t3)['recommended'])
             self.grid_columnconfigure(0, weight=1)
             self.grid_rowconfigure(0, weight=1)
             self.body = ctk.CTkScrollableFrame(self, fg_color='transparent')
@@ -128,26 +129,30 @@ def make_window_class(ctk, pal):
 
         def _draw_step2(self, row):
             f = self.card(row, '2. «Час икс» — подготовка заказа')
-            info = self.flow.order_info('traynor03', 'standard')
+            info = self.flow.order_info('traynor03', self.t3)
             opn = self.flow.open_operation('traynor03')
-            ctk.CTkLabel(f, text='Рейнор: «%s»' % cf.PREP_TEXT, font=(FONT, 12), text_color=MUTED, anchor='w', justify='left', wraplength=740).grid(row=1, column=0, sticky='ew', padx=16, pady=(0, 6))
+            ctk.CTkLabel(f, text=('Вариант: %s. ' % ('«Оборона и диверсии» — НОВЫЙ, экспериментальный (закупленные бункеры и турели строите сами; морпехи прилетают в капсулах)' if self.t3 == 'defence' else 'прежний «Час икс» (заказ готов к старту)')) + 'Рейнор: «%s»' % cf.PREP_TEXT, font=(FONT, 12), text_color=MUTED, anchor='w', justify='left', wraplength=740).grid(row=1, column=0, sticky='ew', padx=16, pady=(0, 6))
             if opn:
                 ctk.CTkLabel(f, text='Операция %s: %s. Заказ зафиксирован и оплачен.' % (opn[0], op_status(opn[1])), font=(FONT, 13), text_color=TEXT, anchor='w',
                              wraplength=740).grid(row=2, column=0, sticky='ew', padx=16, pady=(2, 4))
-                self._op_buttons(f, 3, 'traynor03', 'standard')
+                self._op_buttons(f, 3, 'traynor03', self.t3)
                 return
+            vb = ctk.CTkFrame(f, fg_color='transparent')
+            vb.grid(row=6, column=0, sticky='w', padx=12, pady=(0, 10))
+            self.button(vb, 'Новый: Оборона и диверсии (эксперимент)', lambda: self.set_variant('defence'), primary=(self.t3 == 'defence'), width=300).grid(row=0, column=0, padx=4)
+            self.button(vb, 'Прежний «Час икс»', lambda: self.set_variant('standard'), primary=(self.t3 == 'standard'), width=170).grid(row=0, column=1, padx=4)
             grid = ctk.CTkFrame(f, fg_color='transparent')
             grid.grid(row=2, column=0, sticky='ew', padx=16)
             grid.grid_columnconfigure(0, weight=1)
             for i, k in enumerate(info['items']):
                 pr = info['prices'][k]
                 price = '%d мин.' % pr['minerals'] + (' + %d газа' % pr['gas'] if pr['gas'] else '')
-                ctk.CTkLabel(grid, text='%s (по %s, не более %d)' % (cf.ORDER_LABELS[k], price, info['limits'][k]), font=(FONT, 13), text_color=TEXT,
+                ctk.CTkLabel(grid, text='%s (по %s, %sне более %d)' % (cf.ORDER_LABELS[k], price, ('не менее %d, ' % info['min'][k]) if info['min'].get(k) else '', info['limits'][k]), font=(FONT, 13), text_color=TEXT,
                              anchor='w').grid(row=i, column=0, sticky='ew', pady=3)
                 self.button(grid, '−', lambda kk=k: self.change(kk, -1), width=36).grid(row=i, column=1, padx=4)
                 ctk.CTkLabel(grid, text=str(self.order[k]), font=(FONT, 15, 'bold'), text_color=TEXT, width=36).grid(row=i, column=2)
                 self.button(grid, '+', lambda kk=k: self.change(kk, 1), width=36).grid(row=i, column=3, padx=4)
-            q = self.flow.quote('traynor03', 'standard', self.order)
+            q = self.flow.quote('traynor03', self.t3, self.order)
             cost = q['cost']
             short = q['short']
             line = 'Стоимость заказа: %d минералов, %d газа. В запасе: %d / %d.' % (cost['minerals'], cost['gas'], q['stock']['minerals'], q['stock']['gas'])
@@ -160,17 +165,22 @@ def make_window_class(ctk, pal):
             bar = ctk.CTkFrame(f, fg_color='transparent')
             bar.grid(row=5, column=0, sticky='w', padx=12, pady=(6, 12))
             self.button(bar, 'Рекомендуемый заказ', self.use_recommended).grid(row=0, column=0, padx=4)
-            self.button(bar, 'Оплатить и начать', lambda: self.run_async(lambda: self.flow.start_new('traynor03', 'standard', dict(self.order))), primary=True,
+            self.button(bar, 'Оплатить и начать', lambda: self.run_async(lambda: self.flow.start_new('traynor03', self.t3, dict(self.order))), primary=True,
                         state='normal' if q['ok'] and not self.busy else 'disabled').grid(row=0, column=1, padx=4)
 
         # ---------------------------------------------------------------- actions
         def change(self, key, delta):
-            info = self.flow.order_info('traynor03', 'standard')
-            self.order[key] = max(0, min(info['limits'][key], self.order[key] + delta))
+            info = self.flow.order_info('traynor03', self.t3)
+            self.order[key] = max(info['min'].get(key, 0), min(info['limits'][key], self.order[key] + delta))
+            self.refresh()
+
+        def set_variant(self, name):
+            self.t3 = name
+            self.order = dict(self.flow.order_info('traynor03', name)['recommended'])
             self.refresh()
 
         def use_recommended(self):
-            self.order = dict(self.flow.order_info('traynor03', 'standard')['recommended'])
+            self.order = dict(self.flow.order_info('traynor03', self.t3)['recommended'])
             self.refresh()
 
         def refuse(self, op_id):

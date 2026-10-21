@@ -76,6 +76,13 @@ ZH_TEXT_KEYS = ('ObjTitle', 'ObjText', 'AllDestroyed', 'RaynorName', 'RaynorText
                 'RaynorClip', 'HornerClip', 'HornerWaitClip', 'RebelClip', 'RebelClipAlt', 'RescueClip', 'RescueClipAlt',
                 'Tip1Title', 'Tip1Text', 'Tip2Title', 'Tip2Text', 'Tip3Title', 'Tip3Text')
 ZH_ORDER_ITEMS = ('marines', 'bunkers', 'turrets', 'scvs')
+# The "defence" variant of TRaynor03 (config key "defence", core/GhostOpsDefence.galaxy)
+DEF_TEXT_PREFIX = 'Param/Value/GhostOpsDef_'
+DEF_TEXT_KEYS = ('KitsTitle', 'KitsText', 'KitsBunkers', 'KitsTurrets', 'KitsOut', 'LandedFirst', 'LandedRest', 'LandedGhosts', 'SwannName', 'SwannText', 'SalvoHint', 'SalvoName',
+                 'SalvoTip', 'RaynorText', 'MattText', 'MattEarly', 'Tip1Title', 'Tip1Text', 'Tip2Title', 'Tip2Text', 'Tip3Title', 'Tip3Text')
+DEF_EXPLAIN_KEYS = ('SwannText', 'RaynorText', 'MattText', 'MattEarly')
+TAIL_BEGIN = '// ==== GHOSTOPS TAIL BEGIN (generated, do not edit) ===='
+TAIL_END = '// ==== GHOSTOPS TAIL END ===='
 PANEL_TEXT_KEYS = ('Dead', 'Infinite', 'Cloak', 'Seconds', 'Regen', 'Hold', 'Ready', 'Grenades', 'Footer')  # plus Name0 .. Name<squad - 1>
 PANEL_TEXT_PREFIX = 'Param/Value/GhostOpsPanel_'
 ZH_VOICE_KEYS = ('raynor', 'horner', 'horner_wait', 'rebel', 'rebel_alt', 'rescue', 'rescue_alt')  # index order of go_zhVoiceId
@@ -164,6 +171,8 @@ def validate_config(cfg):
         errs += validate_campaign(cfg)
     if cfg.get('zerohour') is not None:
         errs += validate_zerohour(cfg)
+    if cfg.get('defence') is not None:
+        errs += validate_defence(cfg)
     return errs
 
 
@@ -173,17 +182,23 @@ def validate_zerohour(cfg):
     errs = []
     if not isinstance(z, dict):
         return ['zerohour must be an object']
-    known = {'order', 'limits', 'prices', 'recommended', 'test_budget', 'arrival_minutes', 'targets', 'ping_every', 'ghost_spawn', 'post_arrival', 'scene', 'texts', 'debug_log', 'lock_production', 'voice'}
+    known = {'order', 'limits', 'prices', 'recommended', 'test_budget', 'arrival_minutes', 'targets', 'ping_every', 'ghost_spawn', 'post_arrival', 'scene', 'texts', 'debug_log', 'lock_production', 'voice', 'min'}
     for k in z:
         if k not in known:
             errs.append('zerohour.%s is not supported' % k)
     isint = lambda v: isinstance(v, int) and not isinstance(v, bool)  # noqa: E731
     lim = z.get('limits', {})
+    mn = z.get('min', {})
+    if not isinstance(mn, dict) or set(mn) - set(ZH_ORDER_ITEMS) or any(not isint(v) or v < 0 or v > lim.get(k, -1) for k, v in mn.items()):
+        errs.append('zerohour.min must map order items to integers 0..zerohour.limits.<item>')
+        mn = {}
     for grp in ('order', 'recommended'):
         o = z.get(grp, {})
         for k in ZH_ORDER_ITEMS:
             if not isint(o.get(k)) or not 0 <= o[k] <= lim.get(k, -1):
                 errs.append('zerohour.%s.%s must be an integer 0..zerohour.limits.%s' % (grp, k, k))
+            elif o[k] < mn.get(k, 0):
+                errs.append('zerohour.%s.%s must be at least zerohour.min.%s (%d)' % (grp, k, k, mn[k]))
         extra = set(o) - set(ZH_ORDER_ITEMS)
         if extra:
             errs.append('zerohour.%s has unsupported items %s' % (grp, sorted(extra)))
@@ -239,6 +254,191 @@ def validate_zerohour(cfg):
         if not isinstance(v, dict) or not all(isinstance(v.get(l), str) and v[l] and chr(10) not in v[l] for l in ('ru', 'en')):
             errs.append('zerohour.texts.%s needs non-empty single-line ru and en texts' % k)
     return errs
+
+
+def validate_defence(cfg):
+    """TRaynor03 "defence" variant (config key "defence"). Every number of the variant is a setting; unknown keys are errors."""
+    d = cfg['defence']
+    errs = []
+    if not isinstance(d, dict):
+        return ['defence must be an object']
+    for k in d:
+        if k not in ('landing', 'salvo', 'waves', 'scenes', 'texts', 'debug_log'):
+            errs.append('defence.%s is not supported' % k)
+    if cfg.get('zerohour') is None or not cfg['zerohour'].get('lock_production'):
+        errs.append('defence needs zerohour with lock_production true')
+    if cfg['zerohour'].get('min', {}).get('marines', 0) < 6:
+        errs.append('defence needs zerohour.min.marines >= 6 (the first six marines belong to the paid order)')
+    ln = d.get('landing', {})
+    if not (isinstance(ln.get('point'), list) and len(ln['point']) == 2 and all(_num(v) and 0 <= v <= 255 for v in ln['point'])):
+        errs.append('defence.landing.point must be [x, y]')
+    for k, (lo, hi) in {'first_at': (1, 600), 'rest_at': (1, 900), 'ghosts_at': (1, 900)}.items():
+        if not _num(ln.get(k)) or not lo <= ln[k] <= hi:
+            errs.append('defence.landing.%s must be a number %s..%s (game seconds after the start of control)' % (k, lo, hi))
+    sv = d.get('salvo', {})
+    for k, (lo, hi) in {'range': (3, 20), 'interval': (0.1, 3), 'radius': (0.5, 6), 'damage': (1, 400), 'cooldown': (1, 300)}.items():
+        if not _num(sv.get(k)) or not lo <= sv[k] <= hi:
+            errs.append('defence.salvo.%s must be a number %s..%s' % (k, lo, hi))
+    if not isinstance(sv.get('missiles'), int) or isinstance(sv.get('missiles'), bool) or not 1 <= sv['missiles'] <= 12:
+        errs.append('defence.salvo.missiles must be an integer 1..12')
+    wv = d.get('waves', {})
+    if not _num(wv.get('power')) or not 1 <= wv['power'] <= 2:
+        errs.append('defence.waves.power must be 1 (share) or 2 (share squared)')
+    if wv.get('rounding') not in ('down', 'nearest', 'up'):
+        errs.append('defence.waves.rounding must be down, nearest or up')
+    sc = d.get('scenes', {})
+    for k, (lo, hi) in {'raynor_at': (0, 600), 'raynor_seconds': (3, 30), 'matt_at': (0, 1200), 'matt_seconds': (3, 30), 'swann_delay': (0, 120), 'swann_seconds': (3, 30), 'reveal_seconds': (1, 30), 'reveal_radius': (2, 12)}.items():
+        if not _num(sc.get(k)) or not lo <= sc[k] <= hi:
+            errs.append('defence.scenes.%s must be a number %s..%s' % (k, lo, hi))
+    texts = d.get('texts', {})
+    if set(texts) != set(DEF_TEXT_KEYS):
+        errs.append('defence.texts must have exactly the keys %s' % (DEF_TEXT_KEYS,))
+    for k in DEF_TEXT_KEYS:
+        v = texts.get(k)
+        if not isinstance(v, dict) or not all(isinstance(v.get(l), str) and v[l] and chr(10) not in v[l] for l in ('ru', 'en')):
+            errs.append('defence.texts.%s needs non-empty single-line ru and en texts' % k)
+    return errs
+
+
+def gen_defence(cfg, adapter=None):
+    """GhostOps_ApplyDefenceConfig() and, in a build without the "defence" key, the stubs the zerohour module calls."""
+    d = cfg.get('defence')
+    nl = chr(10)
+    if not d:
+        return nl.join(['// no defence variant in this build (stubs)', 'void GhostOps_ApplyDefenceConfig () {', '    go_defEnabled = false;', '}', '', 'void GhostOps_DEF_Start () {', '}', '',
+                        'void GhostOps_DEF_ApplyStock () {', '}', '', 'int GhostOps_DEF_Scale (int lp_player, int lp_qty) {', '    return lp_qty;', '}', '',
+                        'int GhostOps_DEF_PostSide (int lp_start) {', '    return 2 + (lp_start % 3);', '}', ''])
+    b = lambda v: 'true' if v else 'false'  # noqa: E731
+    ln, sc, wv = d['landing'], d['scenes'], d['waves']
+    lines = ['// Generated defence configuration', 'void GhostOps_ApplyDefenceConfig () {', '    go_defEnabled = true;', '    go_defDebug = %s;' % b(d.get('debug_log')),
+             '    go_defLandX = %.4f;' % ln['point'][0], '    go_defLandY = %.4f;' % ln['point'][1],
+             '    go_defLandAt[0] = %.1f;' % ln['first_at'], '    go_defLandAt[1] = %.1f;' % ln['rest_at'], '    go_defLandAt[2] = %.1f;' % ln['ghosts_at'],
+             '    go_defRaynorAt = %.1f;' % sc['raynor_at'], '    go_defRaynorLen = %.1f;' % sc['raynor_seconds'], '    go_defMattAt = %.1f;' % sc['matt_at'],
+             '    go_defMattLen = %.1f;' % sc['matt_seconds'], '    go_defRevealSec = %.1f;' % sc['reveal_seconds'], '    go_defRevealRadius = %.1f;' % sc['reveal_radius'], '    go_defSwannDelay = %.1f;' % sc['swann_delay'], '    go_defSwannLen = %.1f;' % sc['swann_seconds'],
+             '    go_defPower = %.1f;' % wv['power'], '    go_defRound = %d;' % {'down': 0, 'nearest': 1, 'up': 2}[wv['rounding']], '}', '']
+    for w in (adapter or {}).get('defence_waves', []):
+        lines.append('bool GhostOps_DEF_%s (bool testConds, bool runActions);' % w['function'][3:-5])
+    return nl.join(lines)
+
+
+def defence_wave_tail(text, adapter):
+    """The generated copies of the original attack functions (script tail): every number of units of a Zerg base is scaled by the share of its living marked
+    Hatcheries (GhostOps_DEF_Scale), the waves are buffered and sent only when something is left (GhostOps_DEF_Send). Nothing else of the original changes."""
+    nl = '\r\n' if '\r\n' in text else '\n'
+    out = []
+    for w in adapter.get('defence_waves', []):
+        name, group = w['function'], w['group']
+        head = 'bool %s (bool testConds, bool runActions) {' % name
+        a = text.find(head)
+        if a < 0:
+            raise ValueError('defence wave function not found: %s' % name)
+        e = text.find(nl + '}', a)
+        body = text[a:e + len(nl) + 1]
+        short = name[3:-5]
+        body = body.replace(head, 'bool GhostOps_DEF_%s (bool testConds, bool runActions) {' % short, 1)
+        body = re.sub(r'AIAttackWaveAddUnits4\(', 'GhostOps_DEF_Add4(%d, ' % group, body)
+        body = re.sub(r'AIAttackWaveAddWaypoint\(gv_pLAYER0\d_ZERG, ', 'GhostOps_DEF_Wp(%d, ' % group, body)
+        body = re.sub(r'AIAttackWaveSend\(gv_pLAYER0(\d)_ZERG, ', r'GhostOps_DEF_Send(\1, ', body)
+        for call, grp in (('libNtve_gf_CreateUnitsAtPoint2(', None), ('gf_SpawnNydusUnitsP02West(', 2), ('gf_SpawnNydusUnitsP04East(', 4), ('gf_FirstZergWaveAttackP03(', 3),
+                          ('gf_DropPodExpansionZergling(', 0)):
+            body = _wrap_first_arg(body, call, grp, group)
+        if not w.get('prelude'):
+            marker0 = '    if (!runActions) {' + nl + '        return true;' + nl + '    }' + nl
+            if body.count(marker0) == 1:
+                body = body.replace(marker0, marker0 + nl + '    GhostOps_DEF_Log("attack source runs: %s");' % short + nl)
+        if w.get('prelude'):
+            marker = '    if (!runActions) {' + nl + '        return true;' + nl + '    }' + nl
+            if body.count(marker) != 1:
+                raise ValueError('prelude anchor not found in %s' % name)
+            body = body.replace(marker, marker + nl + '    ' + w['prelude'] + nl)
+        out.append(body.rstrip() + nl)
+    return nl.join(out)
+
+
+def _wrap_first_arg(body, call, grp, default_group):
+    """Wraps the first argument of every `call(` into GhostOps_DEF_Scale(group, arg). For libNtve_gf_CreateUnitsAtPoint2 only calls whose owner (4th argument) is a Zerg AI player."""
+    res = []
+    i = 0
+    while True:
+        j = body.find(call, i)
+        if j < 0:
+            res.append(body[i:])
+            break
+        k = j + len(call)
+        depth = 1
+        args = []
+        start = k
+        m = k
+        while depth > 0:
+            c = body[m]
+            if c == '(':
+                depth += 1
+            elif c == ')':
+                depth -= 1
+                if depth == 0:
+                    args.append(body[start:m])
+            elif c == ',' and depth == 1:
+                args.append(body[start:m])
+                start = m + 1
+            m += 1
+        g = grp
+        ok = True
+        if call.startswith('libNtve_gf_CreateUnitsAtPoint2'):
+            mo = re.search(r'gv_pLAYER0([234])_ZERG', args[3]) if len(args) > 3 else None
+            if mo:
+                g = int(mo.group(1))
+            elif len(args) > 3 and 'gv_pLAYER05_ZERG_NOAI' in args[3]:
+                g = 0
+            else:
+                ok = False
+        if ok:
+            first = args[0].strip()
+            rest = body[k + len(args[0]):m]
+            res.append(body[i:k] + 'GhostOps_DEF_Scale(%d, %s)' % (g, first) + rest)
+        else:
+            res.append(body[i:m])
+        i = m
+    return ''.join(res)
+
+
+def defence_fragments(d):
+    """Catalog overrides of the defence variant (map local): Bunker / Missile Turret are free to build for the kit logic and need only the Command Center, the turret gets
+    the manual ground salvo (separate Ghost Ops data; the weapon of every other Missile Turret of the game is not touched)."""
+    g = lambda v: '%g' % v  # noqa: E731
+    sv = d['salvo']
+    nl = chr(10)
+    periods = ['            <PeriodicPeriodArray value="0"/>'] + ['            <PeriodicPeriodArray value="%s"/>' % g(sv['interval']) for _ in range(sv['missiles'] - 1)]
+    return {
+        'UnitData.xml': nl.join([
+            '    <CUnit id="Bunker">', '        <CostResource index="Minerals" value="0"/>', '    </CUnit>',
+            '    <CUnit id="MissileTurret">', '        <CostResource index="Minerals" value="0"/>', '        <AbilArray Link="GhostOpsTurretSalvo"/>',
+            '        <CardLayouts index="0">',
+            '            <LayoutButtons Face="GhostOpsTurretSalvo" Type="AbilCmd" AbilCmd="GhostOpsTurretSalvo,Execute" Row="1" Column="1"/>',
+            '        </CardLayouts>', '    </CUnit>', '']),
+        'AbilData.xml': nl.join([
+            '    <CAbilBuild id="TerranBuild">',
+            '        <InfoArray index="Build6">', '            <Button Requirements="HaveCommandCenter"/>', '        </InfoArray>',
+            '        <InfoArray index="Build7">', '            <Button Requirements="HaveCommandCenter"/>', '        </InfoArray>',
+            '    </CAbilBuild>',
+            '    <CAbilEffectTarget id="GhostOpsTurretSalvo">', '        <EditorCategories value="Race:Terran,AbilityorEffectType:Units"/>',
+            '        <Effect index="0" value="GhostOpsSalvoMain"/>', '        <Range value="%s"/>' % g(sv['range']), '        <Arc value="360"/>', '        <CastIntroTime value="0"/>',
+            '        <Flags index="RequireTargetVision" value="1"/>', '        <CursorEffect value="GhostOpsSalvoSearch"/>',
+            '        <Cost index="0">', '            <Cooldown TimeUse="%s"/>' % g(sv['cooldown']), '        </Cost>',
+            '        <CmdButtonArray index="Execute" DefaultButtonFace="GhostOpsTurretSalvo"/>', '    </CAbilEffectTarget>', '']),
+        'ButtonData.xml': nl.join([
+            '    <CButton id="GhostOpsTurretSalvo">', '        <Icon value="Assets' + chr(92) + 'Textures' + chr(92) + 'btn-command-attack.dds"/>',
+            '        <EditorCategories value="Race:Terran"/>', '    </CButton>', '']),
+        'EffectData.xml': nl.join([
+            '    <CEffectCreatePersistent id="GhostOpsSalvoMain">', '        <EditorCategories value="Race:Terran"/>', '        <WhichLocation Value="TargetPoint"/>',
+            '        <PeriodCount value="%d"/>' % sv['missiles'], '        <PeriodicEffectArray value="GhostOpsSalvoLaunch"/>'] + periods + ['    </CEffectCreatePersistent>',
+            '    <CEffectLaunchMissile id="GhostOpsSalvoLaunch">', '        <EditorCategories value="Race:Terran"/>', '        <ImpactEffect value="GhostOpsSalvoSearch"/>',
+            '        <ImpactLocation Value="TargetPoint"/>', '        <AmmoUnit value="LongboltMissileWeapon"/>', '    </CEffectLaunchMissile>',
+            '    <CEffectEnumArea id="GhostOpsSalvoSearch">', '        <EditorCategories value="Race:Terran"/>', '        <LaunchLocation Value="TargetPoint"/>', '        <ImpactLocation Value="TargetPoint"/>',
+            '        <AreaArray Radius="%s" Effect="GhostOpsSalvoDamage"/>' % g(sv['radius']),
+            '        <SearchFilters value="Ground,Visible;Player,Ally,Neutral,Air,Missile,Stasis,Dead,Hidden,Invulnerable"/>', '    </CEffectEnumArea>',
+            '    <CEffectDamage id="GhostOpsSalvoDamage">', '        <EditorCategories value="Race:Terran"/>', '        <Kind value="Splash"/>', '        <Amount value="%s"/>' % g(sv['damage']),
+            '        <Flags index="Notification" value="1"/>', '        <ResponseFlags index="Acquire" value="1"/>', '    </CEffectDamage>', '']),
+    }
 
 
 def zerohour_cost(cfg, order=None):
@@ -778,6 +978,9 @@ def catalog_fragments(cfg):
         for name, frag in tactical_fragments(cfg['tactical'], cfg.get('ghost_tuning')).items():
             if frag:
                 frags[name] = frags.get(name, '') + frag
+    if cfg.get('defence'):
+        for name, frag in defence_fragments(cfg['defence']).items():
+            frags[name] = frags.get(name, '') + frag
     if 'UnitData.xml' in frags:
         frags['UnitData.xml'] = merge_same_id(frags['UnitData.xml'], 'CUnit', 'Ghost')
     facial = {c['id']: c['facial'] for c in (cfg.get('audio') or {}).get('clips', []) if c.get('facial')}
@@ -1073,6 +1276,10 @@ def patch_script(text, adapter, block):
         edits.append((apos, nl + '    ' + hook['call'] + HOOK_TAG))
     block_nl = nl.join(block.replace('\r\n', '\n').split('\n'))
     edits.append((ins, nl + BEGIN + nl + block_nl.rstrip() + nl + END))
+    if adapter.get('defence'):
+        tail = defence_wave_tail(text, adapter)
+        tail_nl = nl.join(tail.replace('\r\n', '\n').split('\n'))
+        edits.append((len(text), nl + TAIL_BEGIN + nl + tail_nl.rstrip() + nl + TAIL_END))
     out = text
     for pos, ins_text in sorted(edits, key=lambda e: -e[0]):
         out = out[:pos] + ins_text + out[pos:]
@@ -1150,6 +1357,17 @@ def text_entries(cfg):
                 out.setdefault(loc, []).append(('Button/Name/GhostOpsArmorPiercing', g['GrenadeName'][lang]))
                 out.setdefault(loc, []).append(('Button/Tooltip/GhostOpsArmorPiercing', g['GrenadeTip'][lang]))
                 out.setdefault(loc, []).append(('Button/Hotkey/GhostOpsArmorPiercing', 'E'))
+    df = cfg.get('defence')
+    if df:
+        for loc, lang in (('ruRU', 'ru'), ('enUS', 'en')):
+            for k in DEF_TEXT_KEYS:
+                v = df['texts'][k][lang]
+                if k in DEF_EXPLAIN_KEYS:
+                    v = EXPLAIN_STYLE[0] + v + EXPLAIN_STYLE[1]
+                out.setdefault(loc, []).append((DEF_TEXT_PREFIX + k, v))
+            out.setdefault(loc, []).append(('Button/Name/GhostOpsTurretSalvo', df['texts']['SalvoName'][lang]))
+            out.setdefault(loc, []).append(('Button/Tooltip/GhostOpsTurretSalvo', df['texts']['SalvoTip'][lang]))
+            out.setdefault(loc, []).append(('Button/Hotkey/GhostOpsTurretSalvo', 'G'))
     pn = cfg.get('panel')
     if pn and pn.get('enabled'):
         for loc, lang in (('ruRU', 'ru'), ('enUS', 'en')):
@@ -1187,7 +1405,7 @@ def build_block(adapter, cfg):
     if 'tactical' in gens:
         extra += gen_tactical_test(cfg) + '\n' + gen_tactical(cfg) + '\n'
     if 'zerohour' in gens:
-        extra += gen_zerohour(cfg) + '\n'
+        extra += gen_zerohour(cfg) + '\n' + gen_defence(cfg, adapter) + '\n'
     if 'hanson' in gens:
         extra += gen_hanson_test(cfg) + '\n' + gen_hanson(cfg) + '\n'
     if cfg.get('scene'):
@@ -1263,12 +1481,22 @@ def apply_ce0(adapter, cfg):
     """Optional modules chosen by the RESOLVED config, added to a COPY of the adapter:
     key "ce0" (development probe, only in *_dev profiles) and key "campaign" (the campaign journal of a playable profile that takes part in the
     economy). Without a key the adapter is returned untouched, so a profile without it contains nothing of it."""
-    if not cfg.get('ce0') and not cfg.get('campaign'):
+    if not cfg.get('ce0') and not cfg.get('campaign') and not cfg.get('defence'):
         return adapter
     a = json.loads(json.dumps(adapter))
     a['generators'] = adapter.get('generators', ['tactical'] if adapter.get('modules') else [])
     mods = list(adapter.get('modules') or [])
     hooks = list(adapter.get('extra_hooks', []))
+    if cfg.get('defence'):
+        mods.append('core/GhostOpsDefence.galaxy')
+        for w in adapter.get('defence_waves', []):
+            hooks.append({'function': w['function'], 'before': '// Actions', 'call': 'if (go_defEnabled && runActions) { return GhostOps_DEF_%s(testConds, runActions); }' % w['function'][3:-5]})
+        # the original starts the AI (and with it the attack waves) in the intro, before the mission start hooks run: the flag must be set first
+        hooks.append({'function': 'gt_IntroSequence_Func', 'before': 'TriggerExecute(gt_StartAI, true, false);', 'call': 'GhostOps_ApplyDefenceConfig();'})
+        # the original tips ask for a Reactor / Engineering Bay and talk about buildings the player does not have here
+        for tip in ('gt_TipBunkerQ_Func', 'gt_TipReactorQ_Func', 'gt_TipEngineeringBayQ_Func', 'gt_TipMissileTurretQ_Func'):
+            hooks.append({'function': tip, 'before': '// Actions', 'call': 'if (go_defEnabled && runActions) { return true; }'})
+        a['defence'] = True
     if cfg.get('campaign'):
         mods.append('core/GhostOpsCampaign.galaxy')
         hooks += list(adapter.get('campaign_hooks', []))
@@ -1518,6 +1746,7 @@ def cmd_verify(args):
     check('Ghost Ops block present exactly once', new.count(BEGIN) == 1 and new.count(END) == 1)
     orig = a_src.read(man['script_member']).decode('utf-8-sig')
     stripped = re.sub(r'\r?\n' + re.escape(BEGIN) + r'.*?' + re.escape(END), '', new, flags=re.S)
+    stripped = re.sub(r'\r?\n' + re.escape(TAIL_BEGIN) + r'.*?' + re.escape(TAIL_END), '', stripped, flags=re.S)
     stripped = re.sub(r'\r?\n    [^\n]*' + re.escape(HOOK_TAG), '', stripped)
     check('removing our additions restores the original script text exactly', stripped == orig)
     check('all scenario functions of the original are kept', all(f in new for f in re.findall(r'^bool (gt_\w+_Func)', orig, re.M)))

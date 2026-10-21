@@ -169,10 +169,400 @@ bool GhostOps_Ce0_WvTick (bool lp_test, bool lp_run) {
     return true;
 }
 
+unitgroup go_szG;
+unit go_szOwn;
+unit go_szOv;
+
+// the defence-variant probe commands (a separate function: one very long command function does not compile)
+bool GhostOps_Ce0_DefCmd (string lp_cmd, string lp_a, string lp_b) {
+    string lv_t;
+    int lv_i;
+    unit lv_u;
+    unitgroup lv_g;
+    point lv_p;
+    order lv_o;
+
+    if (lp_cmd == "dst") {
+        lv_t = "DST defence " + IntToString(GhostOps_Ce0_B(go_defEnabled)) + " kits left B " + IntToString(GhostOps_DEF_KitsLeft(1)) + " T " + IntToString(GhostOps_DEF_KitsLeft(2));
+        lv_t = lv_t + " | spent B " + IntToString(go_defSpentB) + " T " + IntToString(go_defSpentT) + " consumed B " + IntToString(go_defConsumedB) + " T " + IntToString(go_defConsumedT);
+        lv_t = lv_t + " reserved B " + IntToString(GhostOps_DEF_Reserved(1)) + " T " + IntToString(GhostOps_DEF_Reserved(2));
+        GhostOps_Ce0_Write("j", lv_t);
+        lv_t = "DST2 landing " + IntToString(go_defLandSt[0]) + IntToString(go_defLandSt[1]) + IntToString(go_defLandSt[2]);
+        lv_t = lv_t + " marines " + IntToString(UnitGroupCount(UnitGroup("Marine", 1, RegionEntireMap(), GhostOps_DEF_Live(), 0), c_unitCountAlive));
+        lv_t = lv_t + " ghosts " + IntToString(UnitGroupCount(UnitGroup("Ghost", 1, RegionEntireMap(), GhostOps_DEF_Live(), 0), c_unitCountAlive));
+        lv_t = lv_t + " | salvo " + IntToString(GhostOps_Ce0_B(go_defSalvoOn)) + " scene " + IntToString(GhostOps_Ce0_B(go_defSalvoScene)) + " swannAt " + FixedToString(go_defSwannAt, 1);
+        GhostOps_Ce0_Write("j", lv_t);
+        lv_t = "DST3 groups dead " + IntToString(go_defGrpDead[0]) + "/" + IntToString(go_defGrpDead[1]) + "/" + IntToString(go_defGrpDead[2]);
+        lv_t = lv_t + " of " + IntToString(go_defGrpTotal[0]) + "/" + IntToString(go_defGrpTotal[1]) + "/" + IntToString(go_defGrpTotal[2]);
+        lv_t = lv_t + " | waves sent " + IntToString(go_defWvSent) + " skipped " + IntToString(go_defWvSkipped) + " | t0 " + FixedToString(go_defT0, 1) + " now " + FixedToString(GameGetMissionTime(), 1);
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "cat") {
+        // catalog field of the ability TerranBuild (a = field path) or of a unit (b = unit id, a = field)
+        if (lp_b == "") {
+            GhostOps_Ce0_Write("j", "CAT TerranBuild " + lp_a + " = " + CatalogFieldValueGet(c_gameCatalogAbil, "TerranBuild", lp_a, 1));
+        }
+        else {
+            GhostOps_Ce0_Write("j", "CAT unit " + lp_b + " " + lp_a + " = " + CatalogFieldValueGet(c_gameCatalogUnit, lp_b, lp_a, 1));
+        }
+
+        return true;
+    }
+
+    if (lp_cmd == "catab") {
+        lv_t = "CATAB " + lp_a + " " + lp_b + " = " + CatalogFieldValueGet(c_gameCatalogAbil, lp_a, lp_b, 1);
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "uae") {
+        lv_g = UnitGroup("MissileTurret", 1, RegionEntireMap(), GhostOps_DEF_Live(), 0);
+        UnitGroupLoopBegin(lv_g);
+        while (UnitGroupLoopCurrent() != null) {
+            UnitAbilityEnable(UnitGroupLoopCurrent(), "GhostOpsTurretSalvo", true);
+            UnitGroupLoopStep();
+        }
+
+        UnitGroupLoopEnd();
+        lv_u = UnitGroupUnit(lv_g, 1);
+        lv_t = "UAE turrets " + IntToString(UnitGroupCount(lv_g, c_unitCountAlive));
+        lv_t = lv_t + " valid at 6 cells " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(lv_u, OrderTargetingPoint(AbilityCommand("GhostOpsTurretSalvo", 0), PointWithOffset(UnitGetPosition(lv_u), -6.0, 0.0)))));
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "x1") {
+        CatalogFieldValueSet(c_gameCatalogAbil, "GhostOpsTurretSalvo", "Flags[RequireTargetVision]", 1, "0");
+        return true;
+    }
+
+    if (lp_cmd == "x2") {
+        CatalogFieldValueSet(c_gameCatalogAbil, "GhostOpsTurretSalvo", "Effect[0]", 1, "GhostOpsSalvoLaunch");
+        return true;
+    }
+
+    if (lp_cmd == "x3") {
+        CatalogFieldValueSet(c_gameCatalogAbil, "GhostOpsTurretSalvo", "Cost[0].Cooldown.TimeUse", 1, "0");
+        return true;
+    }
+
+    if (lp_cmd == "chkg") {
+        lv_u = GhostOps_SquadUnit(0);
+        lv_t = "CHKG ghost valid(-6) " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(lv_u, OrderTargetingPoint(AbilityCommand("GhostOpsTurretSalvo", 0), PointWithOffset(UnitGetPosition(lv_u), -6.0, 0.0)))));
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "chkc") {
+        lv_u = UnitFromId(23);
+        lv_t = "CHKC cc valid(-6) " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(lv_u, OrderTargetingPoint(AbilityCommand("GhostOpsTurretSalvo", 0), PointWithOffset(UnitGetPosition(lv_u), -6.0, 0.0)))));
+        GhostOps_Ce0_Write("j", lv_t);
+        UnitIssueOrder(lv_u, OrderTargetingPoint(AbilityCommand("GhostOpsTurretSalvo", 0), PointWithOffset(UnitGetPosition(lv_u), -6.0, 0.0)), c_orderQueueReplace);
+        GhostOps_Ce0_Write("j", "CHKC orders after issue " + IntToString(UnitOrderCount(lv_u)));
+        return true;
+    }
+
+    if (lp_cmd == "chk") {
+        lv_g = UnitGroup("MissileTurret", 1, RegionEntireMap(), GhostOps_DEF_Live(), 0);
+        lv_u = UnitGroupUnit(lv_g, 1);
+        lv_t = "CHK turrets " + IntToString(UnitGroupCount(lv_g, c_unitCountAlive));
+        lv_t = lv_t + " valid(-6) " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(lv_u, OrderTargetingPoint(AbilityCommand("GhostOpsTurretSalvo", 0), PointWithOffset(UnitGetPosition(lv_u), -6.0, 0.0)))));
+        lv_t = lv_t + " snipe-like attack valid " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(lv_u, OrderTargetingPoint(AbilityCommand("attack", 0), PointWithOffset(UnitGetPosition(lv_u), -6.0, 0.0)))));
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "allow") {
+        lv_t = "ALLOW Bunker " + IntToString(GhostOps_Ce0_B(TechTreeUnitIsAllowed(1, "Bunker"))) + " turret " + IntToString(GhostOps_Ce0_B(TechTreeUnitIsAllowed(1, "MissileTurret")));
+        lv_t = lv_t + " Barracks " + IntToString(GhostOps_Ce0_B(TechTreeUnitIsAllowed(1, "Barracks"))) + " requirement-has-barracks " + IntToString(TechTreeUnitCount(1, "Barracks", c_techCountCompleteOnly));
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "ucon") {
+        lv_g = UnitGroup(null, 1, RegionEntireMap(), UnitFilter((1 << c_targetFilterStructure), 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+        lv_t = "UCON structures of the player:";
+        UnitGroupLoopBegin(lv_g);
+        while (UnitGroupLoopCurrent() != null) {
+            lv_t = lv_t + " " + UnitGetType(UnitGroupLoopCurrent()) + IntToString(GhostOps_Ce0_B(UnitTestState(UnitGroupLoopCurrent(), c_unitStateUnderConstruction))) + "/" + IntToString(UnitOrderCount(UnitGroupLoopCurrent()));
+            UnitGroupLoopStep();
+        }
+
+        UnitGroupLoopEnd();
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "szl") {
+        // 6 Zerglings of player 2 at the offset (a, b) from the first turret; an own Marine 1.5 cells away; b2 = "1": the Zerglings walk away east
+        lv_g = UnitGroup("MissileTurret", 1, RegionEntireMap(), GhostOps_DEF_Live(), 0);
+        lv_u = UnitGroupUnit(lv_g, 1);
+        lv_p = PointWithOffset(UnitGetPosition(lv_u), StringToFixed(lp_a), StringToFixed(lp_b));
+        UnitCreate(6, "Zergling", 0, 2, lv_p, 270.0);
+        go_szG = UnitGroupCopy(UnitLastCreatedGroup());
+        UnitGroupLoopBegin(go_szG);
+        while (UnitGroupLoopCurrent() != null) {
+            UnitSetPropertyFixed(UnitGroupLoopCurrent(), c_unitPropLifeMax, 200.0);
+            UnitSetPropertyFixed(UnitGroupLoopCurrent(), c_unitPropLife, 200.0);
+            libNtve_gf_PauseUnit(UnitGroupLoopCurrent(), true);
+
+            UnitGroupLoopStep();
+        }
+
+        UnitGroupLoopEnd();
+        UnitCreate(1, "SCV", 0, 1, PointWithOffset(lv_p, 1.5, 0.0), 270.0);
+        go_szOwn = UnitLastCreated();
+        libNtve_gf_PauseUnit(go_szOwn, true);
+        UnitSetPropertyFixed(go_szOwn, c_unitPropLifeMax, 300.0);
+        UnitSetPropertyFixed(go_szOwn, c_unitPropLife, 300.0);
+        GhostOps_Ce0_Write("j", "SZL 6 zerglings (200 life) + own SCV (300) at " + FixedToString(PointGetX(lv_p), 1) + "," + FixedToString(PointGetY(lv_p), 1));
+        return true;
+    }
+
+    if (lp_cmd == "szmove") {
+        UnitGroupLoopBegin(go_szG);
+        while (UnitGroupLoopCurrent() != null) {
+            libNtve_gf_PauseUnit(UnitGroupLoopCurrent(), false);
+            UnitGroupLoopStep();
+        }
+
+        UnitGroupLoopEnd();
+        UnitGroupIssueOrder(go_szG, OrderTargetingPoint(AbilityCommand("move", 0), PointWithOffset(UnitGetPosition(UnitGroupUnit(go_szG, 1)), StringToFixed(lp_a), StringToFixed(lp_b))), c_orderQueueReplace);
+        return true;
+    }
+
+    if (lp_cmd == "szr") {
+        lv_t = "SZR zerglings alive " + IntToString(UnitGroupCount(go_szG, c_unitCountAlive)) + " lives";
+        UnitGroupLoopBegin(go_szG);
+        while (UnitGroupLoopCurrent() != null) {
+            if (UnitIsAlive(UnitGroupLoopCurrent())) {
+                lv_t = lv_t + " " + FixedToString(UnitGetPropertyFixed(UnitGroupLoopCurrent(), c_unitPropLife, c_unitPropCurrent), 0);
+            }
+
+            UnitGroupLoopStep();
+        }
+
+        UnitGroupLoopEnd();
+        lv_t = lv_t + " | own SCV " + FixedToString(UnitGetPropertyFixed(go_szOwn, c_unitPropLife, c_unitPropCurrent), 0);
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "salvon") {
+        go_defSalvoOn = true;
+        GhostOps_DEF_SalvoApply();
+        GhostOps_Ce0_Write("j", "SALVON ground salvo switched on by the probe");
+        return true;
+    }
+
+    if (lp_cmd == "vis") {
+        lv_t = "VIS targets visible now:";
+        lv_i = 0;
+        while (lv_i < go_zhTargetCount) {
+            lv_t = lv_t + " " + IntToString(GhostOps_Ce0_B(VisIsVisibleForPlayer(1, go_defTgtPos[lv_i])));
+            lv_i += 1;
+        }
+
+        lv_t = lv_t + " | revealDone " + IntToString(GhostOps_Ce0_B(go_defRevealDone));
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "revnow") {
+        go_defRevealDone = false;
+        go_defRevealSec = StringToFixed(lp_a);
+        GhostOps_DEF_RevealTargets();
+        return true;
+    }
+
+    if (lp_cmd == "mattnow") {
+        TriggerExecute(TriggerCreate("GhostOps_DEF_MattMsg"), true, false);
+        return true;
+    }
+
+    if (lp_cmd == "sov") {
+        // an enemy Overlord (air, 200 life, paused) at the offset (a, b) from the first turret: the stock anti-air fire must go on
+        lv_g = UnitGroup("MissileTurret", 1, RegionEntireMap(), GhostOps_DEF_Live(), 0);
+        lv_u = UnitGroupUnit(lv_g, 1);
+        UnitCreate(1, "Overlord", 0, 2, PointWithOffset(UnitGetPosition(lv_u), StringToFixed(lp_a), StringToFixed(lp_b)), 270.0);
+        go_szOv = UnitLastCreated();
+        UnitSetPropertyFixed(go_szOv, c_unitPropLifeMax, 400.0);
+        UnitSetPropertyFixed(go_szOv, c_unitPropLife, 400.0);
+        libNtve_gf_PauseUnit(go_szOv, true);
+        return true;
+    }
+
+    if (lp_cmd == "sovr") {
+        lv_t = "SOVR overlord life " + FixedToString(UnitGetPropertyFixed(go_szOv, c_unitPropLife, c_unitPropCurrent), 0);
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "sv") {
+        // the salvo of ONE turret (index a, 1-based) at the offset (b = dx) from it, dy 0
+        lv_g = UnitGroup("MissileTurret", 1, RegionEntireMap(), GhostOps_DEF_Live(), 0);
+        lv_u = UnitGroupUnit(lv_g, StringToInt(lp_a));
+        lv_p = PointWithOffset(UnitGetPosition(lv_u), StringToFixed(lp_b), 0.0);
+        lv_o = OrderTargetingPoint(AbilityCommand("GhostOpsTurretSalvo", 0), lv_p);
+        lv_t = "SV turret " + lp_a + " valid before " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(lv_u, lv_o)));
+        UnitIssueOrder(lv_u, lv_o, c_orderQueueReplace);
+        GhostOps_Ce0_Write("j", lv_t + " minerals " + IntToString(PlayerGetPropertyInt(1, c_playerPropMinerals)));
+        return true;
+    }
+
+    if (lp_cmd == "bld") {
+        // an SCV builds (a = 7 Bunker, 6 Missile Turret) at x = 86 + b, y = 46
+        lv_u = UnitGroupRandomUnit(UnitGroup("SCV", 1, RegionEntireMap(), GhostOps_DEF_Live(), 0), c_unitCountAlive);
+        lv_p = Point(86.0 + StringToFixed(lp_b), 46.0);
+        lv_o = OrderTargetingPoint(AbilityCommand("TerranBuild", StringToInt(lp_a)), lv_p);
+        UnitIssueOrder(lv_u, lv_o, c_orderQueueReplace);
+        lv_t = "BLD order: build index " + lp_a + " at x " + FixedToString(PointGetX(lv_p), 1);
+        lv_t = lv_t + " valid " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(lv_u, lv_o)));
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "bcancel") {
+        lv_g = UnitGroup(null, 1, RegionEntireMap(), UnitFilter((1 << c_targetFilterStructure), 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+        UnitGroupLoopBegin(lv_g);
+        while (UnitGroupLoopCurrent() != null) {
+            if (UnitTestState(UnitGroupLoopCurrent(), c_unitStateUnderConstruction)) {
+                UnitIssueOrder(UnitGroupLoopCurrent(), Order(AbilityCommand("BuildInProgress", StringToInt(lp_a))), c_orderQueueReplace);
+            }
+
+            UnitGroupLoopStep();
+        }
+
+        UnitGroupLoopEnd();
+        GhostOps_Ce0_Write("j", "BCANCEL cancel ordered for every unfinished structure");
+        return true;
+    }
+
+    if (lp_cmd == "bdmg") {
+        // damages every unfinished structure of the player (as an enemy would): life to 1
+        lv_g = UnitGroup(null, 1, RegionEntireMap(), UnitFilter((1 << c_targetFilterStructure), 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+        UnitGroupLoopBegin(lv_g);
+        while (UnitGroupLoopCurrent() != null) {
+            if (UnitTestState(UnitGroupLoopCurrent(), c_unitStateUnderConstruction)) {
+                UnitSetPropertyFixed(UnitGroupLoopCurrent(), c_unitPropLife, 1.0);
+            }
+
+            UnitGroupLoopStep();
+        }
+
+        UnitGroupLoopEnd();
+        return true;
+    }
+
+    if (lp_cmd == "bdk") {
+        // an enemy-like destruction of the unfinished Bunker: damage first, a second later the kill
+        GhostOps_Ce0_Write("j", "BDK damage");
+        GhostOps_Ce0_DefCmd("bdmg", "", "");
+        Wait(1.0, c_timeGame);
+        GhostOps_Ce0_DefCmd("bkill", "Bunker", "");
+        return true;
+    }
+
+    if (lp_cmd == "bkill") {
+        // kills the player's structures of the type a (finished or not)
+        lv_g = UnitGroup(lp_a, 1, RegionEntireMap(), GhostOps_DEF_Live(), 0);
+        UnitGroupLoopBegin(lv_g);
+        while (UnitGroupLoopCurrent() != null) {
+            UnitKill(UnitGroupLoopCurrent());
+            UnitGroupLoopStep();
+        }
+
+        UnitGroupLoopEnd();
+        GhostOps_Ce0_Write("j", "BKILL killed all " + lp_a);
+        return true;
+    }
+
+    if (lp_cmd == "bfin") {
+        // finishes the construction of every structure at once (dev): sets the progress by finishing the unit's construction state
+        lv_g = UnitGroup(null, 1, RegionEntireMap(), UnitFilter((1 << c_targetFilterStructure), 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+        UnitGroupLoopBegin(lv_g);
+        while (UnitGroupLoopCurrent() != null) {
+            if (UnitTestState(UnitGroupLoopCurrent(), c_unitStateUnderConstruction)) {
+                UnitSetPropertyFixed(UnitGroupLoopCurrent(), c_unitPropLife, UnitGetPropertyFixed(UnitGroupLoopCurrent(), c_unitPropLifeMax, c_unitPropCurrent));
+            }
+
+            UnitGroupLoopStep();
+        }
+
+        UnitGroupLoopEnd();
+        return true;
+    }
+
+    if (lp_cmd == "land") {
+        GhostOps_DEF_StartLanding(StringToInt(lp_a));
+        GhostOps_Ce0_Write("j", "LAND forced slot " + lp_a);
+        return true;
+    }
+
+    if (lp_cmd == "salvo") {
+        // every Missile Turret of the player casts the salvo at the offset (a, b) from the first turret
+        lv_g = UnitGroup("MissileTurret", 1, RegionEntireMap(), GhostOps_DEF_Live(), 0);
+        lv_i = UnitGroupCount(lv_g, c_unitCountAlive);
+        if (lv_i > 0) {
+            lv_u = UnitGroupUnit(lv_g, 1);
+            lv_p = PointWithOffset(UnitGetPosition(lv_u), StringToFixed(lp_a), StringToFixed(lp_b));
+            lv_o = OrderTargetingPoint(AbilityCommand("GhostOpsTurretSalvo", 0), lv_p);
+            lv_t = "SALVO pre-check valid " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(lv_u, lv_o))) + " allowed " + IntToString(GhostOps_Ce0_B(go_defSalvoOn)) + " visible " + IntToString(GhostOps_Ce0_B(VisIsVisibleForPlayer(1, lv_p))) + " dist " + FixedToString(DistanceBetweenPoints(UnitGetPosition(lv_u), lv_p), 1);
+            GhostOps_Ce0_Write("j", lv_t);
+            UnitGroupIssueOrder(lv_g, lv_o, c_orderQueueReplace);
+            lv_t = "SALVO ordered to " + IntToString(lv_i) + " turrets at offset " + lp_a + "," + lp_b;
+            lv_t = lv_t + " valid " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(lv_u, lv_o))) + " minerals " + IntToString(PlayerGetPropertyInt(1, c_playerPropMinerals));
+            GhostOps_Ce0_Write("j", lv_t);
+        }
+
+        return true;
+    }
+
+    if (lp_cmd == "kg") {
+        // kill the marked Hatcheries of the group (Zerg player a = 2, 3, 4)
+        lv_i = 0;
+        while (lv_i < go_zhTargetCount) {
+            if (UnitGetOwner(UnitFromId(go_zhTargetId[lv_i])) == StringToInt(lp_a)) {
+                UnitKill(UnitFromId(go_zhTargetId[lv_i]));
+                if (lp_b == "1") {
+                    lv_i = 999;
+                }
+            }
+
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", "KG killed targets of player " + lp_a + " (b=" + lp_b + ")");
+        return true;
+    }
+
+    if (lp_cmd == "wvn") {
+        // trace the waves: every 10 s the number of fighters of the three Zerg players near our base and the sums sent
+        go_wvTick = TriggerCreate("GhostOps_Ce0_WvTick");
+        TriggerAddEventTimePeriodic(go_wvTick, 10.0, c_timeGame);
+        return true;
+    }
+
+    if (lp_cmd == "mins") {
+        GhostOps_Ce0_Write("j", "MINS minerals " + IntToString(PlayerGetPropertyInt(1, c_playerPropMinerals)));
+        return true;
+    }
+
+    return false;
+}
+
 bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
     int lv_i;
     unit lv_g1;
     unit lv_z;
+    unit lv_u;
+    unitgroup lv_g;
+
+    if (GhostOps_Ce0_DefCmd(lp_cmd, lp_a, lp_b)) {
+        return true;
+    }
 
     if (lp_cmd == "defend") {
         lv_g1 = UnitFromId(23);

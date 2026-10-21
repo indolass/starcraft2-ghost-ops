@@ -265,6 +265,10 @@ def build_app():
                     ctk.CTkLabel(f, text='Эксперимент', font=(FONT, 11, 'bold'), text_color=AMBER, fg_color='#4a3b17', corner_radius=6,
                                  padx=8, pady=1).grid(row=row, column=0, sticky='w', padx=12, pady=(4, 0))
                     row += 1
+                if p.get('badge'):
+                    ctk.CTkLabel(f, text=p['badge'].upper(), font=(FONT, 11, 'bold'), text_color='#0b2a14', fg_color=GREEN, corner_radius=6,
+                                 padx=8, pady=1).grid(row=row, column=0, sticky='w', padx=12, pady=(4, 0))
+                    row += 1
                 t = ctk.CTkLabel(f, text=p['card'], font=(FONT, 13), text_color=MUTED, anchor='nw', justify='left', wraplength=200)
                 t.grid(row=row, column=0, sticky='nsew', padx=12, pady=(6, 4))
                 f.grid_rowconfigure(row, weight=1)

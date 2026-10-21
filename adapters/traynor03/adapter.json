@@ -103,5 +103,48 @@
     "gt_RebelMarines01Intro_Func",
     "gt_RebelMarines01Rescued_Func",
     "void InitLibs"
+  ],
+  "defence_waves": [
+    {
+      "function": "gt_AttackWavesRedZergP02_Func",
+      "group": 2
+    },
+    {
+      "function": "gt_AttackWavesTealZergP03_Func",
+      "group": 3
+    },
+    {
+      "function": "gt_AttackWavesPurpleZergP04_Func",
+      "group": 4
+    },
+    {
+      "function": "gt_ZergP02EarlyNydusWave_Func",
+      "group": 2
+    },
+    {
+      "function": "gt_ZergP02LateNydusWave_Func",
+      "group": 2
+    },
+    {
+      "function": "gt_ZergP04EarlyNydusWave_Func",
+      "group": 4
+    },
+    {
+      "function": "gt_ZergP04LateNydusWave_Func",
+      "group": 4
+    },
+    {
+      "function": "gt_StartFirstZergWaveSpecial_Func",
+      "group": 3,
+      "prelude": "GhostOps_DEF_OnFirstWave();"
+    },
+    {
+      "function": "gt_ZergDropPodExpansion1_Func",
+      "group": 0
+    },
+    {
+      "function": "gt_ZergDropPodExpansion2_Func",
+      "group": 0
+    }
   ]
 }

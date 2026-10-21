@@ -1,0 +1,954 @@
+//==================================================================================================
+// GhostOps module: TRaynor03 "Defence and sabotage" variant (MIT). Config key "defence" (config/traynor03.json, preset "defence"); built ONLY into maps whose resolved
+// config has the key (the previous "Zero Hour" build contains none of it). It sits on top of the "zerohour" module (targets, order, victory gate, rescue scenes) and the
+// tactical module (garrison zone, Ghost rules, missiles).
+//
+// What it does:
+//   - the start: NO stock Marines, Bunkers, Missile Turrets, Barracks or Engineering Bay stand on the map; the Command Center, the supply depots and the SCVs do;
+//   - the paid KITS: the ordered number of Bunkers and Missile Turrets may be built by the SCVs for free (catalog cost 0, requirement = Command Center only), never more:
+//     start of construction reserves a kit, cancelling frees it, completion spends it, the death of a finished building returns nothing, the death of an unfinished one
+//     (it is NOT cancelled by the player) consumes the kit; an over-limit construction is removed on the spot (cost 0, nothing to refund); the remaining kits are shown;
+//   - the landing (Terran drop pods of the campaign library): six Marines first, the rest of the SAME order later, the Ghosts separately; every Marine is a garrison Marine;
+//   - the manual ground salvo of the Missile Turrets (catalog ability "GhostOpsTurretSalvo"), switched on by Swann's scene at the first wave and for later turrets too;
+//   - the waves: the original attack functions of the three Zerg bases are replaced by generated copies (tools/build.py, script tail) whose unit numbers are scaled by the
+//     share of living marked Hatcheries of THEIR group; nothing else of the original is changed;
+//   - Matt's message and the scenes of this variant.
+// Everything saved with the game is a global of this module: a load restores kits, landing stage, salvo switch and the group state; nothing is created twice.
+//==================================================================================================
+bool go_defStarted;
+bool go_defDebug;
+// ---- kits
+int go_defKitB;                    // ordered Bunker kits
+int go_defKitT;                    // ordered turret kits
+int go_defSpentB;                  // completed Bunkers
+int go_defSpentT;
+int go_defConsumedB;               // unfinished Bunkers that were destroyed (their kit is gone)
+int go_defConsumedT;
+int go_defTrkN;
+unit[40] go_defTrk;
+int[40] go_defTrkType;             // 1 Bunker, 2 turret
+int[40] go_defTrkState;            // 0 free, 1 under construction, 2 finished
+fixed[40] go_defTrkLife;           // life seen at the previous tick (a drop = damage taken)
+point[40] go_defTrkPos;
+fixed[40] go_defTrkHurtAt;         // game time of the last drop of life
+int go_defObjKits;
+int go_defLastMin;
+bool go_defObjKitsMade;
+int go_defShownB;
+int go_defShownT;
+trigger go_defKitTrig;
+// ---- landing (0 first Marines, 1 the rest, 2 Ghosts): 0 not yet, 1 under way, 2 done
+int[3] go_defLandSt;
+fixed[3] go_defLandAt;             // game seconds after the start of control
+unitgroup[3] go_defLandUnits;
+fixed[3] go_defLandBegan;
+fixed go_defLandX;
+fixed go_defLandY;
+int go_defMarinesFirst;
+int go_defMarinesRest;
+fixed go_defT0;                    // mission time at the start of control
+trigger go_defSceneTrig;
+// ---- salvo
+bool go_defSalvoOn;
+bool go_defSalvoScene;             // Swann's scene was started
+int go_defWaveSeen;                // the first original wave has begun
+fixed go_defSwannDelay;
+fixed go_defSwannAt;               // mission time of the scene (-1 not scheduled)
+fixed go_defSwannLen;
+fixed go_defHintLen;
+// ---- waves
+int[3] go_defGrpTotal;             // marked Hatcheries per group (Zerg players 2, 3, 4)
+int[3] go_defGrpDead;
+int[12] go_defTgtGrp;
+point[12] go_defTgtPos;
+fixed go_defPower;
+int go_defRound;                   // 0 down, 1 nearest, 2 up
+int go_defWvN;                     // pending wave (buffered until the send)
+string[8] go_defWvType;
+int[8] go_defWvA;
+int[8] go_defWvB;
+int[8] go_defWvC;
+int[8] go_defWvD;
+int go_defWvSum;
+int go_defWpN;
+point[6] go_defWpPt;
+bool[6] go_defWpB;
+int go_defWvSent;
+int go_defWvSkipped;
+// ---- scenes
+fixed go_defRaynorAt;
+fixed go_defMattAt;
+int go_defRaynorSt;                // 0 not yet, 2 shown
+int go_defMattSt;
+fixed go_defRaynorLen;
+fixed go_defMattLen;
+fixed go_defKitsLen;
+bool go_defRevealDone;            // the one-time glimpse of the marked Hatcheries was given (saved with the game)
+fixed go_defRevealSec;
+fixed go_defRevealRadius;
+bank go_defBank;
+int go_defLogN;
+trigger go_defLoadTrig;
+
+void GhostOps_ApplyDefenceConfig ();
+
+int GhostOps_DEF_B (bool lp_v) {
+    if (lp_v) {
+        return 1;
+    }
+
+    return 0;
+}
+
+bool GhostOps_DEF_EnemyNear (point lp_pos) {
+    int lv_p;
+
+    lv_p = 2;
+    while (lv_p <= 4) {
+        if (UnitGroupCount(UnitGroup(null, lv_p, RegionCircle(lp_pos, 6.0), UnitFilter(0, 0, (1 << c_targetFilterStructure), (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive) > 0) {
+            return true;
+        }
+
+        lv_p += 1;
+    }
+
+    return false;
+}
+
+void GhostOps_DEF_Log (string lp_text) {
+    if (!go_defDebug) {
+        return;
+    }
+
+    go_defBank = BankLoad("GhostOpsDevDef", 1);
+    go_defLogN += 1;
+    BankValueSetFromString(go_defBank, "log", "e" + IntToString(go_defLogN), FixedToString(GameGetMissionTime(), 2) + " " + lp_text);
+    BankSave(go_defBank);
+}
+
+unitfilter GhostOps_DEF_Live () {
+    return UnitFilter(0, 0, (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32)) | (1 << (c_targetFilterHidden - 32)));
+}
+
+//--------------------------------------------------------------------------------------------------
+// The start without stock troops and fortifications (called by the zerohour module instead of its own order)
+//--------------------------------------------------------------------------------------------------
+void GhostOps_DEF_RemoveId (int lp_id) {
+    if (UnitIsAlive(UnitFromId(lp_id))) {
+        UnitRemove(UnitFromId(lp_id));
+    }
+}
+
+void GhostOps_DEF_ApplyStock () {
+    unitgroup lv_g;
+    int lv_n;
+    int lv_i;
+    unit lv_u;
+
+    // Marines (also those inside the stock bunkers: removed together with them), bunkers, turrets, Barracks (5, 29), Engineering Bay (7)
+    lv_g = UnitGroupCopy(UnitGroup("Marine", 1, RegionEntireMap(), GhostOps_DEF_Live(), 0));
+    lv_n = UnitGroupCount(lv_g, c_unitCountAll);
+    lv_i = 1;
+    while (lv_i <= lv_n) {
+        UnitRemove(UnitGroupUnit(lv_g, lv_i));
+        lv_i += 1;
+    }
+
+    GhostOps_DEF_RemoveId(4);
+    GhostOps_DEF_RemoveId(13);
+    GhostOps_DEF_RemoveId(291);
+    GhostOps_DEF_RemoveId(298);
+    GhostOps_DEF_RemoveId(752);
+    GhostOps_DEF_RemoveId(294);
+    GhostOps_DEF_RemoveId(113);
+    GhostOps_DEF_RemoveId(245);
+    GhostOps_DEF_RemoveId(5);
+    GhostOps_DEF_RemoveId(29);
+    GhostOps_DEF_RemoveId(7);
+    // the Marines that stood in the bunkers: the cargo of a removed bunker is gone with it, a second sweep removes any left
+    lv_g = UnitGroupCopy(UnitGroup("Marine", 1, RegionEntireMap(), GhostOps_DEF_Live(), 0));
+    lv_n = UnitGroupCount(lv_g, c_unitCountAll);
+    lv_i = 1;
+    while (lv_i <= lv_n) {
+        lv_u = UnitGroupUnit(lv_g, lv_i);
+        UnitRemove(lv_u);
+        lv_i += 1;
+    }
+
+    GhostOps_DEF_Log("stock removed: marines " + IntToString(UnitGroupCount(UnitGroup("Marine", 1, RegionEntireMap(), GhostOps_DEF_Live(), 0), c_unitCountAlive)) + " bunkers " + IntToString(UnitGroupCount(UnitGroup("Bunker", 1, RegionEntireMap(), GhostOps_DEF_Live(), 0), c_unitCountAlive)) + " turrets " + IntToString(UnitGroupCount(UnitGroup("MissileTurret", 1, RegionEntireMap(), GhostOps_DEF_Live(), 0), c_unitCountAlive)));
+}
+
+//--------------------------------------------------------------------------------------------------
+// Kits
+//--------------------------------------------------------------------------------------------------
+int GhostOps_DEF_Reserved (int lp_type) {
+    int lv_k;
+    int lv_c;
+
+    lv_c = 0;
+    lv_k = 0;
+    while (lv_k < go_defTrkN) {
+        if ((go_defTrkType[lv_k] == lp_type) && (go_defTrkState[lv_k] == 1)) {
+            lv_c += 1;
+        }
+
+        lv_k += 1;
+    }
+
+    return lv_c;
+}
+
+int GhostOps_DEF_KitsLeft (int lp_type) {
+    if (lp_type == 1) {
+        return go_defKitB - go_defSpentB - go_defConsumedB - GhostOps_DEF_Reserved(1);
+    }
+
+    return go_defKitT - go_defSpentT - go_defConsumedT - GhostOps_DEF_Reserved(2);
+}
+
+void GhostOps_DEF_KitObjective () {
+    int lv_b;
+    int lv_t;
+
+    lv_b = GhostOps_DEF_KitsLeft(1);
+    lv_t = GhostOps_DEF_KitsLeft(2);
+    if (!go_defObjKitsMade) {
+        go_defObjKitsMade = true;
+        ObjectiveCreate(StringExternal("Param/Value/GhostOpsDef_KitsTitle"), StringExternal("Param/Value/GhostOpsDef_KitsText"), c_objectiveStateActive, false);
+        go_defObjKits = ObjectiveLastCreated();
+    }
+
+    if ((lv_b != go_defShownB) || (lv_t != go_defShownT) || (go_defShownB < 0)) {
+        go_defShownB = lv_b;
+        go_defShownT = lv_t;
+        ObjectiveSetName(go_defObjKits, StringExternal("Param/Value/GhostOpsDef_KitsTitle") + StringToText(": ") + StringExternal("Param/Value/GhostOpsDef_KitsBunkers") + StringToText(" ") + IntToText(lv_b) + StringToText(", ") + StringExternal("Param/Value/GhostOpsDef_KitsTurrets") + StringToText(" ") + IntToText(lv_t));
+    }
+}
+
+int GhostOps_DEF_FindTrk (unit lp_u) {
+    int lv_k;
+
+    lv_k = 0;
+    while (lv_k < go_defTrkN) {
+        if ((go_defTrkState[lv_k] != 0) && (go_defTrk[lv_k] == lp_u)) {
+            return lv_k;
+        }
+
+        lv_k += 1;
+    }
+
+    return -1;
+}
+
+void GhostOps_DEF_ScanType (string lp_type, int lp_code) {
+    unitgroup lv_g;
+    int lv_n;
+    int lv_i;
+    int lv_k;
+    unit lv_u;
+    int lv_slot;
+
+    lv_g = UnitGroup(lp_type, 1, RegionEntireMap(), GhostOps_DEF_Live(), 0);
+    lv_n = UnitGroupCount(lv_g, c_unitCountAll);
+    lv_i = 1;
+    while (lv_i <= lv_n) {
+        lv_u = UnitGroupUnit(lv_g, lv_i);
+        if (GhostOps_DEF_FindTrk(lv_u) < 0) {
+            // a building the tracker does not know yet: a construction that has just started (or a finished one after a load)
+            if (GhostOps_DEF_KitsLeft(lp_code) <= 0) {
+                GhostOps_DEF_Log("over the kits: " + lp_type + " removed");
+                UnitRemove(lv_u);
+                UIDisplayMessage(PlayerGroupAll(), c_messageAreaDirective, StringExternal("Param/Value/GhostOpsDef_KitsOut"));
+            }
+            else {
+                lv_slot = -1;
+                lv_k = 0;
+                while ((lv_k < go_defTrkN) && (lv_slot < 0)) {
+                    if (go_defTrkState[lv_k] == 0) {
+                        lv_slot = lv_k;
+                    }
+
+                    lv_k += 1;
+                }
+
+                if ((lv_slot < 0) && (go_defTrkN < 40)) {
+                    lv_slot = go_defTrkN;
+                    go_defTrkN += 1;
+                }
+
+                if (lv_slot >= 0) {
+                    go_defTrk[lv_slot] = lv_u;
+                    go_defTrkType[lv_slot] = lp_code;
+                    go_defTrkLife[lv_slot] = UnitGetPropertyFixed(lv_u, c_unitPropLife, c_unitPropCurrent);
+                    go_defTrkPos[lv_slot] = UnitGetPosition(lv_u);
+                    go_defTrkHurtAt[lv_slot] = -100.0;
+                    if (UnitTestState(lv_u, c_unitStateUnderConstruction)) {
+                        go_defTrkState[lv_slot] = 1;
+                        GhostOps_DEF_Log("kit reserved: " + lp_type);
+                    }
+                    else {
+                        go_defTrkState[lv_slot] = 2;
+                    }
+                }
+            }
+        }
+
+        lv_i += 1;
+    }
+}
+
+bool GhostOps_DEF_KitTick (bool lp_testConds, bool lp_runActions) {
+    int lv_k;
+    unit lv_u;
+    bool lv_valid;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    GhostOps_DEF_ScanType("Bunker", 1);
+    GhostOps_DEF_ScanType("MissileTurret", 2);
+    lv_k = 0;
+    while (lv_k < go_defTrkN) {
+        if (go_defTrkState[lv_k] != 0) {
+            lv_u = go_defTrk[lv_k];
+            lv_valid = UnitIsValid(lv_u) && (UnitGetType(lv_u) != "");
+            if (lv_valid && UnitIsAlive(lv_u)) {
+                if (go_defTrkState[lv_k] == 1) {
+                    // a drop of life between two ticks means damage: that tells a destroyed construction from a cancelled one
+                    if (UnitGetPropertyFixed(lv_u, c_unitPropLife, c_unitPropCurrent) < (go_defTrkLife[lv_k] - 0.01)) {
+                        go_defTrkHurtAt[lv_k] = GameGetMissionTime();
+                    }
+
+                    go_defTrkLife[lv_k] = UnitGetPropertyFixed(lv_u, c_unitPropLife, c_unitPropCurrent);
+                    go_defTrkPos[lv_k] = UnitGetPosition(lv_u);
+                }
+
+                if ((go_defTrkState[lv_k] == 1) && !UnitTestState(lv_u, c_unitStateUnderConstruction)) {
+                    go_defTrkState[lv_k] = 2;
+                    if (go_defTrkType[lv_k] == 1) {
+                        go_defSpentB += 1;
+                    }
+                    else {
+                        go_defSpentT += 1;
+                    }
+
+                    GhostOps_DEF_Log("kit spent (construction finished), type " + IntToString(go_defTrkType[lv_k]));
+                }
+            }
+            else {
+                if (go_defTrkState[lv_k] == 1) {
+                    if ((GameGetMissionTime() - go_defTrkHurtAt[lv_k] < 4.0) || GhostOps_DEF_EnemyNear(go_defTrkPos[lv_k])) {
+                        // damaged or an enemy next to it: it was destroyed, the kit is gone; a cancelled construction is neither
+                        if (go_defTrkType[lv_k] == 1) {
+                            go_defConsumedB += 1;
+                        }
+                        else {
+                            go_defConsumedT += 1;
+                        }
+
+                        GhostOps_DEF_Log("unfinished building destroyed: kit consumed, type " + IntToString(go_defTrkType[lv_k]));
+                    }
+                    else {
+                        GhostOps_DEF_Log("construction cancelled: kit freed, type " + IntToString(go_defTrkType[lv_k]));
+                    }
+                }
+                else {
+                    GhostOps_DEF_Log("finished building lost: no kit returned, type " + IntToString(go_defTrkType[lv_k]));
+                }
+
+                go_defTrkState[lv_k] = 0;
+            }
+        }
+
+        lv_k += 1;
+    }
+
+    if (go_defDebug) {
+        if (PlayerGetPropertyInt(1, c_playerPropMinerals) < go_defLastMin) {
+            GhostOps_DEF_Log("minerals dropped " + IntToString(go_defLastMin) + " -> " + IntToString(PlayerGetPropertyInt(1, c_playerPropMinerals)) + " (reserved B " + IntToString(GhostOps_DEF_Reserved(1)) + " T " + IntToString(GhostOps_DEF_Reserved(2)) + ")");
+        }
+
+        go_defLastMin = PlayerGetPropertyInt(1, c_playerPropMinerals);
+    }
+
+    // the build buttons follow the kits left
+    TechTreeUnitAllow(1, "Bunker", GhostOps_DEF_KitsLeft(1) > 0);
+    TechTreeUnitAllow(1, "MissileTurret", GhostOps_DEF_KitsLeft(2) > 0);
+    GhostOps_DEF_KitObjective();
+    return true;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Landing
+//--------------------------------------------------------------------------------------------------
+point GhostOps_DEF_LandPoint (int lp_slot) {
+    point lv_p;
+    int lv_i;
+    fixed lv_ox;
+    fixed lv_oy;
+
+    // the configured point, shifted a little per landing; the first free (passable, no structure near) place wins
+    lv_i = 0;
+    while (lv_i < 9) {
+        lv_ox = 0.0;
+        lv_oy = 0.0;
+        if (lv_i > 0) {
+            lv_ox = IntToFixed(((lv_i % 3) - 1) * 5);
+            lv_oy = IntToFixed(((lv_i / 3) - 1) * 5);
+        }
+
+        lv_p = Point(go_defLandX + lv_ox + IntToFixed(lp_slot * 4), go_defLandY + lv_oy);
+        if (PointPathingPassable(lv_p) && (UnitGroupCount(UnitGroup(null, c_playerAny, RegionCircle(lv_p, 2.5), UnitFilter((1 << c_targetFilterStructure), 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive) == 0)) {
+            return lv_p;
+        }
+
+        lv_i += 1;
+    }
+
+    return Point(go_defLandX, go_defLandY);
+}
+
+// Finishes a landing whose thread was cut (a load in the middle of a pod): the units are shown, unpaused and put next to the point.
+void GhostOps_DEF_Unstick (int lp_slot) {
+    int lv_n;
+    int lv_i;
+    unit lv_u;
+
+    lv_n = UnitGroupCount(go_defLandUnits[lp_slot], c_unitCountAll);
+    lv_i = 1;
+    while (lv_i <= lv_n) {
+        lv_u = UnitGroupUnit(go_defLandUnits[lp_slot], lv_i);
+        if ((lv_u != null) && UnitIsAlive(lv_u)) {
+            libNtve_gf_ShowHideUnit(lv_u, true);
+            libNtve_gf_PauseUnit(lv_u, false);
+            UnitSetPosition(lv_u, PointWithOffset(GhostOps_DEF_LandPoint(lp_slot), IntToFixed(lv_i % 4) - 1.5, IntToFixed(lv_i / 4)), false);
+        }
+
+        lv_i += 1;
+    }
+
+    go_defLandSt[lp_slot] = 2;
+    GhostOps_DEF_Log("landing " + IntToString(lp_slot) + " finished by the watchdog");
+}
+
+bool GhostOps_DEF_LandThread (bool lp_testConds, bool lp_runActions) {
+    int lv_slot;
+    int lv_n;
+    int lv_i;
+    point lv_p;
+    unit lv_u;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    // the slot is the first landing that is marked "under way" and has no pod yet (set by the caller right before the thread starts)
+    lv_slot = -1;
+    lv_i = 0;
+    while (lv_i < 3) {
+        if ((go_defLandSt[lv_i] == 1) && (go_defLandBegan[lv_i] < 0.0)) {
+            lv_slot = lv_i;
+        }
+
+        lv_i += 1;
+    }
+
+    if (lv_slot < 0) {
+        return true;
+    }
+
+    go_defLandBegan[lv_slot] = GameGetMissionTime();
+    lv_p = GhostOps_DEF_LandPoint(lv_slot);
+    go_defLandUnits[lv_slot] = UnitGroupEmpty();
+    if (lv_slot == 0) {
+        lv_n = go_defMarinesFirst;
+    }
+    else if (lv_slot == 1) {
+        lv_n = go_defMarinesRest;
+    }
+    else {
+        lv_n = 0;
+    }
+
+    if (lv_slot < 2) {
+        UnitCreate(lv_n, "Marine", 0, 1, lv_p, 270.0);
+        UnitGroupLoopBegin(UnitLastCreatedGroup());
+        while (UnitGroupLoopCurrent() != null) {
+            GhostOps_Tac_AddGarrison(UnitGroupLoopCurrent());
+            UnitGroupAdd(go_defLandUnits[lv_slot], UnitGroupLoopCurrent());
+            UnitGroupLoopStep();
+        }
+
+        UnitGroupLoopEnd();
+    }
+    else {
+        lv_u = GhostOps_SpawnOperatives(1, lv_p);
+        GhostOps_Tac_OnGhostsDelivered(GhostOps_SquadUnit(0), GhostOps_SquadUnit(1));
+        UnitGroupAdd(go_defLandUnits[lv_slot], GhostOps_SquadUnit(0));
+        UnitGroupAdd(go_defLandUnits[lv_slot], GhostOps_SquadUnit(1));
+    }
+
+    GhostOps_DEF_Log("landing " + IntToString(lv_slot) + " starts: units " + IntToString(UnitGroupCount(go_defLandUnits[lv_slot], c_unitCountAll)) + " at " + FixedToString(PointGetX(lv_p), 1) + "," + FixedToString(PointGetY(lv_p), 1));
+    libCamp_gf_CreateDropPod(libCamp_ge_DropPodRace_Terran, lv_p, go_defLandUnits[lv_slot], true);
+    go_defLandSt[lv_slot] = 2;
+    GhostOps_DEF_Log("landing " + IntToString(lv_slot) + " done");
+    if (lv_slot == 0) {
+        UIDisplayMessage(PlayerGroupAll(), c_messageAreaDirective, StringExternal("Param/Value/GhostOpsDef_LandedFirst"));
+    }
+    else if (lv_slot == 1) {
+        UIDisplayMessage(PlayerGroupAll(), c_messageAreaDirective, StringExternal("Param/Value/GhostOpsDef_LandedRest"));
+    }
+    else {
+        UIDisplayMessage(PlayerGroupAll(), c_messageAreaDirective, StringExternal("Param/Value/GhostOpsDef_LandedGhosts"));
+    }
+
+    return true;
+}
+
+void GhostOps_DEF_StartLanding (int lp_slot) {
+    if (go_defLandSt[lp_slot] != 0) {
+        return;
+    }
+
+    if ((lp_slot == 1) && (go_defMarinesRest <= 0)) {
+        go_defLandSt[1] = 2;
+        return;
+    }
+
+    go_defLandSt[lp_slot] = 1;
+    go_defLandBegan[lp_slot] = -1.0;
+    TriggerExecute(TriggerCreate("GhostOps_DEF_LandThread"), true, false);
+}
+
+//--------------------------------------------------------------------------------------------------
+// Salvo
+//--------------------------------------------------------------------------------------------------
+void GhostOps_DEF_SalvoApply () {
+    TechTreeAbilityAllow(1, AbilityCommand("GhostOpsTurretSalvo", 0), go_defSalvoOn);
+}
+
+bool GhostOps_DEF_SwannMsg (bool lp_testConds, bool lp_runActions) {
+    if (!lp_runActions) {
+        return true;
+    }
+
+    TriggerQueueEnter();
+    GhostOps_DEF_Log("scene: Swann (ground salvo)");
+    UIDisplayMessage(PlayerGroupAll(), c_messageAreaSubtitle, StringExternal("Param/Value/GhostOpsDef_SwannName") + StringToText(": ") + StringExternal("Param/Value/GhostOpsDef_SwannText"));
+    GhostOps_Talk("SwannPortrait", 1, go_defSwannLen);
+    go_defSalvoOn = true;
+    GhostOps_DEF_SalvoApply();
+    UIDisplayMessage(PlayerGroupAll(), c_messageAreaDirective, StringExternal("Param/Value/GhostOpsDef_SalvoHint"));
+    GhostOps_DEF_Log("ground salvo switched on");
+    TriggerQueueExit();
+    return true;
+}
+
+// Hook in front of the first action of the original first wave (the Nydus wave of the teal base): the scene of Swann follows after the configured delay.
+void GhostOps_DEF_OnFirstWave () {
+    if (!go_defStarted || go_defSalvoScene) {
+        return;
+    }
+
+    go_defSalvoScene = true;
+    go_defSwannAt = GameGetMissionTime() + go_defSwannDelay;
+    GhostOps_DEF_Log("first original wave begins; Swann's scene at " + FixedToString(go_defSwannAt, 1));
+}
+
+//--------------------------------------------------------------------------------------------------
+// Groups and waves
+//--------------------------------------------------------------------------------------------------
+fixed GhostOps_DEF_Share (int lp_player) {
+    int lv_total;
+    int lv_dead;
+    int lv_g;
+
+    if (!go_defStarted) {
+        return 1.0;
+    }
+
+    if ((lp_player >= 2) && (lp_player <= 4)) {
+        lv_total = go_defGrpTotal[lp_player - 2];
+        lv_dead = go_defGrpDead[lp_player - 2];
+    }
+    else {
+        lv_total = 0;
+        lv_dead = 0;
+        lv_g = 0;
+        while (lv_g < 3) {
+            lv_total += go_defGrpTotal[lv_g];
+            lv_dead += go_defGrpDead[lv_g];
+            lv_g += 1;
+        }
+    }
+
+    if (lv_total <= 0) {
+        return 1.0;
+    }
+
+    return IntToFixed(lv_total - lv_dead) / IntToFixed(lv_total);
+}
+
+// share ^ power for the power values the settings allow (1, 2, 0.5 approximated by a blend); power 1 is the plain share
+fixed GhostOps_DEF_Factor (int lp_player) {
+    fixed lv_s;
+
+    lv_s = GhostOps_DEF_Share(lp_player);
+    if (go_defPower >= 1.5) {
+        return lv_s * lv_s;
+    }
+
+    return lv_s;
+}
+
+int GhostOps_DEF_Scale (int lp_player, int lp_qty) {
+    fixed lv_f;
+    fixed lv_v;
+
+    if (!go_defStarted || (lp_qty <= 0)) {
+        return lp_qty;
+    }
+
+    lv_f = GhostOps_DEF_Factor(lp_player);
+    if (lv_f <= 0.0) {
+        return 0;
+    }
+
+    lv_v = IntToFixed(lp_qty) * lv_f;
+    if (go_defRound == 0) {
+        return FixedToInt(lv_v);
+    }
+
+    if (go_defRound == 2) {
+        return FixedToInt(lv_v + 0.999);
+    }
+
+    return FixedToInt(lv_v + 0.5);
+}
+
+void GhostOps_DEF_Add4 (int lp_player, int lp_a, int lp_b, int lp_c, int lp_d, string lp_type) {
+    int lv_idx;
+    int lv_sum;
+
+    if (go_defWvN >= 8) {
+        return;
+    }
+
+    go_defWvType[go_defWvN] = lp_type;
+    go_defWvA[go_defWvN] = GhostOps_DEF_Scale(lp_player, lp_a);
+    go_defWvB[go_defWvN] = GhostOps_DEF_Scale(lp_player, lp_b);
+    go_defWvC[go_defWvN] = GhostOps_DEF_Scale(lp_player, lp_c);
+    go_defWvD[go_defWvN] = GhostOps_DEF_Scale(lp_player, lp_d);
+    lv_idx = PlayerDifficulty(1);
+    if (lv_idx == 1) {
+        lv_sum = go_defWvA[go_defWvN];
+    }
+    else if (lv_idx == 2) {
+        lv_sum = go_defWvB[go_defWvN];
+    }
+    else if (lv_idx == 3) {
+        lv_sum = go_defWvC[go_defWvN];
+    }
+    else {
+        lv_sum = go_defWvD[go_defWvN];
+    }
+
+    go_defWvSum += lv_sum;
+    go_defWvN += 1;
+}
+
+void GhostOps_DEF_Wp (int lp_player, point lp_pt, bool lp_flag) {
+    if (go_defWpN >= 6) {
+        return;
+    }
+
+    go_defWpPt[go_defWpN] = lp_pt;
+    go_defWpB[go_defWpN] = lp_flag;
+    go_defWpN += 1;
+}
+
+void GhostOps_DEF_Send (int lp_player, int lp_time, bool lp_flag) {
+    int lv_k;
+    int lv_sum;
+    int lv_n;
+
+    // The attack sources run as parallel threads that share this buffer, and AIAttackWaveSend may block until the wave is over:
+    // everything is handed to the AI and the buffer is emptied BEFORE the send.
+    lv_sum = go_defWvSum;
+    lv_n = go_defWvN;
+    if (lv_sum <= 0) {
+        go_defWvSkipped += 1;
+        GhostOps_DEF_Log("wave of player " + IntToString(lp_player) + " skipped: nothing left of it after the weakening");
+        go_defWvN = 0;
+        go_defWvSum = 0;
+        go_defWpN = 0;
+        return;
+    }
+
+    lv_k = 0;
+    while (lv_k < go_defWpN) {
+        AIAttackWaveAddWaypoint(lp_player, go_defWpPt[lv_k], go_defWpB[lv_k]);
+        lv_k += 1;
+    }
+
+    lv_k = 0;
+    while (lv_k < lv_n) {
+        AIAttackWaveAddUnits4(go_defWvA[lv_k], go_defWvB[lv_k], go_defWvC[lv_k], go_defWvD[lv_k], go_defWvType[lv_k]);
+        lv_k += 1;
+    }
+
+    go_defWvN = 0;
+    go_defWvSum = 0;
+    go_defWpN = 0;
+    go_defWvSent += 1;
+    GhostOps_DEF_Log("wave of player " + IntToString(lp_player) + " sent, units(difficulty) " + IntToString(lv_sum) + ", share " + FixedToString(GhostOps_DEF_Share(lp_player), 2));
+    AIAttackWaveSend(lp_player, lp_time, lp_flag);
+}
+
+// After the zero of the timer the zerohour module sends small waves of its own: they are scaled and refused for a base whose group is gone.
+int GhostOps_DEF_PostSide (int lp_start) {
+    int lv_t;
+    int lv_p;
+
+    lv_t = 0;
+    while (lv_t < 3) {
+        lv_p = 2 + ((lp_start + lv_t) % 3);
+        if (!go_defStarted || (GhostOps_DEF_Share(lv_p) > 0.0)) {
+            return lv_p;
+        }
+
+        lv_t += 1;
+    }
+
+    return -1;
+}
+
+// Group state from the marked Hatcheries (their ids and owners come from the zerohour module); regrown Hatcheries on the places of destroyed targets are removed.
+bool GhostOps_DEF_GroupTick (bool lp_testConds, bool lp_runActions) {
+    int lv_i;
+    int lv_g;
+    int lv_p;
+    int lv_n;
+    int lv_k;
+    unit lv_u;
+    unitgroup lv_hg;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    lv_g = 0;
+    while (lv_g < 3) {
+        go_defGrpDead[lv_g] = 0;
+        lv_g += 1;
+    }
+
+    lv_i = 0;
+    while (lv_i < go_zhTargetCount) {
+        lv_g = go_defTgtGrp[lv_i];
+        if ((lv_g >= 0) && (lv_g < 3)) {
+            if (go_zhTargetDead[lv_i]) {
+                go_defGrpDead[lv_g] += 1;
+                // no regrowth of a destroyed marked Hatchery
+                lv_p = 2;
+                while (lv_p <= 4) {
+                    lv_hg = UnitGroup(null, lv_p, RegionCircle(go_defTgtPos[lv_i], 7.0), UnitFilter((1 << c_targetFilterStructure), 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+                    lv_n = UnitGroupCount(lv_hg, c_unitCountAll);
+                    lv_k = 1;
+                    while (lv_k <= lv_n) {
+                        lv_u = UnitGroupUnit(lv_hg, lv_k);
+                        if ((lv_u != UnitFromId(go_zhTargetId[lv_i])) && ((UnitGetType(lv_u) == "Hatchery") || (UnitGetType(lv_u) == "Lair") || (UnitGetType(lv_u) == "Hive"))) {
+                            GhostOps_DEF_Log("regrown Hatchery on the place of target " + IntToString(go_zhTargetId[lv_i]) + " removed");
+                            UnitRemove(lv_u);
+                        }
+
+                        lv_k += 1;
+                    }
+
+                    lv_p += 1;
+                }
+            }
+        }
+
+        lv_i += 1;
+    }
+
+    return true;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Scenes
+//--------------------------------------------------------------------------------------------------
+bool GhostOps_DEF_RaynorMsg (bool lp_testConds, bool lp_runActions) {
+    if (!lp_runActions) {
+        return true;
+    }
+
+    TriggerQueueEnter();
+    GhostOps_DEF_Log("scene: Raynor at the start");
+    UIDisplayMessage(PlayerGroupAll(), c_messageAreaSubtitle, StringExternal("Param/Value/GhostOpsZH_RaynorName") + StringToText(": ") + StringExternal("Param/Value/GhostOpsDef_RaynorText"));
+    GhostOps_Talk("RaynorCommanderPortrait", 0, go_defRaynorLen);
+    TriggerQueueExit();
+    return true;
+}
+
+// Matt names the targets: a short glimpse of the building and its surroundings around every living marked Hatchery (VisRevealArea, the engine removes it after the
+// configured seconds: the same call the original maps use), once; the minimap marks of the zerohour module stay until the target is destroyed. No permanent sight, no camera move.
+void GhostOps_DEF_RevealTargets () {
+    int lv_i;
+
+    if (go_defRevealDone) {
+        return;
+    }
+
+    go_defRevealDone = true;
+    lv_i = 0;
+    while (lv_i < go_zhTargetCount) {
+        if (!go_zhTargetDead[lv_i]) {
+            VisRevealArea(1, RegionCircle(go_defTgtPos[lv_i], go_defRevealRadius), go_defRevealSec, false);
+            MinimapPing(PlayerGroupAll(), go_defTgtPos[lv_i], 6.0, Color(100.00, 45.00, 0.00));
+        }
+
+        lv_i += 1;
+    }
+
+    GhostOps_DEF_Log("targets revealed for " + FixedToString(go_defRevealSec, 1) + " s, radius " + FixedToString(go_defRevealRadius, 1));
+}
+
+bool GhostOps_DEF_MattMsg (bool lp_testConds, bool lp_runActions) {
+    if (!lp_runActions) {
+        return true;
+    }
+
+    TriggerQueueEnter();
+    GhostOps_DEF_Log("scene: Matt");
+    if (go_zhDead >= go_zhTargetCount) {
+        UIDisplayMessage(PlayerGroupAll(), c_messageAreaSubtitle, StringExternal("Param/Value/GhostOpsZH_HornerName") + StringToText(": ") + StringExternal("Param/Value/GhostOpsDef_MattEarly"));
+    }
+    else {
+        UIDisplayMessage(PlayerGroupAll(), c_messageAreaSubtitle, StringExternal("Param/Value/GhostOpsZH_HornerName") + StringToText(": ") + StringExternal("Param/Value/GhostOpsDef_MattText"));
+    }
+
+    GhostOps_Talk("HornerPortrait", 2, go_defMattLen);
+    GhostOps_DEF_RevealTargets();
+    TriggerQueueExit();
+    return true;
+}
+
+bool GhostOps_DEF_SceneTick (bool lp_testConds, bool lp_runActions) {
+    fixed lv_now;
+    int lv_k;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    lv_now = GameGetMissionTime();
+    // the landings (game seconds after the start of control); a landing cut by a load is finished by the watchdog
+    lv_k = 0;
+    while (lv_k < 3) {
+        if ((go_defLandSt[lv_k] == 0) && ((lv_now - go_defT0) >= go_defLandAt[lv_k])) {
+            GhostOps_DEF_StartLanding(lv_k);
+        }
+        else if ((go_defLandSt[lv_k] == 1) && (go_defLandBegan[lv_k] >= 0.0) && ((lv_now - go_defLandBegan[lv_k]) > 30.0)) {
+            GhostOps_DEF_Unstick(lv_k);
+        }
+        else if ((go_defLandSt[lv_k] == 1) && (go_defLandBegan[lv_k] < 0.0) && ((lv_now - go_defT0) > (go_defLandAt[lv_k] + 5.0))) {
+            go_defLandSt[lv_k] = 0;
+        }
+
+        lv_k += 1;
+    }
+
+    if ((go_defRaynorSt == 0) && ((lv_now - go_defT0) >= go_defRaynorAt)) {
+        go_defRaynorSt = 2;
+        TriggerExecute(TriggerCreate("GhostOps_DEF_RaynorMsg"), true, false);
+    }
+
+    if ((go_defMattSt == 0) && ((lv_now - go_defT0) >= go_defMattAt)) {
+        go_defMattSt = 2;
+        TriggerExecute(TriggerCreate("GhostOps_DEF_MattMsg"), true, false);
+    }
+
+    if (go_defSalvoScene && !go_defSalvoOn && (go_defSwannAt >= 0.0) && (lv_now >= go_defSwannAt)) {
+        go_defSwannAt = -1.0;
+        TriggerExecute(TriggerCreate("GhostOps_DEF_SwannMsg"), true, false);
+    }
+
+    return true;
+}
+
+// A loaded game: the switches that live outside the saved globals are put back, a cut scene starts again
+bool GhostOps_DEF_Loaded (bool lp_testConds, bool lp_runActions) {
+    if (!lp_runActions) {
+        return true;
+    }
+
+    GhostOps_DEF_SalvoApply();
+    if (go_defSalvoScene && !go_defSalvoOn && (go_defSwannAt < 0.0)) {
+        go_defSwannAt = GameGetMissionTime() + 1.0;
+    }
+
+    GhostOps_DEF_Log("loaded game: kits " + IntToString(GhostOps_DEF_KitsLeft(1)) + "/" + IntToString(GhostOps_DEF_KitsLeft(2)) + " landings " + IntToString(go_defLandSt[0]) + IntToString(go_defLandSt[1]) + IntToString(go_defLandSt[2]) + " salvo " + IntToString(BoolToInt(go_defSalvoOn)));
+    return true;
+}
+
+//--------------------------------------------------------------------------------------------------
+// Start (once, from GhostOps_ZH_Start, before the order is applied)
+//--------------------------------------------------------------------------------------------------
+void GhostOps_DEF_Start () {
+    int lv_i;
+    int lv_o;
+
+    if (go_defStarted) {
+        return;
+    }
+
+    go_defStarted = true;
+    GhostOps_ApplyDefenceConfig();
+    go_defKitB = go_zhOrdBunkers;
+    go_defKitT = go_zhOrdTurrets;
+    go_defMarinesFirst = go_zhOrdMarines;
+    if (go_defMarinesFirst > 6) {
+        go_defMarinesFirst = 6;
+    }
+
+    go_defMarinesRest = go_zhOrdMarines - go_defMarinesFirst;
+    go_defT0 = GameGetMissionTime();
+    go_defShownB = -1;
+    go_defShownT = -1;
+    go_defSwannAt = -1.0;
+    lv_i = 0;
+    while (lv_i < 12) {
+        go_defTgtGrp[lv_i] = -1;
+        lv_i += 1;
+    }
+
+    lv_i = 0;
+    while (lv_i < go_zhTargetCount) {
+        go_defTgtPos[lv_i] = UnitGetPosition(UnitFromId(go_zhTargetId[lv_i]));
+        lv_o = UnitGetOwner(UnitFromId(go_zhTargetId[lv_i]));
+        if ((lv_o >= 2) && (lv_o <= 4)) {
+            go_defTgtGrp[lv_i] = lv_o - 2;
+            go_defGrpTotal[lv_o - 2] += 1;
+        }
+
+        lv_i += 1;
+    }
+
+    GhostOps_DEF_Log("start: kits " + IntToString(go_defKitB) + "/" + IntToString(go_defKitT) + " marines " + IntToString(go_defMarinesFirst) + "+" + IntToString(go_defMarinesRest) + " groups " + IntToString(go_defGrpTotal[0]) + "/" + IntToString(go_defGrpTotal[1]) + "/" + IntToString(go_defGrpTotal[2]));
+    HelpPanelAddTip(PlayerGroupAll(), StringExternal("Param/Value/GhostOpsDef_Tip1Title"), StringExternal("Param/Value/GhostOpsDef_Tip1Text"), StringExternal("Param/Value/GhostOpsDef_Tip1Title"), "Assets\\Textures\\ui_icon_attention.dds");
+    HelpPanelAddTip(PlayerGroupAll(), StringExternal("Param/Value/GhostOpsDef_Tip2Title"), StringExternal("Param/Value/GhostOpsDef_Tip2Text"), StringExternal("Param/Value/GhostOpsDef_Tip2Title"), "Assets\\Textures\\ui_icon_attention.dds");
+    HelpPanelAddTip(PlayerGroupAll(), StringExternal("Param/Value/GhostOpsDef_Tip3Title"), StringExternal("Param/Value/GhostOpsDef_Tip3Text"), StringExternal("Param/Value/GhostOpsDef_Tip3Title"), "Assets\\Textures\\ui_icon_attention.dds");
+    go_defSalvoOn = false;
+    GhostOps_DEF_SalvoApply();
+    go_defKitTrig = TriggerCreate("GhostOps_DEF_KitTick");
+    TriggerAddEventTimePeriodic(go_defKitTrig, 0.25, c_timeGame);
+    TriggerExecute(go_defKitTrig, true, true);
+    go_defSceneTrig = TriggerCreate("GhostOps_DEF_SceneTick");
+    TriggerAddEventTimePeriodic(go_defSceneTrig, 0.5, c_timeGame);
+    TriggerAddEventTimePeriodic(TriggerCreate("GhostOps_DEF_GroupTick"), 1.0, c_timeGame);
+    go_defLoadTrig = TriggerCreate("GhostOps_DEF_Loaded");
+    TriggerAddEventLoadGameDone(go_defLoadTrig);
+}

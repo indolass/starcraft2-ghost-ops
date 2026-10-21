@@ -481,6 +481,247 @@
           ]
         }
       }
+    },
+    "defence": {
+      "label": "Оборона и диверсии",
+      "message": "Ghost Ops: Час икс - оборона и диверсии",
+      "message_en": "Ghost Ops - Zero Hour: defence and sabotage",
+      "experimental": true,
+      "badge": "Новое",
+      "extends": "standard",
+      "card": "Новая экспериментальная версия: закупленные бункеры и ракетные турели игрок строит сам, морпехи и призраки прилетают в капсулах, ручной наземный залп турелей; уничтожение инкубаторов ослабляет нападения",
+      "details": [
+        "Закупка до миссии: морпехи (не меньше 6), комплекты бункеров и турелей ПВО, КСМ. Оплата один раз за счёт кампании; на карте постройки по комплектам бесплатны и ограничены заказом",
+        "На старте только командный центр и КСМ: готовых морпехов, бункеров и турелей нет, казармы нет, обучение закрыто",
+        "Первые шесть морпехов высаживаются в капсулах через 15 игровых секунд, остальные заказанные - позже; призраки отдельной капсулой",
+        "Два призрака: постоянная маскировка, детекторы видят; Snipe 45 урона, энергия 0, перезарядка 5 с; две ядерные ракеты на миссию",
+        "Ручной наземный залп турелей (включает Свонн при первой атаке); число и сила залпа - в настройках миссии (экспериментальные числа)",
+        "Каждый уничтоженный отмеченный инкубатор уменьшает будущие волны своей группы баз, последний прекращает их",
+        "Победа: истёк таймер 20 минут И уничтожены все отмеченные инкубаторы; на нуле поражения нет"
+      ],
+      "overrides": {
+        "zerohour": {
+          "min": {
+            "marines": 6
+          }
+        },
+        "ghost_tuning": {
+          "snipe": {
+            "cost": 0,
+            "damage": 45,
+            "cast_time": 0.3,
+            "cooldown": 5
+          }
+        },
+        "audio": {
+          "talk": [
+            {
+              "id": "GhostOpsTalkRaynor1",
+              "facial": "THanson02Raynor00011",
+              "seconds": 3.3,
+              "group": "raynor"
+            },
+            {
+              "id": "GhostOpsTalkRaynor2",
+              "facial": "TTosh03ARaynor00004",
+              "seconds": 3.3,
+              "group": "raynor"
+            },
+            {
+              "id": "GhostOpsTalkRaynor3",
+              "facial": "TTychus04Raynor00021",
+              "seconds": 3.1,
+              "group": "raynor"
+            },
+            {
+              "id": "GhostOpsTalkRaynor4",
+              "facial": "THanson02Raynor00013",
+              "seconds": 3.0,
+              "group": "raynor"
+            },
+            {
+              "id": "GhostOpsTalkSwann1",
+              "facial": "THanson02Swann00001",
+              "seconds": 8.7,
+              "group": "swann"
+            },
+            {
+              "id": "GhostOpsTalkSwann2",
+              "facial": "THanson01Swann00046",
+              "seconds": 7.4,
+              "group": "swann"
+            },
+            {
+              "id": "GhostOpsTalkHorner1",
+              "facial": "TRaynor03Horner00006",
+              "seconds": 4.6,
+              "group": "horner"
+            },
+            {
+              "id": "GhostOpsTalkHorner2",
+              "facial": "TRaynor03Horner00012",
+              "seconds": 4.0,
+              "group": "horner"
+            }
+          ]
+        },
+        "defence": {
+          "landing": {
+            "point": [
+              90.0,
+              52.0
+            ],
+            "first_at": 15,
+            "rest_at": 45,
+            "ghosts_at": 30
+          },
+          "salvo": {
+            "range": 11,
+            "missiles": 5,
+            "interval": 0.4,
+            "radius": 2.5,
+            "damage": 30,
+            "cooldown": 20
+          },
+          "waves": {
+            "power": 1,
+            "rounding": "nearest"
+          },
+          "scenes": {
+            "raynor_at": 4,
+            "raynor_seconds": 11,
+            "matt_at": 90,
+            "matt_seconds": 11,
+            "swann_delay": 2,
+            "swann_seconds": 9,
+            "reveal_seconds": 5,
+            "reveal_radius": 4
+          },
+          "texts": {
+            "KitsTitle": {
+              "ru": "Укрепления",
+              "en": "Fortifications"
+            },
+            "KitsText": {
+              "ru": "Закупленные комплекты: бункеры и ракетные турели можно строить только в этом количестве, повторно за минералы они не оплачиваются. Отмена стройки возвращает комплект; разрушенное недостроенное здание его не возвращает.",
+              "en": "Paid kits: bunkers and missile turrets can be built only in this number and are not paid for again with minerals. Cancelling a construction returns the kit; a destroyed unfinished building does not."
+            },
+            "KitsBunkers": {
+              "ru": "бункеры",
+              "en": "bunkers"
+            },
+            "KitsTurrets": {
+              "ru": "турели",
+              "en": "turrets"
+            },
+            "KitsOut": {
+              "ru": "Комплекты исчерпаны: лишнее строительство отменено.",
+              "en": "The kits are used up: the extra construction was cancelled."
+            },
+            "LandedFirst": {
+              "ru": "Первые шесть морпехов высадились на плацдарм. Распределите их по бункерам.",
+              "en": "The first six marines have landed. Place them in the bunkers."
+            },
+            "LandedRest": {
+              "ru": "Основная группа высадилась.",
+              "en": "The main group has landed."
+            },
+            "LandedGhosts": {
+              "ru": "Призраки на плацдарме: Наводчик и Оперативник.",
+              "en": "The Ghosts are on the ground: Spotter and Operative."
+            },
+            "SwannName": {
+              "ru": "Свонн",
+              "en": "Swann"
+            },
+            "SwannText": {
+              "ru": "Ковбой, я тут кое-что прикрутил к ракетницам. Теперь могут и по земле шарахнуть! Только наводи вручную — автоматику ещё не допилил. Сейчас включу.",
+              "en": "Cowboy, I bolted something onto the missile turrets. They can hit the ground now! Aim it by hand though - I have not finished the automatics. Switching it on."
+            },
+            "SalvoHint": {
+              "ru": "Выберите ракетницу → «Наземный залп» → укажите область перед наступающими зергами.",
+              "en": "Select a missile turret -> \"Ground salvo\" -> point at the area in front of the advancing zerg."
+            },
+            "SalvoName": {
+              "ru": "Наземный залп",
+              "en": "Ground salvo"
+            },
+            "SalvoTip": {
+              "ru": "Наземный залп: ракеты турели летят в указанную видимую область и поражают вражеские наземные цели, своих не задевают. Один приказ — один залп, у каждой турели своя перезарядка, ресурсы не тратятся. Против воздуха турель стреляет сама.",
+              "en": "Ground salvo: the turret missiles fly to the chosen visible area and hit enemy ground targets, never your own. One order is one salvo, every turret has its own cooldown, no resources are spent. Against air the turret fires by itself."
+            },
+            "RaynorText": {
+              "ru": "База заражена: оружие морпехов работает только возле неё. Бойцы уже летят в капсулах — встречай и расставляй по бункерам. Бункеры и ракетницы построишь сам, но ровно столько, сколько заказано.",
+              "en": "The base is infected: the marines' weapons only work near it. The troops are already coming down in pods - meet them and put them into bunkers. You build the bunkers and turrets yourself, exactly as many as were ordered."
+            },
+            "MattText": {
+              "ru": "Рейнор, это Мэтт. Корабль придёт через двадцать минут, но сесть я смогу, только если вы уничтожите отмеченные инкубаторы. Чем меньше их останется, тем реже зерги полезут на базу — а ракет у вас считаные.",
+              "en": "Raynor, it is Matt. The ship arrives in twenty minutes but I can only land if you destroy the marked hatcheries. The fewer are left, the less the zerg will attack the base - and you have few missiles."
+            },
+            "MattEarly": {
+              "ru": "Рейнор, вижу, инкубаторы уже горят. Держитесь до прибытия корабля.",
+              "en": "Raynor, I can see the hatcheries are already burning. Hold on until the ship arrives."
+            },
+            "Tip1Title": {
+              "ru": "Комплекты и стройка",
+              "en": "Kits and construction"
+            },
+            "Tip1Text": {
+              "ru": "Бункеры и турели строятся бесплатно, но только в количестве заказа. Оставшиеся комплекты показаны в списке задач слева.",
+              "en": "Bunkers and turrets are built for free, but only as many as were ordered. The kits left are shown in the objectives on the left."
+            },
+            "Tip2Title": {
+              "ru": "Десант",
+              "en": "Landing"
+            },
+            "Tip2Text": {
+              "ru": "Первые шесть морпехов прилетают в капсулах почти сразу, остальные позже. Оружие работает возле базы, в бункере оно усиливается.",
+              "en": "The first six marines come down in pods almost at once, the rest later. Their weapons work near the base and are stronger in a bunker."
+            },
+            "Tip3Title": {
+              "ru": "Инкубаторы",
+              "en": "Hatcheries"
+            },
+            "Tip3Text": {
+              "ru": "Каждый разрушенный отмеченный инкубатор ослабляет будущие атаки своей группы баз, последний прекращает их. Уже отправленные войска продолжают наступление.",
+              "en": "Every destroyed marked hatchery weakens the future attacks of its group of bases, the last one stops them. Troops already sent keep attacking."
+            }
+          }
+        }
+      }
+    },
+    "defence_dev": {
+      "label": "Оборона и диверсии (разработка)",
+      "message": "Ghost Ops - defence (dev)",
+      "message_en": "Ghost Ops - defence (dev)",
+      "hidden": true,
+      "extends": "defence",
+      "card": "Служебный запуск с пробой",
+      "details": [
+        "Только для разработки"
+      ],
+      "overrides": {
+        "tactical": {
+          "debug_log": true
+        },
+        "zerohour": {
+          "debug_log": true
+        },
+        "defence": {
+          "debug_log": true
+        },
+        "ce0": {
+          "operation_id": "CE0-TR03D",
+          "census_types": [
+            "Ghost",
+            "Marine",
+            "Medic",
+            "SCV",
+            "Bunker",
+            "MissileTurret"
+          ]
+        }
+      }
     }
   },
   "audio": {

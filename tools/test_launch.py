@@ -72,7 +72,7 @@ def verify_window(win, mon, w, h):
     user32 = ctypes.windll.user32
     l, t, r, b = win['rect']
     zoomed = bool(user32.IsZoomed(win['hwnd']))
-    ml, mt, mr, mb = mon.bounds
+    ml, mt, mr, mb = mon.left, mon.top, mon.right, mon.bottom
     full = (l <= ml and t <= mt and r >= mr and b >= mb)
     size_ok = (r - l) <= w + 60 and (b - t) <= h + 140
     return {'zoomed': zoomed, 'fullscreen': full, 'size': (r - l, b - t), 'size_ok': size_ok, 'inside_work_area': inside(win['rect'], mon),
@@ -98,7 +98,10 @@ def launch_test_game(command, width=1024, height=768, mute_seconds=900):
     subprocess.Popen(['powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', os.path.join(HERE, 'mute_process.ps1'),
                       '-ProcessId', str(pid), '-Seconds', str(mute_seconds)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     win = place_window(pid, (x, y, w, h))
-    facts = verify_window(win, mon, w, h) if win else {'ok': False}
+    try:
+        facts = verify_window(win, mon, w, h) if win else {'ok': False}
+    except Exception as e:  # a check that cannot run is a failed check: the window is never trusted unverified
+        facts = {'ok': False, 'error': repr(e)}
     LAST.clear()
     LAST.update({'pid': pid, 'monitor': repr(mon), 'second_monitor': second, 'window': win and win['rect'], 'facts': facts, 'command': windowed_command(command, x, y, w, h)})
     print('test game pid %d on %s (%s); window %s; facts %s' % (pid, mon.device, 'second monitor' if second else 'primary: no second monitor', win and win['rect'], facts))
