@@ -1676,11 +1676,24 @@ def read_build_manifest(args):
         return json.load(f)
 
 
-def start_detached(command):
-    """Start SC2 outside this process tree (it survives the launcher closing)."""
+def _raw_start(command):
     ps = "Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = '%s'; CurrentDirectory = '%s' } | Out-Null" % (
         command.replace("'", "''"), os.path.join(SC2_DIR, 'Support64'))
     return subprocess.run(['powershell', '-NoProfile', '-Command', ps]).returncode
+
+
+def start_detached(command, owner=False):
+    """Start SC2 outside this process tree (it survives the launcher closing).
+
+    The ONLY way a game process is started by this project. owner=True is the Owner's normal launch (launcher / campaign window / `build.py launch`): the
+    command is used as it is - unless the environment variable GHOSTOPS_TEST is set (every test tool sets it, also through the GUI): then, like every call
+    without owner=True, the game is started as a TEST game by test_launch.launch_test_game: ordinary window 1024x768 on the second monitor (the primary only when
+    there is no other), muted (our process only), never full screen, never raised; the actual mode / size / monitor of the window are verified afterwards and a
+    window that does not comply is closed (our own pid only)."""
+    if owner and not os.environ.get('GHOSTOPS_TEST'):
+        return _raw_start(command)
+    import test_launch
+    return 0 if test_launch.launch_test_game(command) else 8
 
 
 def cmd_launch(args):
@@ -1697,7 +1710,7 @@ def cmd_launch(args):
         print('expected installed map is missing: %s' % dest)
         return 8
     print('starting %s' % (cfg.get('profile', {}).get('label') or adapter['mission']))
-    return start_detached(command)
+    return start_detached(command, owner=True)
 
 
 def main(argv=None):

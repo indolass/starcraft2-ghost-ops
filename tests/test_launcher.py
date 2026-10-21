@@ -6,6 +6,7 @@ import unittest
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'tools'))
 import launcher_core as lc  # noqa: E402
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 class FakeBackend:
@@ -172,3 +173,27 @@ class LauncherTests(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class TestGameLaunchGuard(unittest.TestCase):
+    """No project tool may start a full screen test game (Owner rule): the one start function forces the windowed test form."""
+
+    def test_windowed_command_replaces_every_display_argument(self):
+        import test_launch
+        cmd = '"SC2Switcher_x64.exe" -run "m.SC2Map" -difficulty 3 -displaymode 2'
+        out = test_launch.windowed_command(cmd, 10, 20, 1024, 768)
+        self.assertEqual(out.count('-displaymode'), 1)
+        self.assertIn('-displaymode 0 -windowwidth 1024 -windowheight 768 -windowx 10 -windowy 20', out)
+        again = test_launch.windowed_command(out, 5, 6, 800, 600)
+        self.assertEqual(again.count('-windowwidth'), 1)
+        self.assertIn('-windowx 5 -windowy 6', again)
+        self.assertNotIn('-displaymode 2', again)
+
+    def test_only_owner_calls_may_skip_the_guard(self):
+        import build
+        src = open(os.path.join(ROOT, 'tools', 'build.py'), encoding='utf-8').read()
+        self.assertEqual(src.count('_raw_start('), 2)  # the definition and the owner branch of start_detached
+        for f in ('launcher_core.py', 'campaign_flow.py'):
+            self.assertIn('start_detached(command, owner=True)', open(os.path.join(ROOT, 'tools', f), encoding='utf-8').read())
+        for f in ('test_launch.py', 'ce0_session.py', 'ce0_campaign_e2e.py', 'save_lock_probe.py'):
+            self.assertNotIn('owner=True', open(os.path.join(ROOT, 'tools', f), encoding='utf-8').read())

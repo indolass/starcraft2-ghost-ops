@@ -52,7 +52,7 @@ class BuildCampaignBackend:
         if not os.path.isfile(dest):
             print('expected installed map is missing: %s' % dest)
             return 8
-        return build.start_detached(command)
+        return build.start_detached(command, owner=True)
 
 
 class CampaignFlow:

@@ -17,6 +17,7 @@ import sys
 import time
 from ctypes import wintypes
 
+os.environ['GHOSTOPS_TEST'] = '1'  # any process that imports this module is a test tool: build.start_detached starts only windowed, muted test games for it
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 import build  # noqa: E402
@@ -57,6 +58,57 @@ def test_command(adapter, cfg, preset, x, y, w, h):
     return command, dest
 
 
+LAST = {}
+
+
+def windowed_command(command, x, y, w, h):
+    """Any SC2 launch command turned into the test form: every display argument replaced by the ordinary window of the given size and place."""
+    command = re.sub(r'\s+-(displaymode|windowwidth|windowheight|windowx|windowy)\s+-?\d+', '', command)
+    return command + ' -displaymode 0 -windowwidth %d -windowheight %d -windowx %d -windowy %d' % (w, h, x, y)
+
+
+def verify_window(win, mon, w, h):
+    """Facts about the real window: not maximised, not full screen, the expected size (client + frame), inside the work area of the chosen monitor."""
+    user32 = ctypes.windll.user32
+    l, t, r, b = win['rect']
+    zoomed = bool(user32.IsZoomed(win['hwnd']))
+    ml, mt, mr, mb = mon.bounds
+    full = (l <= ml and t <= mt and r >= mr and b >= mb)
+    size_ok = (r - l) <= w + 60 and (b - t) <= h + 140
+    return {'zoomed': zoomed, 'fullscreen': full, 'size': (r - l, b - t), 'size_ok': size_ok, 'inside_work_area': inside(win['rect'], mon),
+            'ok': (not zoomed) and (not full) and size_ok and inside(win['rect'], mon)}
+
+
+def launch_test_game(command, width=1024, height=768, mute_seconds=900):
+    """THE way a test game is started (see build.start_detached): windowed 1024x768 on the second monitor (primary only when there is no other), our process muted,
+    never raised, no pinning, then the actual window is verified; a window that does not comply (full screen, wrong size, off the monitor) is closed (our pid only).
+    Returns the pid or None. The facts are kept in LAST."""
+    if sc2_pids():
+        print('StarCraft II is already running (not ours): the test launch is refused, the game is not touched')
+        return None
+    mons = monitors.list_monitors()
+    mon, second = monitors.test_monitor(mons)
+    x, y, w, h = monitors.test_window_rect(mon, width, height)
+    before = sc2_pids()
+    build._raw_start(windowed_command(command, x, y, w, h))
+    pid = wait_new_pid(before)
+    if pid is None:
+        print('the test game did not start')
+        return None
+    subprocess.Popen(['powershell', '-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', os.path.join(HERE, 'mute_process.ps1'),
+                      '-ProcessId', str(pid), '-Seconds', str(mute_seconds)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    win = place_window(pid, (x, y, w, h))
+    facts = verify_window(win, mon, w, h) if win else {'ok': False}
+    LAST.clear()
+    LAST.update({'pid': pid, 'monitor': repr(mon), 'second_monitor': second, 'window': win and win['rect'], 'facts': facts, 'command': windowed_command(command, x, y, w, h)})
+    print('test game pid %d on %s (%s); window %s; facts %s' % (pid, mon.device, 'second monitor' if second else 'primary: no second monitor', win and win['rect'], facts))
+    if not facts.get('ok'):
+        subprocess.run(['taskkill', '/PID', str(pid), '/F'], capture_output=True)
+        print('the test window does not comply with the test rules: closed our own test game, pid', pid)
+        return None
+    return pid
+
+
 def wait_new_pid(before, timeout=60):
     end = time.time() + timeout
     while time.time() < end:
@@ -77,7 +129,11 @@ def place_window(pid, rect, timeout=60):
         if wins:
             hwnd, l, t, r, b = max(wins, key=lambda e: (e[3] - e[1]) * (e[4] - e[2]))
             moved = False
-            if abs(l - x) > 40 or abs(t - y) > 80:
+            if abs(l - x) > 40 or abs(t - y) > 80 or (r - l) > w + 60 or (b - t) > h + 140:
+                if user32.IsZoomed(hwnd):
+                    user32.ShowWindow(hwnd, 9)  # SW_RESTORE of a maximised window
+                elif user32.IsIconic(hwnd):
+                    user32.ShowWindow(hwnd, 4)  # SW_SHOWNOACTIVATE: a minimised test window is shown again without taking the focus
                 user32.SetWindowPos(hwnd, 0, x, y, w, h, SWP_NOZORDER | SWP_NOACTIVATE)
                 moved = True
                 time.sleep(0.5)
