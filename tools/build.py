@@ -644,13 +644,17 @@ def tactical_fragments(t, gt=None):
         button = ['    <CButton id="GhostOpsArmorPiercing">', '        <Icon value="Assets' + chr(92) + 'Textures' + chr(92) + 'btn-ability-terran-punishergrenade-color.dds"/>',
                   '        <AlertIcon value="Assets' + chr(92) + 'Textures' + chr(92) + 'btn-ability-terran-punishergrenade-color.dds"/>', '        <EditorCategories value="Race:Terran"/>', '    </CButton>']
         effects = ['    <CEffectLaunchMissile id="GhostOpsAPLaunch">', '        <EditorCategories value="Race:Terran"/>', '        <ImpactEffect value="GhostOpsAPSearch"/>',
-                   '        <ImpactLocation Value="TargetPoint"/>', '        <AmmoUnit value="PunisherGrenadesLMWeapon"/>', '    </CEffectLaunchMissile>',
+                   '        <ImpactLocation Value="TargetPoint"/>', '        <AmmoUnit value="%s"/>' % ('GhostOpsAPMissile' if gr.get('dev_flight_speed') else 'PunisherGrenadesLMWeapon'), '    </CEffectLaunchMissile>',
                    '    <CEffectEnumArea id="GhostOpsAPSearch">', '        <EditorCategories value="Race:Terran"/>', '        <LaunchLocation Value="TargetPoint"/>', '        <ImpactLocation Value="TargetPoint"/>',
                    '        <AreaArray Radius="%s" Effect="GhostOpsAPDamage"/>' % g(gr['radius']),
                    # ground enemy MACHINES and STRUCTURES only: Mechanical and not Biological (an SCV is both and stays out), no air, no own / allied / neutral units, no missiles
                    '        <SearchFilters value="Ground,Mechanical,Visible;Player,Ally,Neutral,Biological,Air,Missile,Stasis,Dead,Hidden,Invulnerable"/>', '    </CEffectEnumArea>',
                    '    <CEffectDamage id="GhostOpsAPDamage">', '        <EditorCategories value="Race:Terran"/>', '        <Kind value="Splash"/>', '        <Amount value="%s"/>' % g(gr['damage']), '        <Flags index="Notification" value="1"/>',
                    '        <ResponseFlags index="Acquire" value="1"/>', '    </CEffectDamage>']
+    # development only (dev_flight_speed): a slow copy of the grenade projectile, so that a game can be saved while it is in flight
+    mover = []
+    if gr.get('enabled') and gr.get('dev_flight_speed'):
+        mover = ['    <CMoverMissile id="GhostOpsAPMover" parent="PunisherGrenadesWeapon">', '        <MotionPhases index="0" Acceleration="4" MaxSpeed="%s"/>' % g(gr['dev_flight_speed']), '    </CMoverMissile>']
     ghost_unit = (['    <CUnit id="Ghost">', '        <AbilArray Link="GhostOpsArmorPiercing"/>', '        <CardLayouts index="0">',
                    '            <LayoutButtons Face="GhostOpsArmorPiercing" Type="AbilCmd" AbilCmd="GhostOpsArmorPiercing,Execute" Row="1" Column="1"/>', '        </CardLayouts>', '    </CUnit>']
                   if gr.get('enabled') else [])
@@ -662,7 +666,8 @@ def tactical_fragments(t, gt=None):
                '    <CUnit id="Nuke">',
                '        <CostResource index="Minerals" value="0"/>',
                '        <CostResource index="Vespene" value="0"/>',
-               '    </CUnit>'] + ghost_unit + ['']),
+               '    </CUnit>'] + ghost_unit + (['    <CUnit id="GhostOpsAPMissile" parent="PunisherGrenadesLMWeapon">', '        <Mover value="GhostOpsAPMover"/>', '    </CUnit>'] if mover else []) + ['']),
+        'MoverData.xml': nl.join(mover + ['']) if mover else '',
         'BehaviorData.xml': nl.join(behavior('GhostOpsGarrisonDamage', gm) + extra_beh + ['']),
         'ButtonData.xml': nl.join(button + ['']) if button else '',
         'RequirementData.xml': nl.join([

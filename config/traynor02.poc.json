@@ -542,6 +542,9 @@
             "ghost_seconds": 3,
             "raynor_delay": 1,
             "raynor_seconds": 4
+          },
+          "grenade": {
+            "dev_flight_speed": 1.5
           }
         },
         "ce0": {

@@ -1,6 +1,8 @@
 // CE-0 probe: TRaynor02 specific state and commands (development only; compiled only with the config key "ce0").
 void GhostOps_Scene_OnRebelsRescued ();
 
+int go_apImpacts;
+
 bool GhostOps_Ce0_Alive (unit lp_u) {
     if (lp_u == null) {
         return false;
@@ -58,10 +60,25 @@ bool GhostOps_Ce0_BunkerTest (bool lp_testConds, bool lp_runActions) {
         GhostOps_Ce0_Write("j", "BT +" + IntToString(lv_i) + " half-s: bunker alive " + IntToString(GhostOps_Ce0_B(GhostOps_Ce0_Alive(lv_bunker))) + " marines alive " + IntToString(UnitGroupCount(lv_marines, c_unitCountAlive)) + " ammo " + IntToString(go_tacGrenadeAmmo) + " op life " + FixedToString(UnitGetPropertyFixed(go_tacOperative, c_unitPropLife, c_unitPropCurrent), 0));
     }
 
+    GhostOps_Ce0_Write("j", "BT end: ammo " + IntToString(go_tacGrenadeAmmo) + " impacts " + IntToString(go_apImpacts) + " | operative valid for a further shot " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(go_tacOperative, OrderTargetingPoint(AbilityCommand("GhostOpsArmorPiercing", 0), lv_pos)))) + " | ability enabled-state via valid on spotter " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(go_tacSpotter, OrderTargetingPoint(AbilityCommand("GhostOpsArmorPiercing", 0), lv_pos)))));
     return true;
 }
 
-// Grenade test 2: three enemy Hellions in a cluster, two enemy Marines and an enemy SCV beside them (all on hold position); own Marine too. One grenade, then the log.
+// Grenade test 2: three enemy Hellions in a cluster, two enemy Marines and an enemy SCV beside them (all on hold position), an own armed-off Marine too. One grenade, then the lives of every unit.
+string GhostOps_Ce0_Lives (unitgroup lp_g) {
+    string lv_t;
+    int lv_i;
+
+    lv_t = "";
+    lv_i = 1;
+    while (lv_i <= UnitGroupCount(lp_g, c_unitCountAll)) {
+        lv_t = lv_t + FixedToString(UnitGetPropertyFixed(UnitGroupUnit(lp_g, lv_i), c_unitPropLife, c_unitPropCurrent), 0) + (" ");
+        lv_i += 1;
+    }
+
+    return lv_t;
+}
+
 bool GhostOps_Ce0_GrenadeTest (bool lp_testConds, bool lp_runActions) {
     unitgroup lv_h;
     unitgroup lv_m;
@@ -83,6 +100,88 @@ bool GhostOps_Ce0_GrenadeTest (bool lp_testConds, bool lp_runActions) {
     lv_s = UnitLastCreatedGroup();
     UnitCreate(1, "Marine", 0, 1, PointWithOffset(lv_pos, 1.2, 0.0), 270.0);
     lv_own = UnitLastCreatedGroup();
+    UnitGroupLoopBegin(lv_own);
+    while (UnitGroupLoopCurrent() != null) {
+        UnitWeaponRemove(UnitGroupLoopCurrent(), "GuassRifle");
+        UnitSetPropertyFixed(UnitGroupLoopCurrent(), c_unitPropLifeMax, 1000.0);
+        UnitSetPropertyFixed(UnitGroupLoopCurrent(), c_unitPropLife, 1000.0);
+        UnitGroupLoopStep();
+    }
+
+    UnitGroupLoopEnd();
+    UnitGroupLoopBegin(lv_m);
+    while (UnitGroupLoopCurrent() != null) {
+        UnitSetPropertyFixed(UnitGroupLoopCurrent(), c_unitPropLifeMax, 1000.0);
+        UnitSetPropertyFixed(UnitGroupLoopCurrent(), c_unitPropLife, 1000.0);
+        UnitIssueOrder(UnitGroupLoopCurrent(), Order(AbilityCommand("move", 2)), c_orderQueueReplace);
+        UnitGroupLoopStep();
+    }
+
+    UnitGroupLoopEnd();
+    UnitGroupLoopBegin(lv_h);
+    while (UnitGroupLoopCurrent() != null) {
+        UnitIssueOrder(UnitGroupLoopCurrent(), Order(AbilityCommand("move", 2)), c_orderQueueReplace);
+        UnitGroupLoopStep();
+    }
+
+    UnitGroupLoopEnd();
+    Wait(1.0, c_timeGame);
+    GhostOps_Ce0_Write("j", "GT before: hellions " + IntToString(UnitGroupCount(lv_h, c_unitCountAlive)) + " lives " + GhostOps_Ce0_Lives(lv_h) + "| enemy marines lives " + GhostOps_Ce0_Lives(lv_m) + "| enemy scv lives " + GhostOps_Ce0_Lives(lv_s) + "| own marine lives " + GhostOps_Ce0_Lives(lv_own));
+    UnitIssueOrder(go_tacOperative, OrderTargetingPoint(AbilityCommand("GhostOpsArmorPiercing", 0), lv_pos), c_orderQueueReplace);
+    Wait(9.0, c_timeGame);
+    GhostOps_Ce0_Write("j", "GT after: hellions alive " + IntToString(UnitGroupCount(lv_h, c_unitCountAlive)) + " | enemy marines alive " + IntToString(UnitGroupCount(lv_m, c_unitCountAlive)) + " lives " + GhostOps_Ce0_Lives(lv_m) + "| enemy scv alive " + IntToString(UnitGroupCount(lv_s, c_unitCountAlive)) + " lives " + GhostOps_Ce0_Lives(lv_s) + "| own marine alive " + IntToString(UnitGroupCount(lv_own, c_unitCountAlive)) + " lives " + GhostOps_Ce0_Lives(lv_own) + "| ammo " + IntToString(go_tacGrenadeAmmo)
+        + " | impacts " + IntToString(go_apImpacts) + " | operative valid for a further shot " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(go_tacOperative, OrderTargetingPoint(AbilityCommand("GhostOpsArmorPiercing", 0), lv_pos)))) + " spotter valid " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(go_tacSpotter, OrderTargetingPoint(AbilityCommand("GhostOpsArmorPiercing", 0), lv_pos)))));
+    return true;
+}
+
+// Grenade test 3: three enemy Hellions, an enemy Marauder (biological, armored), and OWN vehicle and SCV in the same cluster; lives of everything before / after one grenade.
+bool GhostOps_Ce0_GrenadeTest3 (bool lp_testConds, bool lp_runActions) {
+    unitgroup lv_h;
+    unitgroup lv_m;
+    unitgroup lv_oh;
+    unitgroup lv_os;
+    unitgroup lv_ot;
+    point lv_pos;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    lv_pos = PointWithOffset(UnitGetPosition(go_tacOperative), 8.0, 0.0);
+    UnitCreate(3, "Hellion", 0, 2, lv_pos, 270.0);
+    lv_h = UnitLastCreatedGroup();
+    UnitCreate(1, "Marauder", 0, 2, PointWithOffset(lv_pos, 0.0, 1.2), 270.0);
+    lv_m = UnitLastCreatedGroup();
+    UnitCreate(1, "Hellion", 0, 1, PointWithOffset(lv_pos, 1.2, 0.0), 270.0);
+    lv_oh = UnitLastCreatedGroup();
+    UnitCreate(1, "SCV", 0, 1, PointWithOffset(lv_pos, 0.0, -1.2), 270.0);
+    lv_os = UnitLastCreatedGroup();
+    UnitCreate(1, "SiegeTank", 0, 1, PointWithOffset(lv_pos, -1.2, -1.2), 270.0);
+    lv_ot = UnitLastCreatedGroup();
+    UnitGroupLoopBegin(lv_oh);
+    while (UnitGroupLoopCurrent() != null) {
+        UnitSetPropertyFixed(UnitGroupLoopCurrent(), c_unitPropLifeMax, 1000.0);
+        UnitSetPropertyFixed(UnitGroupLoopCurrent(), c_unitPropLife, 1000.0);
+        UnitGroupLoopStep();
+    }
+
+    UnitGroupLoopEnd();
+    UnitGroupLoopBegin(lv_os);
+    while (UnitGroupLoopCurrent() != null) {
+        UnitSetPropertyFixed(UnitGroupLoopCurrent(), c_unitPropLifeMax, 1000.0);
+        UnitSetPropertyFixed(UnitGroupLoopCurrent(), c_unitPropLife, 1000.0);
+        UnitGroupLoopStep();
+    }
+
+    UnitGroupLoopEnd();
+    UnitGroupLoopBegin(lv_ot);
+    while (UnitGroupLoopCurrent() != null) {
+        UnitSetPropertyFixed(UnitGroupLoopCurrent(), c_unitPropLifeMax, 1000.0);
+        UnitSetPropertyFixed(UnitGroupLoopCurrent(), c_unitPropLife, 1000.0);
+        UnitGroupLoopStep();
+    }
+
+    UnitGroupLoopEnd();
     UnitGroupLoopBegin(lv_h);
     while (UnitGroupLoopCurrent() != null) {
         UnitIssueOrder(UnitGroupLoopCurrent(), Order(AbilityCommand("move", 2)), c_orderQueueReplace);
@@ -92,17 +191,108 @@ bool GhostOps_Ce0_GrenadeTest (bool lp_testConds, bool lp_runActions) {
     UnitGroupLoopEnd();
     UnitGroupLoopBegin(lv_m);
     while (UnitGroupLoopCurrent() != null) {
+        UnitSetPropertyFixed(UnitGroupLoopCurrent(), c_unitPropLifeMax, 1000.0);
+        UnitSetPropertyFixed(UnitGroupLoopCurrent(), c_unitPropLife, 1000.0);
         UnitIssueOrder(UnitGroupLoopCurrent(), Order(AbilityCommand("move", 2)), c_orderQueueReplace);
         UnitGroupLoopStep();
     }
 
     UnitGroupLoopEnd();
-    Wait(1.0, c_timeGame);
-    GhostOps_Ce0_Write("j", "GT before: hellions " + IntToString(UnitGroupCount(lv_h, c_unitCountAlive)) + " marines " + IntToString(UnitGroupCount(lv_m, c_unitCountAlive)) + " scv " + IntToString(UnitGroupCount(lv_s, c_unitCountAlive)) + " own marine " + IntToString(UnitGroupCount(lv_own, c_unitCountAlive)));
+    Wait(0.3, c_timeGame);
+    GhostOps_Ce0_Write("j", "GT3 before: enemy hellions " + GhostOps_Ce0_Lives(lv_h) + "| enemy marauder " + GhostOps_Ce0_Lives(lv_m) + "| OWN hellion " + GhostOps_Ce0_Lives(lv_oh) + "| OWN scv " + GhostOps_Ce0_Lives(lv_os) + "| OWN tank " + GhostOps_Ce0_Lives(lv_ot));
     UnitIssueOrder(go_tacOperative, OrderTargetingPoint(AbilityCommand("GhostOpsArmorPiercing", 0), lv_pos), c_orderQueueReplace);
-    Wait(3.0, c_timeGame);
-    GhostOps_Ce0_Write("j", "GT after: hellions " + IntToString(UnitGroupCount(lv_h, c_unitCountAlive)) + " enemy marines " + IntToString(UnitGroupCount(lv_m, c_unitCountAlive)) + " scv " + IntToString(UnitGroupCount(lv_s, c_unitCountAlive)) + " own marine " + IntToString(UnitGroupCount(lv_own, c_unitCountAlive)) + " ammo " + IntToString(go_tacGrenadeAmmo)
-        + " | second shot valid " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(go_tacOperative, OrderTargetingPoint(AbilityCommand("GhostOpsArmorPiercing", 0), lv_pos)))) + " spotter valid " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(go_tacSpotter, OrderTargetingPoint(AbilityCommand("GhostOpsArmorPiercing", 0), lv_pos)))));
+    Wait(9.0, c_timeGame);
+    GhostOps_Ce0_Write("j", "GT3 after: enemy hellions alive " + IntToString(UnitGroupCount(lv_h, c_unitCountAlive)) + " | enemy marauder " + GhostOps_Ce0_Lives(lv_m) + "| OWN hellion " + GhostOps_Ce0_Lives(lv_oh) + "| OWN scv " + GhostOps_Ce0_Lives(lv_os) + "| OWN tank " + GhostOps_Ce0_Lives(lv_ot) + "| ammo " + IntToString(go_tacGrenadeAmmo) + " impacts " + IntToString(go_apImpacts));
+    return true;
+}
+
+// Nuke geometry test (dev): the Spotter is put at distance go_nkD1 from the entrance bunker (35,77) on the line towards the start base, the Operative at go_nkD2 (0 = not moved);
+// both are cloaked, then the Spotter is ordered to aim at the bunker; the log says whether the aiming starts without a step and what the enemies near do.
+fixed go_nkD1;
+fixed go_nkD2;
+
+point GhostOps_Ce0_NkPoint (fixed lp_d) {
+    return Point(34.5 + (0.749 * lp_d), 76.5 - (0.662 * lp_d));
+}
+
+string GhostOps_Ce0_Near (unit lp_u) {
+    unitgroup lv_g;
+    string lv_t;
+    int lv_p;
+    unit lv_e;
+
+    lv_t = "";
+    lv_p = 2;
+    while (lv_p <= 8) {
+        lv_g = UnitGroup(null, lv_p, RegionCircle(UnitGetPosition(lp_u), 13.0), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+        UnitGroupLoopBegin(lv_g);
+        while (UnitGroupLoopCurrent() != null) {
+            lv_e = UnitGroupLoopCurrent();
+            lv_t = lv_t + "P" + IntToString(lv_p) + ":" + UnitGetType(lv_e) + "@" + FixedToString(PointGetX(UnitGetPosition(lv_e)), 0) + "," + FixedToString(PointGetY(UnitGetPosition(lv_e)), 0) + " ";
+            UnitGroupLoopStep();
+        }
+
+        UnitGroupLoopEnd();
+        lv_p += 1;
+    }
+
+    return lv_t;
+}
+
+string GhostOps_Ce0_NkState (string lp_tag) {
+    return lp_tag + " spotter at " + FixedToString(PointGetX(UnitGetPosition(go_tacSpotter)), 1) + "," + FixedToString(PointGetY(UnitGetPosition(go_tacSpotter)), 1) + " life " + FixedToString(UnitGetPropertyFixed(go_tacSpotter, c_unitPropLife, c_unitPropCurrent), 0) + " cloaked " + IntToString(GhostOps_Ce0_B(UnitTestState(go_tacSpotter, c_unitStateCloaked))) + " channel " + IntToString(GhostOps_Ce0_B(go_tacChannel)) + " state " + IntToString(go_tacState) + " hold " + IntToString(GhostOps_Ce0_B(UnitHasBehavior(go_tacSpotter, "GhostOpsAimHold")))
+        + " | operative life " + FixedToString(UnitGetPropertyFixed(go_tacOperative, c_unitPropLife, c_unitPropCurrent), 0) + " cloaked " + IntToString(GhostOps_Ce0_B(UnitTestState(go_tacOperative, c_unitStateCloaked))) + " at " + FixedToString(PointGetX(UnitGetPosition(go_tacOperative)), 1) + "," + FixedToString(PointGetY(UnitGetPosition(go_tacOperative)), 1) + " | spotter to bunker " + FixedToString(DistanceBetweenPoints(UnitGetPosition(go_tacSpotter), Point(34.5, 76.5)), 1);
+}
+
+bool GhostOps_Ce0_NukeGeo (bool lp_testConds, bool lp_runActions) {
+    point lv_t;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    lv_t = Point(34.5, 76.5);
+    UnitSetPosition(go_tacSpotter, GhostOps_Ce0_NkPoint(go_nkD1), false);
+    if (go_nkD2 > 0.0) {
+        UnitSetPosition(go_tacOperative, GhostOps_Ce0_NkPoint(go_nkD2), false);
+    }
+
+    UnitIssueOrder(go_tacSpotter, Order(AbilityCommand("GhostCloak", 0)), c_orderQueueReplace);
+    UnitIssueOrder(go_tacOperative, Order(AbilityCommand("GhostCloak", 0)), c_orderQueueReplace);
+    Wait(1.5, c_timeGame);
+    GhostOps_Ce0_Write("j", "NK near spotter: " + GhostOps_Ce0_Near(go_tacSpotter) + "| near operative: " + GhostOps_Ce0_Near(go_tacOperative));
+    GhostOps_Ce0_Write("j", "NK " + GhostOps_Ce0_NkState("placed") + " | target visible " + IntToString(GhostOps_Ce0_B(VisIsVisibleForPlayer(1, lv_t))) + " order valid " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(go_tacSpotter, OrderTargetingPoint(AbilityCommand("TacNukeStrike", 0), lv_t)))));
+    UnitIssueOrder(go_tacSpotter, OrderTargetingPoint(AbilityCommand("TacNukeStrike", 0), lv_t), c_orderQueueReplace);
+    Wait(2.0, c_timeGame);
+    GhostOps_Ce0_Write("j", "NK " + GhostOps_Ce0_NkState("2 s after the aim order") + " | near spotter: " + GhostOps_Ce0_Near(go_tacSpotter) + "| near operative: " + GhostOps_Ce0_Near(go_tacOperative));
+    Wait(2.0, c_timeGame);
+    GhostOps_Ce0_Write("j", "NK " + GhostOps_Ce0_NkState("4 s after the aim order") + " | near spotter: " + GhostOps_Ce0_Near(go_tacSpotter));
+    UnitIssueOrder(go_tacSpotter, Order(AbilityCommand("TacNukeStrike", 1)), c_orderQueueReplace);
+    Wait(1.5, c_timeGame);
+    GhostOps_Ce0_Write("j", "NK " + GhostOps_Ce0_NkState("after cancel"));
+    return true;
+}
+
+// Vision scan (dev): the Operative walks along the line bunker -> start base in steps of one cell; the log says from where the strike point (the bunker) is visible to the player.
+bool GhostOps_Ce0_NukeScan (bool lp_testConds, bool lp_runActions) {
+    fixed lv_d;
+    string lv_t;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    UnitIssueOrder(go_tacOperative, Order(AbilityCommand("GhostCloak", 0)), c_orderQueueReplace);
+    lv_t = "";
+    lv_d = 4.0;
+    while (lv_d <= 14.0) {
+        UnitSetPosition(go_tacOperative, GhostOps_Ce0_NkPoint(lv_d), false);
+        Wait(0.4, c_timeGame);
+        lv_t = lv_t + FixedToString(lv_d, 0) + ":" + IntToString(GhostOps_Ce0_B(VisIsVisibleForPlayer(1, Point(34.5, 76.5)))) + " ";
+        lv_d += 1.0;
+    }
+
+    GhostOps_Ce0_Write("j", "NS bunker point visible from the Operative at distance d (1 = yes): " + lv_t + "| operative life " + FixedToString(UnitGetPropertyFixed(go_tacOperative, c_unitPropLife, c_unitPropCurrent), 0));
     return true;
 }
 
@@ -169,6 +359,29 @@ bool GhostOps_Ce0_SnipeTest (bool lp_testConds, bool lp_runActions) {
     UnitIssueOrder(go_tacSpotter, OrderTargetingUnit(AbilityCommand("Snipe", 0), lv_t[2]), c_orderQueueReplace);
     Wait(1.0, c_timeGame);
     GhostOps_Ce0_Write("j", "SN end: target2 life " + FixedToString(UnitGetPropertyFixed(lv_t[2], c_unitPropLife, c_unitPropCurrent), 0) + " energy " + FixedToString(UnitGetPropertyFixed(go_tacSpotter, c_unitPropEnergy, c_unitPropCurrent), 1));
+    return true;
+}
+
+// Grenade flight trace (dev): times of the launch effect and of the impact search effect, a counter of the impacts.
+trigger go_apLaunchTrig;
+trigger go_apImpactTrig;
+
+bool GhostOps_Ce0_ApLaunchTick (bool lp_testConds, bool lp_runActions) {
+    if (!lp_runActions) {
+        return true;
+    }
+
+    GhostOps_Ce0_Write("j", "APT LAUNCH at game time " + FixedToString(GameGetMissionTime(), 2) + " ammo " + IntToString(go_tacGrenadeAmmo));
+    return true;
+}
+
+bool GhostOps_Ce0_ApImpactTick (bool lp_testConds, bool lp_runActions) {
+    if (!lp_runActions) {
+        return true;
+    }
+
+    go_apImpacts += 1;
+    GhostOps_Ce0_Write("j", "APT IMPACT #" + IntToString(go_apImpacts) + " at game time " + FixedToString(GameGetMissionTime(), 2) + " ammo " + IntToString(go_tacGrenadeAmmo));
     return true;
 }
 
@@ -383,6 +596,23 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
         return true;
     }
 
+    if (lp_cmd == "gt3") {
+        TriggerExecute(TriggerCreate("GhostOps_Ce0_GrenadeTest3"), true, false);
+        return true;
+    }
+
+    if (lp_cmd == "nkt") {
+        go_nkD1 = StringToFixed(lp_a);
+        go_nkD2 = StringToFixed(lp_b);
+        TriggerExecute(TriggerCreate("GhostOps_Ce0_NukeGeo"), true, false);
+        return true;
+    }
+
+    if (lp_cmd == "nks") {
+        TriggerExecute(TriggerCreate("GhostOps_Ce0_NukeScan"), true, false);
+        return true;
+    }
+
     if (lp_cmd == "ct") {
         TriggerExecute(TriggerCreate("GhostOps_Ce0_CancelTest"), true, false);
         return true;
@@ -454,6 +684,67 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
     if (lp_cmd == "hint") {
         GhostOps_Scene_OnRebelsRescued();
         GhostOps_Ce0_Write("j", "HINT requested, said=" + IntToString(GhostOps_Ce0_B(go_tacHintSaid)));
+        return true;
+    }
+
+    if (lp_cmd == "apt") {
+        go_apLaunchTrig = TriggerCreate("GhostOps_Ce0_ApLaunchTick");
+        TriggerAddEventPlayerEffectUsed(go_apLaunchTrig, 1, "GhostOpsAPLaunch");
+        go_apImpactTrig = TriggerCreate("GhostOps_Ce0_ApImpactTick");
+        TriggerAddEventPlayerEffectUsed(go_apImpactTrig, 1, "GhostOpsAPSearch");
+        GhostOps_Ce0_Write("j", "APT trace on");
+        return true;
+    }
+
+    if (lp_cmd == "spd") {
+        GameSetSpeedValue(StringToInt(lp_a));
+        GhostOps_Ce0_Write("j", "SPD game speed value " + IntToString(GameGetSpeedValue()) + " factor " + FixedToString(GameGetSpeed(), 2));
+        return true;
+    }
+
+    if (lp_cmd == "apn") {
+        GhostOps_Ce0_Write("j", "APN impacts " + IntToString(go_apImpacts) + " ammo " + IntToString(go_tacGrenadeAmmo) + " panel " + IntToString(go_pnGrenades));
+        return true;
+    }
+
+    if (lp_cmd == "mvget") {
+        GhostOps_Ce0_Write("j", "MVGET " + lp_a + " = " + CatalogFieldValueGet(c_gameCatalogMover, "PunisherGrenadesWeapon", lp_a, 1));
+        return true;
+    }
+
+    if (lp_cmd == "mvset") {
+        CatalogFieldValueSet(c_gameCatalogMover, "PunisherGrenadesWeapon", lp_a, 1, lp_b);
+        GhostOps_Ce0_Write("j", "MVSET " + lp_a + " := " + lp_b + " now " + CatalogFieldValueGet(c_gameCatalogMover, "PunisherGrenadesWeapon", lp_a, 1));
+        return true;
+    }
+
+    if (lp_cmd == "cam") {
+        CameraPan(1, Point(StringToFixed(lp_a), StringToFixed(lp_b)), 0.0, -1.0, 10.0, false);
+        GhostOps_Ce0_Write("j", "CAM at " + lp_a + "," + lp_b);
+        return true;
+    }
+
+    if (lp_cmd == "enp") {
+        // enemy units (players 2..5, 8) within radius 14 of a point: type counts
+        lv_t = "";
+        lv_i = 2;
+        while (lv_i <= 8) {
+            lv_g = UnitGroup(null, lv_i, RegionCircle(Point(StringToFixed(lp_a), StringToFixed(lp_b)), 14.0), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+            if (UnitGroupCount(lv_g, c_unitCountAlive) > 0) {
+                lv_t = lv_t + "P" + IntToString(lv_i) + ": ";
+                UnitGroupLoopBegin(lv_g);
+                while (UnitGroupLoopCurrent() != null) {
+                    lv_t = lv_t + UnitGetType(UnitGroupLoopCurrent()) + "@" + FixedToString(PointGetX(UnitGetPosition(UnitGroupLoopCurrent())), 0) + "," + FixedToString(PointGetY(UnitGetPosition(UnitGroupLoopCurrent())), 0) + " ";
+                    UnitGroupLoopStep();
+                }
+
+                UnitGroupLoopEnd();
+            }
+
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", "ENP around " + lp_a + "," + lp_b + " r14: " + lv_t);
         return true;
     }
 

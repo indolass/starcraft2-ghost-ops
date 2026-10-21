@@ -170,7 +170,7 @@ Ghosts; nuke aim range 24 (old 12), and while the strike is really being aimed (
 `GhostOpsAimHold`; detectors still see him); the Operative's *Бронебойная граната* (2 charges, 500 damage in radius 2.0, range 9, prep 0.8 s, no energy; only enemy
 ground vehicles and structures, one hit destroys the intact entrance bunker); once-only rebel-rescue scene (clip + two explanations, minimap pings, Barracks lift-off
 re-allowed); Raynor clip after the Adjutant alarm; the Ghost landing line about the two charges; larger explanation text; status panel; portraits move their mouth during
-clips and explanations (silent lip-sync drivers, see `docs/MISSION_ROADMAP.md`, seventh task).
+clips and explanations (silent lip-sync drivers, see `docs/MISSION_ROADMAP.md`, seventh task). Technical checks of 2026-10-21 (panel layout, portrait mouth recordings, nuke aim geometry at the entrance bunker, grenade results; in-flight save NOT run because the game's save was locked) are in `docs/MISSION_ROADMAP.md`.
 
 ### The first three missions and the campaign link (2026-10-20, experiment)
 

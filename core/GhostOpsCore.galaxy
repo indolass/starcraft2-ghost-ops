@@ -133,7 +133,7 @@ void GhostOps_Panel_Build () {
 
     go_pnBuilt = true;
     lv_h = (46 * go_pnCount) + 30;
-    DialogCreate(560, lv_h, c_anchorTopRight, 14, 118, false);
+    DialogCreate(500, lv_h, c_anchorTopRight, 14, 118, false);
     go_pnDialog = DialogLastCreated();
     DialogSetImage(go_pnDialog, "Assets\\Textures\\ui_ingame_blackmask.dds");
     DialogSetImageVisible(go_pnDialog, true);
@@ -143,12 +143,12 @@ void GhostOps_Panel_Build () {
     while (lv_i < go_pnCount) {
         DialogControlCreate(go_pnDialog, c_triggerControlTypeLabel);
         go_pnLabel[lv_i] = DialogControlLastCreated();
-        DialogControlSetSize(go_pnLabel[lv_i], PlayerGroupAll(), 544, 26);
+        DialogControlSetSize(go_pnLabel[lv_i], PlayerGroupAll(), 484, 26);
         DialogControlSetPosition(go_pnLabel[lv_i], PlayerGroupAll(), c_anchorTopLeft, 8, 4 + (46 * lv_i));
         DialogControlSetPropertyAsString(go_pnLabel[lv_i], c_triggerControlPropertyStyle, PlayerGroupAll(), "MissionTimePanel");
         DialogControlCreate(go_pnDialog, c_triggerControlTypeProgressBar);
         go_pnBar[lv_i] = DialogControlLastCreated();
-        DialogControlSetSize(go_pnBar[lv_i], PlayerGroupAll(), 544, 12);
+        DialogControlSetSize(go_pnBar[lv_i], PlayerGroupAll(), 484, 12);
         DialogControlSetPosition(go_pnBar[lv_i], PlayerGroupAll(), c_anchorTopLeft, 8, 30 + (46 * lv_i));
         DialogControlSetPropertyAsFixed(go_pnBar[lv_i], c_triggerControlPropertyMinValue, PlayerGroupAll(), 0.0);
         DialogControlSetPropertyAsFixed(go_pnBar[lv_i], c_triggerControlPropertyMaxValue, PlayerGroupAll(), 100.0);
@@ -157,7 +157,7 @@ void GhostOps_Panel_Build () {
 
     DialogControlCreate(go_pnDialog, c_triggerControlTypeLabel);
     go_pnFoot = DialogControlLastCreated();
-    DialogControlSetSize(go_pnFoot, PlayerGroupAll(), 544, 20);
+    DialogControlSetSize(go_pnFoot, PlayerGroupAll(), 484, 20);
     DialogControlSetPosition(go_pnFoot, PlayerGroupAll(), c_anchorTopLeft, 8, 6 + (46 * go_pnCount));
     DialogControlSetPropertyAsString(go_pnFoot, c_triggerControlPropertyStyle, PlayerGroupAll(), "AlertItem");
     DialogControlSetPropertyAsText(go_pnFoot, c_triggerControlPropertyText, PlayerGroupAll(), GhostOps_Panel_Color("9aa6b8", StringExternal("Param/Value/GhostOpsPanel_Footer")));
@@ -259,14 +259,15 @@ bool GhostOps_Panel_Tick (bool lp_testConds, bool lp_runActions) {
             }
 
             lv_line = StringExternal("Param/Value/GhostOpsPanel_Name" + IntToString(lv_i)) + StringToText(" - ") + lv_line;
-            if ((go_pnGrenades >= 0) && (lv_i == go_pnGrenadeSlot)) {
-                lv_line = lv_line + StringToText("  |  ") + StringExternal("Param/Value/GhostOpsPanel_Grenades") + StringToText(": ") + IntToText(go_pnGrenades);
-            }
-
             DialogControlSetPropertyAsText(go_pnLabel[lv_i], c_triggerControlPropertyText, PlayerGroupAll(), GhostOps_Panel_Color(lv_rgb, lv_line));
         }
 
         lv_i += 1;
+    }
+
+    // the charges of the grenade live in the footer line (a row of the panel must stay short)
+    if (go_pnGrenades >= 0) {
+        DialogControlSetPropertyAsText(go_pnFoot, c_triggerControlPropertyText, PlayerGroupAll(), GhostOps_Panel_Color("9aa6b8", StringExternal("Param/Value/GhostOpsPanel_Grenades") + StringToText(": ") + IntToText(go_pnGrenades) + StringToText("  |  ") + StringExternal("Param/Value/GhostOpsPanel_Footer")));
     }
 
     return true;
