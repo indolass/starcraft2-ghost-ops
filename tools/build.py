@@ -1479,10 +1479,44 @@ def preset_names(raw):
     return list(raw.get('presets', {}))
 
 
+def shared_lines_dir():
+    """Folder of the shared lines tables (docs/SHARED_LINES.md of the voice lab): env GHOSTOPS_LINES_DIR, else the one line of build/shared_lines_dir.txt, else none."""
+    d = os.environ.get('GHOSTOPS_LINES_DIR')
+    if not d:
+        p = os.path.join(ROOT, 'build', 'shared_lines_dir.txt')
+        if os.path.isfile(p):
+            d = read(p, 'r').strip()
+    return d or None
+
+
+def apply_shared_lines(raw, adapter):
+    """Put the texts of the shared lines tables (one JSON per mission/profile, edited by Voice Studio and by hand) into the RAW config, BEFORE the presets are merged.
+    No folder configured / no table for the mission -> nothing changes and the texts of the config stay the source. The config FILE is never written; a table that
+    cannot be read is an error (never a silent fallback to older texts). Afterwards the table is marked 'read by the game build' (the studio shows it)."""
+    d = shared_lines_dir()
+    if not d:
+        return raw
+    import lines_table  # tools/lines_table.py = unchanged copy of voice_studio/lines_table.py of the voice lab
+    mission = adapter['mission']
+    name = os.path.basename(adapter['config'])
+    for fn in sorted(os.listdir(d)) if os.path.isdir(d) else []:
+        if not fn.endswith('.lines.json') or fn.split('.')[0] != mission:
+            continue
+        table = lines_table.read_table(os.path.join(d, fn))
+        res = lines_table.apply_texts_to_config(raw, table, name)
+        if res['skipped']:
+            raise ConfigError('shared lines table %s: binding not found in %s: %s' % (fn, name, ', '.join('%s (%s)' % s for s in res['skipped'])))
+        try:
+            lines_table.mark_game_read(os.path.join(d, fn), tool='build.py', info={'config': name})
+        except OSError:
+            pass  # a read-only table folder: the texts are applied, only the studio's "game reads the table" mark is not written
+    return raw
+
+
 def resolve_config(adapter, preset=None, diag=False, no_voice=False):
     """Returns (merged config, preset name or None). Missions without presets ignore nothing: an explicit
     preset for them is an error, an unknown preset name is an error (never a silent fallback)."""
-    raw = load_json(adapter['config'])
+    raw = apply_shared_lines(load_json(adapter['config']), adapter)
     presets = raw.get('presets')
     if presets is None:
         if preset:

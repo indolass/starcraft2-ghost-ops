@@ -1,6 +1,7 @@
 """TRaynor03 "Оборона и диверсии" (preset defence): validation, wave-weakening tail, stubs in the old profile, the new profile separate from the old."""
 import copy
 import os
+os.environ['GHOSTOPS_LINES_DIR'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'no_shared_lines_here')  # tests never read (or mark) the voice lab tables
 import sys
 import unittest
 

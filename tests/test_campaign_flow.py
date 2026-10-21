@@ -1,6 +1,7 @@
 """Campaign flow of the launcher with a fake backend (no game, no build): pay once, unique set per operation, restart / continue without a second charge,
 shortage shown, result proposal accepted once, a stale Bank file ignored."""
 import os
+os.environ['GHOSTOPS_LINES_DIR'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'no_shared_lines_here')  # tests never read (or mark) the voice lab tables
 import sys
 import tempfile
 import time

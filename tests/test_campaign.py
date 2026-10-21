@@ -1,6 +1,7 @@
 """Fault-injection tests of the launcher-side campaign accounting (tools/campaign.py; first written as the CE-0 prototype).
 They prove the contract requirements of docs/MISSION_SETTINGS_AND_CAMPAIGN_ECONOMY.md 7 and 14 for the campaign accounting module."""
 import os
+os.environ['GHOSTOPS_LINES_DIR'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'no_shared_lines_here')  # tests never read (or mark) the voice lab tables
 import sys
 import tempfile
 import unittest

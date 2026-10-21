@@ -1,6 +1,7 @@
 import json
 import math
 import os
+os.environ['GHOSTOPS_LINES_DIR'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'no_shared_lines_here')  # tests never read (or mark) the voice lab tables
 import re
 import sys
 import unittest

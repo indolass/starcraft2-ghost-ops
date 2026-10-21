@@ -71,8 +71,13 @@ def prepare_build(job):
 
 
 def cleanup_build(job):
-    """A development map never stays in the Owner's map list (a protected map is never removed: build.uninstall_key refuses)."""
-    subprocess.run([sys.executable, os.path.join(HERE, 'build.py'), 'uninstall', '--mission', job['mission'], '--preset', job['preset']], cwd=ROOT, capture_output=True, text=True)
+    """A development map never stays in the Owner's map list (a protected map is never removed: build.uninstall_key refuses). The game that just closed may still be
+    exiting (its map counts as being played): retry for a short time."""
+    for _ in range(12):
+        r = subprocess.run([sys.executable, os.path.join(HERE, 'build.py'), 'uninstall', '--mission', job['mission'], '--preset', job['preset']], cwd=ROOT, capture_output=True, text=True)
+        if 'refused' not in (r.stdout or ''):
+            return
+        sleep(2.5)
 
 
 # ---------------------------------------------------------------- queue file
