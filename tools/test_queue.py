@@ -60,7 +60,7 @@ def sleep(sec):
 
 def prepare_build(job):
     """Build + verify + install of the job's map (a hidden dev preset) in a FRESH process (the runner lives long: it must never run stale build code); returns 0 or a code."""
-    r = subprocess.run([sys.executable, os.path.join(HERE, 'build.py'), 'prepare', '--mission', job['mission'], '--preset', job['preset']], cwd=ROOT, capture_output=True, text=True)
+    r = subprocess.run([sys.executable, os.path.join(HERE, 'build.py'), 'prepare', '--mission', job['mission'], '--preset', job['preset']], cwd=ROOT, capture_output=True, text=True, creationflags=0x08000000)
     try:
         os.makedirs(os.path.dirname(job['log']), exist_ok=True)
         with open(job['log'], 'a', encoding='utf-8', errors='replace') as f:
@@ -74,7 +74,7 @@ def cleanup_build(job):
     """A development map never stays in the Owner's map list (a protected map is never removed: build.uninstall_key refuses). The game that just closed may still be
     exiting (its map counts as being played): retry for a short time."""
     for _ in range(12):
-        r = subprocess.run([sys.executable, os.path.join(HERE, 'build.py'), 'uninstall', '--mission', job['mission'], '--preset', job['preset']], cwd=ROOT, capture_output=True, text=True)
+        r = subprocess.run([sys.executable, os.path.join(HERE, 'build.py'), 'uninstall', '--mission', job['mission'], '--preset', job['preset']], cwd=ROOT, capture_output=True, text=True, creationflags=0x08000000)
         if 'refused' not in (r.stdout or ''):
             return
         sleep(2.5)
@@ -297,7 +297,7 @@ class Runner:
                 break
             sleep(1.0)
         if reason:
-            subprocess.run(['taskkill', '/PID', str(proc.pid), '/T', '/F'], capture_output=True)  # our own test script (and what it started), never a game by name
+            subprocess.run(['taskkill', '/PID', str(proc.pid), '/T', '/F'], capture_output=True, creationflags=0x08000000)  # our own test script (and what it started), never a game by name
         rc = proc.poll() if not reason else None
         log.close()
         self.close_own_game(jid)
@@ -368,7 +368,7 @@ def start_detached():
     pyw = sys.executable.replace('python.exe', 'pythonw.exe')
     cmd = '"%s" "%s" run' % (pyw if os.path.exists(pyw) else sys.executable, os.path.abspath(__file__))
     ps = "Invoke-CimMethod -ClassName Win32_Process -MethodName Create -Arguments @{ CommandLine = '%s'; CurrentDirectory = '%s' } | Out-Null" % (cmd.replace("'", "''"), ROOT)
-    subprocess.run(['powershell', '-NoProfile', '-Command', ps])
+    subprocess.run(['powershell', '-NoProfile', '-Command', ps], creationflags=0x08000000)
     return True
 
 

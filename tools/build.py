@@ -1850,7 +1850,7 @@ def cmd_verify(args):
 
 
 def sc2_running():
-    out = subprocess.run(['tasklist', '/FI', 'IMAGENAME eq SC2_x64.exe', '/FO', 'CSV', '/NH'], capture_output=True, text=True).stdout
+    out = subprocess.run(['tasklist', '/FI', 'IMAGENAME eq SC2_x64.exe', '/FO', 'CSV', '/NH'], capture_output=True, text=True, creationflags=0x08000000).stdout
     return 'SC2_x64.exe' in out
 
 

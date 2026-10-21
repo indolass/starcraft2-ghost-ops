@@ -90,7 +90,7 @@ def running_commands():
     """Command lines of the running SC2 processes: [(pid, creation, command line)]."""
     ps = "Get-CimInstance Win32_Process -Filter \"Name='SC2_x64.exe'\" | ForEach-Object { '{0}|{1}|{2}' -f $_.ProcessId, $_.CreationDate.ToString('o'), $_.CommandLine }"
     try:
-        out = subprocess.run(['powershell', '-NoProfile', '-Command', ps], capture_output=True, text=True, timeout=30).stdout
+        out = subprocess.run(['powershell', '-NoProfile', '-Command', ps], capture_output=True, text=True, timeout=30, creationflags=0x08000000).stdout
     except Exception:
         return []
     rows = []
@@ -165,7 +165,7 @@ def close_owned(pid, job=None):
     """Closes a test game - only when it is verifiably ours (never by the exe name alone). Returns True when it was closed."""
     if not is_owned(pid, job):
         return False
-    subprocess.run(['taskkill', '/PID', str(pid), '/T', '/F'], capture_output=True)
+    subprocess.run(['taskkill', '/PID', str(pid), '/T', '/F'], capture_output=True, creationflags=0x08000000)
     return True
 
 
