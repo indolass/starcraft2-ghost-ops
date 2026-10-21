@@ -103,9 +103,64 @@ void GhostOps_Scene_AddTips (int lp_from, int lp_to) {
 
 void GhostOps_Scene_SendTransport ();
 
-// Messages queue behind the original talk (TriggerQueueEnter) and never interrupt it.
-// Every scene: a short ORIGINAL line with its own sound and its exact subtitle (the portrait speaks it with the lip-sync of the original line), then the separate explanation of
-// the scenario (the portrait keeps talking: a chain of silent lip-sync drivers, see GhostOps_Talk). Explanations are shown in a larger style (text keys, tools/build.py).
+// Messages queue behind the original talk (TriggerQueueEnter) and never interrupt it. Every scene plays lines of the line table (config tactical.lines): the speaker's
+// portrait, the text in the subtitle area (larger style for explanations) and the portrait's talking animation for the line's seconds (a voice clip of the line, when the
+// config names one, drives the lip-sync instead of the silent drivers).
+void GhostOps_Line (string lp_id) {
+    int lv_i;
+    int lv_k;
+    int lv_grp;
+    string lv_spk;
+    string lv_model;
+    string lv_name;
+
+    lv_i = -1;
+    lv_k = 0;
+    while (lv_k < go_lnCount) {
+        if (go_lnId[lv_k] == lp_id) {
+            lv_i = lv_k;
+        }
+
+        lv_k += 1;
+    }
+
+    if (lv_i < 0) {
+        return;
+    }
+
+    lv_spk = go_lnSpk[lv_i];
+    if (lv_spk == "raynor") {
+        lv_model = "RaynorCommanderPortrait";
+        lv_grp = 0;
+        lv_name = "RaynorName";
+    }
+    else if (lv_spk == "swann") {
+        lv_model = "SwannPortrait";
+        lv_grp = 1;
+        lv_name = "SwannName";
+    }
+    else if (lv_spk == "adjutant") {
+        lv_model = "AdjutantPortrait_L";
+        lv_grp = 4;
+        lv_name = "AlertTitle";
+    }
+    else {
+        lv_model = "GhostPortrait";
+        lv_grp = 5;
+        lv_name = "GhostName";
+    }
+
+    GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsTac_" + lv_name), StringExternal("Param/Value/GhostOpsTac_L_" + lp_id));
+    if (go_lnClip[lv_i] != "") {
+        GhostOps_Scene_VoiceBegin();
+        GhostOps_ClipStep(lv_model, lv_grp, go_lnClip[lv_i], go_lnSec[lv_i]);
+        GhostOps_Scene_VoiceEnd();
+    }
+    else {
+        GhostOps_Talk(lv_model, lv_grp, go_lnSec[lv_i]);
+    }
+}
+
 bool GhostOps_Scene_AlertMsg (bool lp_testConds, bool lp_runActions) {
     if (!lp_runActions) {
         return true;
@@ -114,12 +169,8 @@ bool GhostOps_Scene_AlertMsg (bool lp_testConds, bool lp_runActions) {
     TriggerQueueEnter();
     go_scBusy = true;
     GhostOps_Tac_Log("scene: alert message on screen");
-    GhostOps_Scene_VoiceBegin();
-    // the clip says "Alert." (its subtitle is exactly that); the explanation is a separate message of the same speaker
-    GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsTac_AlertTitle"), StringExternal("Param/Value/GhostOpsTac_AlertClip"));
-    GhostOps_ClipStep("AdjutantPortrait_L", 4, "GhostOpsAdjutantAlert", 1.0);
-    GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsTac_AlertTitle"), StringExternal("Param/Value/GhostOpsTac_AlertText"));
-    GhostOps_Talk("AdjutantPortrait_L", 4, go_tacStoryAlertLen);
+    GhostOps_Line("ALERT_CLIP");
+    GhostOps_Line("ALERT_TEXT");
     go_scBusy = false;
     if (go_tacScStage == 1) {
         go_tacScStage = 2;
@@ -127,13 +178,12 @@ bool GhostOps_Scene_AlertMsg (bool lp_testConds, bool lp_runActions) {
         GhostOps_Scene_AddTips(1, 1);
     }
 
-    GhostOps_Scene_VoiceEnd();
     GhostOps_Tac_Log("scene: alert message finished (the pause before Swann starts now)");
     TriggerQueueExit();
     return true;
 }
 
-// Raynor after the alarm: a short line of his own, then the explanation (queued behind the original talk, inside the pause before Swann; said once).
+// Raynor after the alarm: what happened and what stays (queued behind the original talk, inside the pause before Swann; said once).
 bool GhostOps_Scene_RaynorMsg (bool lp_testConds, bool lp_runActions) {
     if (!lp_runActions) {
         return true;
@@ -141,12 +191,8 @@ bool GhostOps_Scene_RaynorMsg (bool lp_testConds, bool lp_runActions) {
 
     TriggerQueueEnter();
     GhostOps_Tac_Log("scene: Raynor message on screen");
-    GhostOps_Scene_VoiceBegin();
-    GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsTac_RaynorName"), StringExternal("Param/Value/GhostOpsTac_RaynorClip"));
-    GhostOps_ClipStep("RaynorCommanderPortrait", 0, "GhostOpsRaynorDamn", 1.6);
-    GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsTac_RaynorName"), StringExternal("Param/Value/GhostOpsTac_RaynorText"));
-    GhostOps_Talk("RaynorCommanderPortrait", 0, go_tacStoryRaynorLen);
-    GhostOps_Scene_VoiceEnd();
+    GhostOps_Line("RAYNOR_INFECT");
+    GhostOps_Line("RAYNOR_RESOURCES");
     GhostOps_Tac_Log("scene: Raynor message finished");
     TriggerQueueExit();
     return true;
@@ -165,18 +211,13 @@ bool GhostOps_Scene_SwannMsg (bool lp_testConds, bool lp_runActions) {
     }
 
     GhostOps_Tac_Log("scene: Swann message on screen");
-    GhostOps_Scene_VoiceBegin();
-    GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsTac_SwannName"), StringExternal("Param/Value/GhostOpsTac_SwannText"));
-    GhostOps_ClipStep("SwannPortrait", 1, "GhostOpsSwannHelp", go_tacStorySwannLen);
-    GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsTac_SwannName"), StringExternal("Param/Value/GhostOpsTac_SwannExplain"));
-    GhostOps_Talk("SwannPortrait", 1, go_tacStoryArrivalLen);
-    GhostOps_Scene_VoiceEnd();
+    GhostOps_Line("SWANN_ARRIVAL");
     GhostOps_Tac_Log("scene: Swann message finished");
     TriggerQueueExit();
     return true;
 }
 
-// One short Ghost line when the unloading is over; said once for the pair (go_tacGhostSaid is set by the caller, before this runs). The explanation: the Operative's two armor-piercing charges.
+// One short Ghost line when the unloading is over (said once for the pair; go_tacGhostSaid is set by the caller), then the two roles.
 bool GhostOps_Scene_GhostMsg (bool lp_testConds, bool lp_runActions) {
     if (!lp_runActions) {
         return true;
@@ -184,15 +225,53 @@ bool GhostOps_Scene_GhostMsg (bool lp_testConds, bool lp_runActions) {
 
     TriggerQueueEnter();
     GhostOps_Tac_Log("scene: Ghost line on screen");
-    GhostOps_Scene_VoiceBegin();
-    GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsTac_GhostName"), StringExternal("Param/Value/GhostOpsTac_GhostText"));
-    GhostOps_ClipStep("GhostPortrait", 5, "GhostOpsGhostReady", 2.6);
-    GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsTac_GhostName"), StringExternal("Param/Value/GhostOpsTac_GhostExplain"));
-    GhostOps_Talk("GhostPortrait", 5, go_tacStoryGhostLen);
-    GhostOps_Scene_VoiceEnd();
+    GhostOps_Line("GHOST_READY");
+    GhostOps_Line("GHOST_ROLES");
+    go_tacFindT = GameGetMissionTime();
+    go_tacGhostDone = true;
     GhostOps_Tac_Log("scene: Ghost line finished");
     TriggerQueueExit();
     return true;
+}
+
+// "Find the rebels": after the landing scenes, unless the original discovery of the rebels has already happened. The position is NOT shown (no ping, no fog reveal).
+bool GhostOps_Scene_FindMsg (bool lp_testConds, bool lp_runActions) {
+    if (!lp_runActions) {
+        return true;
+    }
+
+    TriggerQueueEnter();
+    if ((go_tacFindSt == 2) || go_tacRebelsFound) {
+        go_tacFindSt = 2;
+        TriggerQueueExit();
+        return true;
+    }
+
+    GhostOps_Tac_Log("scene: find the rebels");
+    if (!go_tacObjFindMade) {
+        go_tacObjFindMade = true;
+        ObjectiveCreate(StringExternal("Param/Value/GhostOpsTac_FindObjectiveTitle"), StringExternal("Param/Value/GhostOpsTac_FindObjectiveText"), c_objectiveStateActive, false);
+        go_tacObjFind = ObjectiveLastCreated();
+    }
+
+    GhostOps_Line("RAYNOR_FIND");
+    go_tacFindSt = 2;
+    TriggerQueueExit();
+    return true;
+}
+
+// Called by the ORIGINAL discovery of the rebels (gt_RebelsTriggeredQ): the "find" task is done, the old request is never said afterwards.
+void GhostOps_Scene_OnRebelsFound () {
+    if (!go_tacEnabled) {
+        return;
+    }
+
+    go_tacRebelsFound = true;
+    if (go_tacObjFindMade) {
+        ObjectiveSetState(go_tacObjFind, c_objectiveStateCompleted);
+    }
+
+    GhostOps_Tac_Log("scene: rebels found (original trigger)");
 }
 
 // The rebels were handed over (the original dialogue is over, this scene is queued behind it): Raynor says what to do with the rescued units and the Barracks.
@@ -240,22 +319,23 @@ bool GhostOps_Scene_RebelHintMsg (bool lp_testConds, bool lp_runActions) {
     }
 
     TriggerQueueEnter();
-    GhostOps_Tac_Log("scene: rebel hint, the original talk is over");
-    lv_barracks = GhostOps_Scene_RebelBarracks();
-    GhostOps_Scene_VoiceBegin();
-    GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsTac_RaynorName"), StringExternal("Param/Value/GhostOpsTac_RebelClip"));
-    GhostOps_ClipStep("RaynorCommanderPortrait", 0, "GhostOpsRaynorTogether", 1.8);
-    GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsTac_RaynorName"), StringExternal("Param/Value/GhostOpsTac_RebelHint1"));
-    MinimapPing(PlayerGroupAll(), Point(go_tacZoneX, go_tacZoneY), go_tacHintPing, Color(0.00, 100.00, 40.00));
-    GhostOps_Talk("RaynorCommanderPortrait", 0, go_tacHintFirstLen);
-    if (lv_barracks != null) {
-        GhostOps_Scene_Say(StringExternal("Param/Value/GhostOpsTac_RaynorName"), StringExternal("Param/Value/GhostOpsTac_RebelHint2"));
-        MinimapPing(PlayerGroupAll(), UnitGetPosition(lv_barracks), go_tacHintPing, Color(100.00, 70.00, 0.00));
-        GhostOps_Talk("RaynorCommanderPortrait", 0, go_tacHintSecondLen);
+    if (go_tacMeetSt == 2) {
+        TriggerQueueExit();
+        return true;
     }
 
-    GhostOps_Scene_VoiceEnd();
-    GhostOps_Tac_Log("scene: rebel hint finished");
+    GhostOps_Tac_Log("scene: rebel meeting, the original talk is over");
+    lv_barracks = GhostOps_Scene_RebelBarracks();
+    GhostOps_Line("REBEL_MEET_1");
+    MinimapPing(PlayerGroupAll(), Point(go_tacZoneX, go_tacZoneY), go_tacHintPing, Color(0.00, 100.00, 40.00));
+    if (lv_barracks != null) {
+        GhostOps_Line("REBEL_MEET_2");
+        MinimapPing(PlayerGroupAll(), UnitGetPosition(lv_barracks), go_tacHintPing, Color(100.00, 70.00, 0.00));
+    }
+
+    go_tacMeetSt = 2;
+    go_tacMeetT = GameGetMissionTime();
+    GhostOps_Tac_Log("scene: rebel meeting finished");
     TriggerQueueExit();
     return true;
 }
@@ -267,7 +347,132 @@ void GhostOps_Scene_OnRebelsRescued () {
     }
 
     go_tacHintSaid = true;
+    GhostOps_Scene_OnRebelsFound();
+    go_tacMeetSt = 1;
+    go_tacMeetT = GameGetMissionTime();
+    go_tacRescueT = go_tacMeetT;
     TriggerExecute(TriggerCreate("GhostOps_Scene_RebelHintMsg"), true, false);
+}
+
+// Rescued fighters (units, not buildings) that are alive / stand in the defence zone with a margin.
+int GhostOps_Scene_RescuedAlive (bool lp_inZoneOnly) {
+    int lv_n;
+    int lv_i;
+    int lv_c;
+    unit lv_u;
+
+    lv_c = 0;
+    lv_n = UnitGroupCount(go_tacRescued, c_unitCountAll);
+    lv_i = 1;
+    while (lv_i <= lv_n) {
+        lv_u = UnitGroupUnit(go_tacRescued, lv_i);
+        if ((lv_u != null) && UnitIsAlive(lv_u) && !UnitFilterMatch(lv_u, 1, UnitFilter((1 << c_targetFilterStructure), 0, 0, 0))) {
+            if (!lp_inZoneOnly || (DistanceBetweenPoints(UnitGetPosition(lv_u), Point(go_tacZoneX, go_tacZoneY)) <= (go_tacZoneR + 3.0))) {
+                lv_c += 1;
+            }
+        }
+
+        lv_i += 1;
+    }
+
+    return lv_c;
+}
+
+// The plan is told when the rescued fighters stand under the cover of our base (enough of them) and nobody fights there for a few seconds; when they are all dead
+// after a short pause; and anyway after the maximum wait (never waiting for ever).
+bool GhostOps_Scene_PlanReady (fixed lp_now) {
+    int lv_r;
+    int lv_near;
+    int lv_need;
+    bool lv_calm;
+
+    lv_r = GhostOps_Scene_RescuedAlive(false);
+    if (lv_r == 0) {
+        return (lp_now - go_tacMeetT) >= go_tacPlanDeadDelay;
+    }
+
+    if ((lp_now - go_tacMeetT) >= go_tacPlanMaxWait) {
+        return true;
+    }
+
+    lv_near = GhostOps_Scene_RescuedAlive(true);
+    lv_need = FixedToInt((go_tacPlanShare * IntToFixed(lv_r)) + 0.99);
+    if (lv_need < 1) {
+        lv_need = 1;
+    }
+
+    lv_calm = (UnitGroupCount(UnitGroupAlliance(1, c_unitAllianceEnemy, RegionCircle(Point(go_tacZoneX, go_tacZoneY), go_tacZoneR + 8.0), UnitFilter(0, 0, (1 << c_targetFilterStructure) | (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive) == 0);
+    if ((lv_near >= lv_need) && lv_calm) {
+        if (go_tacPlanCalmT < 0.0) {
+            go_tacPlanCalmT = lp_now;
+        }
+
+        return (lp_now - go_tacPlanCalmT) >= go_tacPlanCalm;
+    }
+
+    go_tacPlanCalmT = -1.0;
+    return false;
+}
+
+// The operation plan: grenades and the missile as a SUGGESTED tactic (all of it stays available before and after). The lines fit the state at this moment.
+bool GhostOps_Scene_PlanMsg (bool lp_testConds, bool lp_runActions) {
+    int lv_ammo;
+    bool lv_rebels;
+    bool lv_missileUsed;
+    bool lv_missileLost;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    TriggerQueueEnter();
+    if (go_tacPlanSt == 2) {
+        TriggerQueueExit();
+        return true;
+    }
+
+    lv_rebels = (GhostOps_Scene_RescuedAlive(false) > 0);
+    lv_ammo = 0;
+    if (go_tacGrenade && GhostOps_Tac_Alive(go_tacOperative)) {
+        lv_ammo = go_tacGrenadeAmmo;
+    }
+
+    lv_missileUsed = (go_tacLaunches > 0);
+    lv_missileLost = (go_tacState == 6) && !lv_missileUsed;
+    GhostOps_Tac_Log("scene: operation plan, charges " + IntToString(lv_ammo) + " rebels " + IntToString(GhostOps_Scene_RescuedAlive(false)) + " launches " + IntToString(go_tacLaunches));
+    GhostOps_Line("PLAN_INTRO");
+    if (lv_ammo >= 2) {
+        GhostOps_Line("PLAN_GRENADE_2");
+    }
+    else if (lv_ammo == 1) {
+        GhostOps_Line("PLAN_GRENADE_1");
+    }
+
+    if (lv_missileUsed) {
+        GhostOps_Line("PLAN_NUKE_USED");
+    }
+    else if (!lv_missileLost) {
+        if (lv_ammo > 0) {
+            if (lv_rebels) {
+                GhostOps_Line("PLAN_NUKE_REBELS");
+            }
+            else {
+                GhostOps_Line("PLAN_NUKE_ALONE");
+            }
+        }
+        else {
+            if (lv_rebels) {
+                GhostOps_Line("PLAN_NUKE_REBELS_NG");
+            }
+            else {
+                GhostOps_Line("PLAN_NUKE_ALONE_NG");
+            }
+        }
+    }
+
+    go_tacPlanSt = 2;
+    TriggerQueueExit();
+    return true;
 }
 
 // The transport with the two Ghosts (the only way the squad reaches the map in this variant).
@@ -375,6 +580,48 @@ bool GhostOps_Scene_Tick (bool lp_testConds, bool lp_runActions) {
         }
     }
 
+    // a load can cut the Ghost scene before it ends: the scenes that follow it must not wait for ever
+    if (go_tacGhostSaid && !go_tacGhostDone && (go_tacScStage >= 4) && ((lv_now - go_tacScT) > 60.0)) {
+        go_tacGhostDone = true;
+        go_tacFindT = lv_now;
+    }
+
+    // "find the rebels": after the landing scenes (a loaded game that lost the queued scene starts it again)
+    if (go_tacGhostDone && (go_tacFindSt != 2)) {
+        if (go_tacRebelsFound) {
+            go_tacFindSt = 2;
+        }
+        else if ((go_tacFindSt == 0) && ((lv_now - go_tacFindT) >= go_tacFindDelay)) {
+            go_tacFindSt = 1;
+            go_tacFindT = lv_now;
+            TriggerExecute(TriggerCreate("GhostOps_Scene_FindMsg"), true, false);
+        }
+        else if ((go_tacFindSt == 1) && ((lv_now - go_tacFindT) > 90.0)) {
+            go_tacFindSt = 0;
+            go_tacFindT = lv_now - go_tacFindDelay;
+        }
+    }
+
+    // the meeting scene lost with a load goes on; the plan comes when the rescued stand under the cover of the base
+    if ((go_tacMeetSt == 1) && ((lv_now - go_tacMeetT) > 120.0)) {
+        go_tacMeetT = lv_now;
+        TriggerExecute(TriggerCreate("GhostOps_Scene_RebelHintMsg"), true, false);
+    }
+
+    if (go_tacMeetSt == 2) {
+        if (go_tacPlanSt == 0) {
+            if (GhostOps_Scene_PlanReady(lv_now)) {
+                go_tacPlanSt = 1;
+                go_tacPlanT = lv_now;
+                TriggerExecute(TriggerCreate("GhostOps_Scene_PlanMsg"), true, false);
+            }
+        }
+        else if ((go_tacPlanSt == 1) && ((lv_now - go_tacPlanT) > 120.0)) {
+            go_tacPlanSt = 0;
+            go_tacMeetT = lv_now - go_tacPlanMaxWait;
+        }
+    }
+
     return true;
 }
 
@@ -394,6 +641,7 @@ void GhostOps_OnMissionStart () {
         GhostOps_Tac_Start();
         go_tacScStage = 0;
         go_tacScT = GameGetMissionTime();
+        go_tacPlanCalmT = -1.0;
         go_scTrig = TriggerCreate("GhostOps_Scene_Tick");
         TriggerAddEventTimePeriodic(go_scTrig, 0.5, c_timeGame);
     }

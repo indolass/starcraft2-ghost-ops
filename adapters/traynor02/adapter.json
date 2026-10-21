@@ -22,6 +22,11 @@
       "call": "GhostOps_Tac_OnRescue(UnitGroupLoopCurrent());"
     },
     {
+      "function": "gt_RebelsTriggeredQ_Func",
+      "after": "TriggerEnable(TriggerGetCurrent(), false);",
+      "call": "GhostOps_Scene_OnRebelsFound();"
+    },
+    {
       "function": "gt_RebelsRescuedQ_Func",
       "after": "libCamp_gf_SetAllSoundChannelVolumesCampaign(2);",
       "call": "GhostOps_Scene_OnRebelsRescued();"

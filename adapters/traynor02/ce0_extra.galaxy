@@ -1,5 +1,7 @@
 // CE-0 probe: TRaynor02 specific state and commands (development only; compiled only with the config key "ce0").
 void GhostOps_Scene_OnRebelsRescued ();
+void GhostOps_Scene_OnRebelsFound ();
+int GhostOps_Scene_RescuedAlive (bool lp_inZoneOnly);
 
 int go_apImpacts;
 
@@ -621,6 +623,76 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
         }
 
         GhostOps_Ce0_Write("j", "KILLM marines before " + IntToString(UnitGroupCount(lv_g, c_unitCountAlive)) + " (one was killed if > 0)");
+        return true;
+    }
+
+    if (lp_cmd == "found") {
+        GhostOps_Scene_OnRebelsFound();
+        return true;
+    }
+
+    if (lp_cmd == "resc") {
+        // runs the actions of the ORIGINAL rescue trigger (the conditions are skipped): hand-over, response wave, original dialogue, then our meeting scene
+        TriggerExecute(TriggerCreate("gt_RebelsCompleteQ_Func"), false, false);
+        GhostOps_Ce0_Write("j", "RESC original rescue trigger executed");
+        return true;
+    }
+
+    if (lp_cmd == "killr") {
+        // kills the rescued fighters (units, not buildings)
+        lv_i = 1;
+        while (lv_i <= UnitGroupCount(go_tacRescued, c_unitCountAll)) {
+            lv_u = UnitGroupUnit(go_tacRescued, lv_i);
+            if ((lv_u != null) && UnitIsAlive(lv_u) && !UnitFilterMatch(lv_u, 1, UnitFilter((1 << c_targetFilterStructure), 0, 0, 0))) {
+                UnitKill(lv_u);
+            }
+
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", "KILLR rescued fighters killed");
+        return true;
+    }
+
+    if (lp_cmd == "setl") {
+        go_tacLaunches = StringToInt(lp_a);
+        GhostOps_Ce0_Write("j", "SETL launches " + lp_a);
+        return true;
+    }
+
+    if (lp_cmd == "setammo") {
+        go_tacGrenadeAmmo = StringToInt(lp_a);
+        GhostOps_Ce0_Write("j", "SETAMMO charges " + lp_a);
+        return true;
+    }
+
+    if (lp_cmd == "scs") {
+        GhostOps_Ce0_Write("j", "SCS find " + IntToString(go_tacFindSt) + " meet " + IntToString(go_tacMeetSt) + " plan " + IntToString(go_tacPlanSt) + " found " + IntToString(GhostOps_Ce0_B(go_tacRebelsFound)) + " ghostdone " + IntToString(GhostOps_Ce0_B(go_tacGhostDone)) + " rescued alive " + IntToString(GhostOps_Scene_RescuedAlive(false)) + " in zone " + IntToString(GhostOps_Scene_RescuedAlive(true)) + " charges " + IntToString(go_tacGrenadeAmmo) + " launches " + IntToString(go_tacLaunches) + " state " + IntToString(go_tacState) + " calmT " + FixedToString(go_tacPlanCalmT, 1) + " rescueT " + FixedToString(go_tacRescueT, 1));
+        return true;
+    }
+
+    if (lp_cmd == "planreset") {
+        // forces the plan scene again (dev): the maximum wait counts as over
+        go_tacPlanSt = 0;
+        go_tacMeetSt = 2;
+        go_tacMeetT = GameGetMissionTime() - go_tacPlanMaxWait - 1.0;
+        GhostOps_Ce0_Write("j", "PLANRESET plan scene will run again");
+        return true;
+    }
+
+    if (lp_cmd == "home") {
+        // moves the rescued fighters under the cover of the base (dev)
+        lv_i = 1;
+        while (lv_i <= UnitGroupCount(go_tacRescued, c_unitCountAll)) {
+            lv_u = UnitGroupUnit(go_tacRescued, lv_i);
+            if ((lv_u != null) && UnitIsAlive(lv_u) && !UnitFilterMatch(lv_u, 1, UnitFilter((1 << c_targetFilterStructure), 0, 0, 0))) {
+                UnitSetPosition(lv_u, Point(go_tacZoneX + IntToFixed(lv_i % 5) - 2.0, go_tacZoneY + 6.0 + IntToFixed(lv_i / 5)), false);
+            }
+
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", "HOME rescued fighters moved into the zone");
         return true;
     }
 

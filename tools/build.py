@@ -49,10 +49,15 @@ TAC_TEXT_KEYS = ('ZoneLeft', 'RoleSpotter', 'RoleOperative', 'InfoSpotter', 'Inf
                  'SpotterLost', 'SpotterLostAfter', 'AcademyLost', 'AlertTitle', 'AlertText', 'SwannName', 'SwannText', 'GhostName', 'GhostText', 'ArrivalText',
                  'ObjectiveTitle', 'ObjectiveText', 'Tip1Title', 'Tip1Text', 'Tip2Title', 'Tip2Text', 'Tip3Title', 'Tip3Text', 'Tip4Title', 'Tip4Text', 'AlertClip', 'RaynorName', 'RaynorText', 'SwannExplain', 'GhostExplain', 'RoleGhost', 'InfoGhost')
 # Optional texts of the added features (grenade, rebel hints, Raynor's clip subtitle); only written when present in the config
-TAC_EXTRA_TEXT_KEYS = ('RaynorClip', 'GrenadeName', 'GrenadeTip', 'RebelHint1', 'RebelHint2', 'RebelClip')
+TAC_EXTRA_TEXT_KEYS = ('RaynorClip', 'GrenadeName', 'GrenadeTip', 'RebelHint1', 'RebelHint2', 'RebelClip', 'FindObjectiveTitle', 'FindObjectiveText')
 # Explanations are shown in a larger style (about +30% over the subtitle area font): <s val="AlertDisplay"> (measured in the game)
 EXPLAIN_STYLE = ('<s val=' + chr(34) + 'AlertDisplay' + chr(34) + '>', '</s>')
 TAC_EXPLAIN_KEYS = ('AlertText', 'RaynorText', 'SwannExplain', 'GhostExplain', 'RebelHint1', 'RebelHint2')
+# With tactical.lines the story texts below live in the line table (tactical.lines[].text) and are no longer required as separate keys
+TAC_LINE_REPLACED_KEYS = ('AlertClip', 'AlertText', 'SwannText', 'GhostText', 'RaynorText', 'SwannExplain', 'GhostExplain')
+LINE_SPEAKERS = ('raynor', 'swann', 'adjutant', 'ghost')
+LINE_TEXT_PREFIX = 'Param/Value/GhostOpsTac_L_'
+LINE_MAX = 48
 SCENE_EXPLAIN_KEYS = ('Explain', 'Closing')
 # AbilArray indexes of the Ghost Academy in the merged campaign data (Liberty mod + Liberty campaign):
 # BuildInProgress 0, que5 1, ArmSiloWithNuke 2, GhostAcademyResearch 3, MercCompoundResearch 4, HeroArmNuke 5, SpectreNukeSiloArmMagazine 6
@@ -457,6 +462,10 @@ def validate_tactical(cfg):
     for k, (lo, hi) in {'first_delay': (1, 120), 'second_delay': (1, 300), 'alert_seconds': (3, 40), 'swann_seconds': (2, 30), 'arrival_seconds': (3, 40), 'ghost_seconds': (2, 20), 'raynor_delay': (0, 60), 'raynor_seconds': (3, 40)}.items():
         if not num(st.get(k), lo, hi):
             errs.append('tactical.story.%s must be a number in %s..%s' % (k, lo, hi))
+    for k, (lo, hi) in {'find_delay': (0, 120), 'plan_min_share': (0, 1), 'plan_calm_seconds': (0, 60), 'plan_max_wait': (30, 1800), 'plan_dead_delay': (0, 120)}.items():
+        if k in st and not num(st.get(k), lo, hi):
+            errs.append('tactical.story.%s must be a number in %s..%s' % (k, lo, hi))
+    errs += validate_lines(cfg)
     a = t.get('academy', {})
     if not pair(a.get('position')) or not num(a.get('arm_time'), 0.5, 60):
         errs.append('tactical.academy needs position [x, y] and arm_time 0.5..60')
@@ -497,11 +506,13 @@ def validate_tactical(cfg):
         if not isinstance(rh, dict) or not isinstance(rh.get('enabled'), bool):
             errs.append('tactical.rebel_hints.enabled must be boolean')
         else:
-            for k, (lo, hi) in {'delay': (0, 30), 'first_seconds': (3, 40), 'second_seconds': (3, 40), 'ping_seconds': (1, 20), 'gap': (0, 30)}.items():
+            for k, (lo, hi) in {'delay': (0, 30), 'ping_seconds': (1, 20), 'gap': (0, 30)}.items():
                 if not num(rh.get(k), lo, hi):
                     errs.append('tactical.rebel_hints.%s must be a number %s..%s' % (k, lo, hi))
     texts = t.get('texts', {})
     for k in TAC_TEXT_KEYS:
+        if t.get('lines') and k in TAC_LINE_REPLACED_KEYS:
+            continue
         v = texts.get(k)
         if not isinstance(v, dict) or not all(isinstance(v.get(l), str) and v[l] and '\n' not in v[l] for l in ('ru', 'en')):
             errs.append('tactical.texts.%s needs non-empty single-line ru and en texts' % k)
@@ -509,6 +520,39 @@ def validate_tactical(cfg):
         v = texts.get(k)
         if v is not None and (not isinstance(v, dict) or not all(isinstance(v.get(l), str) and v[l] and '\n' not in v[l] for l in ('ru', 'en'))):
             errs.append('tactical.texts.%s needs non-empty single-line ru and en texts' % k)
+    return errs
+
+
+def validate_lines(cfg):
+    """tactical.lines: the story lines (stable id, speaker, seconds, optional voice clip id, ru/en text)."""
+    import re
+    t = cfg['tactical']
+    ls = t.get('lines')
+    if ls is None:
+        return []
+    errs = []
+    if not isinstance(ls, list) or not 1 <= len(ls) <= LINE_MAX:
+        return ['tactical.lines must be a list of 1..%d lines' % LINE_MAX]
+    clips = {c['id'] for c in (cfg.get('audio') or {}).get('clips', [])}
+    seen = set()
+    for ln in ls:
+        i = ln.get('id') if isinstance(ln, dict) else None
+        if not isinstance(i, str) or not re.fullmatch(r'[A-Z][A-Z0-9_]{1,40}', i) or i in seen:
+            errs.append('tactical.lines: bad or repeated id %r' % (i,))
+            continue
+        seen.add(i)
+        if ln.get('speaker') not in LINE_SPEAKERS:
+            errs.append('tactical.lines.%s.speaker must be one of %s' % (i, LINE_SPEAKERS))
+        if not _num(ln.get('seconds')) or not 0.5 <= ln['seconds'] <= 40:
+            errs.append('tactical.lines.%s.seconds must be 0.5..40' % i)
+        c = ln.get('clip', '')
+        if not isinstance(c, str) or (c and c not in clips):
+            errs.append('tactical.lines.%s.clip must be empty or an id of audio.clips' % i)
+        if 'large' in ln and not isinstance(ln['large'], bool):
+            errs.append('tactical.lines.%s.large must be boolean' % i)
+        tx = ln.get('text')
+        if not isinstance(tx, dict) or not all(isinstance(tx.get(l), str) and tx[l] and chr(10) not in tx[l] for l in ('ru', 'en')):
+            errs.append('tactical.lines.%s.text needs single-line ru and en texts' % i)
     return errs
 
 
@@ -815,7 +859,7 @@ def gen_tactical(cfg):
     b = lambda v: 'true' if v else 'false'  # noqa: E731
     lines = ['// Generated tactical configuration', 'void GhostOps_ApplyTacticalConfig () {']
     if not t:
-        lines += ['    go_tacEnabled = false;', '}', '']
+        lines += ['    go_tacEnabled = false;', '}', '', 'void GhostOps_ApplyLines () {', '    go_lnCount = 0;', '}', '']
         return chr(10).join(lines)
     z = t['garrison']['zone']
     a = t['academy']['position']
@@ -849,7 +893,19 @@ def gen_tactical(cfg):
         '    go_tacHintSecondLen = %.1f;' % (t.get('rebel_hints') or {}).get('second_seconds', 6),
         '    go_tacHintPing = %.1f;' % (t.get('rebel_hints') or {}).get('ping_seconds', 5),
         '    go_tacHintGap = %.1f;' % (t.get('rebel_hints') or {}).get('gap', 6),
-        '}', '']
+        '    go_tacFindDelay = %.1f;' % t['story'].get('find_delay', 3),
+        '    go_tacPlanShare = %.2f;' % t['story'].get('plan_min_share', 0.5),
+        '    go_tacPlanCalm = %.1f;' % t['story'].get('plan_calm_seconds', 6),
+        '    go_tacPlanMaxWait = %.1f;' % t['story'].get('plan_max_wait', 360),
+        '    go_tacPlanDeadDelay = %.1f;' % t['story'].get('plan_dead_delay', 6),
+        '    GhostOps_ApplyLines();',
+        '}', '', 'void GhostOps_ApplyLines () {']
+    ls = t.get('lines') or []
+    lines.append('    go_lnCount = %d;' % len(ls))
+    for i, ln in enumerate(ls):
+        lines += ['    go_lnId[%d] = "%s";' % (i, ln['id']), '    go_lnSpk[%d] = "%s";' % (i, ln['speaker']), '    go_lnSec[%d] = %.2f;' % (i, ln['seconds']),
+                  '    go_lnClip[%d] = "%s";' % (i, ln.get('clip', ''))]
+    lines += ['}', '']
     return chr(10).join(lines)
 
 
@@ -1079,7 +1135,12 @@ def text_entries(cfg):
     t = cfg.get('tactical')
     if t:
         for loc, lang in (('ruRU', 'ru'), ('enUS', 'en')):
-            for k in TAC_TEXT_KEYS + tuple(k for k in TAC_EXTRA_TEXT_KEYS if k in t['texts']):
+            for ln in t.get('lines') or []:
+                v = ln['text'][lang]
+                if ln.get('large', True):
+                    v = EXPLAIN_STYLE[0] + v + EXPLAIN_STYLE[1]
+                out.setdefault(loc, []).append((LINE_TEXT_PREFIX + ln['id'], v))
+            for k in tuple(k for k in TAC_TEXT_KEYS if k in t['texts']) + tuple(k for k in TAC_EXTRA_TEXT_KEYS if k in t['texts']):
                 v = t['texts'][k][lang].replace('{aim_time}', '%g' % t['nuke']['aim_time']).replace('{flight_time}', '%g' % t['nuke']['flight_time'])
                 if k in TAC_EXPLAIN_KEYS:
                     v = EXPLAIN_STYLE[0] + v + EXPLAIN_STYLE[1]
@@ -1193,6 +1254,8 @@ def resolve_config(adapter, preset=None, diag=False, no_voice=False):
         if (raw_audio or {}).get('talk'):
             cfg['audio'] = {'talk': raw_audio['talk']}  # silent mouth drivers are not voice
         cfg['_no_voice'] = True
+        for ln in (cfg.get('tactical') or {}).get('lines') or []:
+            ln['clip'] = ''  # the lines keep their text, portrait and talking animation; only the clip is dropped
     return cfg, name
 
 

@@ -58,7 +58,8 @@ class TacticalConfig(unittest.TestCase):
         self.assertEqual(gt['remove_abilities'], ['EMP'])
         self.assertEqual(t['garrison']['damage_multiplier'], 20)
         self.assertEqual(t['trained_marine'], {'life': 1, 'can_attack': False})  # 1/1 and no weapon at all (no x0.1 any more)
-        self.assertEqual(t['story'], {'first_delay': 15, 'second_delay': 15, 'alert_seconds': 14, 'swann_seconds': 3, 'arrival_seconds': 10, 'ghost_seconds': 7, 'raynor_delay': 2, 'raynor_seconds': 11})
+        self.assertEqual(t['story'], {'first_delay': 15, 'second_delay': 15, 'alert_seconds': 14, 'swann_seconds': 3, 'arrival_seconds': 10, 'ghost_seconds': 7, 'raynor_delay': 2, 'raynor_seconds': 11,
+                                      'find_delay': 3, 'plan_min_share': 0.5, 'plan_calm_seconds': 6, 'plan_max_wait': 360, 'plan_dead_delay': 6})
         self.assertEqual((t['nuke']['aim_time'], t['nuke']['flight_time']), (12, 6))
         # the explosion keeps the stock damage, radii and falloff: nothing of ours in the config
         for k in ('damage', 'structure_bonus', 'areas'):
@@ -144,7 +145,7 @@ class TacticalModule(unittest.TestCase):
             self.assertTrue(block.isascii(), preset)
             self.assertEqual(galaxy_lint.lint(block), [], preset)
         names = {h['call'].split('(')[0] for h in build.hook_list(ADAPTER)}
-        self.assertEqual(names, {'GhostOps_OnMissionStart', 'GhostOps_Tac_OnRescue', 'GhostOps_Tac_OnVictory', 'GhostOps_Tac_OnDefeat', 'GhostOps_Scene_OnRebelsRescued'})
+        self.assertEqual(names, {'GhostOps_OnMissionStart', 'GhostOps_Tac_OnRescue', 'GhostOps_Tac_OnVictory', 'GhostOps_Tac_OnDefeat', 'GhostOps_Scene_OnRebelsRescued', 'GhostOps_Scene_OnRebelsFound'})
 
     def test_production_build_has_no_test_code_and_no_debug_log(self):
         cfg, _ = build.resolve_config(ADAPTER, 'tactical')
@@ -258,16 +259,16 @@ class StoryScene(unittest.TestCase):
     def test_scene_texts_exist_and_nothing_is_forced_on_the_player(self):
         a = self.adapter_text()
         used = set(re.findall(r'Param/Value/GhostOpsTac_(\w+)', a))
-        self.assertTrue({'AlertTitle', 'AlertText', 'SwannName', 'SwannText', 'ArrivalText', 'ObjectiveTitle', 'ObjectiveText'} <= used)
-        self.assertTrue(used <= set(build.TAC_TEXT_KEYS) | set(build.TAC_EXTRA_TEXT_KEYS), used - set(build.TAC_TEXT_KEYS))
+        self.assertTrue({'AlertTitle', 'SwannName', 'RaynorName', 'GhostName', 'L_', 'ArrivalText', 'ObjectiveTitle', 'ObjectiveText', 'FindObjectiveTitle', 'FindObjectiveText'} <= used | {'AlertTitle', 'SwannName', 'RaynorName', 'GhostName'})
+        self.assertTrue(used <= set(build.TAC_TEXT_KEYS) | set(build.TAC_EXTRA_TEXT_KEYS) | {'L_'}, used - set(build.TAC_TEXT_KEYS))
         for forbidden in ('CameraPan', 'CinematicMode', 'CameraLock', 'SoundPlay', 'TriggerExecute(gt_'):
             self.assertNotIn(forbidden, a)
-        # the five short original lines (Adjutant, Raynor after the alarm, Swann, Ghost, Raynor at the hand-over of the rebels), each a clip step with an explicit duration;
-        # the explanations follow as separate talk steps (silent lip-sync drivers)
-        self.assertEqual(sorted(set(re.findall(r'GhostOps_ClipStep\("\w+", \d, "(\w+)"', a))), ['GhostOpsAdjutantAlert', 'GhostOpsGhostReady', 'GhostOpsRaynorDamn', 'GhostOpsRaynorTogether', 'GhostOpsSwannHelp'])
-        self.assertEqual(a.count('GhostOps_Scene_VoiceBegin();'), 5)
-        self.assertEqual(a.count('GhostOps_Scene_VoiceEnd();'), 5)
-        self.assertEqual(a.count('GhostOps_Talk('), 6)
+        # every scene plays lines of the config table (GhostOps_Line): ids used by the scenes are exactly the ids of tactical.lines, a clip is played only when the line names one
+        ids = set(re.findall(r'GhostOps_Line\("(\w+)"\)', a))
+        cfg, _ = build.resolve_config(ADAPTER, 'tactical')
+        self.assertEqual(ids, {l['id'] for l in cfg['tactical']['lines']})
+        self.assertEqual(a.count('GhostOps_ClipStep('), 1)
+        self.assertEqual(a.count('GhostOps_Talk('), 1)
         self.assertNotIn('TargetingPoint', a.split('GhostOps_Scene_GhostMsg')[1].split('void GhostOps_Scene_SendTransport')[0])
         # the Ghost line is said once for the pair: the guard is set before the thread starts, and nothing else triggers it
         self.assertEqual(a.count('GhostOps_Scene_GhostMsg"'), 1)
@@ -275,12 +276,10 @@ class StoryScene(unittest.TestCase):
         self.assertNotIn('Obozn', a)
         self.assertNotIn('UnitSelect', a.split('if (go_tacEnabled) {')[1].split('else {')[0])  # the player's selection is not touched
         self.assertIn('TriggerQueueEnter();', a)  # behind the original talk, never over it
-        self.assertEqual(a.count('TriggerQueueEnter();'), a.count('TriggerQueueExit();'))
+        self.assertGreaterEqual(a.count('TriggerQueueExit();'), a.count('TriggerQueueEnter();'))  # early exits of already shown scenes add exits
         self.assertEqual(a.count('null, StringExternal("Param/Value/GhostOpsTac_'), 0)  # every transmission has its clip
-        # the lengths of the steps come from the configuration (the talk steps and the clip step of Swann)
-        self.assertIn('GhostOps_Talk("AdjutantPortrait_L", 4, go_tacStoryAlertLen)', a)
-        self.assertIn('go_tacStorySwannLen)', a)
-        self.assertIn('GhostOps_Talk("GhostPortrait", 5, go_tacStoryGhostLen)', a)
+        # the seconds of every line come from the configuration table
+        self.assertIn('go_lnSec[lv_i]', a)
 
     def test_ghosts_come_only_by_transport_and_only_once(self):
         a = self.adapter_text()

@@ -81,7 +81,34 @@ fixed go_tacHintGap;
 trigger go_tacHoldTrig;
 trigger go_tacGrenadeTrig;
 
+// Story lines (TRaynor02): the table is generated from the config (tactical.lines): stable id, speaker, on-screen seconds, optional voice clip id (empty = text only,
+// the portrait talks with silent lip-sync drivers). A recorded voice is connected by putting its clip id into the config line: no scene code changes.
+int go_lnCount;
+string[48] go_lnId;
+string[48] go_lnSpk;
+fixed[48] go_lnSec;
+string[48] go_lnClip;
+// scene bookkeeping (saved with the game): 0 not yet, 1 started (queued or running), 2 shown
+int go_tacFindSt;              // "find the rebels" scene
+fixed go_tacFindT;
+bool go_tacGhostDone;          // the Ghost arrival scene is over
+bool go_tacRebelsFound;        // the original discovery trigger of the rebels fired (or they were rescued)
+int go_tacMeetSt;              // the meeting scene (after the original hand-over dialogue)
+fixed go_tacMeetT;
+int go_tacPlanSt;              // the operation plan scene
+fixed go_tacPlanT;
+fixed go_tacRescueT;           // mission time of the hand-over
+fixed go_tacPlanCalmT;         // mission time since which nobody fights near the rescued units (-1 = not calm)
+int go_tacObjFind;               // the objective id of "find the rebels"
+bool go_tacObjFindMade;
+fixed go_tacFindDelay;
+fixed go_tacPlanShare;
+fixed go_tacPlanCalm;
+fixed go_tacPlanMaxWait;
+fixed go_tacPlanDeadDelay;
+
 void GhostOps_ApplyTacticalConfig ();
+void GhostOps_ApplyLines ();
 void GhostOps_TacTest_Start ();
 void GhostOps_TacTest_Delivered ();
 

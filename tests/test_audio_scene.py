@@ -60,7 +60,9 @@ class AudioImport(unittest.TestCase):
         proto, _ = build.resolve_config(AD2, 'prototype')
         self.assertNotIn('SoundData.xml', build.catalog_fragments(proto))
         tac, _ = build.resolve_config(AD2, 'tactical')
-        self.assertIn('GhostOpsSwannHelp', build.catalog_fragments(tac)['SoundData.xml'])
+        self.assertIn('GhostOpsAdjutantAlert', build.catalog_fragments(tac)['SoundData.xml'])
+        # new story texts carry NO old clip that speaks other words: only the two lines whose clip says exactly the line keep one
+        self.assertEqual(sorted(l['clip'] for l in tac['tactical']['lines'] if l.get('clip')), ['GhostOpsAdjutantAlert', 'GhostOpsGhostReady'])
 
     @unittest.skipUnless(os.path.isfile(SRC1), 'source map not extracted')
     def test_built_map_holds_the_clips(self):

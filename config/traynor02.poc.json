@@ -69,24 +69,9 @@
               "facial": "TTychus01Adjutant00010"
             },
             {
-              "id": "GhostOpsSwannHelp",
-              "source": "assets/audio/traynor02/swann_B.wav",
-              "facial": "THanson03ABriefingSwann00003"
-            },
-            {
               "id": "GhostOpsGhostReady",
               "source": "assets/audio/traynor02/ghost_ready00.wav",
               "facial": "Ghost_Ready00"
-            },
-            {
-              "id": "GhostOpsRaynorDamn",
-              "source": "assets/audio/traynor02/raynor_damn.wav",
-              "facial": "TTychus01Raynor00012"
-            },
-            {
-              "id": "GhostOpsRaynorTogether",
-              "source": "assets/audio/traynor02/raynor_onward.wav",
-              "facial": "TTychus03Raynor00011"
             }
           ],
           "talk": [
@@ -281,25 +266,13 @@
               "ru": "Адъютант",
               "en": "Adjutant"
             },
-            "AlertText": {
-              "ru": "Компьютерная сеть базы заражена. Оружие гарнизона работает только в пределах локальной сети. У новобранцев нарушена работа боевого снаряжения — вести огонь они не могут.",
-              "en": "The base computer network is infected. The garrison weapons only work inside the local network. The recruits' combat gear is damaged: they cannot fire."
-            },
             "SwannName": {
               "ru": "Свонн",
               "en": "Swann"
             },
-            "SwannText": {
-              "ru": "Я решил, что помощь тебе не помешает.",
-              "en": "I figured you could use some help."
-            },
             "GhostName": {
               "ru": "Призрак",
               "en": "Ghost"
-            },
-            "GhostText": {
-              "ru": "Призрак явился.",
-              "en": "Ghost reporting."
             },
             "ArrivalText": {
               "ru": "Прибыло подкрепление: спецотряд призраков избежал заражения. Используйте ядерный удар для штурма базы противника. Доступна только одна ракета.",
@@ -345,25 +318,9 @@
               "ru": "Спасённые повстанцы сохраняют обычные характеристики. Запуск ракеты миссию не завершает: добейте оставшиеся силы и здания.",
               "en": "Rescued rebels keep their normal stats. The launch does not end the mission: finish the remaining forces and buildings."
             },
-            "AlertClip": {
-              "ru": "Тревога.",
-              "en": "Alert."
-            },
             "RaynorName": {
               "ru": "Рейнор",
               "en": "Raynor"
-            },
-            "RaynorText": {
-              "ru": "Вот же сволочи… Гарнизон оставляем здесь. Ресурсы всё равно собирайте: нам ещё корабль чинить и людей снаряжать. Пригодятся для следующих операций.",
-              "en": "Bastards... We leave the garrison here. Keep gathering resources anyway: we still have a ship to repair and people to equip. They will be needed for the next operations."
-            },
-            "SwannExplain": {
-              "ru": "Эти двое к заражённой сети не подключались. Снаряжение исправно. Я подготовил одну ядерную ракету — наводчик обозначен. Береги его, Джим: до запуска заменить его некому.",
-              "en": "These two were never connected to the infected network. Their gear is fine. I prepared one nuclear missile - the Spotter is marked. Look after him, Jim: nobody can replace him before the launch."
-            },
-            "GhostExplain": {
-              "ru": "У Оперативника два бронебойных заряда. Берегите их для техники и укреплений — против пехоты они бесполезны.",
-              "en": "The Operative has two armor-piercing charges. Save them for vehicles and fortifications: they are useless against infantry."
             },
             "RoleGhost": {
               "ru": "Призрак",
@@ -373,22 +330,6 @@
               "ru": "Постоянная маскировка и Snipe. Может навести ядерный удар; общий запас — две ракеты на операцию. Заменить призрака нельзя.",
               "en": "Permanent cloak and Snipe. May aim the nuclear strike; two missiles for the whole operation. A Ghost cannot be replaced."
             },
-            "RaynorClip": {
-              "ru": "Какого...",
-              "en": "What the..."
-            },
-            "RebelClip": {
-              "ru": "Идем дальше, парни.",
-              "en": "Let us move on, boys."
-            },
-            "RebelHint1": {
-              "ru": "Эти ребята не заражены. Их оружие поможет нам пробиться к вражеским бункерам, но подкреплений больше нет. Здесь они долго не продержатся — отведите отряд на нашу базу, под защиту гарнизона.",
-              "en": "These guys are not infected. Their weapons will help us break through to the enemy bunkers, but there are no more reinforcements. They will not last long here: take the squad to our base, under the protection of the garrison."
-            },
-            "RebelHint2": {
-              "ru": "Казарму тоже забирайте: поднимите её в воздух и перегоните на нашу базу.",
-              "en": "Take the Barracks too: lift it off and fly it to our base."
-            },
             "GrenadeName": {
               "ru": "Бронебойная граната",
               "en": "Armor-piercing grenade"
@@ -396,6 +337,14 @@
             "GrenadeTip": {
               "ru": "Бронебойная граната: разрушает вражескую наземную технику и здания в небольшой области. Пехоту, воздух, своих и союзников не задевает. Два заряда на миссию, без пополнения; энергия не расходуется. Только у Оперативника.",
               "en": "Armor-piercing grenade: destroys enemy ground vehicles and buildings in a small area. Infantry, air units, own and allied units are not hurt. Two charges per mission, no refill; no energy cost. Operative only."
+            },
+            "FindObjectiveTitle": {
+              "ru": "Найти повстанцев",
+              "en": "Find the rebels"
+            },
+            "FindObjectiveText": {
+              "ru": "Где-то поблизости держатся местные повстанцы. Найдите их: нам нужна пехота. Их положение заранее не раскрыто.",
+              "en": "Local rebels are holding out somewhere nearby. Find them: we need infantry. Their position is not revealed in advance."
             }
           },
           "story": {
@@ -406,7 +355,12 @@
             "arrival_seconds": 10,
             "ghost_seconds": 7,
             "raynor_delay": 2,
-            "raynor_seconds": 11
+            "raynor_seconds": 11,
+            "find_delay": 3,
+            "plan_min_share": 0.5,
+            "plan_calm_seconds": 6,
+            "plan_max_wait": 360,
+            "plan_dead_delay": 6
           },
           "grenade": {
             "enabled": true,
@@ -419,11 +373,177 @@
           "rebel_hints": {
             "enabled": true,
             "delay": 0,
-            "first_seconds": 13,
-            "second_seconds": 6,
             "ping_seconds": 6,
             "gap": 0
-          }
+          },
+          "lines": [
+            {
+              "id": "ALERT_CLIP",
+              "speaker": "adjutant",
+              "seconds": 1.0,
+              "clip": "GhostOpsAdjutantAlert",
+              "large": false,
+              "text": {
+                "ru": "Тревога.",
+                "en": "Alert."
+              }
+            },
+            {
+              "id": "ALERT_TEXT",
+              "speaker": "adjutant",
+              "seconds": 14,
+              "text": {
+                "ru": "Компьютерная сеть базы заражена. Оружие гарнизона работает только в пределах локальной сети. У новобранцев нарушена работа боевого снаряжения — вести огонь они не могут.",
+                "en": "The base computer network is infected. The garrison weapons only work inside the local network. The recruits' combat gear is damaged: they cannot fire."
+              }
+            },
+            {
+              "id": "RAYNOR_INFECT",
+              "speaker": "raynor",
+              "seconds": 9,
+              "text": {
+                "ru": "Вот же сволочи… Они заразили нашу систему! Оружие морпехов работает только возле базы. Новобранцы вообще едва на ногах стоят. Ладно, будем выкручиваться.",
+                "en": "Bastards... They infected our system! The Marines' weapons only work near the base. The recruits can barely stand. All right, we will manage."
+              }
+            },
+            {
+              "id": "RAYNOR_RESOURCES",
+              "speaker": "raynor",
+              "seconds": 5.5,
+              "text": {
+                "ru": "Ресурсы продолжайте собирать. Они понадобятся для следующих операций.",
+                "en": "Keep gathering resources. They will be needed for the next operations."
+              }
+            },
+            {
+              "id": "SWANN_ARRIVAL",
+              "speaker": "swann",
+              "seconds": 8,
+              "text": {
+                "ru": "Ковбой, принимай парочку специалистов. Их снаряжение чистое. Только береги ребят — других у меня нет.",
+                "en": "Cowboy, take a couple of specialists. Their gear is clean. Just look after them - I have no others."
+              }
+            },
+            {
+              "id": "GHOST_READY",
+              "speaker": "ghost",
+              "seconds": 2.6,
+              "clip": "GhostOpsGhostReady",
+              "large": false,
+              "text": {
+                "ru": "Призрак явился.",
+                "en": "Ghost reporting."
+              }
+            },
+            {
+              "id": "GHOST_ROLES",
+              "speaker": "ghost",
+              "seconds": 7,
+              "text": {
+                "ru": "Наводчик: одна ядерная ракета. Оперативник: два бронебойных заряда.",
+                "en": "Spotter: one nuclear missile. Operative: two armor-piercing charges."
+              }
+            },
+            {
+              "id": "RAYNOR_FIND",
+              "speaker": "raynor",
+              "seconds": 9,
+              "text": {
+                "ru": "Здесь ещё держатся местные повстанцы. Найдите их. Нам нужна пехота — одними призраками всех не выкурить.",
+                "en": "Local rebels are still holding out here. Find them. We need infantry: ghosts alone will not smoke them all out."
+              }
+            },
+            {
+              "id": "REBEL_MEET_1",
+              "speaker": "raynor",
+              "seconds": 10,
+              "text": {
+                "ru": "Эти ребята не заражены — оружие работает! Но здесь их перебьют. Отводите людей на нашу базу, под прикрытие гарнизона.",
+                "en": "These guys are not infected: their weapons work! But they will be slaughtered here. Take the people to our base, under the garrison's cover."
+              }
+            },
+            {
+              "id": "REBEL_MEET_2",
+              "speaker": "raynor",
+              "seconds": 6,
+              "text": {
+                "ru": "И казарму забирайте. Она летает — поднимайте и перегоняйте к нам.",
+                "en": "And take the Barracks too. It flies: lift it off and fly it to us."
+              }
+            },
+            {
+              "id": "PLAN_INTRO",
+              "speaker": "raynor",
+              "seconds": 2.5,
+              "text": {
+                "ru": "Теперь слушайте.",
+                "en": "Listen up."
+              }
+            },
+            {
+              "id": "PLAN_GRENADE_2",
+              "speaker": "raynor",
+              "seconds": 8,
+              "text": {
+                "ru": "У Оперативника два бронебойных заряда. Ими можно вскрыть бункер или накрыть технику. На пехоту не тратьте.",
+                "en": "The Operative has two armor-piercing charges. They can crack a bunker or cover vehicles. Do not spend them on infantry."
+              }
+            },
+            {
+              "id": "PLAN_GRENADE_1",
+              "speaker": "raynor",
+              "seconds": 8,
+              "text": {
+                "ru": "У Оперативника остался один бронебойный заряд. Им можно вскрыть бункер или накрыть технику. На пехоту не тратьте.",
+                "en": "The Operative has one armor-piercing charge left. It can crack a bunker or cover vehicles. Do not spend it on infantry."
+              }
+            },
+            {
+              "id": "PLAN_NUKE_REBELS",
+              "speaker": "raynor",
+              "seconds": 13,
+              "text": {
+                "ru": "Но всю базу этим не разнести. Подведите Наводчика и положите ракету туда, где собралось побольше врагов. Повстанцами добьём остальных. Людей мало — берегите каждого.",
+                "en": "But this will not tear down the whole base. Bring the Spotter up and put the missile where the most enemies are gathered. The rebels will finish off the rest. There are few of us: look after everyone."
+              }
+            },
+            {
+              "id": "PLAN_NUKE_ALONE",
+              "speaker": "raynor",
+              "seconds": 11,
+              "text": {
+                "ru": "Но всю базу этим не разнести. Подведите Наводчика и положите ракету туда, где собралось побольше врагов. Остальных придётся добивать самим. Людей мало — берегите каждого.",
+                "en": "But this will not tear down the whole base. Bring the Spotter up and put the missile where the most enemies are gathered. We will have to finish off the rest ourselves. There are few of us: look after everyone."
+              }
+            },
+            {
+              "id": "PLAN_NUKE_REBELS_NG",
+              "speaker": "raynor",
+              "seconds": 11,
+              "text": {
+                "ru": "Подведите Наводчика и положите ракету туда, где собралось побольше врагов. Повстанцами добьём остальных. Людей мало — берегите каждого.",
+                "en": "Bring the Spotter up and put the missile where the most enemies are gathered. The rebels will finish off the rest. There are few of us: look after everyone."
+              }
+            },
+            {
+              "id": "PLAN_NUKE_ALONE_NG",
+              "speaker": "raynor",
+              "seconds": 9,
+              "text": {
+                "ru": "Подведите Наводчика и положите ракету туда, где собралось побольше врагов. Остальных придётся добивать самим. Людей мало — берегите каждого.",
+                "en": "Bring the Spotter up and put the missile where the most enemies are gathered. We will have to finish off the rest ourselves. There are few of us: look after everyone."
+              }
+            },
+            {
+              "id": "PLAN_NUKE_USED",
+              "speaker": "raynor",
+              "seconds": 6,
+              "text": {
+                "ru": "Ракета уже ушла — теперь добивайте оставшихся. Людей мало, берегите каждого.",
+                "en": "The missile is already gone: now finish off the rest. There are few of us, look after everyone."
+              }
+            }
+          ]
         },
         "campaign": {
           "operation_id": "STANDALONE"
