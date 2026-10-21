@@ -200,6 +200,8 @@ never writes into the campaign.
 **TRaynor03 balance fixed until the Owner's review (2026-10-21):** 16 marines / 4 bunkers / 4 turrets / 8 repair SCVs = 1640 minerals, garrison damage x8; no further automatic tuning of the kit or the multiplier is planned.
 Full playability of TRaynor03 is NOT confirmed: loading from the main menu, a full playthrough by a human and the balance of the order are for the Owner to judge. The voice of Raynor in TRaynor02 and the explanatory texts have no clips (portrait + text only).
 
+**TRaynor03 redesign (agreed 2026-10-21, NOT implemented):** the *Zero Hour* described above is the PREVIOUS build. The agreed next version (player-built paid bunkers / turrets, a six-marine landing, a manual ground salvo of the turrets, waves weakened by destroying incubators, no grenade) is only a design: `docs/MISSION_ROADMAP.md` 7.7 and `docs/MISSION_SETTINGS_AND_CAMPAIGN_ECONOMY.md` 9.3. Its numbers are not decided and the previous balance / defence results do not apply to it.
+
 ## What this repository does NOT contain (and how to restore it locally)
 
 Published: Galaxy sources, build tools, launcher, configs, tests, docs and the audio **manifest** `assets/audio/SOURCES.md`. NOT published (git-ignored, never committed): the game, CASC data,

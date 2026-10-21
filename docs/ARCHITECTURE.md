@@ -220,3 +220,13 @@ Components (all new files are small and sit next to the existing ones):
   gate in front of the original timer victory, the post-timer waves, the scenes. The tactical module (`core/GhostOpsTactical.galaxy`) is shared with TRaynor02 and generalised by config:
   `tactical.nuke.count` (missiles = successful launches), `tactical.nuke.both_may_aim`, `tactical.spotter_defeat` (defaults keep TRaynor02 as it was).
 - The CE-0 probe (`core/GhostOpsCe0.galaxy`, `adapters/*/ce0_extra.galaxy`, `tools/ce0_session.py`, `tools/ce0_ui.py`) stays dev-only; no playable profile contains it (`tests/test_ce0_build.py`).
+
+## TRaynor03 redesign (agreed 2026-10-21; design only, NOTHING of it is implemented)
+
+The implemented TRaynor03 (section above: `core/GhostOpsZeroHour.galaxy`, `adapters/traynor03/`, `config/traynor03.json`) is the previous build and stays as it is. The agreed new design (mission text: `docs/MISSION_ROADMAP.md` 7.7; paid kit: `docs/MISSION_SETTINGS_AND_CAMPAIGN_ECONOMY.md` 9.3) adds, as separate responsibilities and not as a second contract:
+- **Landing and kit accounting** (player-built bunkers / turrets, kit counters as saved globals): mission module + adapter; the economy rules stay in the contract (7, 9.3); construction events are a technical check.
+- **Manual ground salvo of the turrets**: a catalog ability on the turret plus a small mission-side unlock scene; the stock air fire is not touched; simultaneous firing is a prototype check. No resource cost.
+- **Wave weakening by incubator groups**: a mission-side layer over the ORIGINAL wave sources (no AI rewrite); the table "incubator group -> wave handler" must be derived from the original script first (before and after the timer, regrowth of targets). Formula undefined.
+- **Story lines** use the existing line table mechanism (`tactical.lines`, `GhostOps_Line`), so a later voice recording is a config change.
+- **Saves:** every new state above is a saved global; a load must not repeat a landing or grant a kit (contract 7.5-7.8). The new version is a separate build with a new map file name.
+Boundary: the tactical module stays shared with TRaynor02 and is generalised by config only; the grenade of TRaynor02 is not part of TRaynor03.

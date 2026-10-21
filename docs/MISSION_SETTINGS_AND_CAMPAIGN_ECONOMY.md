@@ -297,6 +297,18 @@ The TRaynor02 → THanson01 pair is the **first economy experiment**. It does no
 - Compatibility with the existing `sniper` profile (**[OPEN - Owner decision]**): the profile locks development (`hanson.lock_development`, every producible type and upgrade is forbidden) and pre-places 15 turrets. Free turret construction needs a profile in which building turrets (only turrets) is allowed and the pre-placed ones are reconsidered. A new profile, not a change of `sniper`, is the proposed route; its name is not chosen.
 - Kit accounting needs a hook on construction start / cancel / completion for the turret type. How these events are read is **[OPEN - technical check]** (the TRaynor02 module already works with unit-created events, **[IMPL]**; construction-progress events are not used anywhere yet).
 
+### 9.3 TRaynor03 «Час икс»: the paid kit in the NEW design **[AGREED]** (Owner, 2026-10-21; not built)
+
+The prepared order of the existing economy (section 7: paid once, immutable operation set, accepted-result carry-over) is applied to the new version of the mission as follows. Details of the mission itself: `docs/MISSION_ROADMAP.md` 7.7. Nothing here is implemented; the implemented TRaynor03 (order ready at the start of control, `zerohour`) is the previous build and keeps working as it is.
+- **What is bought (unchanged principle):** a limited number of bunkers, anti-air missile turrets, marines and repair SCVs. No barracks at the start, training new soldiers is closed, nothing is bought on the map.
+- **Bunkers and turrets are built by the player** (any place he chooses) **[AGREED]**. The paid kit is applied like the THanson01 turret rule (9.2) **[REQUIREMENT]**: N bunkers / M turrets ordered = exactly N / M free constructions; a kit is reserved when construction starts, cancelling returns it, completion spends it; **the loss of a finished building does not return a kit**; there is no second payment inside the map. Counters (reserved / spent) are saved globals and part of the state of a save (7.6 B): a load returns them to the saved values and never grants an additional kit.
+- **Technical check [OPEN - technical check]:** construction start / cancel / completion events for bunkers and turrets in the installed game (the same check as list item 3 of section 12, extended to bunkers); how the kit is enforced (disabled build buttons at zero, removal of an over-limit construction without a refund). Implementation is the next technical stage.
+- **Marines:** the landing (about 15 game seconds after control starts, a first group of six, then the main group, existing pod animation, no automatic boarding of bunkers) delivers the ordered marines. **[OPEN - Owner decision]** whether the first six are part of the paid order or a base squad of the mission; no hidden free six is created.
+- **Surviving units / remainder (7.4, 7.7):** unchanged: the remaining stock of the operation is carried by an accepted result proposal; no new reward is invented. Unspent kits are not converted into stock unless the Owner decides so **[OPEN - Owner decision]**.
+- **Prices and limits:** the experimental numbers of the implemented build (`zerohour.prices`, `limits`, `recommended`; marine 40, bunker 75, turret 75, SCV; recommended 16/4/4/8 = 1640) are NOT approved for the new version; new prices, the turret kit price and the limits are decided with the balance **[OPEN - Owner decision]**.
+- **Ability to fire at the ground (manual turret salvo)** costs no resources per shot; it is a rule of the mission, not an economy item.
+- **Saves / versions [REQUIREMENT]:** a load restores the remaining kits, buildings under construction, finished buildings, the landing stages and the fact that fighters were delivered; it never repeats the landing and never grants a kit. The new version is a separate build (7.8); maps of started operations are never rebuilt in place.
+
 ## 10. Future directions **[DESIGN]** (none is current implementation, no empty subsystem is created now)
 
 | Direction | Where it plugs in | Data it needs |
@@ -344,6 +356,7 @@ The TRaynor02 → THanson01 pair is the **first economy experiment**. It does no
 Decided by the Owner (no longer open): the **right to make a mistake** (1, 7.5): free manual save and load inside an operation, loading never punished, no mandatory ironman, no limit on attempts. This is not a question and nothing below reopens it.
 
 Owner decisions **[OPEN - Owner decision]**:
+0. (2026-10-21) TRaynor03 new design (9.3): whether the first six landing marines belong to the paid order; new prices / limits; fate of unspent kits. Other open points of the new design: `docs/MISSION_ROADMAP.md` 7.7.8.
 1. Price of a turret kit; final prices and number of mercenaries (not agreed, none invented).
 2. Method and moment of mercenary delivery.
 3. Preparation cost refund when the operation is cancelled before it starts, treatment of defeat / abandonment, and what happens to the handed stock when an operation is abandoned (7.1, 7.2).
