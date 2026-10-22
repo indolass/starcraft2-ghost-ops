@@ -81,7 +81,8 @@ ZH_ORDER_ITEMS = ('marines', 'bunkers', 'turrets', 'scvs')
 DEF_TEXT_PREFIX = 'Param/Value/GhostOpsDef_'
 DEF_TEXT_KEYS = ('KitsTitle', 'KitsText', 'KitsBunkers', 'KitsTurrets', 'KitsOut', 'LandedFirst', 'LandedRest', 'LandedGhosts', 'SwannName', 'SwannText', 'SalvoHint', 'SalvoName',
                  'SalvoTip', 'RaynorText', 'MattText', 'MattEarly', 'Tip1Title', 'Tip1Text', 'Tip2Title', 'Tip2Text', 'Tip3Title', 'Tip3Text')
-DEF_EXPLAIN_KEYS = ('SwannText', 'RaynorText', 'MattText', 'MattEarly')
+DEF_OPTIONAL_TEXT_KEYS = ('ScannerSwann', 'IntroHold')  # texts of optional scenes (the profile that has them lists them; a profile without them is valid)
+DEF_EXPLAIN_KEYS = ('SwannText', 'RaynorText', 'MattText', 'MattEarly', 'ScannerSwann', 'IntroHold')
 TAIL_BEGIN = '// ==== GHOSTOPS TAIL BEGIN (generated, do not edit) ===='
 TAIL_END = '// ==== GHOSTOPS TAIL END ===='
 PANEL_TEXT_KEYS = ('Dead', 'Infinite', 'Cloak', 'Seconds', 'Regen', 'Hold', 'Ready', 'Grenades', 'Footer')  # plus Name0 .. Name<squad - 1>
@@ -174,6 +175,8 @@ def validate_config(cfg):
         errs += validate_zerohour(cfg)
     if cfg.get('defence') is not None:
         errs += validate_defence(cfg)
+    if cfg.get('detector_analysis'):
+        errs += validate_detector_analysis(cfg)
     return errs
 
 
@@ -297,14 +300,62 @@ def validate_defence(cfg):
     for k, (lo, hi) in {'raynor_at': (0, 600), 'raynor_seconds': (3, 30), 'matt_at': (0, 1200), 'matt_seconds': (3, 30), 'swann_delay': (0, 120), 'swann_seconds': (3, 30), 'reveal_seconds': (1, 30), 'reveal_radius': (2, 12)}.items():
         if not _num(sc.get(k)) or not lo <= sc[k] <= hi:
             errs.append('defence.scenes.%s must be a number %s..%s' % (k, lo, hi))
+    for k, (lo, hi) in {'scanner_delay': (0, 120), 'scanner_seconds': (3, 30), 'intro_seconds': (3, 30), 'raynor_wait_timers': (0, 1)}.items():
+        if k in sc and (not _num(sc[k]) or not lo <= sc[k] <= hi):
+            errs.append('defence.scenes.%s must be a number %s..%s' % (k, lo, hi))
     texts = d.get('texts', {})
-    if set(texts) != set(DEF_TEXT_KEYS):
-        errs.append('defence.texts must have exactly the keys %s' % (DEF_TEXT_KEYS,))
-    for k in DEF_TEXT_KEYS:
+    if set(texts) - set(DEF_OPTIONAL_TEXT_KEYS) != set(DEF_TEXT_KEYS):
+        errs.append('defence.texts must have exactly the keys %s (and may add %s)' % (DEF_TEXT_KEYS, DEF_OPTIONAL_TEXT_KEYS))
+    for k in DEF_TEXT_KEYS + tuple(k for k in DEF_OPTIONAL_TEXT_KEYS if k in texts):
         v = texts.get(k)
         if not isinstance(v, dict) or not all(isinstance(v.get(l), str) and v[l] and chr(10) not in v[l] for l in ('ru', 'en')):
             errs.append('defence.texts.%s needs non-empty single-line ru and en texts' % k)
     return errs
+
+
+def validate_detector_analysis(cfg):
+    """The passive Ghost ability "Detector analysis" (config key "detector_analysis"): the circles of the detection range of the VISIBLE enemy detectors while a Ghost is selected.
+    Reuses the Hero Detector Radar of the Liberty campaign data (the Nova / Tosh / Zeratul mechanic): behavior HeroDetectorRadar on the Ghost."""
+    d = cfg['detector_analysis']
+    errs = []
+    if not isinstance(d, dict):
+        return ['detector_analysis must be an object']
+    for k in d:
+        if k not in ('enabled', 'texts', 'column', 'row', 'debug_ring'):
+            errs.append('detector_analysis.%s is not supported' % k)
+    if not isinstance(d.get('enabled'), bool):
+        errs.append('detector_analysis.enabled must be true or false')
+    for k, hi in (('row', 2), ('column', 4)):
+        if k in d and not (isinstance(d[k], int) and not isinstance(d[k], bool) and 0 <= d[k] <= hi):
+            errs.append('detector_analysis.%s must be an integer 0..%d (the place of the passive icon on the Ghost card)' % (k, hi))
+    texts = d.get('texts', {})
+    if set(texts) != {'Name', 'Tip'}:
+        errs.append('detector_analysis.texts must have exactly Name and Tip')
+    for k in ('Name', 'Tip'):
+        v = texts.get(k)
+        if not isinstance(v, dict) or not all(isinstance(v.get(l), str) and v[l] and chr(10) not in v[l] for l in ('ru', 'en')):
+            errs.append('detector_analysis.texts.%s needs non-empty single-line ru and en texts' % k)
+    if d.get('enabled') and not cfg.get('ghost_tuning'):
+        errs.append('detector_analysis needs ghost_tuning (the Ghost override of this mission)')
+    return errs
+
+
+def detector_analysis_fragments(d):
+    """Catalog overrides (map local): a passive icon on the Ghost card and the range actors GhostOpsDetRange10/11/12 that draw the circle of the behavior Detector1x on the units that
+    carry the stock buff HeroDetectorRadarDetected (applied by core/GhostOpsDetector.galaxy while a Ghost is selected, to VISIBLE enemy detectors only)."""
+    nl = chr(10)
+    row, col = d.get('row', 1), d.get('column', 4)
+    return {
+        'UnitData.xml': nl.join(['    <CUnit id="Ghost">', '        <CardLayouts index="0">',
+                                  '            <LayoutButtons Face="GhostOpsDetectorAnalysis" Type="Passive" Row="%d" Column="%d"/>' % (row, col), '        </CardLayouts>', '    </CUnit>', '']),
+        'ActorData.xml': nl.join(sum([['    <CActorRange id="GhostOpsDetRange%d">' % n, '        <Behavior value="Detector%d"/>' % n, '        <Terms value="Cap 1"/>', '        <IconArcLength value="0.450000"/>',  # dense: the stock value 1.25 draws a sparse, hardly visible dotted circle
+                                         '        <IconTint value="255,60,30,255"/>',
+                                         '        <On Terms="Behavior.HeroDetectorRadarDetected.On; ValidateUnit HasDetector%d" Send="Create"/>' % n,
+                                         '        <On Terms="Behavior.HeroDetectorRadarDetected.Off" Send="Destroy"/>', '    </CActorRange>'] for n in (10, 11, 12)], [])
+                              + (['    <CActorRange id="GhostOpsDetTestRing">', '        <Range value="5"/>', '        <On Terms="Behavior.HeroDetectorRadar.On" Send="Create"/>', '        <On Terms="Behavior.HeroDetectorRadar.Off" Send="Destroy"/>', '    </CActorRange>'] if d.get('debug_ring') else []) + ['']),
+        'ButtonData.xml': nl.join(['    <CButton id="GhostOpsDetectorAnalysis">', '        <Icon value="Assets' + chr(92) + 'Textures' + chr(92) + 'btn-status-radar.dds"/>',
+                                    '        <EditorCategories value="Race:Terran"/>', '    </CButton>', '']),
+    }
 
 
 def gen_defence(cfg, adapter=None):
@@ -323,6 +374,13 @@ def gen_defence(cfg, adapter=None):
              '    go_defRaynorAt = %.1f;' % sc['raynor_at'], '    go_defRaynorLen = %.1f;' % sc['raynor_seconds'], '    go_defMattAt = %.1f;' % sc['matt_at'],
              '    go_defMattLen = %.1f;' % sc['matt_seconds'], '    go_defRevealSec = %.1f;' % sc['reveal_seconds'], '    go_defRevealRadius = %.1f;' % sc['reveal_radius'], '    go_defSwannDelay = %.1f;' % sc['swann_delay'], '    go_defSwannLen = %.1f;' % sc['swann_seconds'],
              '    go_defPower = %.1f;' % wv['power'], '    go_defRound = %d;' % {'down': 0, 'nearest': 1, 'up': 2}[wv['rounding']], '}', '']
+    lines.insert(lines.index('}'), '    go_defScannerOn = %s;' % b('ScannerSwann' in d['texts']))
+    lines.insert(lines.index('}'), '    go_defScannerDelay = %.1f;' % sc.get('scanner_delay', 2))
+    lines.insert(lines.index('}'), '    go_defScannerLen = %.1f;' % sc.get('scanner_seconds', 8))
+    lines.insert(lines.index('}'), '    go_defIntroOn = %s;' % b('IntroHold' in d['texts']))
+    if sc.get('raynor_wait_timers'):  # the intro takes the trigger queue only after the original has started its timers (hook on gt_StartTimers)
+        lines.insert(lines.index('}'), '    go_defRaynorAt = 9999.0;')
+    lines.insert(lines.index('}'), '    go_defIntroLen = %.1f;' % sc.get('intro_seconds', 7))
     for w in (adapter or {}).get('defence_waves', []):
         lines.append('bool GhostOps_DEF_%s (bool testConds, bool runActions);' % w['function'][3:-5])
     return nl.join(lines)
@@ -525,7 +583,7 @@ def validate_ce0(cfg):
     if not isinstance(types, list) or not 1 <= len(types) <= 8 or any(not re.fullmatch(r'[A-Za-z0-9_]+', str(t)) for t in types):
         errs.append('ce0.census_types must be a list of 1..8 unit type ids')
     for k in c:
-        if k not in ('operation_id', 'census_types'):
+        if k not in ('operation_id', 'census_types', 'trace'):
             errs.append('ce0.%s is not supported' % k)
     return errs
 
@@ -1017,6 +1075,9 @@ def catalog_fragments(cfg):
     if cfg.get('defence'):
         for name, frag in defence_fragments(cfg['defence']).items():
             frags[name] = frags.get(name, '') + frag
+    if cfg.get('detector_analysis') and cfg['detector_analysis'].get('enabled'):
+        for name, frag in detector_analysis_fragments(cfg['detector_analysis']).items():
+            frags[name] = frags.get(name, '') + frag
     if 'UnitData.xml' in frags:
         frags['UnitData.xml'] = merge_same_id(frags['UnitData.xml'], 'CUnit', 'Ghost')
     facial = {c['id']: c['facial'] for c in (cfg.get('audio') or {}).get('clips', []) if c.get('facial')}
@@ -1213,6 +1274,8 @@ def gen_hanson(cfg):
 
 def gen_zerohour(cfg):
     """GhostOps_ApplyZeroHourConfig(): constants of the TRaynor03 module."""
+    if not cfg.get('zerohour'):  # the original-like trace profile: the module stays off
+        return chr(10).join(['// no TRaynor03 module in this build (stub)', 'void GhostOps_ApplyZeroHourConfig () {', '    go_zhEnabled = false;', '}', ''])
     z = cfg['zerohour']
     b = lambda v: 'true' if v else 'false'  # noqa: E731
     o, pa, sc = z['order'], z['post_arrival'], z['scene']
@@ -1277,6 +1340,25 @@ def hook_list(adapter):
     return hooks
 
 
+TRACE_RE = re.compile(r'^gt_(Transmission|Tip|Objective|Alert|Rebel|Start|Intro|Briefing|Zerg|AttackWaves|SpineCrawler|Victory|Defeat|TenMinute|FiveMinute|TwoMinute|OneMinute|DropPod|Evacuation|Warning|Nydus)')
+
+
+def trace_hooks(text, adapter):
+    """Development only (profile key ce0.trace): a TRACE journal line at the start of every original scene / transmission / wave function, to compare what plays when."""
+    if not adapter.get('trace'):
+        return []
+    hooks = []
+    for m in re.finditer(r'^bool (gt_\w+)_Func \(', text, re.M):
+        name = m.group(1)
+        if not TRACE_RE.match(name):
+            continue
+        fend = text.find('\n}', m.start())
+        if text[m.start():fend].count('// Actions') != 1:
+            continue
+        hooks.append({'function': name + '_Func', 'anchor': '// Actions', 'where': 'before', 'call': 'if (runActions) { GhostOps_Ce0_Trace("%s"); }' % name})
+    return hooks
+
+
 def patch_script(text, adapter, block):
     """Pure function: returns patched MapScript text or raises ValueError."""
     if BEGIN in text:
@@ -1291,7 +1373,7 @@ def patch_script(text, adapter, block):
         raise ValueError('no include lines before InitLibs')
     ins = includes[-1].end()
     edits = []  # (position, inserted text)
-    for hook in hook_list(adapter):
+    for hook in hook_list(adapter) + trace_hooks(text, adapter):
         fstart = text.find('bool %s' % hook['function'])
         if fstart < 0:
             raise ValueError('hook function not found: %s' % hook['function'])
@@ -1396,7 +1478,7 @@ def text_entries(cfg):
     df = cfg.get('defence')
     if df:
         for loc, lang in (('ruRU', 'ru'), ('enUS', 'en')):
-            for k in DEF_TEXT_KEYS:
+            for k in DEF_TEXT_KEYS + tuple(k for k in DEF_OPTIONAL_TEXT_KEYS if k in df['texts']):
                 v = df['texts'][k][lang]
                 if k in DEF_EXPLAIN_KEYS:
                     v = EXPLAIN_STYLE[0] + v + EXPLAIN_STYLE[1]
@@ -1404,6 +1486,11 @@ def text_entries(cfg):
             out.setdefault(loc, []).append(('Button/Name/GhostOpsTurretSalvo', df['texts']['SalvoName'][lang]))
             out.setdefault(loc, []).append(('Button/Tooltip/GhostOpsTurretSalvo', df['texts']['SalvoTip'][lang]))
             out.setdefault(loc, []).append(('Button/Hotkey/GhostOpsTurretSalvo', df['salvo'].get('hotkey', 'G')))
+    da = cfg.get('detector_analysis')
+    if da and da.get('enabled'):
+        for loc, lang in (('ruRU', 'ru'), ('enUS', 'en')):
+            out.setdefault(loc, []).append(('Button/Name/GhostOpsDetectorAnalysis', da['texts']['Name'][lang]))
+            out.setdefault(loc, []).append(('Button/Tooltip/GhostOpsDetectorAnalysis', da['texts']['Tip'][lang]))
     pn = cfg.get('panel')
     if pn and pn.get('enabled'):
         for loc, lang in (('ruRU', 'ru'), ('enUS', 'en')):
@@ -1446,6 +1533,8 @@ def build_block(adapter, cfg):
         extra += gen_hanson_test(cfg) + '\n' + gen_hanson(cfg) + '\n'
     if cfg.get('scene'):
         extra += gen_scene(cfg) + '\n'
+    if adapter.get('detector_analysis'):
+        extra += chr(10).join(['// Generated detector-analysis configuration', 'void GhostOps_ApplyDetectorAnalysisConfig () {', '    go_daEnabled = true;', '}', '']) + chr(10)
     if cfg.get('ce0'):
         extra += gen_ce0(cfg) + '\n'
     if cfg.get('campaign'):
@@ -1538,6 +1627,7 @@ def resolve_config(adapter, preset=None, diag=False, no_voice=False):
         cfg = base
         for link in reversed(chain):
             cfg = deep_merge(cfg, presets[link].get('overrides', {}))
+        cfg = {k: v for k, v in cfg.items() if v is not None}  # an override with null removes a whole module of the base config (the original-like trace profile)
         cfg['profile'] = {'name': name, 'label': presets[name]['label'], 'message': presets[name]['message'],
                           'message_en': presets[name].get('message_en', presets[name]['message'])}
     if diag:
@@ -1557,7 +1647,7 @@ def apply_ce0(adapter, cfg):
     """Optional modules chosen by the RESOLVED config, added to a COPY of the adapter:
     key "ce0" (development probe, only in *_dev profiles) and key "campaign" (the campaign journal of a playable profile that takes part in the
     economy). Without a key the adapter is returned untouched, so a profile without it contains nothing of it."""
-    if not cfg.get('ce0') and not cfg.get('campaign') and not cfg.get('defence'):
+    if not cfg.get('ce0') and not cfg.get('campaign') and not cfg.get('defence') and not (cfg.get('detector_analysis') or {}).get('enabled'):
         return adapter
     a = json.loads(json.dumps(adapter))
     a['generators'] = adapter.get('generators', ['tactical'] if adapter.get('modules') else [])
@@ -1572,15 +1662,28 @@ def apply_ce0(adapter, cfg):
         # the original tips ask for a Reactor / Engineering Bay and talk about buildings the player does not have here
         for tip in ('gt_TipBunkerQ_Func', 'gt_TipReactorQ_Func', 'gt_TipEngineeringBayQ_Func', 'gt_TipMissileTurretQ_Func'):
             hooks.append({'function': tip, 'before': '// Actions', 'call': 'if (go_defEnabled && runActions) { return true; }'})
+        hooks.append({'function': 'gt_StartTimers_Func', 'after': 'TimerWindowSetColor(gv_evacuationTimerWindow, c_timerWindowColorTime, Color(0.00, 100.00, 0.00), 0.0);', 'call': 'GhostOps_DEF_OnTimersStarted();'})
         a['defence'] = True
+    if (cfg.get('detector_analysis') or {}).get('enabled'):
+        mods.append('core/GhostOpsDetector.galaxy')
+        st = (adapter.get('start_hooks') or [adapter.get('start_hook')])[0]
+        hooks.append({'function': st['function'], 'after': st['after'], 'call': 'GhostOps_DA_Start();'})
+        a['detector_analysis'] = True
     if cfg.get('campaign'):
         mods.append('core/GhostOpsCampaign.galaxy')
         hooks += list(adapter.get('campaign_hooks', []))
         a['campaign'] = True
     if cfg.get('ce0'):
-        mods += ['core/GhostOpsCe0.galaxy', adapter['ce0_extra']]
+        if 'ce0_trace' not in adapter:
+            mods += ['core/GhostOpsCe0.galaxy', adapter['ce0_extra']]
+        elif cfg.get('defence') or cfg.get('zerohour'):
+            mods += ['core/GhostOpsCe0.galaxy', adapter['ce0_trace'], adapter['ce0_extra']]
+        else:  # the original-like profile: the trace probe alone
+            mods += ['core/GhostOpsCe0.galaxy', adapter['ce0_trace'], adapter['ce0_trace_only']]
         hooks += list(adapter.get('ce0_hooks', []))
         a['ce0'] = True
+        if cfg['ce0'].get('trace'):
+            a['trace'] = True  # every original scene / transmission / wave function writes a TRACE line (patch_script adds the hooks)
     a['modules'] = mods
     a['extra_hooks'] = hooks
     return a
@@ -1811,7 +1914,7 @@ def cmd_verify(args):
         got = a_out.read(x['member'])
         check('audio %s: %s is the project file (sha256 %s...)' % (x['id'], x['member'], x['sha256'][:8]), got is not None and sha256(got) == x['sha256'] and got[:4] == b'RIFF')
     new = a_out.read(man['script_member']).decode('utf-8-sig')
-    n_hooks = len(hook_list(adapter))
+    n_hooks = len(hook_list(adapter)) + len(trace_hooks(a_src.read(man['script_member']).decode('utf-8-sig'), adapter))
     check('%d hook call(s) present, once each' % n_hooks, new.count(HOOK_TAG) == n_hooks)
     check('tactical module state matches manifest (%s)' % man.get('tactical', False),
           ('go_tacEnabled = true;' in new) == bool(man.get('tactical', False)) or 'GhostOps_ApplyTacticalConfig' not in new)

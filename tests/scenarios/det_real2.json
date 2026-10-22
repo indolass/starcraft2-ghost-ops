@@ -1,0 +1,89 @@
+{
+ "name": "det_real2",
+ "mission": "traynor03",
+ "preset": "defence_next_dev",
+ "why": "detection radius against the real behaviour of an enemy",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "until",
+   "grep": "DST2 landing 222",
+   "cmd": "dst",
+   "every": 4,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "nofoe"
+  },
+  {
+   "op": "cmd",
+   "text": "pausem"
+  },
+  {
+   "op": "cmd",
+   "text": "ghold"
+  },
+  {
+   "op": "until",
+   "grep": "TRACE gt_TransmissionFirstZergWaveIncomingQ",
+   "every": 3,
+   "timeout": 150
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "dtz 1 0"
+  },
+  {
+   "op": "cmd",
+   "text": "dtov 20 0"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "cmd",
+   "text": "dtlog"
+  },
+  {
+   "op": "sleep",
+   "s": 4
+  },
+  {
+   "op": "cmd",
+   "text": "dtmv 0 3"
+  },
+  {
+   "op": "sleep",
+   "s": 22
+  },
+  {
+   "op": "expect",
+   "regex": "DTL t=.*ghostLife 45 \\| Overseer d=(1[2-9]|20)",
+   "note": "before the Overseer is within 11: the Ghost is untouched"
+  },
+  {
+   "op": "expect",
+   "regex": "DTL t=.*ghostLife (4[0-4]|[0-3]?\\d) \\| Overseer d=",
+   "note": "damage appears only later (read the distance of the first such line)"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

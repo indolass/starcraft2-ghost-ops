@@ -1,0 +1,103 @@
+// the trace / arrival probes (dev only): which original scenes ran when, which Zerg groups really came to the base, and which of them died there
+fixed[5] go_arrFirst;
+int[5] go_arrDied;
+int[5] go_arrDiedNear;
+int[5] go_arrPeak;
+trigger go_arrTick;
+trigger go_arrDeath;
+int go_arrN;
+
+void GhostOps_Ce0_Trace (string lp_name) {
+    GhostOps_Ce0_Write("j", "TRACE " + lp_name + " t=" + FixedToString(GameGetMissionTime(), 1));
+}
+
+bool GhostOps_Ce0_ArrDeath (bool lp_test, bool lp_run) {
+    int lv_o;
+
+    if (!lp_run) {
+        return true;
+    }
+
+    lv_o = UnitGetOwner(EventUnit());
+    if ((lv_o >= 2) && (lv_o <= 4) && !UnitTypeTestAttribute(UnitGetType(EventUnit()), c_unitAttributeStructure)) {
+        go_arrDied[lv_o] += 1;
+        if (DistanceBetweenPoints(UnitGetPosition(EventUnit()), Point(86.0, 46.0)) < 32.0) {
+            go_arrDiedNear[lv_o] += 1;
+        }
+    }
+
+    return true;
+}
+
+bool GhostOps_Ce0_ArrTick (bool lp_test, bool lp_run) {
+    int lv_p;
+    int lv_i;
+    int lv_n;
+    int lv_near;
+    unitgroup lv_g;
+    string lv_t;
+
+    if (!lp_run) {
+        return true;
+    }
+
+    lv_t = "ARR t=" + FixedToString(GameGetMissionTime(), 0);
+    lv_p = 2;
+    while (lv_p <= 4) {
+        lv_g = UnitGroup(null, lv_p, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterStructure), (1 << (c_targetFilterDead - 32))), 0);
+        lv_n = UnitGroupCount(lv_g, c_unitCountAlive);
+        lv_near = 0;
+        lv_i = 1;
+        while (lv_i <= lv_n) {
+            if (DistanceBetweenPoints(UnitGetPosition(UnitGroupUnit(lv_g, lv_i)), Point(86.0, 46.0)) < 32.0) {
+                lv_near += 1;
+            }
+
+            lv_i += 1;
+        }
+
+        if ((lv_near > 0) && (go_arrFirst[lv_p] < 0.5)) {
+            go_arrFirst[lv_p] = GameGetMissionTime();
+        }
+
+        if (lv_near > go_arrPeak[lv_p]) {
+            go_arrPeak[lv_p] = lv_near;
+        }
+
+        lv_t = lv_t + " | P" + IntToString(lv_p) + " alive " + IntToString(lv_n) + " near " + IntToString(lv_near) + " peak " + IntToString(go_arrPeak[lv_p]) + " first " + FixedToString(go_arrFirst[lv_p], 0) + " died " + IntToString(go_arrDied[lv_p]) + " diedNear " + IntToString(go_arrDiedNear[lv_p]);
+        lv_p += 1;
+    }
+
+    GhostOps_Ce0_Write("j", lv_t);
+    return true;
+}
+
+bool GhostOps_Ce0_TraceCmd (string lp_cmd, string lp_a, string lp_b) {
+    unit lv_u;
+
+    if (lp_cmd == "arr") {
+        // every 10 s: per Zerg player the units alive / near the base, the first arrival, the deaths near the base
+        go_arrDeath = TriggerCreate("GhostOps_Ce0_ArrDeath");
+        TriggerAddEventUnitDied(go_arrDeath, null);
+        go_arrTick = TriggerCreate("GhostOps_Ce0_ArrTick");
+        TriggerAddEventTimePeriodic(go_arrTick, 10.0, c_timeGame);
+        GhostOps_Ce0_Write("j", "ARR started");
+        return true;
+    }
+
+    if (lp_cmd == "uid") {
+        // does the map object with this id exist and what is it
+        lv_u = UnitFromId(StringToInt(lp_a));
+        if (lv_u == null) {
+            GhostOps_Ce0_Write("j", "UID " + lp_a + " null");
+        }
+        else {
+            GhostOps_Ce0_Write("j", "UID " + lp_a + " " + UnitGetType(lv_u) + " owner " + IntToString(UnitGetOwner(lv_u)) + " alive " + IntToString(GhostOps_Ce0_B(UnitIsAlive(lv_u))));
+        }
+
+        return true;
+    }
+
+    return false;
+}
+

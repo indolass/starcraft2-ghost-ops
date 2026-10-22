@@ -1,0 +1,125 @@
+{
+ "name": "salvo_cd8",
+ "mission": "traynor03",
+ "preset": "defence_next_dev",
+ "why": "cooldown 8 s, no bypass, no overlap",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "cmd",
+   "text": "bld 5 8"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "bld 5 12"
+  },
+  {
+   "op": "until",
+   "grep": "spent B 0 T 2",
+   "cmd": "dst",
+   "every": 4,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "salvon"
+  },
+  {
+   "op": "cmd",
+   "text": "nofoe"
+  },
+  {
+   "op": "cmd",
+   "text": "pausem"
+  },
+  {
+   "op": "cmd",
+   "text": "amset -10 0"
+  },
+  {
+   "op": "cmd",
+   "text": "amgrid 3.0"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "cmd",
+   "text": "amsv 1"
+  },
+  {
+   "op": "cmd",
+   "text": "amval 1"
+  },
+  {
+   "op": "cmd",
+   "text": "amsv 1"
+  },
+  {
+   "op": "cmd",
+   "text": "amval 1"
+  },
+  {
+   "op": "until",
+   "grep": "AMVAL turret 1 ready 1",
+   "cmd": "amval 1",
+   "every": 1,
+   "timeout": 40
+  },
+  {
+   "op": "cmd",
+   "text": "amr 2.5"
+  },
+  {
+   "op": "cmd",
+   "text": "amhist"
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "expect",
+   "regex": "AMSV turret 1 valid before 1",
+   "note": "the first order"
+  },
+  {
+   "op": "expect",
+   "regex": "AMSV turret 1 valid before 0",
+   "note": "the second order right after it is invalid"
+  },
+  {
+   "op": "expect",
+   "regex": "AMVAL turret 1 ready 0 game time",
+   "note": "cooling down (read the game times of the first ready 0 and the first ready 1: about 8 s apart)"
+  },
+  {
+   "op": "expect",
+   "regex": "AMVAL turret 1 ready 1 game time",
+   "note": "ready again"
+  },
+  {
+   "op": "expect",
+   "regex": "AMHIST",
+   "note": "at most 5 hits per target = no overlapping second salvo"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

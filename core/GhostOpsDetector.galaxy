@@ -1,0 +1,53 @@
+//--------------------------------------------------------------------------------------------------
+// Ghost ability "Detector analysis" (passive; config key "detector_analysis"; reusable by any mission whose profile enables it).
+//
+// While at least one of our Ghosts is SELECTED it carries the stock behavior HeroDetectorRadar of the Liberty campaign data (the Nova / Tosh / Zeratul mechanic): every 0.25 s the
+// behavior applies the short buff HeroDetectorRadarDetected to the enemy detectors within 25 that are VISIBLE to the player (search filter "Visible,Detector"). The range circles are
+// drawn by our actors GhostOpsDetRange10/11/12 (data: detector_analysis_fragments of tools/build.py) on exactly those units for exactly the radius of their behavior
+// Detector10/11/12 (= the real detection radius, not the sight). Nothing is revealed (a unit in the fog is not "Visible", so it gets no buff and no circle). When no Ghost is
+// selected the behavior is removed and the circles disappear within half a second. The state lives in behaviors and actors of the engine: a loaded game continues as it was.
+//--------------------------------------------------------------------------------------------------
+bool go_daEnabled;
+trigger go_daTrig;
+
+bool GhostOps_DA_Tick (bool lp_testConds, bool lp_runActions) {
+    unitgroup lv_g;
+    unit lv_u;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    lv_g = UnitGroup("Ghost", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+    UnitGroupLoopBegin(lv_g);
+    while (UnitGroupLoopCurrent() != null) {
+        lv_u = UnitGroupLoopCurrent();
+        if (UnitIsSelected(lv_u, 1)) {
+            if (UnitBehaviorCount(lv_u, "HeroDetectorRadar") == 0) {
+                UnitBehaviorAdd(lv_u, "HeroDetectorRadar", lv_u, 1);
+            }
+        }
+        else {
+            if (UnitBehaviorCount(lv_u, "HeroDetectorRadar") > 0) {
+                UnitBehaviorRemove(lv_u, "HeroDetectorRadar", 1);
+            }
+        }
+
+        UnitGroupLoopStep();
+    }
+
+    UnitGroupLoopEnd();
+    return true;
+}
+
+void GhostOps_ApplyDetectorAnalysisConfig ();
+
+void GhostOps_DA_Start () {
+    GhostOps_ApplyDetectorAnalysisConfig();
+    if (!go_daEnabled || (go_daTrig != null)) {
+        return;
+    }
+
+    go_daTrig = TriggerCreate("GhostOps_DA_Tick");
+    TriggerAddEventTimePeriodic(go_daTrig, 0.25, c_timeGame);
+}

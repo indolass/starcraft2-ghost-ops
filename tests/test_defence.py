@@ -21,7 +21,7 @@ class DefenceConfig(unittest.TestCase):
         self.assertEqual(build.validate_config(cfg), [])
         raw = build.load_json(adapter['config'])['presets']['defence']
         self.assertTrue(raw['experimental'])
-        self.assertEqual(raw['badge'], 'Новое')
+        self.assertTrue(raw['badge'])
         self.assertEqual(cfg['zerohour']['min']['marines'], 6)
         self.assertEqual(cfg['ghost_tuning']['snipe']['damage'], 45)
 
@@ -113,6 +113,59 @@ class AimedSalvo(unittest.TestCase):
         bad = copy.deepcopy(self.cfg)
         bad['defence']['salvo']['spread'] = 7
         self.assertTrue(build.validate_defence(bad))
+
+
+class DetectorAnalysisAndIntro(unittest.TestCase):
+    def test_owner_version_is_unchanged_next_has_the_new_things(self):
+        _, old = resolved('defence')
+        _, new = resolved('defence_next')
+        self.assertEqual(old['defence']['salvo']['cooldown'], 20)
+        self.assertEqual(new['defence']['salvo']['cooldown'], 8)
+        self.assertNotIn('detector_analysis', old)
+        self.assertTrue(new['detector_analysis']['enabled'])
+        self.assertNotIn('ScannerSwann', old['defence']['texts'])
+        self.assertIn('ScannerSwann', new['defence']['texts'])
+        self.assertEqual(build.validate_config(old), [])
+        self.assertEqual(build.validate_config(new), [])
+        self.assertIn('go_defScannerOn = false;', build.gen_defence(old, build.load_adapter('traynor03')))
+        self.assertIn('go_defScannerOn = true;', build.gen_defence(new, build.load_adapter('traynor03')))
+
+    def test_detector_analysis_uses_the_stock_hero_detector_radar(self):
+        _, cfg = resolved('defence_next')
+        frag = build.catalog_fragments(cfg)
+        self.assertIn("GhostOpsDetRange11", frag["ActorData.xml"])
+        self.assertIn('Face="GhostOpsDetectorAnalysis" Type="Passive"', frag['UnitData.xml'])
+        self.assertIn('btn-status-radar.dds', frag['ButtonData.xml'])
+        for k in ('Button/Name/GhostOpsDetectorAnalysis', 'Button/Tooltip/GhostOpsDetectorAnalysis'):
+            self.assertIn(k, [key for key, _ in build.text_entries(cfg)['ruRU']])
+        # no new ability, no energy, no cooldown: only a behavior and a passive icon
+        self.assertNotIn('GhostOpsDetectorAnalysis', frag.get('AbilData.xml', ''))
+        # the icon does not take a slot of cloak / Snipe / nuke
+        used = {'0,0', '0,1', '0,2', '0,3', '0,4', '1,0', '1,2', '1,3', '2,0', '2,2', '2,3', '2,4'}
+        da = cfg['detector_analysis']
+        self.assertNotIn('%d,%d' % (da.get('row', 1), da.get('column', 4)), used)
+
+    def test_detector_analysis_validation(self):
+        _, cfg = resolved('defence_next')
+        bad = copy.deepcopy(cfg)
+        bad['detector_analysis']['column'] = 9
+        self.assertTrue(build.validate_config(bad))
+        bad = copy.deepcopy(cfg)
+        del bad['detector_analysis']['texts']['Tip']
+        self.assertTrue(build.validate_config(bad))
+
+    def test_trace_profile_has_no_ghost_ops_modules_and_traces_the_original_scenes(self):
+        adapter = build.load_adapter('traynor03')
+        cfg, _ = build.resolve_config(adapter, 'orig_trace_dev')
+        self.assertEqual(build.validate_config(cfg), [])
+        a = build.apply_ce0(adapter, cfg)
+        self.assertTrue(a.get('trace'))
+        self.assertNotIn('core/GhostOpsDefence.galaxy', a['modules'])
+        src = 'bool gt_TipBunkerQ_Func (bool testConds, bool runActions) {' + chr(10) + '    // Actions' + chr(10) + '    return true;' + chr(10) + '}' + chr(10)
+        hooks = build.trace_hooks(src, a)
+        self.assertEqual(hooks[0]['call'], 'if (runActions) { GhostOps_Ce0_Trace("gt_TipBunkerQ"); }')
+        self.assertEqual(build.trace_hooks(src, adapter), [])  # no trace without the flag
+
 
 
 if __name__ == '__main__':

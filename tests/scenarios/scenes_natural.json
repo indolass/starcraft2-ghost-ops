@@ -1,0 +1,79 @@
+{
+ "name": "scenes_natural",
+ "mission": "traynor03",
+ "preset": "defence_next_dev",
+ "why": "scene order and once-only",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 3
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "cmd",
+   "text": "nofoe"
+  },
+  {
+   "op": "sleep",
+   "s": 75
+  },
+  {
+   "op": "cmd",
+   "text": "dst"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "expect",
+   "regex": "TRACE gt_StartTimers t=[789]\\.\\d",
+   "note": "the original timers start at about 7.9 s as in the original (the intro does not hold the queue before)"
+  },
+  {
+   "op": "expect",
+   "regex": "TRACE gt_StartFirstZergWaveSpecial t=7[6-9]\\.\\d",
+   "note": "the first special wave at about 78 s as in the original"
+  },
+  {
+   "op": "expect",
+   "regex": "TRACE gt_TransmissionFirstZergWaveIncomingQ t=(8[89]|9\\d)\\.\\d",
+   "note": "the original marine transmission about 12 s after the wave"
+  },
+  {
+   "op": "expect_def",
+   "regex": "original timers started",
+   "count": 1,
+   "note": "the intro was released by the end of the original timers"
+  },
+  {
+   "op": "expect_def",
+   "regex": "scene: Raynor",
+   "count": 1,
+   "note": "the intro by Raynor ran exactly once"
+  },
+  {
+   "op": "expect_def",
+   "regex": "scene: Swann \\(detector analysis\\)",
+   "count": 1,
+   "note": "the Swann line about the scanners ran exactly once"
+  },
+  {
+   "op": "expect_def",
+   "regex": "landing 2 done",
+   "count": 1,
+   "note": "the Ghosts landed"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

@@ -1,0 +1,80 @@
+{
+ "name": "det_ring_test",
+ "mission": "traynor03",
+ "preset": "defence_next_dev",
+ "why": "a range actor of our own draws a ring",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "until",
+   "grep": "DST2 landing 222",
+   "cmd": "dst",
+   "every": 4,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "nofoe"
+  },
+  {
+   "op": "cmd",
+   "text": "pausem"
+  },
+  {
+   "op": "cmd",
+   "text": "ghold"
+  },
+  {
+   "op": "until",
+   "grep": "TRACE gt_TransmissionFirstZergWaveIncomingQ",
+   "every": 3,
+   "timeout": 150
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "dtsp 6 0"
+  },
+  {
+   "op": "cmd",
+   "text": "selghosts"
+  },
+  {
+   "op": "sleep",
+   "s": 4
+  },
+  {
+   "op": "shot",
+   "file": "ring_0_ghosts_selected.png"
+  },
+  {
+   "op": "cmd",
+   "text": "selonly Marine"
+  },
+  {
+   "op": "sleep",
+   "s": 4
+  },
+  {
+   "op": "shot",
+   "file": "ring_1_marine_selected.png"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

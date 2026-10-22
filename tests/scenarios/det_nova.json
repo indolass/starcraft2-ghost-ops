@@ -1,0 +1,89 @@
+{
+ "name": "det_nova",
+ "mission": "traynor03",
+ "preset": "defence_next_dev",
+ "why": "comparison: the stock carrier",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "until",
+   "grep": "DST2 landing 222",
+   "cmd": "dst",
+   "every": 4,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "nofoe"
+  },
+  {
+   "op": "cmd",
+   "text": "pausem"
+  },
+  {
+   "op": "cmd",
+   "text": "ghold"
+  },
+  {
+   "op": "until",
+   "grep": "TRACE gt_TransmissionFirstZergWaveIncomingQ",
+   "every": 3,
+   "timeout": 150
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "dtsp 7 0"
+  },
+  {
+   "op": "cmd",
+   "text": "mku Nova 3"
+  },
+  {
+   "op": "cmd",
+   "text": "selm Nova"
+  },
+  {
+   "op": "sleep",
+   "s": 4
+  },
+  {
+   "op": "shot",
+   "file": "nova_0_selected.png"
+  },
+  {
+   "op": "cmd",
+   "text": "selghosts"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "shot",
+   "file": "nova_1_ghosts.png"
+  },
+  {
+   "op": "expect",
+   "regex": "MKU Nova created",
+   "note": "the campaign unit exists in the data of this map"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

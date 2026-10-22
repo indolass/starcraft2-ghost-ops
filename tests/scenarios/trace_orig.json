@@ -1,0 +1,52 @@
+{
+ "name": "trace_orig",
+ "mission": "traynor03",
+ "preset": "orig_trace_dev",
+ "why": "original-like build: scenes and arrivals (the undefended original is defeated at about 337 s)",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 3
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "cmd",
+   "text": "arr"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ARR t=3[23]\\d",
+   "every": 10,
+   "timeout": 800
+  },
+  {
+   "op": "expect",
+   "regex": "TRACE ",
+   "note": "scenes / transmissions / waves in the order they ran"
+  },
+  {
+   "op": "expect",
+   "regex": "ARR t=",
+   "note": "arrival counters every 10 s"
+  },
+  {
+   "op": "expect",
+   "regex": "(LOAD|SNAP) ",
+   "note": "probe snapshots"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

@@ -55,6 +55,13 @@ int go_defWaveSeen;                // the first original wave has begun
 fixed go_defSwannDelay;
 fixed go_defSwannAt;               // mission time of the scene (-1 not scheduled)
 fixed go_defSwannLen;
+bool go_defScannerOn;           // the Swann line about the detector analysis exists in this profile
+fixed go_defScannerDelay;
+bool go_defIntroOn;             // an extra first line of Raynor (what we do here) exists in this profile
+fixed go_defIntroLen;
+fixed go_defScannerLen;
+fixed go_defScannerAt;          // game time of the scene, -1 = not scheduled
+int go_defScannerSt;             // 0 not yet, 2 shown (once)
 fixed go_defHintLen;
 // ---- waves
 int[3] go_defGrpTotal;             // marked Hatcheries per group (Zerg players 2, 3, 4)
@@ -493,6 +500,10 @@ bool GhostOps_DEF_LandThread (bool lp_testConds, bool lp_runActions) {
     libCamp_gf_CreateDropPod(libCamp_ge_DropPodRace_Terran, lv_p, go_defLandUnits[lv_slot], true);
     go_defLandSt[lv_slot] = 2;
     GhostOps_DEF_Log("landing " + IntToString(lv_slot) + " done");
+    if ((lv_slot == 2) && go_defScannerOn && (go_defScannerSt == 0) && (go_defScannerAt < 0.0)) {
+        go_defScannerAt = GameGetMissionTime() + go_defScannerDelay;
+    }
+
     if (lv_slot == 0) {
         UIDisplayMessage(PlayerGroupAll(), c_messageAreaDirective, StringExternal("Param/Value/GhostOpsDef_LandedFirst"));
     }
@@ -541,6 +552,19 @@ bool GhostOps_DEF_SwannMsg (bool lp_testConds, bool lp_runActions) {
     GhostOps_DEF_SalvoApply();
     UIDisplayMessage(PlayerGroupAll(), c_messageAreaDirective, StringExternal("Param/Value/GhostOpsDef_SalvoHint"));
     GhostOps_DEF_Log("ground salvo switched on");
+    TriggerQueueExit();
+    return true;
+}
+
+bool GhostOps_DEF_ScannerMsg (bool lp_testConds, bool lp_runActions) {
+    if (!lp_runActions) {
+        return true;
+    }
+
+    TriggerQueueEnter();
+    GhostOps_DEF_Log("scene: Swann (detector analysis)");
+    UIDisplayMessage(PlayerGroupAll(), c_messageAreaSubtitle, StringExternal("Param/Value/GhostOpsDef_SwannName") + StringToText(": ") + StringExternal("Param/Value/GhostOpsDef_ScannerSwann"));
+    GhostOps_Talk("SwannPortrait", 1, go_defScannerLen);
     TriggerQueueExit();
     return true;
 }
@@ -780,6 +804,17 @@ bool GhostOps_DEF_GroupTick (bool lp_testConds, bool lp_runActions) {
 //--------------------------------------------------------------------------------------------------
 // Scenes
 //--------------------------------------------------------------------------------------------------
+// The original creates its first objective and starts ALL its timers (first special wave, evacuation, warnings) inside a trigger-queue entry: a scene of ours that holds the
+// queue earlier than that would delay every one of them. So the intro waits for the end of gt_StartTimers (hook) and only then takes the queue.
+void GhostOps_DEF_OnTimersStarted () {
+    if (!go_defStarted || (go_defRaynorSt != 0)) {
+        return;
+    }
+
+    go_defRaynorAt = (GameGetMissionTime() - go_defT0) + 0.5;
+    GhostOps_DEF_Log("original timers started: the intro follows at " + FixedToString(go_defRaynorAt, 1) + " s of control");
+}
+
 bool GhostOps_DEF_RaynorMsg (bool lp_testConds, bool lp_runActions) {
     if (!lp_runActions) {
         return true;
@@ -787,6 +822,11 @@ bool GhostOps_DEF_RaynorMsg (bool lp_testConds, bool lp_runActions) {
 
     TriggerQueueEnter();
     GhostOps_DEF_Log("scene: Raynor at the start");
+    if (go_defIntroOn) {
+        UIDisplayMessage(PlayerGroupAll(), c_messageAreaSubtitle, StringExternal("Param/Value/GhostOpsZH_RaynorName") + StringToText(": ") + StringExternal("Param/Value/GhostOpsDef_IntroHold"));
+        GhostOps_Talk("RaynorCommanderPortrait", 0, go_defIntroLen);
+    }
+
     UIDisplayMessage(PlayerGroupAll(), c_messageAreaSubtitle, StringExternal("Param/Value/GhostOpsZH_RaynorName") + StringToText(": ") + StringExternal("Param/Value/GhostOpsDef_RaynorText"));
     GhostOps_Talk("RaynorCommanderPortrait", 0, go_defRaynorLen);
     TriggerQueueExit();
@@ -871,6 +911,11 @@ bool GhostOps_DEF_SceneTick (bool lp_testConds, bool lp_runActions) {
         TriggerExecute(TriggerCreate("GhostOps_DEF_MattMsg"), true, false);
     }
 
+    if (go_defScannerOn && (go_defScannerSt == 0) && (go_defScannerAt >= 0.0) && (lv_now >= go_defScannerAt)) {
+        go_defScannerSt = 2;
+        TriggerExecute(TriggerCreate("GhostOps_DEF_ScannerMsg"), true, false);
+    }
+
     if (go_defSalvoScene && !go_defSalvoOn && (go_defSwannAt >= 0.0) && (lv_now >= go_defSwannAt)) {
         go_defSwannAt = -1.0;
         TriggerExecute(TriggerCreate("GhostOps_DEF_SwannMsg"), true, false);
@@ -919,6 +964,7 @@ void GhostOps_DEF_Start () {
     go_defShownB = -1;
     go_defShownT = -1;
     go_defSwannAt = -1.0;
+    go_defScannerAt = -1.0;
     lv_i = 0;
     while (lv_i < 12) {
         go_defTgtGrp[lv_i] = -1;

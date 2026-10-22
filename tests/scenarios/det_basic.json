@@ -1,0 +1,147 @@
+{
+ "name": "det_basic",
+ "mission": "traynor03",
+ "preset": "defence_next_dev",
+ "why": "radar behavior and buff on visible detectors; selection screenshots",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "until",
+   "grep": "DST2 landing 222",
+   "cmd": "dst",
+   "every": 4,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "nofoe"
+  },
+  {
+   "op": "cmd",
+   "text": "pausem"
+  },
+  {
+   "op": "cmd",
+   "text": "ghold"
+  },
+  {
+   "op": "until",
+   "grep": "TRACE gt_TransmissionFirstZergWaveIncomingQ",
+   "every": 3,
+   "timeout": 150
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "cmd",
+   "text": "dtsp 6 0"
+  },
+  {
+   "op": "cmd",
+   "text": "dtov 9 4"
+  },
+  {
+   "op": "cmd",
+   "text": "dtlog"
+  },
+  {
+   "op": "cmd",
+   "text": "selghosts"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "dtbuff"
+  },
+  {
+   "op": "shot",
+   "file": "det_0_both_ghosts.png"
+  },
+  {
+   "op": "cmd",
+   "text": "selonly Ghost"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "shot",
+   "file": "det_1_one_ghost.png"
+  },
+  {
+   "op": "cmd",
+   "text": "selonly Marine"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "dtbuff"
+  },
+  {
+   "op": "shot",
+   "file": "det_2_marine.png"
+  },
+  {
+   "op": "cmd",
+   "text": "selmix"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "shot",
+   "file": "det_3_mixed.png"
+  },
+  {
+   "op": "sleep",
+   "s": 6
+  },
+  {
+   "op": "expect",
+   "regex": "DTBUFF ghost has radar behavior 1",
+   "note": "while the Ghosts are selected the first Ghost carries the stock Hero Detector Radar behavior"
+  },
+  {
+   "op": "expect",
+   "regex": "DTBUFF ghost has radar behavior 0",
+   "note": "with only a Marine selected the behavior is removed (circles gone)"
+  },
+  {
+   "op": "expect",
+   "regex": "DTL t=.*SporeCrawler d=\\d+\\.\\d vis=1 buff=1",
+   "note": "a visible enemy detector within 25 gets the radar buff (that is what the stock range-circle actor reacts to)"
+  },
+  {
+   "op": "expect",
+   "regex": "DTL t=.*Overseer d=\\d+\\.\\d vis=1 buff=1",
+   "note": "also the Overseer"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

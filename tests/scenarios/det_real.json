@@ -1,0 +1,84 @@
+{
+ "name": "det_real",
+ "mission": "traynor03",
+ "preset": "defence_next_dev",
+ "why": "real detection by an enemy Zergling versus the circle radius",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "until",
+   "grep": "DST2 landing 222",
+   "cmd": "dst",
+   "every": 4,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "nofoe"
+  },
+  {
+   "op": "cmd",
+   "text": "pausem"
+  },
+  {
+   "op": "cmd",
+   "text": "ghold"
+  },
+  {
+   "op": "until",
+   "grep": "TRACE gt_TransmissionFirstZergWaveIncomingQ",
+   "every": 3,
+   "timeout": 150
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "dtz 3 0"
+  },
+  {
+   "op": "cmd",
+   "text": "dtov 16 -2"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "cmd",
+   "text": "dtlog"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "dtmv 1 2"
+  },
+  {
+   "op": "sleep",
+   "s": 16
+  },
+  {
+   "op": "expect",
+   "regex": "DTL t=.*ghostLife",
+   "note": "timeline: Ghost life against the distance of the Overseer: damage should start when the Overseer comes within about 11 of the Ghost"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

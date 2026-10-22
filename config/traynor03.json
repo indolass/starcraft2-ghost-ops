@@ -478,18 +478,19 @@
             "SCV",
             "Bunker",
             "MissileTurret"
-          ]
+          ],
+          "trace": true
         }
       }
     },
     "defence": {
-      "label": "Оборона и диверсии",
+      "label": "Оборона и диверсии, версия 1",
       "message": "Ghost Ops: Час икс - оборона и диверсии",
       "message_en": "Ghost Ops - Zero Hour: defence and sabotage",
       "experimental": true,
-      "badge": "Новое",
+      "badge": "Версия 1",
       "extends": "standard",
-      "card": "Новая экспериментальная версия: закупленные бункеры и ракетные турели игрок строит сам, морпехи и призраки прилетают в капсулах, ручной наземный залп турелей; уничтожение инкубаторов ослабляет нападения",
+      "card": "Версия, которую проходил Owner (карта не меняется): закупленные бункеры и ракетные турели игрок строит сам, морпехи и призраки прилетают в капсулах, ручной наземный залп турелей; уничтожение инкубаторов ослабляет нападения",
       "details": [
         "Закупка до миссии: морпехи (не меньше 6), комплекты бункеров и турелей ПВО, КСМ. Оплата один раз за счёт кампании; на карте постройки по комплектам бесплатны и ограничены заказом",
         "На старте только командный центр и КСМ: готовых морпехов, бункеров и турелей нет, казармы нет, обучение закрыто",
@@ -719,35 +720,68 @@
             "SCV",
             "Bunker",
             "MissileTurret"
-          ]
+          ],
+          "trace": true
         }
       }
     },
     "defence_next": {
-      "label": "Оборона и диверсии (следующая сборка, разработка)",
-      "message": "Ghost Ops - defence (next)",
-      "message_en": "Ghost Ops - defence (next)",
-      "hidden": true,
+      "label": "Оборона и диверсии, версия 2",
+      "message": "Ghost Ops: Час икс - оборона и диверсии, версия 2",
+      "message_en": "Ghost Ops - Zero Hour: defence and sabotage, version 2",
       "extends": "defence",
-      "card": "Следующая сборка профиля «Оборона и диверсии»: отдельный файл карты; версия Owner (defence) не меняется",
+      "card": "По итогам прохождения: понятное вступление Рейнора, залп по области с указателем и клавишей A (перезарядка 8 с), пассивная способность призраков «Анализ детекторов» (круги обнаружения), сцена Свонна про сканеры. Отдельная карта, версия 1 не меняется",
       "details": [
-        "Только для разработки: версия Owner остаётся прежней"
+        "Вступление Рейнора после запуска оригинальных таймеров (сроки волн как в оригинале)",
+        "Наземный залп турели: круг области и дальности под курсором, клавиша A, перезарядка 8 с (экспериментальное значение)",
+        "Призраки: пассивная способность «Анализ детекторов» - при выборе призрака видны круги обнаружения видимых вражеских детекторов",
+        "Всё остальное (цены, урон ×8, волны, победа) как в версии 1"
       ],
       "overrides": {
         "defence": {
           "salvo": {
             "radius": 1.5,
             "spread": 1.0,
-            "hotkey": "A"
+            "hotkey": "A",
+            "cooldown": 8
           },
           "texts": {
             "SalvoTip": {
               "ru": "Наземный залп: укажите область в пределах дальности - круг на земле показывает весь охват обстрела. Ракеты падают по очереди в разные точки круга; враги, ушедшие из него, не пострадают. Один приказ - один залп, у каждой турели своя перезарядка, свои не задеваются, ресурсы не тратятся. Против воздуха турель стреляет сама.",
               "en": "Ground salvo: choose an area within range - the circle on the ground shows the whole area of the barrage. The missiles land one after another at different points of the circle; enemies that leave it are not hit. One order is one salvo, every turret has its own cooldown, your units are never hurt, nothing is spent. Against air the turret fires by itself."
+            },
+            "ScannerSwann": {
+              "ru": "Подкрутил вам сканеры. Теперь видите, где вас могут засечь. В эти круги лучше не лезть.",
+              "en": "I tuned your scanners. Now you can see where you can be spotted. Better stay out of those circles."
+            },
+            "IntroHold": {
+              "ru": "Держим плацдарм до эвакуации. Новых бойцов здесь не производят: будут только те, кого ты заказал.",
+              "en": "We hold this beachhead until the evacuation. No new troops are trained here: only the ones you ordered will come."
+            }
+          },
+          "scenes": {
+            "raynor_at": 2,
+            "raynor_seconds": 13,
+            "intro_seconds": 7,
+            "raynor_wait_timers": 1
+          }
+        },
+        "detector_analysis": {
+          "enabled": true,
+          "texts": {
+            "Name": {
+              "ru": "Анализ детекторов",
+              "en": "Detector analysis"
+            },
+            "Tip": {
+              "ru": "Показывает зоны обнаружения видимых вражеских детекторов. Внутри этих зон маскировка не скрывает призрака от противника.",
+              "en": "Shows the detection zones of visible enemy detectors. Inside these zones the cloak does not hide the Ghost from the enemy."
             }
           }
         }
-      }
+      },
+      "badge": "Новое",
+      "experimental": true
     },
     "defence_next_dev": {
       "label": "Оборона и диверсии, следующая сборка (проба)",
@@ -778,7 +812,8 @@
             "SCV",
             "Bunker",
             "MissileTurret"
-          ]
+          ],
+          "trace": true
         }
       }
     },
@@ -798,6 +833,31 @@
             "interval": 3,
             "cooldown": 60
           }
+        }
+      }
+    },
+    "orig_trace_dev": {
+      "label": "Оригинал с трассировкой (проба)",
+      "message": "Ghost Ops - original trace (dev)",
+      "message_en": "Ghost Ops - original trace (dev)",
+      "hidden": true,
+      "extends": "standard",
+      "card": "Служебный запуск: оригинальная миссия без наших модулей, только журнал событий и счётчик прибытия врагов",
+      "details": [
+        "Только для разработки"
+      ],
+      "overrides": {
+        "zerohour": null,
+        "tactical": null,
+        "campaign": null,
+        "ghost_tuning": null,
+        "ce0": {
+          "operation_id": "CE0-TR03O",
+          "census_types": [
+            "Marine",
+            "SCV"
+          ],
+          "trace": true
         }
       }
     }

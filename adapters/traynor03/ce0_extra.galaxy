@@ -1021,6 +1021,182 @@ bool GhostOps_Ce0_AimCmd (string lp_cmd, string lp_a, string lp_b) {
     return false;
 }
 
+// the detector-analysis probes (dev only): enemy detectors near the Ghosts, the radar buff, the real detection by an enemy Zergling, selections
+unit[6] go_dtU;
+int go_dtN;
+unit go_dtZ;
+trigger go_dtTick;
+int go_dtCount;
+
+unit GhostOps_Ce0_Ghost1 () {
+    return UnitGroupUnit(UnitGroup("Ghost", 1, RegionEntireMap(), GhostOps_DEF_Live(), 0), 1);
+}
+
+bool GhostOps_Ce0_DtTick (bool lp_test, bool lp_run) {
+    int lv_i;
+    string lv_t;
+    unit lv_g;
+
+    if (!lp_run) {
+        return true;
+    }
+
+    lv_g = GhostOps_Ce0_Ghost1();
+    lv_t = "DTL t=" + FixedToString(GameGetMissionTime(), 1) + " ghostLife " + FixedToString(UnitGetPropertyFixed(lv_g, c_unitPropLife, c_unitPropCurrent), 0);
+    lv_i = 0;
+    while (lv_i < go_dtN) {
+        if ((go_dtU[lv_i] != null) && UnitIsAlive(go_dtU[lv_i])) {
+            lv_t = lv_t + " | " + UnitGetType(go_dtU[lv_i]) + " d=" + FixedToString(DistanceBetweenPoints(UnitGetPosition(go_dtU[lv_i]), UnitGetPosition(lv_g)), 1) + " vis=" + IntToString(GhostOps_Ce0_B(VisIsVisibleForPlayer(1, UnitGetPosition(go_dtU[lv_i])))) + " buff=" + IntToString(UnitBehaviorCount(go_dtU[lv_i], "HeroDetectorRadarDetected"));
+        }
+        else {
+            lv_t = lv_t + " | dead";
+        }
+
+        lv_i += 1;
+    }
+
+    GhostOps_Ce0_Write("j", lv_t);
+    go_dtCount += 1;
+    if (go_dtCount >= 150) {
+        TriggerDestroy(TriggerGetCurrent());
+    }
+
+    return true;
+}
+
+bool GhostOps_Ce0_DetCmd (string lp_cmd, string lp_a, string lp_b) {
+    unit lv_g;
+    unit lv_u;
+    unitgroup lv_grp;
+
+    if ((lp_cmd == "dtsp") || (lp_cmd == "dtov")) {
+        // an enemy (player 2) Spore Crawler / Overseer at the offset (a, b) from the first Ghost
+        lv_g = GhostOps_Ce0_Ghost1();
+        if (lp_cmd == "dtsp") {
+            UnitCreate(1, "SporeCrawler", 0, 2, PointWithOffset(UnitGetPosition(lv_g), StringToFixed(lp_a), StringToFixed(lp_b)), 270.0);
+        }
+        else {
+            UnitCreate(1, "Overseer", 0, 2, PointWithOffset(UnitGetPosition(lv_g), StringToFixed(lp_a), StringToFixed(lp_b)), 270.0);
+        }
+
+        lv_u = UnitLastCreated();
+        if (lp_cmd == "dtov") {
+            libNtve_gf_PauseUnit(lv_u, true);
+        }
+
+        if (go_dtN < 6) {
+            go_dtU[go_dtN] = lv_u;
+            go_dtN += 1;
+        }
+
+        if (go_dumG != null) {
+            UnitGroupAdd(go_dumG, lv_u);
+        }
+
+        GhostOps_Ce0_Write("j", "DT placed " + UnitGetType(lv_u) + " index " + IntToString(go_dtN - 1) + " owner " + IntToString(UnitGetOwner(lv_u)));
+        return true;
+    }
+
+    if (lp_cmd == "dtmv") {
+        // the detector with the index a walks (flies) to the offset b-th... : (a = index, b = dx; dy = 0) relative to the first Ghost
+        lv_g = GhostOps_Ce0_Ghost1();
+        libNtve_gf_PauseUnit(go_dtU[StringToInt(lp_a)], false);
+        UnitIssueOrder(go_dtU[StringToInt(lp_a)], OrderTargetingPoint(AbilityCommand("move", 0), PointWithOffset(UnitGetPosition(lv_g), StringToFixed(lp_b), 0.0)), c_orderQueueReplace);
+        GhostOps_Ce0_Write("j", "DTMV detector " + lp_a + " moves to dx " + lp_b);
+        return true;
+    }
+
+    if (lp_cmd == "dtkill") {
+        UnitKill(go_dtU[StringToInt(lp_a)]);
+        GhostOps_Ce0_Write("j", "DTKILL detector " + lp_a);
+        return true;
+    }
+
+    if (lp_cmd == "dtlog") {
+        go_dtCount = 0;
+        go_dtTick = TriggerCreate("GhostOps_Ce0_DtTick");
+        TriggerAddEventTimePeriodic(go_dtTick, 0.4, c_timeGame);
+        return true;
+    }
+
+    if (lp_cmd == "dtz") {
+        // an enemy Zergling (player 2) at the offset (a, b) from the first Ghost: it attacks the Ghost only when the Ghost is DETECTED
+        lv_g = GhostOps_Ce0_Ghost1();
+        UnitCreate(1, "Zergling", 0, 2, PointWithOffset(UnitGetPosition(lv_g), StringToFixed(lp_a), StringToFixed(lp_b)), 270.0);
+        go_dtZ = UnitLastCreated();
+        UnitSetPropertyFixed(go_dtZ, c_unitPropLifeMax, 3000.0);
+        UnitSetPropertyFixed(go_dtZ, c_unitPropLife, 3000.0);
+        UnitIssueOrder(go_dtZ, Order(AbilityCommand("move", 2)), c_orderQueueReplace);
+        if (go_dumG != null) {
+            UnitGroupAdd(go_dumG, go_dtZ);
+        }
+
+        GhostOps_Ce0_Write("j", "DTZ zergling placed");
+        return true;
+    }
+
+    if (lp_cmd == "selghosts") {
+        lv_grp = UnitGroup("Ghost", 1, RegionEntireMap(), GhostOps_DEF_Live(), 0);
+        UnitGroupSelect(lv_grp, 1, true);
+        CameraPan(1, UnitGetPosition(UnitGroupUnit(lv_grp, 1)), 0.0, -1, 10.0, false);
+        GhostOps_Ce0_Write("j", "SELGHOSTS " + IntToString(UnitGroupCount(lv_grp, c_unitCountAlive)) + " selected");
+        return true;
+    }
+
+    if (lp_cmd == "selmix") {
+        lv_grp = UnitGroup("Ghost", 1, RegionEntireMap(), GhostOps_DEF_Live(), 0);
+        UnitGroupAddUnitGroup(lv_grp, UnitGroup("Marine", 1, RegionEntireMap(), GhostOps_DEF_Live(), 3));
+        UnitGroupSelect(lv_grp, 1, true);
+        CameraPan(1, UnitGetPosition(GhostOps_Ce0_Ghost1()), 0.0, -1, 10.0, false);
+        GhostOps_Ce0_Write("j", "SELMIX " + IntToString(UnitGroupCount(lv_grp, c_unitCountAlive)) + " selected");
+        return true;
+    }
+
+    if (lp_cmd == "mku") {
+        // creates one unit of the type a for the player at the offset (b, 0) from the first Ghost and selects it (does the type exist in the data of this map?)
+        lv_g = GhostOps_Ce0_Ghost1();
+        UnitCreate(1, lp_a, 0, 1, PointWithOffset(UnitGetPosition(lv_g), StringToFixed(lp_b), 0.0), 270.0);
+        lv_u = UnitLastCreated();
+        if (lv_u == null) {
+            GhostOps_Ce0_Write("j", "MKU " + lp_a + " NOT created");
+        }
+        else {
+            UnitSelect(lv_u, 1, true);
+            GhostOps_Ce0_Write("j", "MKU " + lp_a + " created and selected: " + UnitGetType(lv_u));
+        }
+
+        return true;
+    }
+
+    if (lp_cmd == "ghold") {
+        // the Ghosts hold their position (they do not wander after enemies): a stable scene for the screenshots
+        lv_grp = UnitGroup("Ghost", 1, RegionEntireMap(), GhostOps_DEF_Live(), 0);
+        UnitSetPosition(UnitGroupUnit(lv_grp, 1), Point(90.0, 48.0), false);
+        UnitSetPosition(UnitGroupUnit(lv_grp, 2), Point(91.5, 48.0), false);
+        UnitGroupIssueOrder(lv_grp, Order(AbilityCommand("move", 2)), c_orderQueueReplace);
+        GhostOps_Ce0_Write("j", "GHOLD " + IntToString(UnitGroupCount(lv_grp, c_unitCountAlive)) + " ghosts hold position at " + FixedToString(PointGetX(UnitGetPosition(GhostOps_Ce0_Ghost1())), 1) + "," + FixedToString(PointGetY(UnitGetPosition(GhostOps_Ce0_Ghost1())), 1));
+        return true;
+    }
+
+    if (lp_cmd == "selonly") {
+        // only the first unit of the type a is selected (the selection is replaced)
+        UnitClearSelection(1);
+        lv_u = UnitGroupUnit(UnitGroup(lp_a, 1, RegionEntireMap(), GhostOps_DEF_Live(), 0), 1);
+        UnitSelect(lv_u, 1, true);
+        CameraPan(1, UnitGetPosition(GhostOps_Ce0_Ghost1()), 0.0, -1, 10.0, false);
+        GhostOps_Ce0_Write("j", "SELONLY " + lp_a + " selected alone");
+        return true;
+    }
+
+    if (lp_cmd == "dtbuff") {
+        lv_g = GhostOps_Ce0_Ghost1();
+        GhostOps_Ce0_Write("j", "DTBUFF ghost has radar behavior " + IntToString(UnitBehaviorCount(lv_g, "HeroDetectorRadar")));
+        return true;
+    }
+
+    return false;
+}
+
 bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
     int lv_i;
     unit lv_g1;
@@ -1033,6 +1209,14 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
     }
 
     if (GhostOps_Ce0_AimCmd(lp_cmd, lp_a, lp_b)) {
+        return true;
+    }
+
+    if (GhostOps_Ce0_TraceCmd(lp_cmd, lp_a, lp_b)) {
+        return true;
+    }
+
+    if (GhostOps_Ce0_DetCmd(lp_cmd, lp_a, lp_b)) {
         return true;
     }
 

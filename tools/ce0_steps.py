@@ -9,6 +9,7 @@ Steps (every one is bounded; nothing loops forever):
   key KEYS...                posted keys into OUR window ("keys": ["ESC"])
   cmd TEXT [wait]            a probe command typed into the game chat
   sleep S
+  expect_def REGEX [count]   like expect, over the log bank of the defence module (exact number of matching lines with count)
   click X Y                  posted left click into OUR window (client coordinates)
   move X Y                   posted mouse-move into OUR window (client coordinates)
   until GREP [cmd] [every] [timeout]   repeat `cmd` until the regexp GREP appears in the journal lines after the last mark (fails the scenario on timeout)
@@ -109,6 +110,19 @@ class Scenario:
         sc2_ui.click(ce0_session.load_state()['pid'], s['x'], s['y'])
         self.record('click', x=s['x'], y=s['y'])
 
+    def op_expect_def(self, s):
+        """The same as expect, but over the log Bank of the defence module (GhostOpsDevDef: scenes, landings, waves): `count` = the exact number of matching lines (default: at least one)."""
+        rx = re.compile(s['regex'])
+        rows = []
+        for f in ce0_session.bank_files('GhostOpsDevDef'):
+            for k, v in ce0_session.read_bank(f).get('log', {}).items():
+                rows.append(v)
+        hits = [t for t in rows if rx.search(t)]
+        good = (len(hits) == s['count']) if 'count' in s else bool(hits)
+        if not good:
+            self.ok = False
+        self.record('expect_def', regex=s['regex'], count=s.get('count'), found=len(hits), ok=good, lines=hits[-20:], note=s.get('note', ''))
+
     def op_sleep(self, s):
         time.sleep(s['s'])
         self.record('sleep', s=s['s'])
@@ -139,7 +153,7 @@ class Scenario:
         good = (not hits) if s.get('absent') else bool(hits)
         if not good:
             self.ok = False
-        self.record('expect', regex=s['regex'], absent=bool(s.get('absent')), ok=good, lines=hits[-40:], note=s.get('note', ''))
+        self.record('expect', regex=s['regex'], absent=bool(s.get('absent')), ok=good, lines=hits[-400:], note=s.get('note', ''))
 
     def _menu(self, mode, name):
         pid = ce0_session.load_state()['pid']

@@ -146,5 +146,7 @@
       "function": "gt_ZergDropPodExpansion2_Func",
       "group": 0
     }
-  ]
+  ],
+  "ce0_trace": "adapters/traynor03/ce0_trace.galaxy",
+  "ce0_trace_only": "adapters/traynor03/ce0_trace_only.galaxy"
 }

@@ -1,0 +1,52 @@
+{
+ "name": "trace_defence",
+ "mission": "traynor03",
+ "preset": "defence_next_dev",
+ "why": "defence build, nothing forced: scenes and arrivals",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 3
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "cmd",
+   "text": "arr"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ARR t=4[5-9]\\d",
+   "every": 10,
+   "timeout": 800
+  },
+  {
+   "op": "expect",
+   "regex": "TRACE ",
+   "note": "scenes / transmissions / waves in the order they ran"
+  },
+  {
+   "op": "expect",
+   "regex": "ARR t=",
+   "note": "arrival counters every 10 s"
+  },
+  {
+   "op": "expect",
+   "regex": "(LOAD|SNAP) ",
+   "note": "probe snapshots"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

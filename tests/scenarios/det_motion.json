@@ -1,0 +1,110 @@
+{
+ "name": "det_motion",
+ "mission": "traynor03",
+ "preset": "defence_next_dev",
+ "why": "the buff follows visibility and death",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "until",
+   "grep": "DST2 landing 222",
+   "cmd": "dst",
+   "every": 4,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "nofoe"
+  },
+  {
+   "op": "cmd",
+   "text": "pausem"
+  },
+  {
+   "op": "cmd",
+   "text": "ghold"
+  },
+  {
+   "op": "until",
+   "grep": "TRACE gt_TransmissionFirstZergWaveIncomingQ",
+   "every": 3,
+   "timeout": 150
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "dtov 8 3"
+  },
+  {
+   "op": "cmd",
+   "text": "dtsp 7 -3"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "cmd",
+   "text": "dtlog"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "dtmv 0 45"
+  },
+  {
+   "op": "sleep",
+   "s": 12
+  },
+  {
+   "op": "cmd",
+   "text": "dtmv 0 8"
+  },
+  {
+   "op": "sleep",
+   "s": 8
+  },
+  {
+   "op": "cmd",
+   "text": "dtkill 1"
+  },
+  {
+   "op": "sleep",
+   "s": 5
+  },
+  {
+   "op": "expect",
+   "regex": "Overseer d=\\d+\\.\\d vis=1 buff=1",
+   "note": "visible: buff on"
+  },
+  {
+   "op": "expect",
+   "regex": "Overseer d=\\d+\\.\\d vis=0 buff=0",
+   "note": "out of sight (still within 25 of the Ghost or not): NO buff, no circle"
+  },
+  {
+   "op": "expect",
+   "regex": "\\| dead",
+   "note": "a killed detector is gone"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

@@ -1,0 +1,68 @@
+{
+ "name": "uid_defence",
+ "mission": "traynor03",
+ "preset": "defence_next_dev",
+ "why": "object ids in the defence build (after the stock units were removed)",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 2
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "cmd",
+   "text": "uid 366"
+  },
+  {
+   "op": "cmd",
+   "text": "uid 855"
+  },
+  {
+   "op": "cmd",
+   "text": "uid 548"
+  },
+  {
+   "op": "cmd",
+   "text": "uid 788"
+  },
+  {
+   "op": "cmd",
+   "text": "uid 23"
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "expect",
+   "regex": "UID 366",
+   "note": "target of the first wave group 1"
+  },
+  {
+   "op": "expect",
+   "regex": "UID 855",
+   "note": "target of the first wave group 2"
+  },
+  {
+   "op": "expect",
+   "regex": "UID 548",
+   "note": "nydus of the teal base"
+  },
+  {
+   "op": "expect",
+   "regex": "UID 23 ",
+   "note": "alert point object"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

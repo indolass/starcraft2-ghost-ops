@@ -1,0 +1,108 @@
+{
+ "name": "det_saveload",
+ "mission": "traynor03",
+ "preset": "defence_next_dev",
+ "why": "save / load with a detector in range",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "until",
+   "grep": "DST2 landing 222",
+   "cmd": "dst",
+   "every": 4,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "nofoe"
+  },
+  {
+   "op": "cmd",
+   "text": "pausem"
+  },
+  {
+   "op": "cmd",
+   "text": "ghold"
+  },
+  {
+   "op": "until",
+   "grep": "TRACE gt_TransmissionFirstZergWaveIncomingQ",
+   "every": 3,
+   "timeout": 150
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "dtsp 6 0"
+  },
+  {
+   "op": "cmd",
+   "text": "selghosts"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "shot",
+   "file": "dsl_0_before.png"
+  },
+  {
+   "op": "save",
+   "name": "CE0_DET"
+  },
+  {
+   "op": "load",
+   "name": "CE0_DET"
+  },
+  {
+   "op": "sleep",
+   "s": 4
+  },
+  {
+   "op": "cmd",
+   "text": "selghosts"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "shot",
+   "file": "dsl_1_after.png"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "cmd",
+   "text": "dtlog"
+  },
+  {
+   "op": "sleep",
+   "s": 5
+  },
+  {
+   "op": "expect",
+   "regex": "SporeCrawler d=\\d+\\.\\d vis=1 buff=1",
+   "note": "after the load the detector is again marked once (one buff, not two)"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

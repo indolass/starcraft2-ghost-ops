@@ -1,0 +1,11 @@
+// CE-0 probe of the ORIGINAL-like trace profile (orig_trace_dev): only the scene trace and the arrival counters, nothing of the Ghost Ops modules
+string GhostOps_Ce0_Extra () {
+    return "orig trace";
+}
+
+void GhostOps_Ce0_MissionStart () {
+}
+
+bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
+    return GhostOps_Ce0_TraceCmd(lp_cmd, lp_a, lp_b);
+}
