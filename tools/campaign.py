@@ -333,3 +333,76 @@ def collect(path, operation_id, launched_at, intent='fresh', bank=None):
     proposals = [p for p in proposals if p['op'] == operation_id]
     s, held = observe(path, records, intent)
     return {'fresh': True, 'records': records, 'proposals': proposals, 'held': held}
+
+
+# ---- results of builds that were started WITHOUT an operation of the campaign (the launcher card, a standalone start) -------------------------------------------
+# Such a map writes its journal with op=STANDALONE. The campaign never reads it by itself (no operation, no immutable set, no payment): the player may ADOPT a victory
+# result of such a run after seeing the exact numbers and its source. One result id is adopted once; the stock change and the accepted mark are ONE commit.
+def archive_dir():
+    return os.path.join(APP_DIR, 'bank_archive')
+
+
+def scan_banks(extra=None):
+    """Read-only list of the Bank files that may hold a journal: the current one and the archived ones (the launcher moves the old file there before a campaign launch)."""
+    files = []
+    cur = bank_file()
+    if os.path.exists(cur):
+        files.append(cur)
+    d = archive_dir()
+    if os.path.isdir(d):
+        files += sorted((os.path.join(d, f) for f in os.listdir(d) if f.endswith('.SC2Bank')), key=os.path.getmtime)
+    for f in extra or []:
+        if os.path.exists(f) and f not in files:
+            files.append(f)
+    return files
+
+
+def standalone_scan(mission, banks=None):
+    """What the journals say about standalone runs of the mission: {'banks': [paths], 'started': n (START / LOADED records), 'results': [proposals with 'source']}.
+    The same result written into both sections of a journal, or found in a Bank and in its archived copy, is ONE result (by id)."""
+    files = banks if banks is not None else scan_banks()
+    started, results, seen = 0, [], set()
+    for f in files:
+        records, proposals = parse_journal(journal_rows(f))
+        started += sum(1 for r in records if r['op'] == STANDALONE and r.get('mission') == mission)
+        for p in proposals:
+            if p['op'] == STANDALONE and p.get('mission') == mission and p['result_id'] not in seen:
+                seen.add(p['result_id'])
+                q = dict(p)
+                q['source'] = f
+                results.append(q)
+    return {'banks': files, 'started': started, 'results': results}
+
+
+def adopt_standalone(path, proposal, profile, crash_at=None):
+    """The player confirmed the standalone result: the remainder goes into the stock ONCE. It becomes an `accepted` pseudo-operation of the mission (`standalone: true`,
+    no cost, no attempts), so the campaign knows the mission was completed; the ledger names it. Rejected (nothing changes): an unknown shape, a result that is not a
+    victory, a negative amount, an already accepted id, a mission that already has an accepted operation."""
+    s = load(path)
+    if proposal.get('op') != STANDALONE:
+        raise Rejected('this is not a standalone result')
+    if proposal.get('outcome') != 'victory':
+        raise Rejected('only a victory result can be adopted')
+    if proposal['result_id'] in s['accepted_results']:
+        raise Rejected('this result was already accepted')
+    mission = proposal.get('mission')
+    if not mission:
+        raise Rejected('the result names no mission')
+    for op in s['operations'].values():
+        if op['mission'] == mission and op['state'] == 'accepted':
+            raise Rejected('the mission already has an accepted operation')
+    for k in RES:
+        if int(proposal[k]) < 0:
+            raise Rejected('negative resource')
+    op_id = 'SA-' + proposal['result_id']
+    if op_id in s['operations']:
+        raise Rejected('this result was already adopted')
+    for k in RES:
+        s['stock'][k] += int(proposal[k])
+    s['ledger'].append({'op': op_id, 'kind': 'return_standalone', 'result_id': proposal['result_id'], 'minerals': int(proposal['minerals']), 'gas': int(proposal['gas'])})
+    s['accepted_results'].append(proposal['result_id'])
+    s['operations'][op_id] = {'mission': mission, 'profile': profile, 'cost': {'minerals': 0, 'gas': 0}, 'handed': {}, 'data_hash': proposal.get('data_hash'), 'order': None,
+                              'state': 'accepted', 'attempts': {}, 'accepted_result': proposal['result_id'], 'report': report(proposal), 'standalone': True,
+                              'created': time.time()}
+    commit(path, s, crash_at)
+    return s

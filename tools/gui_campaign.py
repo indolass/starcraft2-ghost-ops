@@ -3,6 +3,7 @@
 Window: the campaign stock, step 1 "Вне закона" (start / continue / restart / refuse, the result of the map as a PROPOSAL to confirm), step 2 "Час икс"
 (the order form with prices, limits, total and shortage; pay once and start). Nothing here closes or moves a running game.
 """
+import os
 import queue
 import threading
 
@@ -76,6 +77,7 @@ def make_window_class(ctk, pal):
             ctk.CTkLabel(self.body, text='Запас кампании меняют только подтверждённый результат карты и оплата заказа. Закрытие игры не отменяет операцию: сохраните, закройте и продолжите позже.',
                          font=(FONT, 12), text_color=MUTED, anchor='w', justify='left', wraplength=740).grid(row=1, column=0, sticky='ew', padx=14, pady=(0, 6))
             self._draw_pending(2)
+            self._draw_standalone(5)
             self._draw_step1(3)
             self._draw_step2(4)
 
@@ -94,6 +96,42 @@ def make_window_class(ctk, pal):
                 self.button(f, 'Принять этот результат', lambda pp=p: self.accept(pp), primary=True).grid(row=3 + i * 4, column=0, sticky='w', padx=16, pady=(6, 4))
             ctk.CTkLabel(f, text='Остаток в кампанию попадает один раз. Пока результат не принят, новые запуски операций недоступны (журнал карты не теряется).',
                          font=(FONT, 11), text_color=MUTED, anchor='w', justify='left', wraplength=730).grid(row=2 + len(self.pending) * 4, column=0, sticky='ew', padx=16, pady=(0, 10))
+
+        def _draw_standalone(self, row):
+            """The result of a run that was started from the launcher card (outside the campaign): found / already counted / not connected / not found + the reason."""
+            info = self.flow.standalone_status('traynor02')
+            color = {'found': AMBER, 'accepted': GREEN, 'not_connected': MUTED, 'not_found': MUTED}[info['state']]
+            f = ctk.CTkFrame(self.body, fg_color=CARD, corner_radius=12, border_width=2 if info['state'] == 'found' else 1, border_color=AMBER if info['state'] == 'found' else LINE)
+            f.grid(row=row, column=0, sticky='ew', padx=6, pady=8)
+            f.grid_columnconfigure(0, weight=1)
+            ctk.CTkLabel(f, text='Самостоятельное прохождение «Вне закона» (запуск с карточки, вне кампании)', font=(FONT, 15, 'bold'), text_color=TEXT, anchor='w').grid(
+                row=0, column=0, sticky='ew', padx=16, pady=(10, 2))
+            ctk.CTkLabel(f, text=info['text'], font=(FONT, 13, 'bold'), text_color=color, anchor='w', justify='left', wraplength=740).grid(row=1, column=0, sticky='ew', padx=16)
+            r = 2
+            for p in info['results']:
+                rep = campaign.report(p)
+                src = 'Источник: журнал карты %s (Documents\\StarCraft II\\Banks), результат %s, запуск вне кампании (операция %s), игровое время %s с, профиль карты: %s (хэш данных %s).' % (
+                    os.path.basename(p['source']), p['result_id'], p['op'], p['mission_time'].split('.')[0], p.get('profile') or 'не определён', p.get('data_hash'))
+                ctk.CTkLabel(f, text='Победа. В запас кампании будет зачислено ровно: %d минералов, %d газа.' % (p['minerals'], p['gas']), font=(FONT, 14, 'bold'), text_color=TEXT,
+                             anchor='w').grid(row=r, column=0, sticky='ew', padx=16, pady=(6, 0))
+                ctk.CTkLabel(f, text='\n'.join(campaign.report_lines(rep)) + '\n' + src, font=(FONT, 11), text_color=MUTED, anchor='w', justify='left', wraplength=740).grid(
+                    row=r + 1, column=0, sticky='ew', padx=16)
+                if info['state'] == 'found':
+                    self.button(f, 'Зачислить в кампанию (один раз)', lambda pp=p: self.adopt(pp), primary=True, state='disabled' if info['blocked'] else 'normal', width=260).grid(
+                        row=r + 2, column=0, sticky='w', padx=16, pady=(6, 4))
+                r += 3
+            ctk.CTkLabel(f, text='Самостоятельный запуск карты с карточки в кампанию не записывается сам: остаток попадает в запас только после вашего подтверждения здесь или как результат операции кампании.',
+                         font=(FONT, 11), text_color=MUTED, anchor='w', justify='left', wraplength=740).grid(row=r, column=0, sticky='ew', padx=16, pady=(0, 10))
+
+        def adopt(self, proposal):
+            try:
+                self.flow.adopt_standalone(proposal)
+            except campaign.Rejected as e:
+                self.say('Результат не зачислен: %s' % e, RED)
+                self.refresh()
+                return
+            self.say('Результат зачислен: %d минералов и %d газа добавлены в запас кампании одной записью.' % (proposal['minerals'], proposal['gas']), GREEN)
+            self.refresh()
 
         def _op_buttons(self, f, row, mission, preset):
             opn = self.flow.open_operation(mission)
@@ -120,9 +158,9 @@ def make_window_class(ctk, pal):
             if acc and acc[1].get('report'):
                 ctk.CTkLabel(f, text='\n'.join(campaign.report_lines(acc[1]['report'])), font=(FONT, 12), text_color=MUTED, anchor='w', justify='left',
                              wraplength=740).grid(row=2, column=0, sticky='ew', padx=16, pady=(0, 4))
-            if not self._op_buttons(f, 3, 'traynor02', 'tactical')[0]:
+            if not self._op_buttons(f, 3, 'traynor02', cf.step_of('traynor02')['preset'])[0]:
                 if not acc:
-                    self.button(f, 'Начать «Вне закона»', lambda: self.run_async(lambda: self.flow.start_new('traynor02', 'tactical')), primary=True).grid(row=3, column=0, sticky='w', padx=16, pady=(4, 12))
+                    self.button(f, 'Начать «Вне закона»', lambda: self.run_async(lambda: self.flow.start_new('traynor02', cf.step_of('traynor02')['preset'])), primary=True).grid(row=3, column=0, sticky='w', padx=16, pady=(4, 12))
                 else:
                     ctk.CTkLabel(f, text='Операция завершена. Повтор принятой операции доход не даёт (правила практики и отката ещё не определены).', font=(FONT, 11), text_color=MUTED,
                                  anchor='w', justify='left', wraplength=740).grid(row=3, column=0, sticky='ew', padx=16, pady=(0, 12))

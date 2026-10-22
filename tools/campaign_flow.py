@@ -15,7 +15,7 @@ import campaign
 
 # missions that take part in the campaign sequence, in the order of the first economy experiment
 SEQUENCE = [
-    {'mission': 'traynor02', 'preset': 'tactical', 'title': 'Вне закона', 'order': False},
+    {'mission': 'traynor02', 'preset': 'tactical_next', 'title': 'Вне закона', 'order': False},  # the current version (the earlier operations keep their own profile 'tactical')
     {'mission': 'traynor03', 'preset': 'standard', 'title': 'Час икс', 'order': True},
 ]
 ORDER_LABELS = {'marines': 'Морпехи гарнизона', 'bunkers': 'Бункеры', 'turrets': 'Ракетные турели', 'scvs': 'КСМ для ремонта'}
@@ -204,6 +204,56 @@ class CampaignFlow:
         op = self.state()['operations'].get(launch['op'])
         props = [p for p in got['proposals'] if p['outcome'] == 'victory' and op and op['state'] != 'accepted' and p['result_id'] not in s['accepted_results']]
         return {'op': launch['op'], 'proposals': props, 'held': got['held'], 'fresh': got['fresh']}
+
+    # ---- standalone results (a start from the launcher card, outside the campaign) ----------------------------------------------------------------
+    def profile_of_hash(self, mission, data_hash):
+        """Which profile built the map that wrote a result: the data hash of every last build of the mission is kept in build/last_build_<mission>_<preset>.json."""
+        import glob
+        for f in glob.glob(os.path.join(build.ROOT, 'build', 'last_build_%s_*.json' % mission)):
+            try:
+                with open(f, encoding='utf-8') as fh:
+                    d = json.load(fh)
+            except (OSError, ValueError):
+                continue
+            if data_hash and d.get('data_hash') == data_hash and d.get('preset'):
+                return d['preset']
+        return None
+
+    def standalone_status(self, mission='traynor02', banks=None):
+        """What the window must say about runs of the mission outside the campaign. state: found (waiting for acceptance) / accepted / not_connected / not_found,
+        with the exact reason in `text` and the exact numbers of every found result."""
+        s = self.state()
+        scan = campaign.standalone_scan(mission, banks)
+        found, done = [], []
+        for p in scan['results']:
+            p = dict(p)
+            p['profile'] = self.profile_of_hash(mission, p.get('data_hash'))
+            if p['result_id'] in s['accepted_results']:
+                done.append(p)
+            elif p['outcome'] == 'victory':
+                found.append(p)
+        acc = self.accepted_operation(mission)
+        if found:
+            blocked = ('' if not acc else ' Принять его нельзя: у миссии уже есть принятая операция (%s).' % acc[0])
+            return {'state': 'found', 'results': found, 'blocked': bool(acc),
+                    'text': 'Результат самостоятельного прохождения найден и ожидает принятия.' + blocked}
+        if done:
+            return {'state': 'accepted', 'results': done, 'blocked': False, 'text': 'Результат самостоятельного прохождения уже зачислен в кампанию.'}
+        if scan['started']:
+            return {'state': 'not_connected', 'results': [], 'blocked': False,
+                    'text': 'Самостоятельное прохождение не подключено к кампании: карта запускалась без операции кампании, а победного результата в журнале нет '
+                            '(игра не доиграна до победы или закончилась поражением).'}
+        if not scan['banks']:
+            why = 'журнал карты не найден (файл Bank «%s» отсутствует в %s и в архиве запускателя)' % (campaign.BANK_NAME, campaign.bank_dir())
+        else:
+            why = 'в журналах карты нет записей самостоятельного прохождения «%s»' % mission
+        return {'state': 'not_found', 'results': [], 'blocked': False, 'text': 'Результат не найден: %s.' % why}
+
+    def adopt_standalone(self, proposal):
+        """The player confirmed the standalone result shown to him: ONE atomic write (stock + accepted mark + the pseudo-operation). Returns the report."""
+        profile = self.profile_of_hash(proposal.get('mission'), proposal.get('data_hash')) or 'неизвестный профиль'
+        s = campaign.adopt_standalone(self.path, proposal, profile)
+        return s['operations']['SA-' + proposal['result_id']]['report']
 
     def accept(self, proposal):
         """The player confirmed THIS proposal: stock change and the accepted mark are one atomic write."""
