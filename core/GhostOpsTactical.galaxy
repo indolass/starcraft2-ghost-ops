@@ -81,6 +81,23 @@ fixed go_tacHintGap;
 trigger go_tacHoldTrig;
 trigger go_tacGrenadeTrig;
 
+// Labels above the rescued fighters (TRaynor02 v2): a text tag follows the unit (hidden in the fog, destroyed with the unit, drawn again after a loaded game)
+bool go_tacRebelLabels;
+bool go_tacMsgEmpty;           // the text "charges are out" exists in this profile
+unit[64] go_tacRebUnit;
+int[64] go_tacRebTag;
+int go_tacRebCount;
+trigger go_tacRebTrig;
+
+// New victory (TRaynor02 v2): all enemy production buildings of the listed types (adapter.galaxy runs the check)
+bool go_tacVictory;
+int go_tacVicCount;
+string[16] go_tacVicType;
+bool go_tacVicSeen;            // at least one listed building was seen alive (never an instant victory on an empty map)
+int go_tacVicLeft;
+int go_tacVicObj;
+trigger go_tacVicTrig;
+
 // Story lines (TRaynor02): the table is generated from the config (tactical.lines): stable id, speaker, on-screen seconds, optional voice clip id (empty = text only,
 // the portrait talks with silent lip-sync drivers). A recorded voice is connected by putting its clip id into the config line: no scene code changes.
 int go_lnCount;
@@ -247,6 +264,97 @@ void GhostOps_Tac_MakeTrained (unit lp_unit, string lp_source) {
     UnitSetPropertyFixed(lp_unit, c_unitPropLife, go_tacTrainedLife);
 }
 
+// ---- labels of the rescued units ----
+void GhostOps_Tac_RebelDestroyAll () {
+    int lv_i;
+
+    lv_i = 0;
+    while (lv_i < go_tacRebCount) {
+        TextTagDestroy(go_tacRebTag[lv_i]);
+        go_tacRebUnit[lv_i] = null;
+        lv_i += 1;
+    }
+
+    go_tacRebCount = 0;
+}
+
+bool GhostOps_Tac_RebelHas (unit lp_unit) {
+    int lv_i;
+
+    lv_i = 0;
+    while (lv_i < go_tacRebCount) {
+        if (go_tacRebUnit[lv_i] == lp_unit) {
+            return true;
+        }
+
+        lv_i += 1;
+    }
+
+    return false;
+}
+
+void GhostOps_Tac_RebelLabel (unit lp_unit) {
+    text lv_name;
+
+    if (!go_tacRebelLabels || (lp_unit == null) || !UnitIsAlive(lp_unit)) {
+        return;
+    }
+
+    if (UnitFilterMatch(lp_unit, 1, UnitFilter((1 << c_targetFilterStructure), 0, 0, 0))) {
+        return;
+    }
+
+    if (GhostOps_Tac_RebelHas(lp_unit) || (go_tacRebCount >= 64)) {
+        return;
+    }
+
+    lv_name = StringExternal("Param/Value/GhostOpsTac_RebelTag");
+    if (UnitGetType(lp_unit) == "Medic") {
+        lv_name = StringExternal("Param/Value/GhostOpsTac_RebelMedicTag");
+    }
+
+    // the name / description of THIS unit only (the Marine type is not renamed)
+    UnitSetInfoText(lp_unit, lv_name, StringExternal("Param/Value/GhostOpsTac_RebelInfo"), StringExternal("Param/Value/GhostOpsTac_RebelInfo"));
+    UnitSetState(lp_unit, c_unitStateTooltipable, true);
+    TextTagCreate(lv_name, 12, UnitGetPosition(lp_unit), 0.0, true, false, PlayerGroupAll());
+    TextTagAttachToUnit(TextTagLastCreated(), lp_unit, 1.8);
+    go_tacRebTag[go_tacRebCount] = TextTagLastCreated();
+    go_tacRebUnit[go_tacRebCount] = lp_unit;
+    go_tacRebCount += 1;
+}
+
+// Every second: tags of the dead are destroyed, a rescued unit that has no tag yet gets one (also after a loaded game: the tags were destroyed by the load).
+bool GhostOps_Tac_RebelTick (bool lp_testConds, bool lp_runActions) {
+    int lv_i;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    lv_i = 0;
+    while (lv_i < go_tacRebCount) {
+        if ((go_tacRebUnit[lv_i] == null) || !UnitIsAlive(go_tacRebUnit[lv_i])) {
+            TextTagDestroy(go_tacRebTag[lv_i]);
+            go_tacRebCount -= 1;
+            go_tacRebUnit[lv_i] = go_tacRebUnit[go_tacRebCount];
+            go_tacRebTag[lv_i] = go_tacRebTag[go_tacRebCount];
+            go_tacRebUnit[go_tacRebCount] = null;
+        }
+        else {
+            lv_i += 1;
+        }
+    }
+
+    UnitGroupLoopBegin(go_tacRescued);
+    while (UnitGroupLoopCurrent() != null) {
+        GhostOps_Tac_RebelLabel(UnitGroupLoopCurrent());
+        UnitGroupLoopStep();
+    }
+
+    UnitGroupLoopEnd();
+    return true;
+}
+
 // Hook: called for every unit the rebel rescue hands over (right after the original change of owner).
 void GhostOps_Tac_OnRescue (unit lp_unit) {
     if (!go_tacEnabled) {
@@ -259,6 +367,7 @@ void GhostOps_Tac_OnRescue (unit lp_unit) {
 
     UnitGroupAdd(go_tacRescued, lp_unit);
     GhostOps_Tac_Log("rescued " + UnitGetType(lp_unit));
+    GhostOps_Tac_RebelLabel(lp_unit);
 }
 
 bool GhostOps_Tac_CreatedTick (bool lp_testConds, bool lp_runActions) {
@@ -421,6 +530,7 @@ bool GhostOps_Tac_LoadedTick (bool lp_testConds, bool lp_runActions) {
     }
 
     go_tacTagCount = 0;
+    GhostOps_Tac_RebelDestroyAll();
     TextTagDestroy(go_tacRoleTags[0]);
     TextTagDestroy(go_tacRoleTags[1]);
     if (go_tacMarkers) {
@@ -676,6 +786,9 @@ bool GhostOps_Tac_GrenadeTick (bool lp_testConds, bool lp_runActions) {
     GhostOps_Tac_Log("grenade shot, charges left " + IntToString(go_tacGrenadeAmmo));
     if ((go_tacGrenadeAmmo <= 0) && GhostOps_Tac_Alive(go_tacOperative)) {
         UnitAbilityEnable(go_tacOperative, "GhostOpsArmorPiercing", false);
+        if (go_tacMsgEmpty) {
+            GhostOps_Tac_Say("Param/Value/GhostOpsTac_GrenadeEmpty");
+        }
     }
 
     return true;
@@ -741,6 +854,7 @@ void GhostOps_Tac_OnGhostsDelivered (unit lp_spotter, unit lp_operative) {
     if (go_tacGrenade) {
         go_tacGrenadeAmmo = go_tacGrenadeMax;
         go_pnGrenades = go_tacGrenadeAmmo;
+        go_pnGrenadeMax = go_tacGrenadeMax;
         go_pnGrenadeSlot = 1;
         UnitAbilityEnable(go_tacSpotter, "GhostOpsArmorPiercing", false);
         go_tacGrenadeTrig = TriggerCreate("GhostOps_Tac_GrenadeTick");
@@ -797,6 +911,11 @@ void GhostOps_Tac_Start () {
 
     go_tacZoneTrig = TriggerCreate("GhostOps_Tac_ZoneTick");
     TriggerAddEventTimePeriodic(go_tacZoneTrig, 0.25, c_timeGame);
+    if (go_tacRebelLabels) {
+        go_tacRebTrig = TriggerCreate("GhostOps_Tac_RebelTick");
+        TriggerAddEventTimePeriodic(go_tacRebTrig, 1.0, c_timeGame);
+    }
+
     go_tacScanTrig = TriggerCreate("GhostOps_Tac_ScanTick");
     TriggerAddEventTimePeriodic(go_tacScanTrig, 0.2, c_timeGame);
     go_tacNukeTrig = TriggerCreate("GhostOps_Tac_NukeTick");

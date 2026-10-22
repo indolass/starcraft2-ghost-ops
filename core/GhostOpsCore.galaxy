@@ -99,6 +99,7 @@ bool go_pnPermanent;
 bool go_pnHold;                  // the strike channel pauses the cloak drain (written by the tactical module)
 int go_pnGrenades;               // charges left of the armor-piercing grenade (written by the tactical module); -1 = the mission has none
 int go_pnGrenadeSlot;            // squad index of the grenadier
+int go_pnGrenadeMax;             // charges the grenadier had at the start (for the line "N/M")
 int go_pnHoldSlot;               // squad index of the unit whose cloak drain is paused (the Spotter)
 trigger go_pnLoadTrig;
 int go_pnDialog;
@@ -265,9 +266,26 @@ bool GhostOps_Panel_Tick (bool lp_testConds, bool lp_runActions) {
         lv_i += 1;
     }
 
-    // the charges of the grenade live in the footer line (a row of the panel must stay short)
+    // the charges of the grenade live in the footer line (a row of the panel must stay short); the number is the real charge counter of the module, read every tick,
+    // so the line is the same with any selection. A dead grenadier is shown as dead.
     if (go_pnGrenades >= 0) {
-        DialogControlSetPropertyAsText(go_pnFoot, c_triggerControlPropertyText, PlayerGroupAll(), GhostOps_Panel_Color("9aa6b8", StringExternal("Param/Value/GhostOpsPanel_Grenades") + StringToText(": ") + IntToText(go_pnGrenades) + StringToText("  |  ") + StringExternal("Param/Value/GhostOpsPanel_Footer")));
+        if (GhostOps_SquadUnit(go_pnGrenadeSlot) != null && !UnitIsAlive(GhostOps_SquadUnit(go_pnGrenadeSlot))) {
+            lv_line = StringExternal("Param/Value/GhostOpsPanel_Name" + IntToString(go_pnGrenadeSlot)) + StringToText(" - ") + StringExternal("Param/Value/GhostOpsPanel_Dead");
+            lv_rgb = "808080";
+        }
+        else {
+            lv_line = StringExternal("Param/Value/GhostOpsPanel_Name" + IntToString(go_pnGrenadeSlot)) + StringToText(" - ") + StringExternal("Param/Value/GhostOpsPanel_Grenades") + StringToText(": ") + IntToText(go_pnGrenades);
+            if (go_pnGrenadeMax > 0) {
+                lv_line = lv_line + StringToText("/") + IntToText(go_pnGrenadeMax);
+            }
+
+            lv_rgb = "9aa6b8";
+            if (go_pnGrenades <= 0) {
+                lv_rgb = "ff7070";
+            }
+        }
+
+        DialogControlSetPropertyAsText(go_pnFoot, c_triggerControlPropertyText, PlayerGroupAll(), GhostOps_Panel_Color(lv_rgb, lv_line));
     }
 
     return true;

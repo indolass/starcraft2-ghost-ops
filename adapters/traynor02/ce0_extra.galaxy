@@ -451,6 +451,242 @@ bool GhostOps_Ce0_WvTick (bool lp_testConds, bool lp_runActions) {
     return true;
 }
 
+// Nuke damage meter (dev): for every type and distance one fresh unit of player 5 is put at distance d from a strike point, the damage effect NukeDamage of THIS build
+// (stock values or the mission profile) is created there by the Spotter, lives before / after are logged. Nothing else is touched.
+string go_ndTypes;
+fixed go_ndCx;
+fixed go_ndCy;
+
+string GhostOps_Ce0_NdLife (unit lp_u) {
+    if ((lp_u == null) || !UnitIsAlive(lp_u)) {
+        return "dead";
+    }
+
+    return FixedToString(UnitGetPropertyFixed(lp_u, c_unitPropLife, c_unitPropCurrent), 0);
+}
+
+bool GhostOps_Ce0_NukeMeter (bool lp_testConds, bool lp_runActions) {
+    string[6] lv_type;
+    fixed[6] lv_d;
+    int lv_i;
+    int lv_j;
+    unit lv_u;
+    string lv_before;
+    string lv_after;
+    point lv_c;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    lv_type[0] = "CommandCenter";
+    lv_type[1] = "Barracks";
+    lv_type[2] = "Bunker";
+    lv_type[3] = "SiegeTank";
+    lv_type[4] = "Marine";
+    lv_type[5] = "Hellion";
+    lv_d[0] = 0.0;
+    lv_d[1] = 2.0;
+    lv_d[2] = 4.5;
+    lv_d[3] = 6.5;
+    lv_d[4] = 8.5;
+    lv_d[5] = 10.5;
+    lv_c = Point(go_ndCx, go_ndCy);
+    UnitSetPosition(go_tacSpotter, Point(go_ndCx - 20.0, go_ndCy), false);
+    UnitSetPosition(go_tacOperative, Point(go_ndCx - 20.0, go_ndCy + 2.0), false);
+    GhostOps_Ce0_Write("j", "ND meter at " + FixedToString(go_ndCx, 1) + "," + FixedToString(go_ndCy, 1));
+    GhostOps_Ce0_Write("j", "ND catalog amount " + CatalogFieldValueGet(c_gameCatalogEffect, "NukeDamage", "Amount", 1) + " structure bonus " + CatalogFieldValueGet(c_gameCatalogEffect, "NukeDamage", "AttributeBonus[Structure]", 1));
+    GhostOps_Ce0_Write("j", "ND catalog radii " + CatalogFieldValueGet(c_gameCatalogEffect, "NukeDamage", "AreaArray[0].Radius", 1) + "/" + CatalogFieldValueGet(c_gameCatalogEffect, "NukeDamage", "AreaArray[1].Radius", 1) + "/" + CatalogFieldValueGet(c_gameCatalogEffect, "NukeDamage", "AreaArray[2].Radius", 1));
+    GhostOps_Ce0_Write("j", "ND catalog fractions " + CatalogFieldValueGet(c_gameCatalogEffect, "NukeDamage", "AreaArray[0].Fraction", 1) + "/" + CatalogFieldValueGet(c_gameCatalogEffect, "NukeDamage", "AreaArray[1].Fraction", 1) + "/" + CatalogFieldValueGet(c_gameCatalogEffect, "NukeDamage", "AreaArray[2].Fraction", 1));
+    lv_i = 0;
+    while (lv_i < 6) {
+        lv_j = 0;
+        while (lv_j < 6) {
+            UnitCreate(1, lv_type[lv_i], 0, 2, PointWithOffset(lv_c, 0.0 - lv_d[lv_j], 0.0), 270.0);
+            lv_u = UnitLastCreated();
+            if (lv_u == null) {
+                GhostOps_Ce0_Write("j", "ND create failed " + lv_type[lv_i] + " at " + FixedToString(PointGetX(PointWithOffset(lv_c, 0.0 - lv_d[lv_j], 0.0)), 1) + "," + FixedToString(PointGetY(PointWithOffset(lv_c, 0.0 - lv_d[lv_j], 0.0)), 1));
+            }
+
+            Wait(0.3, c_timeGame);
+            lv_before = GhostOps_Ce0_NdLife(lv_u) + "/" + FixedToString(UnitGetPropertyFixed(lv_u, c_unitPropLifeMax, c_unitPropCurrent), 0);
+            UnitCreateEffectPoint(go_tacSpotter, "NukeDamage", lv_c);
+            Wait(0.4, c_timeGame);
+            lv_after = GhostOps_Ce0_NdLife(lv_u);
+            GhostOps_Ce0_Write("j", "ND " + lv_type[lv_i] + " d=" + FixedToString(lv_d[lv_j], 1) + " life " + lv_before + " -> " + lv_after);
+            if (UnitIsAlive(lv_u)) {
+                UnitRemove(lv_u);
+            }
+
+            lv_j += 1;
+        }
+
+        lv_i += 1;
+    }
+
+    GhostOps_Ce0_Write("j", "ND meter done");
+    return true;
+}
+
+// The whole chain (dev): the Spotter aims at a cluster of player 5 units 20 cells north of him, the Operative gives the vision from 11 cells in front of the cluster;
+// the log gives the lives of the cluster before the launch and after the detonation and where the detonation really was (the first damage effect position).
+unit[8] go_nrU;
+string[8] go_nrT;
+
+bool GhostOps_Ce0_NukeReal (bool lp_testConds, bool lp_runActions) {
+    point lv_c;
+    int lv_i;
+    string lv_s;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    lv_c = Point(99.0, 27.7);
+    UnitSetPosition(go_tacSpotter, Point(86.0, 31.0), false);
+    UnitSetPosition(go_tacOperative, Point(88.0, 28.0), false);
+    UnitIssueOrder(go_tacSpotter, Order(AbilityCommand("GhostCloak", 0)), c_orderQueueReplace);
+    UnitIssueOrder(go_tacOperative, Order(AbilityCommand("GhostCloak", 0)), c_orderQueueReplace);
+    go_nrT[0] = "Marine";
+    go_nrT[1] = "SiegeTank";
+    go_nrT[2] = "CommandCenter";
+    go_nrT[3] = "Barracks";
+    go_nrT[4] = "Bunker";
+    go_nrT[5] = "Hellion";
+    UnitCreate(1, "Marine", 0, 2, lv_c, 270.0);
+    go_nrU[0] = UnitLastCreated();
+    UnitCreate(1, "SiegeTank", 0, 2, PointWithOffset(lv_c, 3.0, 0.0), 270.0);
+    go_nrU[1] = UnitLastCreated();
+    UnitCreate(1, "CommandCenter", 0, 2, PointWithOffset(lv_c, 0.0, -5.0), 270.0);
+    go_nrU[2] = UnitLastCreated();
+    UnitCreate(1, "Barracks", 0, 2, PointWithOffset(lv_c, -6.0, 0.0), 270.0);
+    go_nrU[3] = UnitLastCreated();
+    UnitCreate(1, "Bunker", 0, 2, PointWithOffset(lv_c, 0.0, 4.5), 270.0);
+    go_nrU[4] = UnitLastCreated();
+    UnitCreate(1, "Hellion", 0, 2, PointWithOffset(lv_c, 7.0, 0.0), 270.0);
+    go_nrU[5] = UnitLastCreated();
+    Wait(1.5, c_timeGame);
+    lv_s = "";
+    lv_i = 0;
+    while (lv_i < 6) {
+        lv_s = lv_s + go_nrT[lv_i] + ":" + GhostOps_Ce0_NdLife(go_nrU[lv_i]) + " ";
+        lv_i += 1;
+    }
+
+    GhostOps_Ce0_Write("j", "NR before the aim: " + lv_s + "| target visible " + IntToString(GhostOps_Ce0_B(VisIsVisibleForPlayer(1, lv_c))) + " | order valid " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(go_tacSpotter, OrderTargetingPoint(AbilityCommand("TacNukeStrike", 0), lv_c)))));
+    UnitIssueOrder(go_tacSpotter, OrderTargetingPoint(AbilityCommand("TacNukeStrike", 0), lv_c), c_orderQueueReplace);
+    Wait(30.0, c_timeGame);
+    lv_s = "";
+    lv_i = 0;
+    while (lv_i < 6) {
+        lv_s = lv_s + go_nrT[lv_i] + ":" + GhostOps_Ce0_NdLife(go_nrU[lv_i]) + " ";
+        lv_i += 1;
+    }
+
+    GhostOps_Ce0_Write("j", "NR after the strike (30 s): " + lv_s + "| tac state " + IntToString(go_tacState) + " launches " + IntToString(go_tacLaunches) + " | spotter " + GhostOps_Ce0_NdLife(go_tacSpotter) + " operative " + GhostOps_Ce0_NdLife(go_tacOperative));
+    return true;
+}
+
+// Moving-target test (dev): three player 5 Hellions run west along a line; the strike point is on that line; lead = distance in cells between the Hellions and the point at the
+// moment of the order. The log gives how many are alive after the strike and where they stopped.
+fixed go_gmLead;
+
+bool GhostOps_Ce0_MoveTest (bool lp_testConds, bool lp_runActions) {
+    unitgroup lv_h;
+    point lv_aim;
+    point lv_start;
+    string lv_pos;
+    int lv_i;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    lv_aim = PointWithOffset(UnitGetPosition(go_tacOperative), 6.0, 6.0);
+    lv_start = PointWithOffset(lv_aim, go_gmLead, 0.0);
+    UnitCreate(3, "Hellion", 0, 2, lv_start, 270.0);
+    lv_h = UnitLastCreatedGroup();
+    UnitGroupLoopBegin(lv_h);
+    while (UnitGroupLoopCurrent() != null) {
+        UnitIssueOrder(UnitGroupLoopCurrent(), OrderTargetingPoint(AbilityCommand("move", 0), PointWithOffset(lv_aim, -20.0, 0.0)), c_orderQueueReplace);
+        UnitGroupLoopStep();
+    }
+
+    UnitGroupLoopEnd();
+    Wait(0.2, c_timeGame);
+    GhostOps_Ce0_Write("j", "GM lead " + FixedToString(go_gmLead, 1) + " before the order: lives " + GhostOps_Ce0_Lives(lv_h) + " ammo " + IntToString(go_tacGrenadeAmmo));
+    UnitIssueOrder(go_tacOperative, OrderTargetingPoint(AbilityCommand("GhostOpsArmorPiercing", 0), lv_aim), c_orderQueueReplace);
+    Wait(5.0, c_timeGame);
+    lv_pos = "";
+    lv_i = 1;
+    while (lv_i <= UnitGroupCount(lv_h, c_unitCountAll)) {
+        lv_pos = lv_pos + FixedToString(PointGetX(UnitGetPosition(UnitGroupUnit(lv_h, lv_i))) - PointGetX(lv_aim), 1) + " ";
+        lv_i += 1;
+    }
+
+    GhostOps_Ce0_Write("j", "GM lead " + FixedToString(go_gmLead, 1) + " after: hellions alive " + IntToString(UnitGroupCount(lv_h, c_unitCountAlive)) + " of 3 | x offsets of the survivors from the strike point " + lv_pos + "| ammo " + IntToString(go_tacGrenadeAmmo) + " impacts " + IntToString(go_apImpacts));
+    UnitGroupLoopBegin(lv_h);
+    while (UnitGroupLoopCurrent() != null) {
+        if (UnitIsAlive(UnitGroupLoopCurrent())) {
+            UnitRemove(UnitGroupLoopCurrent());
+        }
+
+        UnitGroupLoopStep();
+    }
+
+    UnitGroupLoopEnd();
+    return true;
+}
+
+// Nuke range test (dev): the strike point (the entrance bunker) is REVEALED to the player, so the only limit left is the range. The cloaked Spotter is put at distance d on the
+// line bunker -> start base, ordered to aim, and after 1.5 s the log says whether he walked (out of range) or started the channel (in range).
+bool GhostOps_Ce0_NukeRange (bool lp_testConds, bool lp_runActions) {
+    fixed[7] lv_d;
+    int lv_i;
+    int lv_k;
+    point lv_t;
+    point lv_p0;
+    point lv_p1;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    lv_d[0] = 10.0;
+    lv_d[1] = 22.0;
+    lv_d[2] = 26.0;
+    lv_d[3] = 40.0;
+    lv_d[4] = 46.0;
+    lv_d[5] = 50.0;
+    lv_d[6] = 54.0;
+    lv_t = Point(34.5, 76.5);
+    VisRevealArea(1, RegionCircle(lv_t, 5.0), 400.0, false);
+    lv_i = 0;
+    while (lv_i < 7) {
+        lv_k = 0;
+        while ((go_tacState != 2) && (lv_k < 20)) {
+            UnitIssueOrder(go_tacSpotter, Order(AbilityCommand("TacNukeStrike", 1)), c_orderQueueReplace);
+            Wait(1.0, c_timeGame);
+            lv_k += 1;
+        }
+
+        UnitSetPosition(go_tacSpotter, GhostOps_Ce0_NkPoint(lv_d[lv_i]), false);
+        UnitIssueOrder(go_tacSpotter, Order(AbilityCommand("GhostCloak", 0)), c_orderQueueReplace);
+        Wait(0.6, c_timeGame);
+        lv_p0 = UnitGetPosition(go_tacSpotter);
+        UnitIssueOrder(go_tacSpotter, OrderTargetingPoint(AbilityCommand("TacNukeStrike", 0), lv_t), c_orderQueueReplace);
+        Wait(1.5, c_timeGame);
+        lv_p1 = UnitGetPosition(go_tacSpotter);
+        GhostOps_Ce0_Write("j", "NKR d=" + FixedToString(lv_d[lv_i], 0) + " visible " + IntToString(GhostOps_Ce0_B(VisIsVisibleForPlayer(1, lv_t))) + " moved " + FixedToString(DistanceBetweenPoints(lv_p0, lv_p1), 1) + " channel " + IntToString(GhostOps_Ce0_B(go_tacChannel)) + " state " + IntToString(go_tacState));
+        UnitIssueOrder(go_tacSpotter, Order(AbilityCommand("TacNukeStrike", 1)), c_orderQueueReplace);
+        Wait(3.0, c_timeGame);
+        lv_i += 1;
+    }
+
+    GhostOps_Ce0_Write("j", "NKR done");
+    return true;
+}
+
 bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
     unitgroup lv_g;
     string lv_t;
@@ -828,6 +1064,113 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
         }
 
         GhostOps_Ce0_Write("j", "ENP around " + lp_a + "," + lp_b + " r14: " + lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "gm") {
+        go_gmLead = StringToFixed(lp_a);
+        TriggerExecute(TriggerCreate("GhostOps_Ce0_MoveTest"), true, false);
+        return true;
+    }
+
+    if (lp_cmd == "nkr") {
+        TriggerExecute(TriggerCreate("GhostOps_Ce0_NukeRange"), true, false);
+        return true;
+    }
+
+    if (lp_cmd == "aimc") {
+        // the Spotter (base center) aims at the revealed point (99, 27.7); the Operative is far away (the blast radius reaches 10)
+        UnitSetPosition(go_tacSpotter, Point(86.0, 31.0), false);
+        UnitSetPosition(go_tacOperative, Point(70.0, 31.0), false);
+        VisRevealArea(1, RegionCircle(Point(99.0, 27.7), 5.0), 400.0, false);
+        UnitIssueOrder(go_tacSpotter, Order(AbilityCommand("GhostCloak", 0)), c_orderQueueReplace);
+        UnitIssueOrder(go_tacSpotter, OrderTargetingPoint(AbilityCommand("TacNukeStrike", 0), Point(99.0, 27.7)), c_orderQueueReplace);
+        GhostOps_Ce0_Write("j", "AIMC aim ordered at 99,27.7");
+        return true;
+    }
+
+    if (lp_cmd == "apspd") {
+        // apspd <max speed> <acceleration>: slows the projectile of the grenade at run time (the data of the build stay as they are)
+        CatalogFieldValueSet(c_gameCatalogMover, "GhostOpsAPMover", "MotionPhases[0].MaxSpeed", 1, lp_a);
+        CatalogFieldValueSet(c_gameCatalogMover, "GhostOpsAPMover", "MotionPhases[0].Acceleration", 1, lp_b);
+        GhostOps_Ce0_Write("j", "APSPD max " + CatalogFieldValueGet(c_gameCatalogMover, "GhostOpsAPMover", "MotionPhases[0].MaxSpeed", 1) + " acc " + CatalogFieldValueGet(c_gameCatalogMover, "GhostOpsAPMover", "MotionPhases[0].Acceleration", 1));
+        return true;
+    }
+
+    if (lp_cmd == "nd") {
+        // nd <dx> <dy>: the damage meter around the point (dx, dy) from the Operative
+        go_ndCx = StringToFixed(lp_a);
+        go_ndCy = StringToFixed(lp_b);
+        TriggerExecute(TriggerCreate("GhostOps_Ce0_NukeMeter"), true, false);
+        return true;
+    }
+
+    if (lp_cmd == "nkreal") {
+        TriggerExecute(TriggerCreate("GhostOps_Ce0_NukeReal"), true, false);
+        return true;
+    }
+
+    if (lp_cmd == "p2types") {
+        // the structures of the enemy player (2): type counts (and how many are lifted off the ground), to define the production-building victory list
+        lv_g = UnitGroup(null, 2, RegionEntireMap(), UnitFilter((1 << c_targetFilterStructure), 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+        lv_t = "";
+        lv_i = 0;
+        UnitGroupLoopBegin(lv_g);
+        while (UnitGroupLoopCurrent() != null) {
+            lv_t = lv_t + UnitGetType(UnitGroupLoopCurrent()) + "#" + IntToString(UnitGetOwner(UnitGroupLoopCurrent())) + " ";
+            lv_i += 1;
+            UnitGroupLoopStep();
+        }
+
+        UnitGroupLoopEnd();
+        GhostOps_Ce0_Write("j", "P2TYPES " + IntToString(lv_i) + " structures: " + lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "ammo") {
+        GhostOps_Ce0_Write("j", "AMMO grenade charges " + IntToString(go_tacGrenadeAmmo) + " of " + IntToString(go_tacGrenadeMax) + " | panel " + IntToString(go_pnGrenades) + "/" + IntToString(go_pnGrenadeMax));
+        GhostOps_Ce0_Write("j", "RANGE nuke now " + CatalogFieldValueGet(c_gameCatalogAbil, "TacNukeStrike", "Range[0]", 1) + " | AP " + CatalogFieldValueGet(c_gameCatalogAbil, "GhostOpsArmorPiercing", "Range", 1));
+        GhostOps_Ce0_Write("j", "STATE tac " + IntToString(go_tacState) + " launches " + IntToString(go_tacLaunches) + " ended " + IntToString(GhostOps_Ce0_B(go_tacEnded)));
+        GhostOps_Ce0_Write("j", "STATE victory on " + IntToString(GhostOps_Ce0_B(go_tacVictory)) + " seen " + IntToString(GhostOps_Ce0_B(go_tacVicSeen)) + " left " + IntToString(go_tacVicLeft));
+        GhostOps_Ce0_Write("j", "STATE labels " + IntToString(go_tacRebCount) + " rescued " + IntToString(UnitGroupCount(go_tacRescued, c_unitCountAlive)));
+        return true;
+    }
+
+    if (lp_cmd == "kp2") {
+        // kp2 <n>: kills the enemy (player 2) production buildings of the victory list until n of them are left alive
+        lv_i = 0;
+        lv_g = UnitGroup(null, 2, RegionEntireMap(), UnitFilter((1 << c_targetFilterStructure), 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+        UnitGroupLoopBegin(lv_g);
+        while (UnitGroupLoopCurrent() != null) {
+            lv_t = UnitGetType(UnitGroupLoopCurrent());
+            if ((lv_t == "Barracks") || (lv_t == "Factory") || (lv_t == "CommandCenter") || (lv_t == "Starport") || (lv_t == "OrbitalCommand") || (lv_t == "PlanetaryFortress")) {
+                lv_i += 1;
+                if (lv_i > StringToInt(lp_a)) {
+                    UnitKill(UnitGroupLoopCurrent());
+                }
+            }
+
+            UnitGroupLoopStep();
+        }
+
+        UnitGroupLoopEnd();
+        GhostOps_Ce0_Write("j", "KP2 production buildings seen " + IntToString(lv_i) + ", kept " + lp_a);
+        return true;
+    }
+
+    if (lp_cmd == "rebstat") {
+        lv_t = "";
+        lv_i = 0;
+        while (lv_i < go_tacRebCount) {
+            lv_t = lv_t + UnitGetType(go_tacRebUnit[lv_i]) + ":" + IntToString(GhostOps_Ce0_B(UnitIsAlive(go_tacRebUnit[lv_i]))) + " ";
+            lv_i += 1;
+        }
+
+        if (go_tacRebCount > 0) {
+            CameraPan(1, UnitGetPosition(go_tacRebUnit[0]), 0.0, -1.0, 10.0, false);
+        }
+
+        GhostOps_Ce0_Write("j", "REBSTAT labels " + IntToString(go_tacRebCount) + " rescued alive " + IntToString(UnitGroupCount(go_tacRescued, c_unitCountAlive)) + " | " + lv_t);
         return true;
     }
 

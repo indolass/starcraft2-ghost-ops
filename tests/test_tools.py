@@ -95,6 +95,7 @@ class PatchTests(unittest.TestCase):
         self.assertEqual(galaxy_lint.lint(out), [])
         import re
         s = re.sub(r'\r?\n' + re.escape(build.BEGIN) + r'.*?' + re.escape(build.END), '', out, flags=re.S)
+        s = re.sub(r'\r?\n' + re.escape(build.TAIL_BEGIN) + r'.*?' + re.escape(build.TAIL_END), '', s, flags=re.S)
         s = re.sub(r'\r?\n    GhostOps_OnMissionStart\(\);' + re.escape(build.HOOK_TAG), '', s)
         self.assertEqual(s, SYNTH)
 

@@ -1,0 +1,50 @@
+{
+ "name": "tr02_nuke_range_stock",
+ "mission": "traynor02",
+ "preset": "ce0_dev",
+ "why": "nuke range with the strike point revealed: moved = out of range, channel = in range (stock)",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "ammo",
+   "grep": "AMMO grenade charges 2",
+   "every": 4,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "nkr",
+   "wait": 1.5
+  },
+  {
+   "op": "until",
+   "grep": "NKR done",
+   "every": 5,
+   "timeout": 300
+  },
+  {
+   "op": "expect",
+   "regex": "NKR d=",
+   "note": "range test lines"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

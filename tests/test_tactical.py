@@ -218,6 +218,7 @@ class TacticalOnTheRealMap(unittest.TestCase):
         self.assertEqual(out.count(build.HOOK_TAG), len(build.hook_list(ADAPTER)))
         self.assertEqual(galaxy_lint.lint(out), [])
         stripped = re.sub(r'\r?\n' + re.escape(build.BEGIN) + r'.*?' + re.escape(build.END), '', out, flags=re.S)
+        stripped = re.sub(r'\r?\n' + re.escape(build.TAIL_BEGIN) + r'.*?' + re.escape(build.TAIL_END), '', stripped, flags=re.S)
         stripped = re.sub(r'\r?\n    GhostOps_\w+\([^\n]*\);' + re.escape(build.HOOK_TAG), '', stripped)
         self.assertEqual(stripped, self.script)
 
@@ -350,7 +351,7 @@ class TestLaunchMode(unittest.TestCase):
 class TacticalLauncher(unittest.TestCase):
     def test_gui_shows_one_experimental_tactical_card_with_exact_details(self):
         profiles = launcher_core.profiles_of('traynor02')
-        self.assertEqual([(p['name'], p['label'], p['experimental']) for p in profiles], [('tactical', 'Тактический', True)])
+        self.assertEqual([(p['name'], p['label'], p['experimental']) for p in profiles], [('tactical', 'Тактический', True), ('tactical_next', 'Вне закона, версия 2', True)])
         text = '\n'.join(launcher_core.detail_lines('traynor02', 'tactical'))
         for needle in ('×20', 'зоне обороны', 'атаковать не могут', 'транспорте', 'Наводчик и Оперативник', '45/45', 'перезарядка 5', 'одна ракета', '12 с', '6 с', 'штатные', 'дальность наведения 24', 'Бронебойная граната', 'Панель призраков'):
             self.assertIn(needle, text)

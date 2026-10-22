@@ -1,0 +1,92 @@
+{
+ "name": "tr02_nuke_range",
+ "mission": "traynor02",
+ "preset": "tactical_next_dev",
+ "why": "nuke aiming range x2 from the cover near the entrance bunker: 14, 30, 44, 52 cells",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "ammo",
+   "grep": "AMMO grenade charges 2",
+   "every": 4,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "nkt 14 9",
+   "wait": 1.5
+  },
+  {
+   "op": "until",
+   "grep": "NK 4 s after",
+   "every": 4,
+   "timeout": 60
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "cmd",
+   "text": "nkt 30 9",
+   "wait": 1.5
+  },
+  {
+   "op": "until",
+   "grep": "NK 4 s after",
+   "every": 4,
+   "timeout": 60
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "cmd",
+   "text": "nkt 44 9",
+   "wait": 1.5
+  },
+  {
+   "op": "until",
+   "grep": "NK 4 s after",
+   "every": 4,
+   "timeout": 60
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "cmd",
+   "text": "nkt 52 9",
+   "wait": 1.5
+  },
+  {
+   "op": "until",
+   "grep": "NK 4 s after",
+   "every": 4,
+   "timeout": 60
+  },
+  {
+   "op": "expect",
+   "regex": "NK ",
+   "note": "aim / range / vision lines"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

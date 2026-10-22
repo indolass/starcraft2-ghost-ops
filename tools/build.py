@@ -50,7 +50,18 @@ TAC_TEXT_KEYS = ('ZoneLeft', 'RoleSpotter', 'RoleOperative', 'InfoSpotter', 'Inf
                  'SpotterLost', 'SpotterLostAfter', 'AcademyLost', 'AlertTitle', 'AlertText', 'SwannName', 'SwannText', 'GhostName', 'GhostText', 'ArrivalText',
                  'ObjectiveTitle', 'ObjectiveText', 'Tip1Title', 'Tip1Text', 'Tip2Title', 'Tip2Text', 'Tip3Title', 'Tip3Text', 'Tip4Title', 'Tip4Text', 'AlertClip', 'RaynorName', 'RaynorText', 'SwannExplain', 'GhostExplain', 'RoleGhost', 'InfoGhost')
 # Optional texts of the added features (grenade, rebel hints, Raynor's clip subtitle); only written when present in the config
-TAC_EXTRA_TEXT_KEYS = ('RaynorClip', 'GrenadeName', 'GrenadeTip', 'RebelHint1', 'RebelHint2', 'RebelClip', 'FindObjectiveTitle', 'FindObjectiveText')
+# texts of optional features: a profile that does not define them still gets these (the code that reads them is inert there)
+TAC_DEFAULT_TEXTS = {
+    'RebelTag': {'ru': 'Повстанец', 'en': 'Rebel'},
+    'RebelMedicTag': {'ru': 'Медик повстанцев', 'en': 'Rebel medic'},
+    'RebelInfo': {'ru': 'Повстанец', 'en': 'Rebel'},
+    'GrenadeEmpty': {'ru': 'Заряды закончились.', 'en': 'No charges left.'},
+    'VictoryTitle': {'ru': 'Победа', 'en': 'Victory'},
+    'VictoryText': {'ru': 'Уничтожьте вражеское производство.', 'en': 'Destroy the enemy production.'},
+    'VictoryLeft': {'ru': 'Осталось: ', 'en': 'Left: '},
+}
+TAC_EXTRA_TEXT_KEYS = ('RaynorClip', 'GrenadeName', 'GrenadeTip', 'RebelHint1', 'RebelHint2', 'RebelClip', 'FindObjectiveTitle', 'FindObjectiveText',
+                       'VictoryTitle', 'VictoryText', 'VictoryLeft', 'RebelTag', 'RebelMedicTag', 'RebelInfo', 'GrenadeEmpty')
 # Explanations are shown in a larger style (about +30% over the subtitle area font): <s val="AlertDisplay"> (measured in the game)
 EXPLAIN_STYLE = ('<s val=' + chr(34) + 'AlertDisplay' + chr(34) + '>', '</s>')
 TAC_EXPLAIN_KEYS = ('AlertText', 'RaynorText', 'SwannExplain', 'GhostExplain', 'RebelHint1', 'RebelHint2')
@@ -772,8 +783,16 @@ def validate_tactical(cfg):
         errs.append('tactical.nuke.count must be an integer 1..6')
     if not isinstance(n.get('both_may_aim', False), bool) or not isinstance(t.get('spotter_defeat', True), bool):
         errs.append('tactical.nuke.both_may_aim and tactical.spotter_defeat must be boolean')
-    if not num(n.get('range'), 1, 30):
-        errs.append('tactical.nuke.range must be 1..30')
+    if not num(n.get('range'), 1, 100):
+        errs.append('tactical.nuke.range must be 1..100')
+    nd = n.get('damage')
+    if nd is not None:
+        if not isinstance(nd, dict) or not num(nd.get('amount'), 1, 20000) or not num(nd.get('structure_bonus'), 0, 20000):
+            errs.append('tactical.nuke.damage needs amount 1..20000 and structure_bonus 0..20000 (the damage profile of this mission only; experimental)')
+        ar = (nd or {}).get('areas')
+        if not (isinstance(ar, list) and len(ar) == 3 and all(isinstance(x, list) and len(x) == 2 and num(x[0], 0.5, 30) and num(x[1], 0.01, 1) for x in ar)
+                and ar[0][0] < ar[1][0] < ar[2][0] and ar[0][1] >= ar[1][1] >= ar[2][1]):
+            errs.append('tactical.nuke.damage.areas must be three [radius, fraction] pairs with growing radius and falling fraction')
     if 'aim_cloak_hold' in n and not isinstance(n['aim_cloak_hold'], bool):
         errs.append('tactical.nuke.aim_cloak_hold must be boolean')
     if 'require_vision' in n and not isinstance(n['require_vision'], bool):
@@ -787,14 +806,29 @@ def validate_tactical(cfg):
         else:
             if not isinstance(gr.get('charges'), int) or isinstance(gr.get('charges'), bool) or not 1 <= gr['charges'] <= 6:
                 errs.append('tactical.grenade.charges must be an integer 1..6')
-            for k, (lo, hi) in {'damage': (1, 3000), 'radius': (0.5, 6), 'range': (3, 20), 'prep_time': (0, 3)}.items():
+            for k, (lo, hi) in {'damage': (1, 3000), 'radius': (0.5, 8), 'range': (3, 20), 'prep_time': (0, 3)}.items():
                 if not num(gr.get(k), lo, hi):
                     errs.append('tactical.grenade.%s must be a number %s..%s' % (k, lo, hi))
+            if 'flight_speed' in gr and not num(gr['flight_speed'], 1, 60):
+                errs.append('tactical.grenade.flight_speed must be a number 1..60 (cells per second of the projectile)')
+            if 'hotkey' in gr and not (isinstance(gr['hotkey'], str) and len(gr['hotkey']) == 1 and gr['hotkey'].isalpha() and gr['hotkey'].isupper()):
+                errs.append('tactical.grenade.hotkey must be one capital letter')
+            if 'pointer' in gr and not isinstance(gr['pointer'], bool):
+                errs.append('tactical.grenade.pointer must be boolean (range circle and area circle under the cursor)')
+            if 'effects' in gr and not isinstance(gr['effects'], bool):
+                errs.append('tactical.grenade.effects must be boolean (impact flash / explosion model and sound)')
             if gr['enabled'] and cfg['operatives'].get('squad') != ['Ghost', 'Ghost']:
                 errs.append('tactical.grenade needs the two-Ghost squad (the second Ghost is the Operative)')
             for k in ('GrenadeName', 'GrenadeTip'):
                 if gr['enabled'] and k not in t.get('texts', {}):
                     errs.append('tactical.texts.%s is needed by the grenade' % k)
+    vc = t.get('victory')
+    if vc is not None:
+        if not isinstance(vc, dict) or not isinstance(vc.get('enabled'), bool) or not (isinstance(vc.get('types'), list) and 1 <= len(vc['types']) <= 16 and all(isinstance(x, str) and re.fullmatch(r'[A-Za-z0-9]+', x) for x in vc['types'])):
+            errs.append('tactical.victory needs enabled (boolean) and types: 1..16 unit type ids of the enemy production buildings')
+    rl = t.get('rebel_labels')
+    if rl is not None and (not isinstance(rl, dict) or not isinstance(rl.get('enabled'), bool)):
+        errs.append('tactical.rebel_labels.enabled must be boolean')
     rh = t.get('rebel_hints')
     if rh is not None:
         if not isinstance(rh, dict) or not isinstance(rh.get('enabled'), bool):
@@ -967,6 +1001,7 @@ def tactical_fragments(t, gt=None):
         ]
 
     gr = t.get('grenade') or {}
+    gr = dict(gr, dev_flight_speed=gr.get('dev_flight_speed') or gr.get('flight_speed'))  # projectile speed of this mission; the probe builds may override it (dev_flight_speed)
     hold = ((-gt['cloak_net_per_second']) if gt and t['nuke'].get('aim_cloak_hold') else 0)
     extra_beh = []
     if hold > 0:
@@ -989,10 +1024,27 @@ def tactical_fragments(t, gt=None):
                    '        <SearchFilters value="Ground,Mechanical,Visible;Player,Ally,Neutral,Biological,Air,Missile,Stasis,Dead,Hidden,Invulnerable"/>', '    </CEffectEnumArea>',
                    '    <CEffectDamage id="GhostOpsAPDamage">', '        <EditorCategories value="Race:Terran"/>', '        <Kind value="Splash"/>', '        <Amount value="%s"/>' % g(gr['damage']), '        <Flags index="Notification" value="1"/>',
                    '        <ResponseFlags index="Acquire" value="1"/>', '    </CEffectDamage>']
+    nuke_damage = []
+    if n.get('damage'):
+        # the damage profile of THIS mission only (map local override of the stock NukeDamage: 300 + 200 vs structures, radii 4 / 6 / 8 with 100 / 50 / 25 %): experimental, from the config
+        nd = n['damage']
+        nuke_damage = ['    <CEffectDamage id="NukeDamage">', '        <Amount value="%s"/>' % g(nd['amount']), '        <AttributeBonus index="Structure" value="%s"/>' % g(nd['structure_bonus'])] + [
+            '        <AreaArray index="%d" Radius="%s" Fraction="%s"/>' % (i, g(r), g(f)) for i, (r, f) in enumerate(nd['areas'])] + ['    </CEffectDamage>']
+    grenade_actors = []
+    if gr.get('enabled') and (gr.get('pointer') or gr.get('effects')):
+        # the pointer of the ability like the Odin's Barrage / the EMP: cursor splat (radius = the CursorEffect area = the real damage radius), cursor model and the range indicator
+        grenade_actors = ['    <CActorModel id="GhostOpsAPCursorModel" parent="TerranCursorModel" abil="GhostOpsArmorPiercing"/>', '    <CActorSplat id="GhostOpsAPCursorSplat" parent="TerranCursorSplat" abil="GhostOpsArmorPiercing"/>',
+                          '    <CActorRange id="GhostOpsAPRange" parent="RangeAbil" abil="GhostOpsArmorPiercing"/>']
+        if gr.get('effects'):
+            # flash / explosion at the REAL hit (the impact of the search effect; the visual does no damage) with the stock explosion model and sound of the campaign data
+            grenade_actors += ['    <CActorModel id="GhostOpsAPImpact" parent="ModelAnimationStyleOneShot">', '        <Model value="BarrageModel"/>', '        <HostSiteOps Ops="SOpTargetPoint"/>',
+                               '        <On Terms="Effect.GhostOpsAPSearch.Impact" Send="Create"/>', '    </CActorModel>',
+                               '    <CActorSound id="GhostOpsAPSound" parent="SoundOneShot">', '        <Sound value="Terran_ExplosionLarge"/>', '        <On Terms="Effect.GhostOpsAPSearch.Impact" Send="Create"/>', '    </CActorSound>']
     # development only (dev_flight_speed): a slow copy of the grenade projectile, so that a game can be saved while it is in flight
     mover = []
-    if gr.get('enabled') and gr.get('dev_flight_speed'):
-        mover = ['    <CMoverMissile id="GhostOpsAPMover" parent="PunisherGrenadesWeapon">', '        <MotionPhases index="0" Acceleration="4" MaxSpeed="%s"/>' % g(gr['dev_flight_speed']), '    </CMoverMissile>']
+    speed = gr.get('dev_flight_speed')  # = flight_speed unless a probe build overrides it with a slow copy (so that a game can be saved while the projectile is in flight)
+    if gr.get('enabled') and speed:
+        mover = ['    <CMoverMissile id="GhostOpsAPMover" parent="PunisherGrenadesWeapon">', '        <MotionPhases index="0" Acceleration="%s" MaxSpeed="%s"/>' % (g(max(40, speed * 2)), g(speed)), '    </CMoverMissile>']
     ghost_unit = (['    <CUnit id="Ghost">', '        <AbilArray Link="GhostOpsArmorPiercing"/>', '        <CardLayouts index="0">',
                    '            <LayoutButtons Face="GhostOpsArmorPiercing" Type="AbilCmd" AbilCmd="GhostOpsArmorPiercing,Execute" Row="1" Column="1"/>', '        </CardLayouts>', '    </CUnit>']
                   if gr.get('enabled') else [])
@@ -1036,7 +1088,8 @@ def tactical_fragments(t, gt=None):
             '    <CEffectCreatePersistent id="NukeDetonate">',
             '        <InitialDelay value="0"/>',
             '    </CEffectCreatePersistent>',
-        ] + effects),
+        ] + nuke_damage + effects),
+        'ActorData.xml': nl.join(grenade_actors + ['']) if grenade_actors else '',
     }
 
 
@@ -1187,6 +1240,11 @@ def gen_tactical(cfg):
         '    go_tacAimHold = %s;' % b(t['nuke'].get('aim_cloak_hold')),
         '    go_tacGrenade = %s;' % b((t.get('grenade') or {}).get('enabled')),
         '    go_tacGrenadeMax = %d;' % (t.get('grenade') or {}).get('charges', 0),
+        '    go_tacRebelLabels = %s;' % b((t.get('rebel_labels') or {}).get('enabled')),
+        '    go_tacMsgEmpty = %s;' % b('GrenadeEmpty' in t.get('texts', {})),
+        '    go_tacVictory = %s;' % b((t.get('victory') or {}).get('enabled')),
+        '    go_tacVicCount = %d;' % len((t.get('victory') or {}).get('types', [])),
+    ] + ['    go_tacVicType[%d] = "%s";' % (i, x) for i, x in enumerate((t.get('victory') or {}).get('types', []))] + [
         '    go_tacHints = %s;' % b((t.get('rebel_hints') or {}).get('enabled')),
         '    go_tacHintDelay = %.1f;' % (t.get('rebel_hints') or {}).get('delay', 0),
         '    go_tacHintFirstLen = %.1f;' % (t.get('rebel_hints') or {}).get('first_seconds', 8),
@@ -1394,8 +1452,12 @@ def patch_script(text, adapter, block):
         edits.append((apos, nl + '    ' + hook['call'] + HOOK_TAG))
     block_nl = nl.join(block.replace('\r\n', '\n').split('\n'))
     edits.append((ins, nl + BEGIN + nl + block_nl.rstrip() + nl + END))
+    tail = ''
     if adapter.get('defence'):
-        tail = defence_wave_tail(text, adapter)
+        tail += defence_wave_tail(text, adapter) + chr(10)
+    if adapter.get('tail_source'):
+        tail += read(os.path.join(ROOT, adapter['tail_source']), 'r') + chr(10)
+    if tail:
         tail_nl = nl.join(tail.replace('\r\n', '\n').split('\n'))
         edits.append((len(text), nl + TAIL_BEGIN + nl + tail_nl.rstrip() + nl + TAIL_END))
     out = text
@@ -1465,8 +1527,9 @@ def text_entries(cfg):
                 if ln.get('large', True):
                     v = EXPLAIN_STYLE[0] + v + EXPLAIN_STYLE[1]
                 out.setdefault(loc, []).append((LINE_TEXT_PREFIX + ln['id'], v))
-            for k in tuple(k for k in TAC_TEXT_KEYS if k in t['texts']) + tuple(k for k in TAC_EXTRA_TEXT_KEYS if k in t['texts']):
-                v = t['texts'][k][lang].replace('{aim_time}', '%g' % t['nuke']['aim_time']).replace('{flight_time}', '%g' % t['nuke']['flight_time'])
+            all_texts = dict(TAC_DEFAULT_TEXTS, **t['texts'])
+            for k in tuple(k for k in TAC_TEXT_KEYS if k in all_texts) + tuple(k for k in TAC_EXTRA_TEXT_KEYS if k in all_texts):
+                v = all_texts[k][lang].replace('{aim_time}', '%g' % t['nuke']['aim_time']).replace('{flight_time}', '%g' % t['nuke']['flight_time'])
                 if k in TAC_EXPLAIN_KEYS:
                     v = EXPLAIN_STYLE[0] + v + EXPLAIN_STYLE[1]
                 out.setdefault(loc, []).append((TAC_TEXT_PREFIX + k, v))
@@ -1474,7 +1537,7 @@ def text_entries(cfg):
                 g = t['texts']
                 out.setdefault(loc, []).append(('Button/Name/GhostOpsArmorPiercing', g['GrenadeName'][lang]))
                 out.setdefault(loc, []).append(('Button/Tooltip/GhostOpsArmorPiercing', g['GrenadeTip'][lang]))
-                out.setdefault(loc, []).append(('Button/Hotkey/GhostOpsArmorPiercing', 'E'))
+                out.setdefault(loc, []).append(('Button/Hotkey/GhostOpsArmorPiercing', (t.get('grenade') or {}).get('hotkey', 'E')))
     df = cfg.get('defence')
     if df:
         for loc, lang in (('ruRU', 'ru'), ('enUS', 'en')):

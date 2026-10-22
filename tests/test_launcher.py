@@ -80,7 +80,7 @@ class ProfilesTests(unittest.TestCase):
     def test_three_profiles_for_traynor01_none_for_prototypes(self):
         names = [p['name'] for p in lc.profiles_of('traynor01')]
         self.assertEqual(names, ['easy', 'hard', 'extreme'])
-        self.assertEqual([p['name'] for p in lc.profiles_of('traynor02')], ['tactical'])  # the old prototype preset is hidden (CLI only)
+        self.assertEqual([p['name'] for p in lc.profiles_of('traynor02')], ['tactical', 'tactical_next'])  # the old prototype preset is hidden (CLI only); version 2 is its own card
         self.assertTrue(lc.profiles_of('traynor02')[0]['experimental'])
         self.assertEqual(lc.profiles_of('ttychus01'), [])
 

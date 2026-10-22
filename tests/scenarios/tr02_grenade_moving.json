@@ -1,0 +1,103 @@
+{
+ "name": "tr02_grenade_moving",
+ "mission": "traynor02",
+ "preset": "tactical_next_dev",
+ "why": "three hellions running past the strike point, lead 0 / 2 / 4 / 6 cells",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "ammo",
+   "grep": "AMMO grenade charges 2",
+   "every": 4,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "apt",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "gm 2",
+   "wait": 1.5
+  },
+  {
+   "op": "until",
+   "grep": "GM lead 2.0 after",
+   "every": 4,
+   "timeout": 40
+  },
+  {
+   "op": "cmd",
+   "text": "setammo 2",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "gm 4",
+   "wait": 1.5
+  },
+  {
+   "op": "until",
+   "grep": "GM lead 4.0 after",
+   "every": 4,
+   "timeout": 40
+  },
+  {
+   "op": "cmd",
+   "text": "setammo 2",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "gm 6",
+   "wait": 1.5
+  },
+  {
+   "op": "until",
+   "grep": "GM lead 6.0 after",
+   "every": 4,
+   "timeout": 40
+  },
+  {
+   "op": "cmd",
+   "text": "setammo 2",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "gm 0",
+   "wait": 1.5
+  },
+  {
+   "op": "until",
+   "grep": "GM lead 0.0 after",
+   "every": 4,
+   "timeout": 40
+  },
+  {
+   "op": "expect",
+   "regex": "GM lead",
+   "note": "moving hellion hit rates by lead"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

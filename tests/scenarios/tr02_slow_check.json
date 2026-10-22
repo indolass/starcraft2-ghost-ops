@@ -1,0 +1,58 @@
+{
+ "name": "tr02_slow_check",
+ "mission": "traynor02",
+ "preset": "tactical_next_slow_dev",
+ "why": "slow projectile without a load: does the shot happen",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "ammo",
+   "grep": "AMMO grenade charges 2",
+   "every": 4,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "apt",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "ap 6 6",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 10
+  },
+  {
+   "op": "cmd",
+   "text": "apn",
+   "wait": 1.5
+  },
+  {
+   "op": "expect",
+   "regex": "APN impacts 1 ammo 1",
+   "note": "slow shot without a load"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

@@ -1,0 +1,46 @@
+{
+ "name": "tr02_facts",
+ "mission": "traynor02",
+ "preset": "ce0_dev",
+ "why": "start facts of TRaynor02",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "cmd",
+   "text": "p2types"
+  },
+  {
+   "op": "cmd",
+   "text": "ammo"
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "expect",
+   "regex": "P2TYPES",
+   "note": "enemy structure types"
+  },
+  {
+   "op": "expect",
+   "regex": "AMMO",
+   "note": "start ammo and ranges in the running build"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

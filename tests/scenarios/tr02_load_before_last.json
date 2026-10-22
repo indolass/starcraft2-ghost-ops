@@ -1,0 +1,84 @@
+{
+ "name": "tr02_load_before_last",
+ "mission": "traynor02",
+ "preset": "tactical_next_dev",
+ "why": "save/load before destroying the last production building",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "ammo",
+   "grep": "AMMO grenade charges 2",
+   "every": 4,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "kp2 1",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 6
+  },
+  {
+   "op": "cmd",
+   "text": "ammo",
+   "wait": 1.5
+  },
+  {
+   "op": "save",
+   "name": "CE0_TR2_E"
+  },
+  {
+   "op": "load",
+   "name": "CE0_TR2_E"
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "cmd",
+   "text": "ammo",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "kp2 0",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 8
+  },
+  {
+   "op": "cmd",
+   "text": "ammo",
+   "wait": 1.5
+  },
+  {
+   "op": "expect",
+   "regex": "STATE tac [0-9]+ launches [0-9]+ ended 1",
+   "note": "victory after the load"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

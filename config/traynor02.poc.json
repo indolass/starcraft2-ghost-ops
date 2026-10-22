@@ -714,6 +714,173 @@
           ]
         }
       }
+    },
+    "tactical_next": {
+      "label": "Вне закона, версия 2",
+      "message": "Ghost Ops — Вне закона, версия 2",
+      "message_en": "Ghost Ops - Outlaws, version 2",
+      "experimental": true,
+      "extends": "tactical",
+      "card": "Доработка по прохождению: бронебойный удар по области, ядерный удар дальше и сильнее, метки повстанцев, новая победа",
+      "details": [
+        "Оперативник: 2 заряда, область с кругом, клавиша G, счётчик на панели отряда",
+        "Ядерный удар: дальность вдвое (48), усиленный урон только в этой миссии (экспериментальные числа)",
+        "Победа: уничтожить все вражеские бараки, фабрики, командные центры и космопорты",
+        "Метки «Повстанец» над спасёнными бойцами"
+      ],
+      "overrides": {
+        "tactical": {
+          "nuke": {
+            "range": 48,
+            "damage": {
+              "amount": 600,
+              "structure_bonus": 900,
+              "areas": [
+                [
+                  4,
+                  1.0
+                ],
+                [
+                  7,
+                  0.5
+                ],
+                [
+                  10,
+                  0.25
+                ]
+              ]
+            }
+          },
+          "grenade": {
+            "radius": 3.0,
+            "flight_speed": 20,
+            "hotkey": "G",
+            "effects": true,
+            "charges": 2,
+            "prep_time": 0.4,
+            "pointer": true
+          },
+          "rebel_labels": {
+            "enabled": true
+          },
+          "victory": {
+            "enabled": true,
+            "types": [
+              "Barracks",
+              "BarracksFlying",
+              "Factory",
+              "FactoryFlying",
+              "CommandCenter",
+              "CommandCenterFlying",
+              "OrbitalCommand",
+              "OrbitalCommandFlying",
+              "PlanetaryFortress",
+              "Starport",
+              "StarportFlying"
+            ]
+          },
+          "texts": {
+            "GrenadeName": {
+              "ru": "Бронебойный удар",
+              "en": "Armor-piercing strike"
+            },
+            "GrenadeTip": {
+              "ru": "Бронебойный удар по области: выберите точку, круг показывает реальную область поражения. Разрушает вражескую наземную технику и здания; пехоту, воздух, своих и союзников не задевает. Два заряда на миссию, без пополнения; отмена приказа заряд не тратит. Только у Оперативника.",
+              "en": "Armor-piercing area strike: pick a point, the circle shows the real damage area. Destroys enemy ground vehicles and buildings; infantry, air units, own and allied units are not hurt. Two charges per mission, no refill; cancelling the order costs nothing. Operative only."
+            },
+            "GrenadeEmpty": {
+              "ru": "Заряды закончились.",
+              "en": "No charges left."
+            },
+            "RebelTag": {
+              "ru": "Повстанец",
+              "en": "Rebel"
+            },
+            "RebelMedicTag": {
+              "ru": "Медик повстанцев",
+              "en": "Rebel medic"
+            },
+            "RebelInfo": {
+              "ru": "Повстанец — оружие работает вне базы",
+              "en": "Rebel - the weapon works outside the base"
+            },
+            "VictoryTitle": {
+              "ru": "Уничтожить вражеское производство",
+              "en": "Destroy the enemy production"
+            },
+            "VictoryText": {
+              "ru": "Разрушьте все вражеские казармы, фабрики, командные центры и космопорты, в том числе поднятые в воздух. Осталось зданий:",
+              "en": "Destroy every enemy barracks, factory, command center and starport, including lifted-off ones. Buildings left:"
+            },
+            "VictoryLeft": {
+              "ru": "Вражеских производственных зданий осталось: ",
+              "en": "Enemy production buildings left: "
+            }
+          }
+        },
+        "panel": {
+          "texts": {
+            "Grenades": {
+              "ru": "Бронебойные заряды",
+              "en": "Armor-piercing charges"
+            }
+          }
+        }
+      }
+    },
+    "tactical_next_dev": {
+      "label": "Вне закона, версия 2 (отладка)",
+      "message": "Ghost Ops — Вне закона v2 (отладка)",
+      "message_en": "Ghost Ops - Outlaws v2 (debug)",
+      "hidden": true,
+      "extends": "tactical_next",
+      "card": "Только для разработки",
+      "details": [
+        "Только для разработки"
+      ],
+      "overrides": {
+        "tactical": {
+          "debug_log": true,
+          "story": {
+            "first_delay": 3,
+            "second_delay": 6,
+            "alert_seconds": 4,
+            "swann_seconds": 3,
+            "arrival_seconds": 4,
+            "ghost_seconds": 3,
+            "raynor_delay": 1,
+            "raynor_seconds": 4
+          }
+        },
+        "ce0": {
+          "operation_id": "CE0-TR02",
+          "census_types": [
+            "Ghost",
+            "Marine",
+            "Medic",
+            "SCV",
+            "MissileTurret"
+          ]
+        }
+      }
+    },
+    "tactical_next_slow_dev": {
+      "label": "Вне закона v2 (медленный снаряд, отладка)",
+      "message": "Ghost Ops — Вне закона v2 (медленный снаряд)",
+      "message_en": "Ghost Ops - Outlaws v2 (slow projectile, debug)",
+      "hidden": true,
+      "extends": "tactical_next_dev",
+      "card": "Только для разработки",
+      "details": [
+        "Только для разработки"
+      ],
+      "overrides": {
+        "tactical": {
+          "grenade": {
+            "dev_flight_speed": 3
+          }
+        }
+      }
     }
   }
 }

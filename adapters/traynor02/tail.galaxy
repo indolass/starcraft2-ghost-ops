@@ -1,0 +1,14 @@
+// Tail of the Ghost Ops additions: the only place that sees the original variables and triggers of the mission (they are declared after our block).
+// The original victory trigger (gt_VictoryDominionOutpostCompleted) is called with the conditions skipped: the same objective, hooks and campaign victory sequence as
+// when the original condition fires; gv_gameOver is set by it, so it can happen only once.
+bool GhostOps_Tac_GameIsOver () {
+    return gv_gameOver;
+}
+
+void GhostOps_Tac_VictoryFire () {
+    if (gv_gameOver) {
+        return;
+    }
+
+    gt_VictoryDominionOutpostCompleted_Func(false, true);
+}

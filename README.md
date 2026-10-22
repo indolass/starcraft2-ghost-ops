@@ -172,6 +172,11 @@ ground vehicles and structures, one hit destroys the intact entrance bunker); on
 re-allowed); Raynor clip after the Adjutant alarm; the Ghost landing line about the two charges; larger explanation text; status panel; portraits move their mouth during
 clips and explanations (silent lip-sync drivers, see `docs/MISSION_ROADMAP.md`, seventh task). Technical checks of 2026-10-21 (panel layout, portrait mouth recordings, nuke aim geometry at the entrance bunker, grenade results; in-flight save NOT run because the game's save was locked) are in `docs/MISSION_ROADMAP.md`.
 
+
+### The Outlaws, version 2 (TRaynor02 `tactical_next`, 2026-10-22, experimental numbers, NOT Owner-approved)
+
+Separate map `GhostOps_TRaynor02_r2_tactical_next.SC2Map`, launcher card *Вне закона, версия 2* (`python toolsuild.py launch --mission traynor02 --preset tactical_next`); the Owner's `tactical` map is not touched. Armor-piercing strike: 2 charges (counter on the squad panel), area circle under the cursor, key G, radius 3 / damage 500; nuclear strike: aiming range 48 (was 24) and a mission-only damage profile 600 + 900 vs structures, radii 4 / 7 / 10 (the stock 300 + 200 left a Command Center at 1000 of 1500); "Повстанец" labels over the rescued fighters; new victory: all enemy barracks, factories, command centers and starports (also lifted off) are destroyed. Measured values and open checks: `docs/MISSION_ROADMAP.md` section 6.1, architecture: `docs/ARCHITECTURE.md`.
+
 ### The first three missions and the campaign link (2026-10-20, experiment)
 
 Plan and statuses: [docs/MISSION_ROADMAP.md](docs/MISSION_ROADMAP.md); economy and save rules (the one contract): [docs/MISSION_SETTINGS_AND_CAMPAIGN_ECONOMY.md](docs/MISSION_SETTINGS_AND_CAMPAIGN_ECONOMY.md).

@@ -6,6 +6,7 @@
   "output_map_file": "GhostOps_TRaynor02_r2.SC2Map",
   "script_member": "MapScript.galaxy",
   "adapter_source": "adapters/traynor02/adapter.galaxy",
+  "tail_source": "adapters/traynor02/tail.galaxy",
   "config": "config/traynor02.poc.json",
   "modules": [
     "core/GhostOpsTactical.galaxy"

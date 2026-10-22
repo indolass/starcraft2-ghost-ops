@@ -1,0 +1,55 @@
+{
+ "name": "tr02_nuke_real_stock",
+ "mission": "traynor02",
+ "preset": "ce0_dev",
+ "why": "whole nuke chain: aim, launch, flight, detonation against a player 5 cluster (stock)",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "ammo",
+   "grep": "AMMO grenade charges 2",
+   "every": 4,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "nkreal",
+   "wait": 1.5
+  },
+  {
+   "op": "until",
+   "grep": "NR after the strike",
+   "every": 5,
+   "timeout": 160
+  },
+  {
+   "op": "expect",
+   "regex": "NR before the aim",
+   "note": "cluster before"
+  },
+  {
+   "op": "expect",
+   "regex": "NR after the strike",
+   "note": "cluster after the whole chain"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

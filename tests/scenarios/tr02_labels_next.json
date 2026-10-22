@@ -1,0 +1,80 @@
+{
+ "name": "tr02_labels_next",
+ "mission": "traynor02",
+ "preset": "tactical_next_dev",
+ "why": "labels above the rescued fighters appear and disappear with the units",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "ammo",
+   "grep": "AMMO grenade charges 2",
+   "every": 4,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "resc",
+   "wait": 3
+  },
+  {
+   "op": "sleep",
+   "s": 4
+  },
+  {
+   "op": "cmd",
+   "text": "rebstat",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "shot",
+   "file": "labels.png"
+  },
+  {
+   "op": "cmd",
+   "text": "killr",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "rebstat",
+   "wait": 1.5
+  },
+  {
+   "op": "expect",
+   "regex": "REBSTAT labels [1-9]",
+   "note": "labels exist"
+  },
+  {
+   "op": "expect",
+   "regex": "REBSTAT labels 0",
+   "note": "labels gone after death"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

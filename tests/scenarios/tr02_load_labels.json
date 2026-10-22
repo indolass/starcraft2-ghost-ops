@@ -1,0 +1,74 @@
+{
+ "name": "tr02_load_labels",
+ "mission": "traynor02",
+ "preset": "tactical_next_dev",
+ "why": "rebel labels after save/load",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "ammo",
+   "grep": "AMMO grenade charges 2",
+   "every": 4,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "resc",
+   "wait": 3
+  },
+  {
+   "op": "sleep",
+   "s": 4
+  },
+  {
+   "op": "cmd",
+   "text": "rebstat",
+   "wait": 1.5
+  },
+  {
+   "op": "save",
+   "name": "CE0_TR2_F"
+  },
+  {
+   "op": "load",
+   "name": "CE0_TR2_F"
+  },
+  {
+   "op": "sleep",
+   "s": 4
+  },
+  {
+   "op": "cmd",
+   "text": "rebstat",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "expect",
+   "regex": "REBSTAT labels [1-9][0-9]* rescued alive",
+   "note": "ten labels after the load, no duplicates"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

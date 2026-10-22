@@ -1,0 +1,83 @@
+{
+ "name": "tr02_load_after_launch",
+ "mission": "traynor02",
+ "preset": "tactical_next_dev",
+ "why": "save/load after the missile launch",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "ammo",
+   "grep": "AMMO grenade charges 2",
+   "every": 4,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "aimc",
+   "wait": 1.5
+  },
+  {
+   "op": "until",
+   "grep": "STATE tac 4",
+   "cmd": "ammo",
+   "every": 3,
+   "timeout": 60
+  },
+  {
+   "op": "save",
+   "name": "CE0_TR2_D"
+  },
+  {
+   "op": "load",
+   "name": "CE0_TR2_D"
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "cmd",
+   "text": "ammo",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 10
+  },
+  {
+   "op": "cmd",
+   "text": "ammo",
+   "wait": 1.5
+  },
+  {
+   "op": "expect",
+   "regex": "STATE tac 5 launches 1",
+   "note": "detonated once, one launch"
+  },
+  {
+   "op": "expect",
+   "regex": "launches 2",
+   "note": "no second missile",
+   "absent": true
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

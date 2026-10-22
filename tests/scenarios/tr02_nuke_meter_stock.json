@@ -1,0 +1,60 @@
+{
+ "name": "tr02_nuke_meter_stock",
+ "mission": "traynor02",
+ "preset": "ce0_dev",
+ "why": "measured damage of the stock / mission NukeDamage by type and distance (stock)",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "ammo",
+   "grep": "AMMO grenade charges 2",
+   "every": 4,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "nd 99.0 27.7",
+   "wait": 1.5
+  },
+  {
+   "op": "until",
+   "grep": "ND meter done",
+   "every": 5,
+   "timeout": 150
+  },
+  {
+   "op": "expect",
+   "regex": "ND meter at",
+   "note": "catalog values and point"
+  },
+  {
+   "op": "expect",
+   "regex": "ND CommandCenter d=0",
+   "note": "CC at the center"
+  },
+  {
+   "op": "expect",
+   "regex": "ND Marine d=10",
+   "note": "edge infantry"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

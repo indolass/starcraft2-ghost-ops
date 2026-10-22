@@ -1,0 +1,86 @@
+{
+ "name": "tr02_load_after_shot",
+ "mission": "traynor02",
+ "preset": "tactical_next_dev",
+ "why": "save/load after the first shot",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "ammo",
+   "grep": "AMMO grenade charges 2",
+   "every": 4,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "apt",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "bt",
+   "wait": 1.5
+  },
+  {
+   "op": "until",
+   "grep": "BT end",
+   "every": 4,
+   "timeout": 60
+  },
+  {
+   "op": "cmd",
+   "text": "ammo",
+   "wait": 1.5
+  },
+  {
+   "op": "save",
+   "name": "CE0_TR2_A"
+  },
+  {
+   "op": "load",
+   "name": "CE0_TR2_A"
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "cmd",
+   "text": "ammo",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "apn",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "expect",
+   "regex": "AMMO grenade charges 1 of 2 \\| panel 1/2",
+   "note": "after the load the charge stays spent, not re-granted"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

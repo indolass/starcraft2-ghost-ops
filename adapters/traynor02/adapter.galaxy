@@ -625,6 +625,72 @@ bool GhostOps_Scene_Tick (bool lp_testConds, bool lp_runActions) {
     return true;
 }
 
+// ---- New victory (config tactical.victory): every enemy production building of the listed types is destroyed ----
+// The tail of the script (adapters/traynor02/tail.galaxy) knows the original mission variables: it tells whether the mission is over and fires the ORIGINAL victory
+// (objective, campaign victory sequence, hooks) exactly once. The original victory trigger stays as it is (everything of the enemy dead = victory too).
+bool GhostOps_Tac_GameIsOver ();
+void GhostOps_Tac_VictoryFire ();
+
+int GhostOps_Victory_Count () {
+    int lv_i;
+    int lv_n;
+
+    lv_n = 0;
+    lv_i = 0;
+    while (lv_i < go_tacVicCount) {
+        lv_n += UnitGroupCount(UnitGroup(go_tacVicType[lv_i], 2, RegionEntireMap(), GhostOps_Tac_LiveFilter(), 0), c_unitCountAlive);
+        lv_i += 1;
+    }
+
+    return lv_n;
+}
+
+bool GhostOps_Victory_Tick (bool lp_testConds, bool lp_runActions) {
+    int lv_n;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    if (go_tacEnded || GhostOps_Tac_GameIsOver()) {
+        return true;
+    }
+
+    lv_n = GhostOps_Victory_Count();
+    if (lv_n > 0) {
+        go_tacVicSeen = true;
+    }
+
+    if (lv_n != go_tacVicLeft) {
+        go_tacVicLeft = lv_n;
+        ObjectiveSetDescription(go_tacVicObj, StringExternal("Param/Value/GhostOpsTac_VictoryText") + StringToText(" ") + IntToText(lv_n));
+        if (lv_n > 0) {
+            UIDisplayMessage(PlayerGroupAll(), c_messageAreaDirective, StringExternal("Param/Value/GhostOpsTac_VictoryLeft") + IntToText(lv_n));
+        }
+    }
+
+    if (go_tacVicSeen && (lv_n == 0)) {
+        TriggerEnable(TriggerGetCurrent(), false);
+        ObjectiveSetState(go_tacVicObj, c_objectiveStateCompleted);
+        GhostOps_Tac_Log("victory: no listed production building left");
+        GhostOps_Tac_VictoryFire();
+    }
+
+    return true;
+}
+
+void GhostOps_Victory_Start () {
+    if (!go_tacVictory || (go_tacVicTrig != null)) {
+        return;
+    }
+
+    ObjectiveCreate(StringExternal("Param/Value/GhostOpsTac_VictoryTitle"), StringExternal("Param/Value/GhostOpsTac_VictoryText"), c_objectiveStateActive, false);
+    go_tacVicObj = ObjectiveLastCreated();
+    go_tacVicLeft = -1;
+    go_tacVicTrig = TriggerCreate("GhostOps_Victory_Tick");
+    TriggerAddEventTimePeriodic(go_tacVicTrig, 1.0, c_timeGame);
+}
+
 void GhostOps_OnMissionStart () {
     unit lv_operative;
 
@@ -639,6 +705,7 @@ void GhostOps_OnMissionStart () {
     if (go_tacEnabled) {
         // the Ghosts come later, by transport (see the scene above)
         GhostOps_Tac_Start();
+        GhostOps_Victory_Start();
         go_tacScStage = 0;
         go_tacScT = GameGetMissionTime();
         go_tacPlanCalmT = -1.0;
