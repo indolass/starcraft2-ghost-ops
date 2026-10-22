@@ -1,0 +1,50 @@
+{
+ "name": "tr02_nuke_size_next",
+ "mission": "traynor02",
+ "preset": "tactical_next_dev",
+ "why": "nuke damage vs distance for Command Center / Barracks / Supply Depot with our Marines paused (next)",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "ammo",
+   "grep": "AMMO grenade charges 2",
+   "every": 4,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "sz 99.0 27.7",
+   "wait": 1.5
+  },
+  {
+   "op": "until",
+   "grep": "SZ done",
+   "every": 5,
+   "timeout": 240
+  },
+  {
+   "op": "expect",
+   "regex": "SZ ",
+   "note": "size and falloff"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

@@ -239,12 +239,325 @@ unit GhostOps_Ce0_First (string lp_type) {
     return UnitGroupUnit(UnitGroup(lp_type, 1, RegionEntireMap(), GhostOps_Ce0_Live(), 0), 1);
 }
 
+// Blast test (dev): a cluster around the placed container i: enemy ground biological (Zergling), enemy armored (Roach), the heavy Ultralisk, an enemy air unit (Mutalisk),
+// own Marine, allied Marine (player 4), colonist (player 4), own Supply Depot, and a Zergling outside the radius as control. Lives are logged before / after.
+unit[10] go_nbU;
+string[10] go_nbT;
+
+string GhostOps_Ce0_NbLife (unit lp_u) {
+    if ((lp_u == null) || !UnitIsAlive(lp_u)) {
+        return "dead";
+    }
+
+    return FixedToString(UnitGetPropertyFixed(lp_u, c_unitPropLife, c_unitPropCurrent), 0);
+}
+
+void GhostOps_Ce0_NbLog (string lp_tag) {
+    string lv_s;
+    int lv_i;
+
+    lv_s = "";
+    lv_i = 0;
+    while (lv_i < 10) {
+        lv_s = lv_s + go_nbT[lv_i] + ":" + GhostOps_Ce0_NbLife(go_nbU[lv_i]) + " ";
+        lv_i += 1;
+    }
+
+    GhostOps_Ce0_Write("j", "NB " + lp_tag + " " + lv_s);
+}
+
+void GhostOps_Ce0_NbMake (int lp_i, string lp_type, int lp_owner, point lp_pos) {
+    go_nbT[lp_i] = lp_type + "#" + IntToString(lp_owner);
+    UnitCreate(1, lp_type, 0, lp_owner, lp_pos, 270.0);
+    go_nbU[lp_i] = UnitLastCreated();
+}
+
+// Resource probe (dev): what the player has and what the SCVs do. nres = one line now; nresmon = a line every 30 s of game time (gas, minerals, SCVs, refineries).
+trigger go_nrMon;
+
+void GhostOps_Ce0_NresLine () {
+    unitgroup lv_scv;
+    unitgroup lv_ref;
+    unit lv_r;
+    int lv_i;
+    string lv_t;
+
+    lv_scv = UnitGroup("SCV", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+    lv_ref = UnitGroup("Refinery", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+    lv_t = "";
+    lv_i = 1;
+    while (lv_i <= UnitGroupCount(lv_ref, c_unitCountAlive)) {
+        lv_r = UnitGroupUnit(lv_ref, lv_i);
+        lv_t = lv_t + "(" + FixedToString(PointGetX(UnitGetPosition(lv_r)), 0) + "," + FixedToString(PointGetY(UnitGetPosition(lv_r)), 0) + ") ";
+        lv_i += 1;
+    }
+
+    GhostOps_Ce0_Write("j", "NRES t " + FixedToString(GameGetMissionTime(), 0) + " gas " + IntToString(PlayerGetPropertyInt(1, c_playerPropVespene)) + " min " + IntToString(PlayerGetPropertyInt(1, c_playerPropMinerals)) + " mined gas " + IntToString(PlayerGetPropertyInt(1, c_playerPropVespeneCollected)));
+    GhostOps_Ce0_Write("j", "NRES scvs " + IntToString(UnitGroupCount(lv_scv, c_unitCountAlive)) + " refineries " + IntToString(UnitGroupCount(lv_ref, c_unitCountAlive)) + " at " + lv_t);
+}
+
+bool GhostOps_Ce0_NresTick (bool lp_testConds, bool lp_runActions) {
+    if (!lp_runActions) {
+        return true;
+    }
+
+    GhostOps_Ce0_NresLine();
+    return true;
+}
+
+bool GhostOps_Ce0_FastCancel (bool lp_testConds, bool lp_runActions) {
+    unit lv_f;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    lv_f = GhostOps_Ce0_First("Firebat");
+    UnitIssueOrder(lv_f, OrderTargetingPoint(AbilityCommand("GhostOpsPlaceContainer", 0), PointWithOffset(UnitGetPosition(lv_f), 2.0, 0.0)), c_orderQueueReplace);
+    Wait(0.05, c_timeGame);
+    UnitIssueOrder(lv_f, Order(AbilityCommand("stop", 0)), c_orderQueueReplace);
+    GhostOps_Ce0_Write("j", "NFAST order given and cancelled 0.05 s later");
+    return true;
+}
+
 bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
     unit lv_scv;
     unit lv_cc;
     point lv_p;
     int lv_i;
     string lv_t;
+
+    if (lp_cmd == "nblast") {
+        lv_p = UnitGetPosition(go_hCont[StringToInt(lp_a)]);
+        // the Ghosts stand 8 cells away (outside their own rifle range): the cluster can only be changed by the explosion
+        UnitSetPosition(GhostOps_SquadUnit(0), PointWithOffset(lv_p, -8.0, 0.0), false);
+        UnitSetPosition(GhostOps_SquadUnit(1), PointWithOffset(lv_p, -8.0, 1.5), false);
+        GhostOps_Ce0_NbMake(0, "Zergling", 6, PointWithOffset(lv_p, 1.0, 0.0));
+        GhostOps_Ce0_NbMake(1, "Roach", 6, PointWithOffset(lv_p, -1.0, 0.0));
+        GhostOps_Ce0_NbMake(2, "Ultralisk", 6, PointWithOffset(lv_p, 0.0, 1.6));
+        GhostOps_Ce0_NbMake(3, "Mutalisk", 6, PointWithOffset(lv_p, 0.0, -1.0));
+        GhostOps_Ce0_NbMake(4, "Marine", 1, PointWithOffset(lv_p, 1.5, 1.5));
+        GhostOps_Ce0_NbMake(5, "Marine", 4, PointWithOffset(lv_p, -1.5, 1.5));
+        GhostOps_Ce0_NbMake(6, "Civilian", 4, PointWithOffset(lv_p, -1.5, -1.5));
+        GhostOps_Ce0_NbMake(7, "SupplyDepot", 1, PointWithOffset(lv_p, 2.4, -2.0));
+        GhostOps_Ce0_NbMake(8, "Zergling", 6, PointWithOffset(lv_p, 4.6, 0.0));
+        GhostOps_Ce0_NbMake(9, "Marine", 1, PointWithOffset(lv_p, 0.0, -2.6));
+        // a clean scene: the cluster is paused (nobody fights anybody) and the Ghosts hold their fire; only the explosion (and the shot at the container) can change a life
+        lv_i = 0;
+        while (lv_i < 10) {
+            libNtve_gf_PauseUnit(go_nbU[lv_i], true);
+            lv_i += 1;
+        }
+
+        UnitIssueOrder(GhostOps_SquadUnit(0), Order(AbilityCommand("GhostHoldFire", 0)), c_orderQueueReplace);
+        UnitIssueOrder(GhostOps_SquadUnit(1), Order(AbilityCommand("GhostHoldFire", 0)), c_orderQueueReplace);
+        GhostOps_Ce0_NbLog("before");
+        return true;
+    }
+
+    if (lp_cmd == "nafter") {
+        GhostOps_Ce0_NbLog("after");
+        return true;
+    }
+
+    if (lp_cmd == "nbunk") {
+        lv_scv = GhostOps_Ce0_First("Firebat");
+        UnitCreate(1, "SupplyDepot", 0, 1, PointWithOffset(UnitGetPosition(lv_scv), StringToFixed(lp_a), StringToFixed(lp_b)), 270.0);
+        GhostOps_Ce0_Write("j", "NBUNK depots of player 1 now " + IntToString(UnitGroupCount(UnitGroup("SupplyDepot", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive)) + " at " + FixedToString(PointGetX(UnitGetPosition(UnitLastCreated())), 1) + "," + FixedToString(PointGetY(UnitGetPosition(UnitLastCreated())), 1));
+        return true;
+    }
+
+    if (lp_cmd == "nused") {
+        go_hContUsed = StringToInt(lp_a);
+        GhostOps_Ce0_Write("j", "NUSED shared limit used set to " + lp_a);
+        return true;
+    }
+
+    if (lp_cmd == "nres") {
+        GhostOps_Ce0_NresLine();
+        return true;
+    }
+
+    if (lp_cmd == "nresmon") {
+        go_nrMon = TriggerCreate("GhostOps_Ce0_NresTick");
+        TriggerAddEventTimePeriodic(go_nrMon, 30.0, c_timeGame);
+        GhostOps_Ce0_NresLine();
+        return true;
+    }
+
+    if (lp_cmd == "nharv") {
+        // nharv <n>: n SCVs are ordered to harvest from the first Refinery of the player (the number of gas workers of the measurement)
+        lv_cc = GhostOps_Ce0_First("Refinery");
+        lv_i = 1;
+        while (lv_i <= StringToInt(lp_a)) {
+            UnitIssueOrder(UnitGroupUnit(UnitGroup("SCV", 1, RegionEntireMap(), GhostOps_Ce0_Live(), 0), lv_i), OrderTargetingUnit(AbilityCommand("SCVHarvest", 0), lv_cc), c_orderQueueReplace);
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", "NHARV harvest order sent to " + lp_a + " SCVs");
+        return true;
+    }
+
+    if (lp_cmd == "nhp") {
+        // the real health of the Zerg types of the installed game (the Snipe numbers are judged against these, not against any table)
+        lv_t = "Zergling Baneling Roach Hydralisk Mutalisk Ultralisk Queen Infestor Corruptor BroodLord Overlord Drone";
+        lv_i = 1;
+        while (lv_i <= 12) {
+            UnitCreate(1, StringWord(lv_t, lv_i), 0, 6, Point(20.0 + (3.0 * lv_i), 20.0), 270.0);
+            GhostOps_Ce0_Write("j", "NHP " + StringWord(lv_t, lv_i) + " life " + FixedToString(UnitGetPropertyFixed(UnitLastCreated(), c_unitPropLife, c_unitPropCurrent), 0) + "/" + FixedToString(UnitGetPropertyFixed(UnitLastCreated(), c_unitPropLifeMax, c_unitPropCurrent), 0));
+            UnitRemove(UnitLastCreated());
+            lv_i += 1;
+        }
+
+        return true;
+    }
+
+    if (lp_cmd == "nabil") {
+        lv_scv = GhostOps_Ce0_First("Firebat");
+        lv_t = "";
+        lv_i = 0;
+        while (lv_i < UnitAbilityCount(lv_scv)) {
+            lv_t = lv_t + UnitAbilityGet(lv_scv, lv_i) + " ";
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", "NABIL firebat abilities: " + lv_t);
+        GhostOps_Ce0_Write("j", "NABIL place exists " + IntToString(GhostOps_Ce0_B(UnitAbilityExists(lv_scv, "GhostOpsPlaceContainer"))) + " enabled " + IntToString(GhostOps_Ce0_B(UnitAbilityCheck(lv_scv, "GhostOpsPlaceContainer", true))) + " range " + FixedToString(UnitAbilityEffectInstantGetRange(lv_scv, "GhostOpsPlaceContainer"), 1));
+        GhostOps_Ce0_Write("j", "NABIL type " + UnitGetType(lv_scv) + " owner " + IntToString(UnitGetOwner(lv_scv)) + " cooldown-free valid-move " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(lv_scv, OrderTargetingPoint(AbilityCommand("move", 0), PointWithOffset(UnitGetPosition(lv_scv), 2.0, 0.0))))));
+        return true;
+    }
+
+    if (lp_cmd == "ncu") {
+        // direct creation (no effect, no ability) of the barrel and of the container; catalog fields of the container
+        lv_scv = GhostOps_Ce0_First("Firebat");
+        GhostOps_Ce0_Write("j", "NCU catalog container LifeMax " + CatalogFieldValueGet(c_gameCatalogUnit, "GhostOpsFuelContainer", "LifeMax", 1) + " | barrel LifeMax " + CatalogFieldValueGet(c_gameCatalogUnit, "ExplodingBarrelLarge", "LifeMax", 1) + " | abil range " + CatalogFieldValueGet(c_gameCatalogAbil, "GhostOpsPlaceContainer", "Range", 1));
+        UnitCreate(1, "ExplodingBarrelLarge", 0, 0, PointWithOffset(UnitGetPosition(lv_scv), -3.0, 0.0), 270.0);
+        GhostOps_Ce0_Write("j", "NCU barrel made " + IntToString(GhostOps_Ce0_B(UnitLastCreated() != null)));
+        UnitCreate(1, "GhostOpsFuelContainer", 0, 1, PointWithOffset(UnitGetPosition(lv_scv), -2.0, 2.0), 270.0);
+        GhostOps_Ce0_Write("j", "NCU container made " + IntToString(GhostOps_Ce0_B(UnitLastCreated() != null)) + " effect " + CatalogFieldValueGet(c_gameCatalogEffect, "GhostOpsContainerCreate", "SpawnUnit", 1));
+        return true;
+    }
+
+    if (lp_cmd == "ncat") {
+        // which stock units exist in the data of THIS map (the container needs a parent / model that exists): life of a few candidates, models by their variation count
+        lv_t = "ExplodingBarrelLarge ExplodingBarrelMedium PalletGas PalletMinerals TerrazineCanister TankerTruck GasCanister CargoTruckUnitBarrels AutoTurret Hut MineralField Refinery SupplyDepot";
+        lv_i = 1;
+        while (lv_i <= 13) {
+            GhostOps_Ce0_Write("j", "NCAT unit " + StringWord(lv_t, lv_i) + " LifeMax [" + CatalogFieldValueGet(c_gameCatalogUnit, StringWord(lv_t, lv_i), "LifeMax", 1) + "]");
+            lv_i += 1;
+        }
+
+        return true;
+    }
+
+    if (lp_cmd == "ncu2") {
+        // does UnitCreate work at all at this place, for a known unit and for ours (counted by type afterwards, not by UnitLastCreated)
+        lv_scv = GhostOps_Ce0_First("Firebat");
+        lv_t = "Marine SupplyDepot ExplodingBarrelLarge GhostOpsFuelContainer";
+        lv_i = 1;
+        while (lv_i <= 4) {
+            UnitCreate(1, StringWord(lv_t, lv_i), 0, 1, PointWithOffset(UnitGetPosition(lv_scv), -2.0, 1.0 + (2.5 * lv_i)), 270.0);
+            GhostOps_Ce0_Write("j", "NCU2 " + StringWord(lv_t, lv_i) + " alive of any owner " + IntToString(UnitGroupCount(UnitGroup(StringWord(lv_t, lv_i), c_playerAny, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive)));
+            lv_i += 1;
+        }
+
+        return true;
+    }
+
+    if (lp_cmd == "nkillref") {
+        UnitKill(GhostOps_Ce0_First("Refinery"));
+        GhostOps_Ce0_Write("j", "NKILLREF refinery killed; refinery allowed to build " + IntToString(GhostOps_Ce0_B(TechTreeUnitIsAllowed(1, "Refinery"))));
+        return true;
+    }
+
+    if (lp_cmd == "nunlock") {
+        TechTreeUnitAllow(1, "GhostOpsFuelContainer", true);
+        GhostOps_Ce0_Write("j", "NUNLOCK container allowed again; unit allowed " + IntToString(GhostOps_Ce0_B(TechTreeUnitIsAllowed(1, "GhostOpsFuelContainer"))));
+        return true;
+    }
+
+    if (lp_cmd == "ncreate") {
+        // the effect alone (no ability, no order): is the unit / the effect itself fine?
+        lv_scv = GhostOps_Ce0_First("Firebat");
+        UnitCreateEffectPoint(lv_scv, "GhostOpsContainerCreate", PointWithOffset(UnitGetPosition(lv_scv), StringToFixed(lp_a), StringToFixed(lp_b)));
+        GhostOps_Ce0_Write("j", "NCREATE effect run; containers alive " + IntToString(UnitGroupCount(UnitGroup("GhostOpsFuelContainer", c_playerAny, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive)));
+        return true;
+    }
+
+    if (lp_cmd == "norders") {
+        lv_scv = GhostOps_Ce0_First("Firebat");
+        lv_t = "orders " + IntToString(UnitOrderCount(lv_scv));
+        if (UnitOrderCount(lv_scv) > 0) {
+            lv_t = lv_t + " first " + AbilityCommandGetAbility(OrderGetAbilityCommand(UnitOrder(lv_scv, 0)));
+        }
+
+        GhostOps_Ce0_Write("j", "NORDERS " + lv_t + " pos " + FixedToString(PointGetX(UnitGetPosition(lv_scv)), 1) + "," + FixedToString(PointGetY(UnitGetPosition(lv_scv)), 1));
+        return true;
+    }
+
+    if (lp_cmd == "nstat") {
+        // prepared detonations: the numbers that matter (gas, limit, placed, blasts, convoy state) and the ghosts / firebats
+        GhostOps_Ce0_Write("j", "NSTAT gas " + IntToString(GhostOps_Hanson_Gas()) + " used " + IntToString(go_hContUsed) + "/" + IntToString(go_hContLimit) + " placed " + IntToString(go_hContN) + " blasts " + IntToString(go_hContBlasts) + " cmd " + IntToString(go_hCmdState) + " story " + IntToString(go_hStoryState));
+        GhostOps_Ce0_Write("j", "NSTAT convoy sent " + IntToString(go_hSent) + " escort " + IntToString(go_hEscort) + " phase " + IntToString(go_hPhase) + " saved " + IntToString(go_hSaved) + " killed " + IntToString(go_hKilled) + " gate " + IntToString(GhostOps_Hanson_B(go_hGateOpen)));
+        GhostOps_Ce0_Write("j", "NSTAT ghosts " + IntToString(UnitGroupCount(UnitGroup("Ghost", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive)) + " firebats " + IntToString(UnitGroupCount(UnitGroup("Firebat", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive)) + " containers alive " + IntToString(UnitGroupCount(UnitGroup("GhostOpsFuelContainer", c_playerAny, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive)));
+        return true;
+    }
+
+    if (lp_cmd == "ngas") {
+        PlayerModifyPropertyInt(1, c_playerPropVespene, c_playerPropOperSetTo, StringToInt(lp_a));
+        GhostOps_Ce0_Write("j", "NGAS gas set to " + IntToString(GhostOps_Hanson_Gas()));
+        return true;
+    }
+
+    if (lp_cmd == "nplace") {
+        // nplace <dx> <dy>: the first Firebat is ordered to place a container at the offset from himself (the real ability order)
+        lv_scv = GhostOps_Ce0_First("Firebat");
+        UnitIssueOrder(lv_scv, OrderTargetingPoint(AbilityCommand("GhostOpsPlaceContainer", 0), PointWithOffset(UnitGetPosition(lv_scv), StringToFixed(lp_a), StringToFixed(lp_b))), c_orderQueueReplace);
+        GhostOps_Ce0_Write("j", "NPLACE ordered at offset " + lp_a + "," + lp_b + " from the firebat at " + FixedToString(PointGetX(UnitGetPosition(lv_scv)), 1) + "," + FixedToString(PointGetY(UnitGetPosition(lv_scv)), 1) + " ability enabled valid " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(lv_scv, OrderTargetingPoint(AbilityCommand("GhostOpsPlaceContainer", 0), PointWithOffset(UnitGetPosition(lv_scv), StringToFixed(lp_a), StringToFixed(lp_b)))))));
+        return true;
+    }
+
+    if (lp_cmd == "nrifle") {
+        // nrifle <i> <ghost>: the ordinary attack order (the rifle, not Snipe) of a Ghost on the i-th container
+        UnitIssueOrder(GhostOps_SquadUnit(StringToInt(lp_b)), OrderTargetingUnit(AbilityCommand("attack", 0), go_hCont[StringToInt(lp_a)]), c_orderQueueReplace);
+        GhostOps_Ce0_Write("j", "NRIFLE ghost " + lp_b + " ordered to attack container " + lp_a);
+        return true;
+    }
+
+    if (lp_cmd == "nfast") {
+        TriggerExecute(TriggerCreate("GhostOps_Ce0_FastCancel"), true, false);
+        return true;
+    }
+
+    if (lp_cmd == "ncancel") {
+        // the player cancels the placement (Esc / right click = another order): the Firebat is ordered to stop
+        UnitIssueOrder(GhostOps_Ce0_First("Firebat"), Order(AbilityCommand("stop", 0)), c_orderQueueReplace);
+        GhostOps_Ce0_Write("j", "NCANCEL stop ordered");
+        return true;
+    }
+
+    if (lp_cmd == "nmarine") {
+        // nmarine <i>: an own Marine (not a Ghost) is created 3 cells from container i and ordered to attack it with the ordinary attack
+        lv_p = UnitGetPosition(go_hCont[StringToInt(lp_a)]);
+        UnitCreate(1, "Marine", 0, 1, PointWithOffset(lv_p, -3.0, 0.0), 270.0);
+        lv_scv = UnitLastCreated();
+        UnitIssueOrder(lv_scv, OrderTargetingUnit(AbilityCommand("attack", 0), go_hCont[StringToInt(lp_a)]), c_orderQueueReplace);
+        GhostOps_Ce0_Write("j", "NMARINE marine ordered to attack container " + lp_a + " valid " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(lv_scv, OrderTargetingUnit(AbilityCommand("attack", 0), go_hCont[StringToInt(lp_a)])))));
+        return true;
+    }
+
+    if (lp_cmd == "ncam") {
+        CameraPan(1, UnitGetPosition(go_hCont[StringToInt(lp_a)]), 0.0, -1.0, 10.0, false);
+        GhostOps_Ce0_Write("j", "NCAM camera on container " + lp_a);
+        return true;
+    }
+
+    if (lp_cmd == "nshoot") {
+        // nshoot <i>: Ghost 0 shoots the i-th placed container (the real Snipe order)
+        UnitIssueOrder(GhostOps_SquadUnit(0), OrderTargetingUnit(AbilityCommand("Snipe", 0), go_hCont[StringToInt(lp_a)]), c_orderQueueReplace);
+        GhostOps_Ce0_Write("j", "NSHOOT ghost 0 ordered to snipe container " + lp_a + " valid " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(GhostOps_SquadUnit(0), OrderTargetingUnit(AbilityCommand("Snipe", 0), go_hCont[StringToInt(lp_a)])))));
+        return true;
+    }
 
     if (lp_cmd == "enter") {
         // the Ghost walks into the settlement: the escort phase starts (as in the scripted test)

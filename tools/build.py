@@ -83,6 +83,13 @@ SCENE_TEXT_PREFIX = 'Param/Value/GhostOpsScene_'
 HANSON_TEXT_PREFIX = 'Param/Value/GhostOpsH_'
 HANSON_TEXT_KEYS = ('BtnPreparing', 'BtnReady', 'BtnActive', 'ReadyMsg', 'SentMsg')
 HANSON_ROLES = ('base', 'houses', 'air')
+# optional texts of the prepared-detonation variant (containers, gas, HUD, messages); a profile may define any of them, the module reads only what its options need
+HANSON_EXTRA_TEXT_KEYS = ('PlaceFarMsg', 'GasSourceLost', 'ContainerTag', 'GasUnit', 'NeedGas', 'FuelPaidMsg', 'FuelShortMsg', 'HudGas', 'HudContainers', 'HudLeft', 'HudOf', 'HudPrice', 'HudFuelPrice', 'HudNoGasForBox', 'HudShort',
+                          'ContainerName', 'ContainerTip', 'ContainerUnitName', 'ContainerInfo', 'PlaceFailGas', 'PlaceFailLimit', 'PlaceFailSpot', 'RaynorName', 'SwannName')
+HANSON_TEXT_DEFAULTS = {
+    'GasUnit': {'ru': '\u0433\u0430\u0437\u0430', 'en': 'gas'},
+    'NeedGas': {'ru': '\u041a\u043e\u043b\u043e\u043d\u043d\u0430 \u0433\u043e\u0442\u043e\u0432\u0430. \u041d\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u0433\u0430\u0437\u0430:', 'en': 'The convoy is ready. Gas missing:'},
+}
 ZH_TEXT_PREFIX = 'Param/Value/GhostOpsZH_'
 ZH_TEXT_KEYS = ('ObjTitle', 'ObjText', 'AllDestroyed', 'RaynorName', 'RaynorText', 'HornerName', 'HornerText', 'HornerWaitText', 'RebelName', 'RebelText', 'RescueText',
                 'RaynorClip', 'HornerClip', 'HornerWaitClip', 'RebelClip', 'RebelClipAlt', 'RescueClip', 'RescueClipAlt',
@@ -636,8 +643,8 @@ def validate_hanson(cfg):
         if not isinstance(b.get(k), int) or isinstance(b.get(k), bool) or not lo <= b[k] <= hi:
             errs.append('hanson.button.%s must be an integer %d..%d' % (k, lo, hi))
     texts = h.get('texts')
-    if not isinstance(texts, dict) or set(texts) != set(HANSON_TEXT_KEYS):
-        errs.append('hanson.texts must have exactly the keys %s' % (HANSON_TEXT_KEYS,))
+    if not isinstance(texts, dict) or not set(HANSON_TEXT_KEYS) <= set(texts) or not set(texts) <= set(HANSON_TEXT_KEYS) | set(HANSON_EXTRA_TEXT_KEYS):
+        errs.append('hanson.texts must have the keys %s and may have %s' % (HANSON_TEXT_KEYS, HANSON_EXTRA_TEXT_KEYS))
     else:
         for k, v in texts.items():
             if not isinstance(v, dict) or not v.get('ru') or not v.get('en'):
@@ -645,8 +652,49 @@ def validate_hanson(cfg):
     at = h.get('autotest')
     if at is not None and (not isinstance(at, dict) or at.get('mode') not in (1, 2, 3, 4, 5, 6, 7)):
         errs.append('hanson.autotest.mode must be 1..7')
-    if 'Ghost' not in cfg['operatives']['squad'] or len(cfg['operatives']['squad']) != 1:
-        errs.append('hanson variant: the squad is exactly one Ghost')
+    sq = cfg['operatives']['squad']
+    if sq not in (['Ghost'], ['Ghost', 'Ghost']):
+        errs.append('hanson variant: the squad is one Ghost or two Ghosts')
+    ct = h.get('containers')
+    if ct is not None:
+        if not isinstance(ct, dict) or not isinstance(ct.get('enabled'), bool):
+            errs.append('hanson.containers needs enabled (boolean)')
+        else:
+            for k, (lo, hi) in {'limit': (1, 24), 'gas_cost': (0, 500), 'damage': (1, 2000), 'radius': (0.5, 8), 'life': (1, 500), 'place_range': (0.5, 6), 'min_free': (0, 4)}.items():
+                if not _num(ct.get(k)) or not lo <= ct[k] <= hi:
+                    errs.append('hanson.containers.%s must be a number %s..%s' % (k, lo, hi))
+            if ct.get('owner') not in (0, 15):
+                errs.append('hanson.containers.owner must be 0 (neutral)')
+            fr = ct.get('friendly')
+            if not (isinstance(fr, dict) and all(_num(fr.get(k)) and 0 <= fr[k] <= 1 for k in ('hard', 'other'))):
+                errs.append('hanson.containers.friendly needs hard and other multipliers 0..1 (0 = no damage to own units)')
+            if not (isinstance(ct.get('hotkey'), str) and len(ct['hotkey']) == 1 and ct['hotkey'].isalpha() and ct['hotkey'].isupper()):
+                errs.append('hanson.containers.hotkey must be one capital letter')
+            if len(sq) != 2:
+                errs.append('hanson.containers need the two-Ghost squad')
+            if not (cfg.get('ghost_tuning') or {}).get('snipe', {}).get('container_target'):
+                errs.append('hanson.containers need ghost_tuning.snipe.container_target (the Ghost shot is the only detonation)')
+    if 'allow_refinery' in h and not isinstance(h['allow_refinery'], bool):
+        errs.append('hanson.allow_refinery must be boolean')
+    fu = h.get('convoy_fuel')
+    if fu is not None and (not isinstance(fu, dict) or not isinstance(fu.get('enabled'), bool) or not _num(fu.get('gas_cost')) or not 0 <= fu['gas_cost'] <= 1000):
+        errs.append('hanson.convoy_fuel needs enabled and gas_cost 0..1000')
+    if (ct or {}).get('enabled') or (fu or {}).get('enabled'):
+        hud = h.get('hud')
+        if not (isinstance(hud, dict) and all(isinstance(hud.get(k), int) and not isinstance(hud.get(k), bool) for k in ('offset_x', 'offset_y', 'width', 'height'))):
+            errs.append('hanson.hud needs integer offset_x, offset_y, width, height')
+    ln = h.get('lines')
+    if ln is not None:
+        ids = set()
+        for x in ln if isinstance(ln, list) and len(ln) <= 16 else [None]:
+            if not (isinstance(x, dict) and re.fullmatch(r'[A-Z0-9_]{2,40}', str(x.get('id', ''))) and x.get('id') not in ids and x.get('speaker') in ('raynor', 'swann') and _num(x.get('seconds')) and 0.5 <= x['seconds'] <= 60
+                    and isinstance(x.get('text'), dict) and x['text'].get('ru') and x['text'].get('en')):
+                errs.append('hanson.lines entries need a unique id (A-Z0-9_), speaker raynor / swann, seconds 0.5..60 and ru / en text')
+                break
+            ids.add(x['id'])
+        st = h.get('story') or {}
+        if not (_num(st.get('first_delay')) and _num(st.get('gap')) and 0 <= st['first_delay'] <= 600 and 0 <= st['gap'] <= 60):
+            errs.append('hanson.story needs first_delay 0..600 and gap 0..60')
     return errs
 
 
@@ -921,6 +969,8 @@ def validate_ghost_tuning(gt):
         errs.append('ghost_tuning.snipe.cooldown must be a number in 0..60')
     if 'exclude_friendly' in sn and not isinstance(sn['exclude_friendly'], bool):
         errs.append('ghost_tuning.snipe.exclude_friendly must be boolean')
+    if 'container_target' in sn and (not isinstance(sn['container_target'], bool) or not sn.get('exclude_friendly')):
+        errs.append('ghost_tuning.snipe.container_target must be boolean and needs exclude_friendly (the neutral class is opened for the special containers only, own units stay excluded)')
     for k, (lo, hi) in {'cost': (0, 200), 'damage': (1, 1000), 'cast_time': (0, 5)}.items():
         if not _num(sn.get(k)) or not lo <= sn[k] <= hi:
             errs.append('ghost_tuning.snipe.%s must be a number in %s..%s' % (k, lo, hi))
@@ -967,7 +1017,7 @@ def ghost_tuning_fragments(gt):
             '    </CAbilBehavior>',
             '    <CAbilEffectTarget id="Snipe">',
             '        <CastIntroTime value="%s"/>' % g(sn['cast_time']),
-        ] + (['        <TargetFilters index="0" value="Biological,Visible;Self,Player,Ally,Neutral,Structure,Destructible,Stasis,Dead,Hidden,Invulnerable"/>'] if sn.get('exclude_friendly') else []) + [
+        ] + (['        <TargetFilters index="0" value="Biological,Visible;Self,Player,Ally,%sStructure,Destructible,Stasis,Dead,Hidden,Invulnerable"/>' % ('' if sn.get('container_target') else 'Neutral,')] if sn.get('exclude_friendly') else []) + [
             '        <Cost index="0">',
             '            <Vital index="Energy" value="%s"/>' % g(sn['cost']),
         ] + (['            <Cooldown TimeUse="%s"/>' % g(sn['cooldown'])] if sn.get('cooldown', 0) > 0 else []) + [
@@ -978,6 +1028,63 @@ def ghost_tuning_fragments(gt):
             '        <Amount value="%s"/>' % g(sn['damage']),
             '    </CEffectDamage>', '']),
     }
+
+
+def hanson_fragments(h, cfg):
+    """Catalog overrides of the prepared-detonation variant (map local). The container is a neutral, biological, non-colliding unit (the neutral class is what the Ghost's
+    Snipe of this profile may target, container_target); placing it is an ability of the Firebat; the explosion is two search effects (enemies / own side) that the module
+    creates at the place where a container died by a Ghost shot; the radius circles and the explosion visuals are actors (they draw only)."""
+    g = lambda v: '%g' % v  # noqa: E731
+    nl = chr(10)
+    ct = h.get('containers') or {}
+    if not ct.get('enabled'):
+        return {}
+    bs = chr(92)
+    icon = 'Assets' + bs + 'Textures' + bs + 'btn-upgrade-terran-infernalpreigniter.dds'
+    unit = ['    <CUnit id="GhostOpsFuelContainer" parent="ExplodingBarrelLarge">',
+            '        <LifeStart value="%s"/>' % g(ct['life']), '        <LifeMax value="%s"/>' % g(ct['life']), '        <LifeArmor value="0"/>',
+            '        <Attributes index="Biological" value="1"/>', '        <FlagArray index="Destructible" value="0"/>',
+            '        <BehaviorArray index="0" removed="1"/>',
+            # no collision and no footprint: the container can neither block a road nor a convoy
+            ] + (['        <Collide index="Ground" value="0"/>', '        <Collide index="Structure" value="0"/>', '        <Collide index="Burrow" value="0"/>', '        <Footprint value=""/>'] if ct.get('blank_footprint') else []) + [
+            '        <Radius value="0.4"/>', '        <InnerRadius value="0.3"/>',
+            '        <BehaviorArray Link="GhostOpsContainerRadius"/>',
+            '    </CUnit>',
+            '    <CUnit id="Firebat">', '        <AbilArray Link="GhostOpsPlaceContainer"/>', '        <CardLayouts index="0">',
+            '            <LayoutButtons Face="GhostOpsPlaceContainer" Type="AbilCmd" AbilCmd="GhostOpsPlaceContainer,Execute" Row="2" Column="1"/>', '        </CardLayouts>', '    </CUnit>', '']
+    abil = ['    <CAbilEffectTarget id="GhostOpsPlaceContainer">', '        <EditorCategories value="Race:Terran,AbilityorEffectType:Units"/>', '        <Effect index="0" value="GhostOpsContainerArea"/>',
+            '        <ErrorAlert value="Error"/>', '        <Range value="%s"/>' % g(ct['place_range']), '        <CastIntroTime value="0.3"/>', '        <CursorEffect value="GhostOpsContainerArea"/>',
+            # like a building: the model of the container under the cursor and the footprint colours (green = placeable, red = not); the container itself is made by the module
+            '        <PlaceUnit value="GhostOpsFuelContainer"/>', '        <Placeholder value="GhostOpsFuelContainer"/>', '        <ProducedUnitArray value="GhostOpsFuelContainer"/>',
+            '        <CmdButtonArray index="Execute" DefaultButtonFace="GhostOpsPlaceContainer"/>', '    </CAbilEffectTarget>', '']
+    # the Firebat's own Snipe-free card: the new button only; the radius circle of a SELECTED container is a hidden buff shown by the module (UnitIsSelected, like the detector circles)
+    beh = ['    <CBehaviorBuff id="GhostOpsContainerRadius">', '        <InfoFlags index="Hidden" value="1"/>', '    </CBehaviorBuff>',
+           '    <CBehaviorBuff id="GhostOpsContainerShow">', '        <InfoFlags index="Hidden" value="1"/>', '    </CBehaviorBuff>', '']
+    area = lambda eid, filters, dmg: ['    <CEffectEnumArea id="%s">' % eid, '        <EditorCategories value="Race:Terran"/>', '        <LaunchLocation Value="TargetPoint"/>', '        <ImpactLocation Value="TargetPoint"/>',
+                                      '        <AreaArray Radius="%s" Effect="%sDamage"/>' % (g(ct['radius']), eid), '        <SearchFilters value="%s"/>' % filters, '    </CEffectEnumArea>',
+                                      '    <CEffectDamage id="%sDamage">' % eid, '        <EditorCategories value="Race:Terran"/>', '        <Kind value="Splash"/>', '        <Amount value="%s"/>' % g(dmg),
+                                      '        <Flags index="Notification" value="1"/>', '        <ResponseFlags index="Acquire" value="1"/>', '    </CEffectDamage>']
+    # the ability's effect is only this harmless search (no damage, nothing created): the MODULE validates the place and creates / pays for the container itself when the cast executes
+    eff = [
+           '    <CEffectEnumArea id="GhostOpsContainerArea">', '        <EditorCategories value="Race:Terran"/>', '        <AreaArray Radius="%s"/>' % g(ct['radius']), '        <SearchFilters value="Ground;Missile,Dead,Hidden"/>', '    </CEffectEnumArea>']
+    # enemies: ground, no air, no neutral (the other containers: no chain detonation), no missiles; own side: the same without enemies, damage = damage x the multiplier
+    eff += area('GhostOpsCBlast', 'Ground;Player,Ally,Neutral,Air,Missile,Stasis,Dead,Hidden,Invulnerable', ct['damage'])
+    for key, mult in (('Hard', ct['friendly']['hard']), ('Other', ct['friendly']['other'])):
+        if mult > 0:
+            eff += area('GhostOpsCBlastOwn' + key, 'Ground;Enemy,Neutral,Air,Missile,Stasis,Dead,Hidden,Invulnerable', ct['damage'] * mult)
+    eff.append('')
+    act = ['    <CActorUnit id="GhostOpsFuelContainer" parent="GasCanister" unitName="GhostOpsFuelContainer"/>',
+           '    <CActorModel id="GhostOpsCPointerModel" parent="TerranCursorModel" abil="GhostOpsPlaceContainer"/>', '    <CActorSplat id="GhostOpsCPointerSplat" parent="TerranCursorSplat" abil="GhostOpsPlaceContainer"/>',
+           '    <CActorRange id="GhostOpsCPlaceRange" parent="RangeAbil" abil="GhostOpsPlaceContainer"/>']
+    if ct.get('show_radius'):
+        act += ['    <CActorRange id="GhostOpsCRadius">', '        <Range value="%s"/>' % g(ct['radius']), '        <On Terms="Behavior.GhostOpsContainerShow.On" Send="Create"/>', '        <On Terms="Behavior.GhostOpsContainerShow.Off" Send="Destroy"/>', '    </CActorRange>']
+    # visuals only (the damage is the search effects above): the explosion model / flash and the sound at the real place, one short smoke after it
+    act += ['    <CActorModel id="GhostOpsCBlastModel" parent="ModelAnimationStyleOneShot">', '        <Model value="BarrageModel"/>', '        <HostSiteOps Ops="SOpTargetPoint"/>', '        <On Terms="Effect.GhostOpsCBlast.Impact" Send="Create"/>', '    </CActorModel>',
+            '    <CActorModel id="GhostOpsCBlastModel2" parent="ModelAnimationStyleOneShot">', '        <Model value="ExplodingBarrelDeath"/>', '        <HostSiteOps Ops="SOpTargetPoint"/>', '        <On Terms="Effect.GhostOpsCBlast.Impact" Send="Create"/>', '    </CActorModel>',
+            '    <CActorSound id="GhostOpsCBlastSound" parent="SoundOneShot">', '        <Sound value="Terran_ExplosionLarge"/>', '        <On Terms="Effect.GhostOpsCBlast.Impact" Send="Create"/>', '    </CActorSound>', '']
+    btn = ['    <CButton id="GhostOpsPlaceContainer">', '        <Icon value="%s"/>' % icon, '        <AlertIcon value="%s"/>' % icon, '        <EditorCategories value="Race:Terran"/>', '    </CButton>', '']
+    model = ['    <CModel id="GhostOpsFuelContainer" parent="GasCanister"/>', '']
+    return {'ModelData.xml': nl.join(model), 'UnitData.xml': nl.join(unit), 'AbilData.xml': nl.join(abil), 'BehaviorData.xml': nl.join(beh), 'EffectData.xml': nl.join(eff), 'ActorData.xml': nl.join(act), 'ButtonData.xml': nl.join(btn)}
 
 
 def tactical_fragments(t, gt=None):
@@ -1128,6 +1235,10 @@ def catalog_fragments(cfg):
     if cfg.get('defence'):
         for name, frag in defence_fragments(cfg['defence']).items():
             frags[name] = frags.get(name, '') + frag
+    if cfg.get('hanson'):
+        for name, frag in hanson_fragments(cfg['hanson'], cfg).items():
+            if frag:
+                frags[name] = frags.get(name, '') + frag
     if cfg.get('detector_analysis') and cfg['detector_analysis'].get('enabled'):
         for name, frag in detector_analysis_fragments(cfg['detector_analysis']).items():
             frags[name] = frags.get(name, '') + frag
@@ -1324,6 +1435,23 @@ def gen_hanson(cfg):
     for i, t in enumerate(h['turrets']['list']):
         lines.append('    go_hTurretX[%d] = %.4f;' % (i, t['x']))
         lines.append('    go_hTurretY[%d] = %.4f;' % (i, t['y']))
+    ct = h.get('containers') or {}
+    fu = h.get('convoy_fuel') or {}
+    lines += ['    go_hAllowRefinery = %s;' % b(h.get('allow_refinery')), '    go_hContOn = %s;' % b(ct.get('enabled')), '    go_hFuelOn = %s;' % b(fu.get('enabled'))]
+    if ct.get('enabled'):
+        lines += ['    go_hContLimit = %d;' % ct['limit'], '    go_hContCost = %d;' % ct['gas_cost'], '    go_hContOwner = %d;' % ct['owner'], '    go_hContMinFree = %.2f;' % ct['min_free'], '    go_hContRange = %.2f;' % ct['place_range'],
+                  '    go_hContFriendHard = %.4f;' % ct['friendly']['hard'], '    go_hContFriendOther = %.4f;' % ct['friendly']['other']]
+    if fu.get('enabled'):
+        lines.append('    go_hFuelCost = %d;' % fu['gas_cost'])
+    hud = h.get('hud') or {}
+    if hud:
+        lines += ['    go_hHudX = %d;' % hud['offset_x'], '    go_hHudY = %d;' % hud['offset_y'], '    go_hHudW = %d;' % hud['width'], '    go_hHudH = %d;' % hud['height']]
+    lns = h.get('lines') or []
+    lines.append('    go_hLnCount = %d;' % len(lns))
+    for i, ln in enumerate(lns):
+        lines += ['    go_hLnId[%d] = "%s";' % (i, ln['id']), '    go_hLnSpk[%d] = "%s";' % (i, ln['speaker']), '    go_hLnSec[%d] = %.2f;' % (i, ln['seconds'])]
+    if lns:
+        lines += ['    go_hStoryFirst = %.1f;' % h['story']['first_delay'], '    go_hStoryGap = %.1f;' % h['story']['gap']]
     if h.get('autotest'):
         lines.append('    GhostOps_ApplyHansonTestConfig();')
     lines += ['}', '']
@@ -1562,8 +1690,19 @@ def text_entries(cfg):
     hs = cfg.get('hanson')
     if hs:
         for loc, lang in (('ruRU', 'ru'), ('enUS', 'en')):
-            for k in HANSON_TEXT_KEYS:
-                out.setdefault(loc, []).append((HANSON_TEXT_PREFIX + k, hs['texts'][k][lang]))
+            ht = dict(HANSON_TEXT_DEFAULTS, **hs['texts'])
+            cts = hs.get('containers') or {}
+            fill = lambda v: v if not cts else (v.replace('{gas}', '%g' % cts['gas_cost']).replace('{limit}', '%g' % cts['limit']).replace('{damage}', '%g' % cts['damage']).replace('{radius}', '%g' % cts['radius']).replace('{range}', '%g' % cts['place_range']).replace('{friendly}', '%g' % round(100 * cts['friendly']['hard'], 1)))  # noqa: E731
+            for k in HANSON_TEXT_KEYS + tuple(k for k in HANSON_EXTRA_TEXT_KEYS if k in ht):
+                out.setdefault(loc, []).append((HANSON_TEXT_PREFIX + k, fill(ht[k][lang])))
+            for ln in hs.get('lines') or []:
+                v = ln['text'][lang]
+                out.setdefault(loc, []).append((HANSON_TEXT_PREFIX + 'L_' + ln['id'], EXPLAIN_STYLE[0] + v + EXPLAIN_STYLE[1]))
+            if (hs.get('containers') or {}).get('enabled'):
+                out.setdefault(loc, []).append(('Button/Name/GhostOpsPlaceContainer', ht['ContainerName'][lang]))
+                out.setdefault(loc, []).append(('Button/Tooltip/GhostOpsPlaceContainer', fill(ht['ContainerTip'][lang])))
+                out.setdefault(loc, []).append(('Button/Hotkey/GhostOpsPlaceContainer', hs['containers']['hotkey']))
+                out.setdefault(loc, []).append(('Unit/Name/GhostOpsFuelContainer', ht['ContainerUnitName'][lang]))
     zh = cfg.get('zerohour')
     if zh:
         for loc, lang in (('ruRU', 'ru'), ('enUS', 'en')):

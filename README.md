@@ -177,6 +177,11 @@ clips and explanations (silent lip-sync drivers, see `docs/MISSION_ROADMAP.md`, 
 
 Separate map `GhostOps_TRaynor02_r2_tactical_next.SC2Map`, launcher card *Вне закона, версия 2* (`python toolsuild.py launch --mission traynor02 --preset tactical_next`); the Owner's `tactical` map is not touched. Armor-piercing strike: 2 charges (counter on the squad panel), area circle under the cursor, key G, radius 3 / damage 500; nuclear strike: aiming range 48 (was 24) and a mission-only damage profile 600 + 900 vs structures, radii 4 / 7 / 10 (the stock 300 + 200 left a Command Center at 1000 of 1500); "Повстанец" labels over the rescued fighters; new victory: all enemy barracks, factories, command centers and starports (also lifted off) are destroyed. Measured values and open checks: `docs/MISSION_ROADMAP.md` section 6.1, architecture: `docs/ARCHITECTURE.md`.
 
+
+### Evacuation, prepared detonations (THanson01 `sniper_next`, 2026-10-22, experimental numbers, NOT Owner-approved)
+
+Separate map `GhostOps_THanson01_sniper_next.SC2Map`, launcher card *Подготовленные подрывы* (`python toolsuild.py launch --mission thanson01 --preset sniper_next`); the earlier `sniper` map and its saves are untouched. Two Ghosts (45 life, permanent cloak), Snipe 250 / 2 s; the Firebats place fuel containers next to themselves (key C, 25 gas, shared stock 12) that explode from the first hit of any fighter (200 damage within 3 to ground enemies, air is not hit, own side takes 25 % on hard); a convoy leaves only on your command and costs 100 gas; the gas comes from one Refinery (put SCVs on gas yourself after the base is handed over). Verified values and open checks: `docs/MISSION_ROADMAP.md` 8.1; the replicas: `docs/handoff/thanson01.sniper_next.lines.seed.json`.
+
 ### The first three missions and the campaign link (2026-10-20, experiment)
 
 Plan and statuses: [docs/MISSION_ROADMAP.md](docs/MISSION_ROADMAP.md); economy and save rules (the one contract): [docs/MISSION_SETTINGS_AND_CAMPAIGN_ECONOMY.md](docs/MISSION_SETTINGS_AND_CAMPAIGN_ECONOMY.md).

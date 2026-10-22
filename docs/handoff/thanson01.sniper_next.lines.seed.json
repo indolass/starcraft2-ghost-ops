@@ -1,0 +1,336 @@
+{
+ "schema": "ghostops.lines/1",
+ "mission_id": "thanson01",
+ "variant": "sniper_next",
+ "title": "THanson01 Evacuation - prepared detonations (sniper_next)",
+ "order": 40,
+ "table_rev": 1,
+ "languages": [
+  "ru",
+  "en"
+ ],
+ "speakers": {
+  "raynor": "Jim Raynor",
+  "swann": "Swann"
+ },
+ "scenes": [
+  {
+   "id": "S1_SWANN_GHOSTS",
+   "title": "Swann: the Ghosts",
+   "context": "about 20 s after the start, behind the original intro talk",
+   "group": "swann"
+  },
+  {
+   "id": "S2_SWANN_CONTAINERS",
+   "title": "Swann: the containers",
+   "context": "right after S1",
+   "group": "swann"
+  },
+  {
+   "id": "S3_RAYNOR_ORDER",
+   "title": "Raynor: the order of the operation",
+   "context": "right after S2",
+   "group": "raynor"
+  }
+ ],
+ "consumers": {},
+ "lines": [
+  {
+   "id": "SWANN_GHOSTS_1",
+   "key": "thanson01/sniper_next/SWANN_GHOSTS_1",
+   "speaker": "swann",
+   "scene": "S1_SWANN_GHOSTS",
+   "order": 10,
+   "context": "Swann about the Ghosts",
+   "condition": "after the intro, first scene of the variant",
+   "route": "variant",
+   "mode": "record",
+   "text": {
+    "ru": "Подшаманил маскировку — теперь заряд не жрёт.",
+    "en": "Tinkered with the cloak - it no longer eats charge."
+   },
+   "origin_text": {
+    "ru": "Подшаманил маскировку — теперь заряд не жрёт.",
+    "en": "Tinkered with the cloak - it no longer eats charge."
+   },
+   "hash": "60f03ecc97666349e11135792ab347c823c121df29f89eadffeeb3032b812561",
+   "rev": 1,
+   "edited_by": "seed",
+   "edited_utc": "2026-10-22T05:08:54Z",
+   "binding": {
+    "config": "thanson01.json",
+    "path": "presets.sniper_next.overrides.hanson.lines[id=SWANN_GHOSTS_1].text"
+   }
+  },
+  {
+   "id": "SWANN_GHOSTS_2",
+   "key": "thanson01/sniper_next/SWANN_GHOSTS_2",
+   "speaker": "swann",
+   "scene": "S1_SWANN_GHOSTS",
+   "order": 20,
+   "context": "Swann about the Ghosts",
+   "condition": "after the intro, first scene of the variant",
+   "route": "variant",
+   "mode": "record",
+   "text": {
+    "ru": "И винтовки подкрутил: тяжёлых тварей снимайте ими.",
+    "en": "And I tuned the rifles: take down the heavy brutes with them."
+   },
+   "origin_text": {
+    "ru": "И винтовки подкрутил: тяжёлых тварей снимайте ими.",
+    "en": "And I tuned the rifles: take down the heavy brutes with them."
+   },
+   "hash": "be5fa916155832bf4e3b1eb838496407ea1fdac8d0c78f3cbfee4039aff753bb",
+   "rev": 1,
+   "edited_by": "seed",
+   "edited_utc": "2026-10-22T05:08:54Z",
+   "binding": {
+    "config": "thanson01.json",
+    "path": "presets.sniper_next.overrides.hanson.lines[id=SWANN_GHOSTS_2].text"
+   }
+  },
+  {
+   "id": "SWANN_GHOSTS_3",
+   "key": "thanson01/sniper_next/SWANN_GHOSTS_3",
+   "speaker": "swann",
+   "scene": "S1_SWANN_GHOSTS",
+   "order": 30,
+   "context": "Swann about the Ghosts",
+   "condition": "after the intro, first scene of the variant",
+   "route": "variant",
+   "mode": "record",
+   "text": {
+    "ru": "Только берегите железо, экспериментальное ещё.",
+    "en": "Just take care of the gear, it is still experimental."
+   },
+   "origin_text": {
+    "ru": "Только берегите железо, экспериментальное ещё.",
+    "en": "Just take care of the gear, it is still experimental."
+   },
+   "hash": "e1485c984ba5ad38a9dbce7f93ac931659a1f863839eb1d1703c68155761274d",
+   "rev": 1,
+   "edited_by": "seed",
+   "edited_utc": "2026-10-22T05:08:54Z",
+   "binding": {
+    "config": "thanson01.json",
+    "path": "presets.sniper_next.overrides.hanson.lines[id=SWANN_GHOSTS_3].text"
+   }
+  },
+  {
+   "id": "SWANN_BOXES_1",
+   "key": "thanson01/sniper_next/SWANN_BOXES_1",
+   "speaker": "swann",
+   "scene": "S2_SWANN_CONTAINERS",
+   "order": 40,
+   "context": "Swann about the containers",
+   "condition": "second scene",
+   "route": "variant",
+   "mode": "record",
+   "text": {
+    "ru": "Огнемётчикам выдал банки с горючей смесью.",
+    "en": "I gave the Firebats cans of fuel mixture."
+   },
+   "origin_text": {
+    "ru": "Огнемётчикам выдал банки с горючей смесью.",
+    "en": "I gave the Firebats cans of fuel mixture."
+   },
+   "hash": "d1e3f2fe4b6af63cdd1158046a95350fdd13ac628c8ea8b4a3c65f572a0346dd",
+   "rev": 1,
+   "edited_by": "seed",
+   "edited_utc": "2026-10-22T05:08:54Z",
+   "binding": {
+    "config": "thanson01.json",
+    "path": "presets.sniper_next.overrides.hanson.lines[id=SWANN_BOXES_1].text"
+   }
+  },
+  {
+   "id": "SWANN_BOXES_2",
+   "key": "thanson01/sniper_next/SWANN_BOXES_2",
+   "speaker": "swann",
+   "scene": "S2_SWANN_CONTAINERS",
+   "order": 50,
+   "context": "Swann about the containers",
+   "condition": "second scene",
+   "route": "variant",
+   "mode": "record",
+   "text": {
+    "ru": "Расставьте у дороги, а призраки подожгут точным выстрелом.",
+    "en": "Place them by the road, and the Ghosts will set them off with a precise shot."
+   },
+   "origin_text": {
+    "ru": "Расставьте у дороги, а призраки подожгут точным выстрелом.",
+    "en": "Place them by the road, and the Ghosts will set them off with a precise shot."
+   },
+   "hash": "10126b5566367270eb0d693ee20d6521d9ce2ed7e652815f87e586761f67a8be",
+   "rev": 1,
+   "edited_by": "seed",
+   "edited_utc": "2026-10-22T05:08:54Z",
+   "binding": {
+    "config": "thanson01.json",
+    "path": "presets.sniper_next.overrides.hanson.lines[id=SWANN_BOXES_2].text"
+   }
+  },
+  {
+   "id": "SWANN_BOXES_3",
+   "key": "thanson01/sniper_next/SWANN_BOXES_3",
+   "speaker": "swann",
+   "scene": "S2_SWANN_CONTAINERS",
+   "order": 60,
+   "context": "Swann about the containers",
+   "condition": "second scene",
+   "route": "variant",
+   "mode": "record",
+   "text": {
+    "ru": "Только людей сначала отведите — рванёт прилично.",
+    "en": "Just move people away first - it goes off with a bang."
+   },
+   "origin_text": {
+    "ru": "Только людей сначала отведите — рванёт прилично.",
+    "en": "Just move people away first - it goes off with a bang."
+   },
+   "hash": "c88cf09deb2df78f55f8db32035b6eb482ea7ef37288842ed3bdc4dfd51644f0",
+   "rev": 1,
+   "edited_by": "seed",
+   "edited_utc": "2026-10-22T05:08:54Z",
+   "binding": {
+    "config": "thanson01.json",
+    "path": "presets.sniper_next.overrides.hanson.lines[id=SWANN_BOXES_3].text"
+   }
+  },
+  {
+   "id": "HARD_WARNING",
+   "key": "thanson01/sniper_next/HARD_WARNING",
+   "speaker": "swann",
+   "scene": "S2_SWANN_CONTAINERS",
+   "order": 70,
+   "context": "Swann: warning about own losses",
+   "condition": "only when the difficulty is hard and the own-damage multiplier is above 0",
+   "route": "variant",
+   "mode": "record",
+   "text": {
+    "ru": "И учтите: на этой сложности взрыв опасен и для своих.",
+    "en": "And mind this: on this difficulty the blast hurts your own side too."
+   },
+   "origin_text": {
+    "ru": "И учтите: на этой сложности взрыв опасен и для своих.",
+    "en": "And mind this: on this difficulty the blast hurts your own side too."
+   },
+   "hash": "c94efec7c57642a09fdb93b8f99237ae05ce5a22d4a1448d6895053fb8530702",
+   "rev": 1,
+   "edited_by": "seed",
+   "edited_utc": "2026-10-22T05:08:54Z",
+   "binding": {
+    "config": "thanson01.json",
+    "path": "presets.sniper_next.overrides.hanson.lines[id=HARD_WARNING].text"
+   }
+  },
+  {
+   "id": "RAYNOR_PLAN_1",
+   "key": "thanson01/sniper_next/RAYNOR_PLAN_1",
+   "speaker": "raynor",
+   "scene": "S3_RAYNOR_ORDER",
+   "order": 80,
+   "context": "Raynor about the order of the operation",
+   "condition": "third scene",
+   "route": "variant",
+   "mode": "record",
+   "text": {
+    "ru": "Сначала разведайте дорогу и подготовьте засады.",
+    "en": "First scout the road and prepare the ambushes."
+   },
+   "origin_text": {
+    "ru": "Сначала разведайте дорогу и подготовьте засады.",
+    "en": "First scout the road and prepare the ambushes."
+   },
+   "hash": "995c2358b8175c4d659ec1c4d17744a8a87587b75a3ba8e9b5bc8f8af8c15c25",
+   "rev": 1,
+   "edited_by": "seed",
+   "edited_utc": "2026-10-22T05:08:54Z",
+   "binding": {
+    "config": "thanson01.json",
+    "path": "presets.sniper_next.overrides.hanson.lines[id=RAYNOR_PLAN_1].text"
+   }
+  },
+  {
+   "id": "RAYNOR_PLAN_2",
+   "key": "thanson01/sniper_next/RAYNOR_PLAN_2",
+   "speaker": "raynor",
+   "scene": "S3_RAYNOR_ORDER",
+   "order": 90,
+   "context": "Raynor about the order of the operation",
+   "condition": "third scene",
+   "route": "variant",
+   "mode": "record",
+   "text": {
+    "ru": "Колонна выйдет по нашему приказу.",
+    "en": "The convoy leaves on our order."
+   },
+   "origin_text": {
+    "ru": "Колонна выйдет по нашему приказу.",
+    "en": "The convoy leaves on our order."
+   },
+   "hash": "297079636c46d8aac3d5e4625074ed36456a718ea64bd02fb9e5e7ba8197795b",
+   "rev": 1,
+   "edited_by": "seed",
+   "edited_utc": "2026-10-22T05:08:54Z",
+   "binding": {
+    "config": "thanson01.json",
+    "path": "presets.sniper_next.overrides.hanson.lines[id=RAYNOR_PLAN_2].text"
+   }
+  },
+  {
+   "id": "RAYNOR_PLAN_3",
+   "key": "thanson01/sniper_next/RAYNOR_PLAN_3",
+   "speaker": "raynor",
+   "scene": "S3_RAYNOR_ORDER",
+   "order": 100,
+   "context": "Raynor about the order of the operation",
+   "condition": "third scene",
+   "route": "variant",
+   "mode": "record",
+   "text": {
+    "ru": "Потом держитесь рядом и не подпускайте тварей к людям.",
+    "en": "Then stay close and keep the creatures away from the people."
+   },
+   "origin_text": {
+    "ru": "Потом держитесь рядом и не подпускайте тварей к людям.",
+    "en": "Then stay close and keep the creatures away from the people."
+   },
+   "hash": "e297cff7fa8eff9a943aecdb8af8376773479bef6743280c6a9a91ebcd3c5a4d",
+   "rev": 1,
+   "edited_by": "seed",
+   "edited_utc": "2026-10-22T05:08:54Z",
+   "binding": {
+    "config": "thanson01.json",
+    "path": "presets.sniper_next.overrides.hanson.lines[id=RAYNOR_PLAN_3].text"
+   }
+  },
+  {
+   "id": "RAYNOR_FUEL",
+   "key": "thanson01/sniper_next/RAYNOR_FUEL",
+   "speaker": "raynor",
+   "scene": "S3_RAYNOR_ORDER",
+   "order": 110,
+   "context": "Raynor about the order of the operation",
+   "condition": "third scene",
+   "route": "variant",
+   "mode": "record",
+   "text": {
+    "ru": "И следите за газом: на каждый рейс нужна заправка.",
+    "en": "And watch the gas: every trip needs fuel."
+   },
+   "origin_text": {
+    "ru": "И следите за газом: на каждый рейс нужна заправка.",
+    "en": "And watch the gas: every trip needs fuel."
+   },
+   "hash": "df650fb7bd955c742ce69e7750b52beb0169394d8bd1422520d097ef0f99ade2",
+   "rev": 1,
+   "edited_by": "seed",
+   "edited_utc": "2026-10-22T05:08:54Z",
+   "binding": {
+    "config": "thanson01.json",
+    "path": "presets.sniper_next.overrides.hanson.lines[id=RAYNOR_FUEL].text"
+   }
+  }
+ ]
+}

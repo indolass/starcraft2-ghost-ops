@@ -1,0 +1,67 @@
+{
+ "name": "th1_gas_source",
+ "mission": "thanson01",
+ "preset": "sniper_next_ce0_dev",
+ "why": "losing the only gas source",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 6
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "nstat",
+   "grep": "NSTAT ghosts 2 firebats 2",
+   "every": 5,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "enter",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 25
+  },
+  {
+   "op": "cmd",
+   "text": "ngas 10",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "nkillref",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 45
+  },
+  {
+   "op": "cmd",
+   "text": "nstat",
+   "wait": 1.5
+  },
+  {
+   "op": "expect",
+   "regex": "NKILLREF refinery killed; refinery allowed to build 1",
+   "note": "the lock exception: the Refinery can be rebuilt"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

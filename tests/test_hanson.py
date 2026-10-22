@@ -70,7 +70,7 @@ class HansonConfig(unittest.TestCase):
             lambda c: c['hanson']['turrets']['list'].append({'x': 1, 'y': 2, 'role': 'moon'}),
             lambda c: c['hanson']['texts'].pop('BtnReady'),
             lambda c: c['hanson']['button'].update(width=5),
-            lambda c: c['operatives'].update(squad=['Ghost', 'Ghost']),
+            lambda c: c['operatives'].update(squad=['Ghost', 'Ghost', 'Ghost']),
         ):
             bad = copy.deepcopy(self.cfg)
             mutate(bad)
@@ -79,7 +79,7 @@ class HansonConfig(unittest.TestCase):
     def test_dev_preset_is_hidden(self):
         raw = build.load_json(ADAPTER['config'])
         self.assertTrue(raw['presets']['sniper_dev']['hidden'])
-        self.assertEqual([p['name'] for p in launcher_core.profiles_of('thanson01')], ['sniper'])
+        self.assertEqual([p['name'] for p in launcher_core.profiles_of('thanson01')], ['sniper', 'sniper_next'])
         self.assertEqual(launcher_core.default_profile('thanson01'), 'sniper')
         self.assertEqual(launcher_core.mission_info('thanson01')['status'], 'Эксперимент')
         dev, _ = build.resolve_config(ADAPTER, 'sniper_dev')
@@ -134,7 +134,7 @@ class HansonCode(unittest.TestCase):
         self.assertLess(click.index('go_hCmdState = 3;'), click.index('TriggerExecute(go_hGateTrig'))
         hold = m.split('bool GhostOps_Hanson_Hold')[1].split('// Hook (once a second)')[0]
         self.assertIn('go_hGateOpen = false;', hold)  # the gate opens exactly once per click
-        self.assertNotIn('Wait(', m.split('// Convoy command (the button)')[1].split('// Start (from the adapter')[0])  # no thread that a load could cut
+        self.assertNotIn('Wait(', m.split('// Convoy command (the button)')[1].split('// Explosive containers: placement')[0])  # no thread that a load could cut
         self.assertNotIn('"stop"', m.replace('"stop", 0', ''))  # the original is not held by repeated Stop orders
         # the dialog is created again after a load
         self.assertIn('TriggerAddEventLoadGameDone(go_hLoadTrig)', m)
@@ -150,10 +150,11 @@ class HansonCode(unittest.TestCase):
     def test_texts_exist(self):
         block = build.build_block(ADAPTER, self.cfg)
         used = set(re.findall(r'Param/Value/GhostOpsH_(\w+)', self.mod))
-        self.assertTrue(used <= set(build.HANSON_TEXT_KEYS), used)
+        self.assertTrue(used <= set(build.HANSON_TEXT_KEYS) | set(build.HANSON_EXTRA_TEXT_KEYS) | {'L_'}, used)
         ent = dict(build.text_entries(self.cfg)['ruRU'])
         for k in used:
-            self.assertIn(build.HANSON_TEXT_PREFIX + k, ent)
+            if k not in build.HANSON_EXTRA_TEXT_KEYS and k != 'L_':  # the extra texts belong to the prepared-detonation profile only (checked in test_th01_next)
+                self.assertIn(build.HANSON_TEXT_PREFIX + k, ent)
         self.assertTrue(block.isascii())
 
     @unittest.skipUnless(os.path.isfile(SRC), 'source map not extracted')

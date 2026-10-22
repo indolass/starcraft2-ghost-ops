@@ -1,0 +1,48 @@
+{
+ "name": "th1_smoke",
+ "mission": "thanson01",
+ "preset": "sniper_next_ce0_dev",
+ "why": "does the new map load; script errors; two ghosts, firebats, HUD",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 6
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "nstat",
+   "grep": "NSTAT ghosts 2 firebats 2",
+   "every": 5,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "nstat",
+   "wait": 1.5
+  },
+  {
+   "op": "shot",
+   "file": "th1_smoke.png"
+  },
+  {
+   "op": "expect",
+   "regex": "NSTAT gas",
+   "note": "state"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

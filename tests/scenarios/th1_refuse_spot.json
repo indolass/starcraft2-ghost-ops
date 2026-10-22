@@ -1,0 +1,73 @@
+{
+ "name": "th1_refuse_spot",
+ "mission": "thanson01",
+ "preset": "sniper_next_ce0_dev",
+ "why": "refusal on a structure",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 6
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "nstat",
+   "grep": "NSTAT ghosts 2 firebats 2",
+   "every": 5,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "ngas 200",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "nbunk -3 0",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "cmd",
+   "text": "nplace -3 0",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "nstat",
+   "wait": 1.5
+  },
+  {
+   "op": "expect",
+   "regex": "NSTAT gas 200 used 0/12 placed 0",
+   "note": "a spot inside a structure: refused, nothing charged"
+  },
+  {
+   "op": "expect",
+   "regex": "NSTAT gas 175",
+   "note": "must not have charged",
+   "absent": true
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

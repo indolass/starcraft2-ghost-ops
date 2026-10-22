@@ -1,0 +1,55 @@
+{
+ "name": "tr02_grenade_filters",
+ "mission": "traynor02",
+ "preset": "tactical_next_dev",
+ "why": "grenade filters on a clean scene without a fight: vehicles, infantry, Marauder, air, own Marine and Hellion",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "ammo",
+   "grep": "AMMO grenade charges 2",
+   "every": 4,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "apt",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "fs 99.0 27.7",
+   "wait": 1.5
+  },
+  {
+   "op": "until",
+   "grep": "FS ammo",
+   "every": 4,
+   "timeout": 60
+  },
+  {
+   "op": "expect",
+   "regex": "FS (before|after)",
+   "note": "filters on a clean scene"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

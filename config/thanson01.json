@@ -2,7 +2,9 @@
   "schema_version": 4,
   "mission": "thanson01",
   "operatives": {
-    "squad": ["Ghost"],
+    "squad": [
+      "Ghost"
+    ],
     "start_hold_fire": false,
     "ghost_permanent_cloak": true,
     "ghost_start_cloaked": true,
@@ -41,13 +43,19 @@
       "cooldown": 1.0,
       "exclude_friendly": true
     },
-    "remove_abilities": ["TacNukeStrike", "EMP"]
+    "remove_abilities": [
+      "TacNukeStrike",
+      "EMP"
+    ]
   },
   "hanson": {
     "debug_log": false,
     "lock_development": true,
     "convoy_command": true,
-    "ghost_spawn": [110.0, 49.0],
+    "ghost_spawn": [
+      110.0,
+      49.0
+    ],
     "button": {
       "width": 380,
       "height": 56,
@@ -57,21 +65,81 @@
     "turrets": {
       "owner": 4,
       "list": [
-        {"x": 38.0, "y": 45.0, "role": "base"},
-        {"x": 35.0, "y": 41.0, "role": "base"},
-        {"x": 39.0, "y": 40.0, "role": "base"},
-        {"x": 35.0, "y": 50.0, "role": "base"},
-        {"x": 30.0, "y": 53.0, "role": "base"},
-        {"x": 22.0, "y": 52.0, "role": "base"},
-        {"x": 26.0, "y": 53.0, "role": "base"},
-        {"x": 23.0, "y": 46.0, "role": "base"},
-        {"x": 48.0, "y": 50.0, "role": "houses"},
-        {"x": 43.0, "y": 52.0, "role": "houses"},
-        {"x": 66.0, "y": 50.0, "role": "houses"},
-        {"x": 60.0, "y": 42.0, "role": "houses"},
-        {"x": 29.0, "y": 59.0, "role": "air"},
-        {"x": 41.0, "y": 57.0, "role": "air"},
-        {"x": 71.0, "y": 50.0, "role": "air"}
+        {
+          "x": 38.0,
+          "y": 45.0,
+          "role": "base"
+        },
+        {
+          "x": 35.0,
+          "y": 41.0,
+          "role": "base"
+        },
+        {
+          "x": 39.0,
+          "y": 40.0,
+          "role": "base"
+        },
+        {
+          "x": 35.0,
+          "y": 50.0,
+          "role": "base"
+        },
+        {
+          "x": 30.0,
+          "y": 53.0,
+          "role": "base"
+        },
+        {
+          "x": 22.0,
+          "y": 52.0,
+          "role": "base"
+        },
+        {
+          "x": 26.0,
+          "y": 53.0,
+          "role": "base"
+        },
+        {
+          "x": 23.0,
+          "y": 46.0,
+          "role": "base"
+        },
+        {
+          "x": 48.0,
+          "y": 50.0,
+          "role": "houses"
+        },
+        {
+          "x": 43.0,
+          "y": 52.0,
+          "role": "houses"
+        },
+        {
+          "x": 66.0,
+          "y": 50.0,
+          "role": "houses"
+        },
+        {
+          "x": 60.0,
+          "y": 42.0,
+          "role": "houses"
+        },
+        {
+          "x": 29.0,
+          "y": 59.0,
+          "role": "air"
+        },
+        {
+          "x": 41.0,
+          "y": 57.0,
+          "role": "air"
+        },
+        {
+          "x": 71.0,
+          "y": 50.0,
+          "role": "air"
+        }
       ]
     },
     "texts": {
@@ -157,6 +225,374 @@
             "Medic",
             "SCV",
             "MissileTurret"
+          ]
+        }
+      }
+    },
+    "sniper_next": {
+      "label": "Подготовленные подрывы",
+      "message": "Ghost Ops — Подготовленные подрывы",
+      "message_en": "Ghost Ops - Prepared detonations",
+      "experimental": true,
+      "extends": "sniper",
+      "card": "Два призрака, взрывные контейнеры огнемётчиков, колонна по команде за газ",
+      "details": [
+        "Два призрака (45 здоровья), постоянная маскировка; Snipe 250 урона, перезарядка 2 с, без энергии",
+        "Огнемётчики ставят контейнеры с горючей смесью рядом с собой (клавиша C, 25 газа, общий запас 12); контейнер взрывается от первого попадания любого бойца: радиус 3, 200 урона наземным врагам, воздух не поражается; свои получают 25% на сложном уровне",
+        "Колонна отправляется по вашей команде: 100 газа за рейс; газ добывает один перерабатывающий завод, назначьте СКВ на газ после передачи базы",
+        "Производство и найм закрыты; 15 готовых турелей - тестовый комплект («закупки не подключены»)",
+        "Все числа экспериментальные, баланс оценит Owner"
+      ],
+      "overrides": {
+        "operatives": {
+          "squad": [
+            "Ghost",
+            "Ghost"
+          ]
+        },
+        "ghost_tuning": {
+          "snipe": {
+            "cost": 0,
+            "damage": 250,
+            "cast_time": 0.3,
+            "cooldown": 2.0,
+            "exclude_friendly": true,
+            "container_target": true
+          }
+        },
+        "audio": {
+          "talk": [
+            {
+              "id": "GhostOpsTalkRaynor1",
+              "facial": "THanson02Raynor00011",
+              "seconds": 3.3,
+              "group": "raynor"
+            },
+            {
+              "id": "GhostOpsTalkRaynor2",
+              "facial": "TTosh03ARaynor00004",
+              "seconds": 3.3,
+              "group": "raynor"
+            },
+            {
+              "id": "GhostOpsTalkRaynor3",
+              "facial": "TTychus04Raynor00021",
+              "seconds": 3.1,
+              "group": "raynor"
+            },
+            {
+              "id": "GhostOpsTalkRaynor4",
+              "facial": "THanson02Raynor00013",
+              "seconds": 3.0,
+              "group": "raynor"
+            },
+            {
+              "id": "GhostOpsTalkSwann1",
+              "facial": "THanson02Swann00001",
+              "seconds": 8.7,
+              "group": "swann"
+            },
+            {
+              "id": "GhostOpsTalkSwann2",
+              "facial": "THanson01Swann00046",
+              "seconds": 7.4,
+              "group": "swann"
+            }
+          ]
+        },
+        "hanson": {
+          "texts": {
+            "BtnPreparing": {
+              "ru": "Колонисты собираются",
+              "en": "Colonists are gathering"
+            },
+            "BtnReady": {
+              "ru": "ОТПРАВИТЬ КОНВОЙ",
+              "en": "SEND THE CONVOY"
+            },
+            "BtnActive": {
+              "ru": "Колонна в пути",
+              "en": "The convoy is on the road"
+            },
+            "ReadyMsg": {
+              "ru": "Колонна готова. Ожидаем приказа.",
+              "en": "The convoy is ready. Awaiting your order."
+            },
+            "SentMsg": {
+              "ru": "Колонна в пути. Прикрывайте колонистов.",
+              "en": "The convoy is on its way. Cover the colonists."
+            },
+            "GasUnit": {
+              "ru": "газа",
+              "en": "gas"
+            },
+            "NeedGas": {
+              "ru": "Колонна готова. Не хватает газа:",
+              "en": "The convoy is ready. Gas missing:"
+            },
+            "FuelPaidMsg": {
+              "ru": "Колонна заправлена. Списано газа:",
+              "en": "The convoy is fuelled. Gas spent:"
+            },
+            "FuelShortMsg": {
+              "ru": "Не хватает газа для отправки колонны:",
+              "en": "Not enough gas to send the convoy:"
+            },
+            "HudGas": {
+              "ru": "Газ",
+              "en": "Gas"
+            },
+            "HudContainers": {
+              "ru": "Контейнеры",
+              "en": "Containers"
+            },
+            "HudLeft": {
+              "ru": "осталось",
+              "en": "left"
+            },
+            "HudOf": {
+              "ru": "из",
+              "en": "of"
+            },
+            "HudPrice": {
+              "ru": "цена",
+              "en": "price"
+            },
+            "HudFuelPrice": {
+              "ru": "Рейс",
+              "en": "Trip"
+            },
+            "HudNoGasForBox": {
+              "ru": "газа не хватает",
+              "en": "not enough gas"
+            },
+            "ContainerName": {
+              "ru": "Поставить контейнер",
+              "en": "Place a container"
+            },
+            "ContainerTip": {
+              "ru": "Ставит рядом контейнер с горючей смесью (в пределах {range} от огнемётчика): модель показана под курсором, зелёное место допустимо, красное нет. Цена: {gas} газа, общий запас {limit} штук (без пополнения). Взрывается от первого попадания любого бойца (в том числе обычной атакой по приказу): {damage} урона наземным врагам в радиусе {radius}, воздух не поражается; свои в радиусе получают {friendly}% (на сложном уровне). Esc или правая кнопка отменяют без расходов.",
+              "en": "Places a container of fuel mixture next to the Firebat (within {range} of him): the model follows the cursor, green = placeable, red = not. Price: {gas} gas, shared stock of {limit} (no refill). It explodes from the first hit of any fighter (also an ordinary attack order): {damage} damage to ground enemies within {radius}, air is not hit; own units inside take {friendly}% (hard difficulty). Esc or right click cancel at no cost."
+            },
+            "ContainerUnitName": {
+              "ru": "Контейнер с горючей смесью",
+              "en": "Fuel mixture container"
+            },
+            "ContainerInfo": {
+              "ru": "Взрывается от первого попадания призрака (выстрел или Snipe). Круг показывает зону поражения. Свои в зоне тоже пострадают.",
+              "en": "Explodes from the first Ghost hit (rifle or Snipe). The circle shows the blast zone. Own units inside are hurt too."
+            },
+            "PlaceFailGas": {
+              "ru": "Не хватает газа для контейнера.",
+              "en": "Not enough gas for a container."
+            },
+            "PlaceFailLimit": {
+              "ru": "Запас контейнеров исчерпан.",
+              "en": "No containers left."
+            },
+            "PlaceFailSpot": {
+              "ru": "Здесь контейнер поставить нельзя.",
+              "en": "A container cannot be placed here."
+            },
+            "RaynorName": {
+              "ru": "Рейнор",
+              "en": "Raynor"
+            },
+            "SwannName": {
+              "ru": "Свонн",
+              "en": "Swann"
+            },
+            "HudShort": {
+              "ru": "не хватает",
+              "en": "missing"
+            },
+            "ContainerTag": {
+              "ru": "Взрывной контейнер",
+              "en": "Explosive container"
+            },
+            "GasSourceLost": {
+              "ru": "Источник газа потерян, газа на рейс не хватает. Отстройте перерабатывающий завод (75 минералов) и поставьте на газ СКВ.",
+              "en": "The gas source is lost and the gas does not cover a trip. Rebuild the Refinery (75 minerals) and put SCVs on gas."
+            },
+            "PlaceFarMsg": {
+              "ru": "Контейнер можно ставить только рядом с огнемётчиком.",
+              "en": "A container can only be placed close to the Firebat."
+            }
+          },
+          "containers": {
+            "enabled": true,
+            "limit": 12,
+            "gas_cost": 25,
+            "damage": 200,
+            "radius": 3.0,
+            "life": 1,
+            "owner": 0,
+            "place_range": 4.0,
+            "min_free": 1.2,
+            "hotkey": "C",
+            "friendly": {
+              "hard": 0.25,
+              "other": 0.0
+            },
+            "show_radius": true
+          },
+          "convoy_fuel": {
+            "enabled": true,
+            "gas_cost": 100
+          },
+          "hud": {
+            "offset_x": 16,
+            "offset_y": 292,
+            "width": 420,
+            "height": 44
+          },
+          "story": {
+            "first_delay": 20,
+            "gap": 1.0
+          },
+          "lines": [
+            {
+              "id": "SWANN_GHOSTS_1",
+              "speaker": "swann",
+              "seconds": 4.0,
+              "text": {
+                "ru": "Подшаманил маскировку — теперь заряд не жрёт.",
+                "en": "Tinkered with the cloak - it no longer eats charge."
+              }
+            },
+            {
+              "id": "SWANN_GHOSTS_2",
+              "speaker": "swann",
+              "seconds": 4.5,
+              "text": {
+                "ru": "И винтовки подкрутил: тяжёлых тварей снимайте ими.",
+                "en": "And I tuned the rifles: take down the heavy brutes with them."
+              }
+            },
+            {
+              "id": "SWANN_GHOSTS_3",
+              "speaker": "swann",
+              "seconds": 4.0,
+              "text": {
+                "ru": "Только берегите железо, экспериментальное ещё.",
+                "en": "Just take care of the gear, it is still experimental."
+              }
+            },
+            {
+              "id": "SWANN_BOXES_1",
+              "speaker": "swann",
+              "seconds": 4.0,
+              "text": {
+                "ru": "Огнемётчикам выдал банки с горючей смесью.",
+                "en": "I gave the Firebats cans of fuel mixture."
+              }
+            },
+            {
+              "id": "SWANN_BOXES_2",
+              "speaker": "swann",
+              "seconds": 5.0,
+              "text": {
+                "ru": "Расставьте у дороги, а призраки подожгут точным выстрелом.",
+                "en": "Place them by the road, and the Ghosts will set them off with a precise shot."
+              }
+            },
+            {
+              "id": "SWANN_BOXES_3",
+              "speaker": "swann",
+              "seconds": 4.5,
+              "text": {
+                "ru": "Только людей сначала отведите — рванёт прилично.",
+                "en": "Just move people away first - it goes off with a bang."
+              }
+            },
+            {
+              "id": "HARD_WARNING",
+              "speaker": "swann",
+              "seconds": 4.5,
+              "text": {
+                "ru": "И учтите: на этой сложности взрыв опасен и для своих.",
+                "en": "And mind this: on this difficulty the blast hurts your own side too."
+              }
+            },
+            {
+              "id": "RAYNOR_PLAN_1",
+              "speaker": "raynor",
+              "seconds": 4.0,
+              "text": {
+                "ru": "Сначала разведайте дорогу и подготовьте засады.",
+                "en": "First scout the road and prepare the ambushes."
+              }
+            },
+            {
+              "id": "RAYNOR_PLAN_2",
+              "speaker": "raynor",
+              "seconds": 3.5,
+              "text": {
+                "ru": "Колонна выйдет по нашему приказу.",
+                "en": "The convoy leaves on our order."
+              }
+            },
+            {
+              "id": "RAYNOR_PLAN_3",
+              "speaker": "raynor",
+              "seconds": 5.0,
+              "text": {
+                "ru": "Потом держитесь рядом и не подпускайте тварей к людям.",
+                "en": "Then stay close and keep the creatures away from the people."
+              }
+            },
+            {
+              "id": "RAYNOR_FUEL",
+              "speaker": "raynor",
+              "seconds": 4.5,
+              "text": {
+                "ru": "И следите за газом: на каждый рейс нужна заправка.",
+                "en": "And watch the gas: every trip needs fuel."
+              }
+            }
+          ],
+          "allow_refinery": true
+        }
+      }
+    },
+    "sniper_next_dev": {
+      "label": "Подготовленные подрывы (отладка)",
+      "message": "Ghost Ops — Подготовленные подрывы (отладка)",
+      "message_en": "Ghost Ops - Prepared detonations (debug)",
+      "hidden": true,
+      "extends": "sniper_next",
+      "card": "Отладочная сборка с журналом",
+      "details": [
+        "Только для разработки"
+      ],
+      "overrides": {
+        "hanson": {
+          "debug_log": true
+        }
+      }
+    },
+    "sniper_next_ce0_dev": {
+      "label": "Подготовленные подрывы, проба CE-0 (отладка)",
+      "message": "Ghost Ops - Prepared detonations, CE-0 probe (dev)",
+      "message_en": "Ghost Ops - Prepared detonations, CE-0 probe (dev)",
+      "hidden": true,
+      "extends": "sniper_next",
+      "card": "Technical probe",
+      "details": [
+        "Development only"
+      ],
+      "overrides": {
+        "hanson": {
+          "debug_log": true
+        },
+        "ce0": {
+          "operation_id": "CE0-TH01N",
+          "census_types": [
+            "Ghost",
+            "Firebat",
+            "Medic",
+            "MissileTurret",
+            "GhostOpsFuelContainer"
           ]
         }
       }

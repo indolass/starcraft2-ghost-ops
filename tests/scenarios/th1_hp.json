@@ -1,0 +1,38 @@
+{
+ "name": "th1_hp",
+ "mission": "thanson01",
+ "preset": "sniper_next_ce0_dev",
+ "why": "real health of the Zerg types (installed game 3.1.4)",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 6
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "cmd",
+   "text": "nhp",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "expect",
+   "regex": "NHP ",
+   "note": "real health of the Zerg types of the installed game"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

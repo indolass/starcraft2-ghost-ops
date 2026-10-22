@@ -687,6 +687,152 @@ bool GhostOps_Ce0_NukeRange (bool lp_testConds, bool lp_runActions) {
     return true;
 }
 
+// Filter scene (dev): no fight around. Our Marines are paused, the test units are paused too; enemy vehicles / enemy infantry / an enemy Marauder / an enemy air unit / own Marine
+// (biological) / own Hellion (vehicle) stand within 2 cells of one point, one grenade, lives before / after. Written for the Operative at his place: the point is 7 cells east.
+unit[10] go_ftU;
+string[10] go_ftT;
+
+bool GhostOps_Ce0_FilterScene (bool lp_testConds, bool lp_runActions) {
+    point lv_c;
+    int lv_i;
+    string lv_s;
+    unitgroup lv_g;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    UnitGroupLoopBegin(UnitGroup("Marine", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0));
+    while (UnitGroupLoopCurrent() != null) {
+        libNtve_gf_PauseUnit(UnitGroupLoopCurrent(), true);
+        UnitGroupLoopStep();
+    }
+
+    UnitGroupLoopEnd();
+    lv_c = Point(go_ndCx, go_ndCy);
+    UnitSetPosition(go_tacOperative, PointWithOffset(lv_c, -7.0, 0.0), false);
+    UnitSetPosition(go_tacSpotter, PointWithOffset(lv_c, -20.0, 0.0), false);
+    go_ftT[0] = "Hellion";
+    go_ftT[1] = "SiegeTank";
+    go_ftT[2] = "Marine";
+    go_ftT[3] = "Marauder";
+    go_ftT[4] = "VikingFighter";
+    go_ftT[5] = "Marine";
+    go_ftT[6] = "Hellion";
+    go_ftT[7] = "SCV";
+    UnitCreate(1, "Hellion", 0, 2, PointWithOffset(lv_c, 1.0, 0.0), 270.0);
+    go_ftU[0] = UnitLastCreated();
+    UnitCreate(1, "SiegeTank", 0, 2, PointWithOffset(lv_c, -1.0, 0.0), 270.0);
+    go_ftU[1] = UnitLastCreated();
+    UnitCreate(1, "Marine", 0, 2, PointWithOffset(lv_c, 0.0, 1.2), 270.0);
+    go_ftU[2] = UnitLastCreated();
+    UnitCreate(1, "Marauder", 0, 2, PointWithOffset(lv_c, 0.0, -1.2), 270.0);
+    go_ftU[3] = UnitLastCreated();
+    UnitCreate(1, "VikingFighter", 0, 2, PointWithOffset(lv_c, 1.5, 1.5), 270.0);
+    go_ftU[4] = UnitLastCreated();
+    UnitCreate(1, "Marine", 0, 1, PointWithOffset(lv_c, -1.5, 1.5), 270.0);
+    go_ftU[5] = UnitLastCreated();
+    UnitCreate(1, "Hellion", 0, 1, PointWithOffset(lv_c, -1.5, -1.5), 270.0);
+    go_ftU[6] = UnitLastCreated();
+    UnitCreate(1, "SCV", 0, 1, PointWithOffset(lv_c, 1.5, -1.5), 270.0);
+    go_ftU[7] = UnitLastCreated();
+    lv_i = 0;
+    while (lv_i < 8) {
+        libNtve_gf_PauseUnit(go_ftU[lv_i], true);
+        UnitSetPropertyFixed(go_ftU[lv_i], c_unitPropLifeMax, 1000.0);
+        UnitSetPropertyFixed(go_ftU[lv_i], c_unitPropLife, 1000.0);
+        lv_i += 1;
+    }
+
+    Wait(0.5, c_timeGame);
+    lv_s = "";
+    lv_i = 0;
+    while (lv_i < 8) {
+        lv_s = lv_s + go_ftT[lv_i] + "#" + IntToString(UnitGetOwner(go_ftU[lv_i])) + ":" + GhostOps_Ce0_NdLife(go_ftU[lv_i]) + " ";
+        lv_i += 1;
+    }
+
+    GhostOps_Ce0_Write("j", "FS before: " + lv_s);
+    UnitIssueOrder(go_tacOperative, OrderTargetingPoint(AbilityCommand("GhostOpsArmorPiercing", 0), lv_c), c_orderQueueReplace);
+    Wait(5.0, c_timeGame);
+    lv_s = "";
+    lv_i = 0;
+    while (lv_i < 8) {
+        lv_s = lv_s + go_ftT[lv_i] + "#" + IntToString(UnitGetOwner(go_ftU[lv_i])) + ":" + GhostOps_Ce0_NdLife(go_ftU[lv_i]) + " ";
+        lv_i += 1;
+    }
+
+    GhostOps_Ce0_Write("j", "FS after: " + lv_s);
+    GhostOps_Ce0_Write("j", "FS ammo " + IntToString(go_tacGrenadeAmmo) + " impacts " + IntToString(go_apImpacts));
+    return true;
+}
+
+// Size / falloff scene (dev): Command Center and Barracks of player 2 alone, our Marines paused, at distances d west of the point; lives before / after one NukeDamage effect.
+bool GhostOps_Ce0_SizeScene (bool lp_testConds, bool lp_runActions) {
+    string[3] lv_type;
+    fixed[10] lv_d;
+    int lv_i;
+    int lv_j;
+    unit lv_u;
+    string lv_before;
+    point lv_c;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    UnitGroupLoopBegin(UnitGroup("Marine", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0));
+    while (UnitGroupLoopCurrent() != null) {
+        libNtve_gf_PauseUnit(UnitGroupLoopCurrent(), true);
+        UnitGroupLoopStep();
+    }
+
+    UnitGroupLoopEnd();
+    lv_c = Point(go_ndCx, go_ndCy);
+    UnitSetPosition(go_tacSpotter, Point(go_ndCx - 25.0, go_ndCy), false);
+    UnitSetPosition(go_tacOperative, Point(go_ndCx - 25.0, go_ndCy + 2.0), false);
+    lv_type[0] = "CommandCenter";
+    lv_type[1] = "Barracks";
+    lv_type[2] = "SupplyDepot";
+    lv_d[0] = 0.0;
+    lv_d[1] = 2.0;
+    lv_d[2] = 3.5;
+    lv_d[3] = 5.0;
+    lv_d[4] = 6.0;
+    lv_d[5] = 7.0;
+    lv_d[6] = 8.0;
+    lv_d[7] = 9.0;
+    lv_d[8] = 10.0;
+    lv_d[9] = 11.0;
+    lv_i = 0;
+    while (lv_i < 3) {
+        lv_j = 0;
+        while (lv_j < 10) {
+            UnitCreate(1, lv_type[lv_i], 0, 2, PointWithOffset(lv_c, 0.0 - lv_d[lv_j], 0.0), 270.0);
+            lv_u = UnitLastCreated();
+            if (lv_u != null) {
+                libNtve_gf_PauseUnit(lv_u, true);
+            }
+
+            Wait(0.3, c_timeGame);
+            lv_before = GhostOps_Ce0_NdLife(lv_u);
+            UnitCreateEffectPoint(go_tacSpotter, "NukeDamage", lv_c);
+            Wait(0.4, c_timeGame);
+            GhostOps_Ce0_Write("j", "SZ " + lv_type[lv_i] + " d=" + FixedToString(lv_d[lv_j], 1) + " before " + lv_before + " after " + GhostOps_Ce0_NdLife(lv_u));
+            if (UnitIsAlive(lv_u)) {
+                UnitRemove(lv_u);
+            }
+
+            lv_j += 1;
+        }
+
+        lv_i += 1;
+    }
+
+    GhostOps_Ce0_Write("j", "SZ done");
+    return true;
+}
+
 bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
     unitgroup lv_g;
     string lv_t;
@@ -1094,6 +1240,20 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
         CatalogFieldValueSet(c_gameCatalogMover, "GhostOpsAPMover", "MotionPhases[0].MaxSpeed", 1, lp_a);
         CatalogFieldValueSet(c_gameCatalogMover, "GhostOpsAPMover", "MotionPhases[0].Acceleration", 1, lp_b);
         GhostOps_Ce0_Write("j", "APSPD max " + CatalogFieldValueGet(c_gameCatalogMover, "GhostOpsAPMover", "MotionPhases[0].MaxSpeed", 1) + " acc " + CatalogFieldValueGet(c_gameCatalogMover, "GhostOpsAPMover", "MotionPhases[0].Acceleration", 1));
+        return true;
+    }
+
+    if (lp_cmd == "fs") {
+        go_ndCx = StringToFixed(lp_a);
+        go_ndCy = StringToFixed(lp_b);
+        TriggerExecute(TriggerCreate("GhostOps_Ce0_FilterScene"), true, false);
+        return true;
+    }
+
+    if (lp_cmd == "sz") {
+        go_ndCx = StringToFixed(lp_a);
+        go_ndCy = StringToFixed(lp_b);
+        TriggerExecute(TriggerCreate("GhostOps_Ce0_SizeScene"), true, false);
         return true;
     }
 

@@ -1,0 +1,118 @@
+{
+ "name": "th1_convoy_fuel",
+ "mission": "thanson01",
+ "preset": "sniper_next_ce0_dev",
+ "why": "convoy by command: no gas = waits, accepted command charges 100 once, a repeated click does nothing",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 6
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "nstat",
+   "grep": "NSTAT ghosts 2 firebats 2",
+   "every": 5,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "ngas 50",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "enter",
+   "wait": 1.5
+  },
+  {
+   "op": "until",
+   "cmd": "nstat",
+   "grep": "NSTAT gas [0-9]+ used [0-9]+/12 placed [0-9]+ blasts [0-9]+ cmd 2",
+   "every": 10,
+   "timeout": 420
+  },
+  {
+   "op": "cmd",
+   "text": "ngas 50",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "click",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "cmd",
+   "text": "nstat",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "ngas 200",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "click",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "cmd",
+   "text": "nstat",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "click",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "cmd",
+   "text": "nstat",
+   "wait": 1.5
+  },
+  {
+   "op": "expect",
+   "regex": "NSTAT gas 50 used 0/12 placed 0 blasts 0 cmd 2",
+   "note": "short of gas: the convoy waits, nothing charged"
+  },
+  {
+   "op": "expect",
+   "regex": "NSTAT gas 100 used 0/12 placed 0 blasts 0 cmd 3",
+   "note": "paid once, the convoy is on its way"
+  },
+  {
+   "op": "expect",
+   "regex": "NSTAT convoy sent 1 ",
+   "note": "exactly one convoy sent"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}
