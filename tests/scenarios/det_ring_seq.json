@@ -1,0 +1,145 @@
+{
+ "name": "det_ring_seq",
+ "mission": "traynor03",
+ "preset": "defence_next_dev",
+ "why": "the selection sequence",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "until",
+   "grep": "DST2 landing 222",
+   "cmd": "dst",
+   "every": 4,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "nofoe"
+  },
+  {
+   "op": "cmd",
+   "text": "pausem"
+  },
+  {
+   "op": "cmd",
+   "text": "ghold"
+  },
+  {
+   "op": "until",
+   "grep": "TRACE gt_TransmissionFirstZergWaveIncomingQ",
+   "every": 3,
+   "timeout": 150
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "dtsp 6 0"
+  },
+  {
+   "op": "cmd",
+   "text": "dtov 9 4"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "cmd",
+   "text": "dtlog"
+  },
+  {
+   "op": "cmd",
+   "text": "selghosts"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "shot",
+   "file": "seq_0_both.png"
+  },
+  {
+   "op": "cmd",
+   "text": "selonly Ghost"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "shot",
+   "file": "seq_1_one.png"
+  },
+  {
+   "op": "cmd",
+   "text": "selonly Marine"
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "shot",
+   "file": "seq_2_marine_2s.png"
+  },
+  {
+   "op": "sleep",
+   "s": 4
+  },
+  {
+   "op": "shot",
+   "file": "seq_3_marine_6s.png"
+  },
+  {
+   "op": "cmd",
+   "text": "selmix"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "shot",
+   "file": "seq_4_mixed.png"
+  },
+  {
+   "op": "cmd",
+   "text": "selonly Marine"
+  },
+  {
+   "op": "sleep",
+   "s": 5
+  },
+  {
+   "op": "shot",
+   "file": "seq_5_marine_again.png"
+  },
+  {
+   "op": "expect",
+   "regex": "DTL t=",
+   "note": "timeline: gsel = the first Ghost is selected, radar = it carries the behavior, buff of the detectors"
+  },
+  {
+   "op": "expect",
+   "regex": "SEL(ONLY|MIX|GHOSTS)",
+   "note": "selection commands"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

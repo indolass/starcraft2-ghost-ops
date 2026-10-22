@@ -74,6 +74,11 @@
   },
   {
    "op": "expect",
+   "regex": "DTL t=",
+   "note": "the whole timeline (Ghost life against the distance of the Overseer, every 0.4 s)"
+  },
+  {
+   "op": "expect",
    "regex": "DTL t=.*ghostLife 45 \\| Overseer d=(1[2-9]|20)",
    "note": "before the Overseer is within 11: the Ghost is untouched"
   },

@@ -1043,6 +1043,7 @@ bool GhostOps_Ce0_DtTick (bool lp_test, bool lp_run) {
 
     lv_g = GhostOps_Ce0_Ghost1();
     lv_t = "DTL t=" + FixedToString(GameGetMissionTime(), 1) + " ghostLife " + FixedToString(UnitGetPropertyFixed(lv_g, c_unitPropLife, c_unitPropCurrent), 0);
+    lv_t = lv_t + " gsel " + IntToString(GhostOps_Ce0_B(UnitIsSelected(lv_g, 1))) + " radar " + IntToString(UnitBehaviorCount(lv_g, "HeroDetectorRadar"));
     lv_i = 0;
     while (lv_i < go_dtN) {
         if ((go_dtU[lv_i] != null) && UnitIsAlive(go_dtU[lv_i])) {
@@ -1073,10 +1074,10 @@ bool GhostOps_Ce0_DetCmd (string lp_cmd, string lp_a, string lp_b) {
         // an enemy (player 2) Spore Crawler / Overseer at the offset (a, b) from the first Ghost
         lv_g = GhostOps_Ce0_Ghost1();
         if (lp_cmd == "dtsp") {
-            UnitCreate(1, "SporeCrawler", 0, 2, PointWithOffset(UnitGetPosition(lv_g), StringToFixed(lp_a), StringToFixed(lp_b)), 270.0);
+            UnitCreate(1, "SporeCrawler", 0, 5, PointWithOffset(UnitGetPosition(lv_g), StringToFixed(lp_a), StringToFixed(lp_b)), 270.0);
         }
         else {
-            UnitCreate(1, "Overseer", 0, 2, PointWithOffset(UnitGetPosition(lv_g), StringToFixed(lp_a), StringToFixed(lp_b)), 270.0);
+            UnitCreate(1, "Overseer", 0, 5, PointWithOffset(UnitGetPosition(lv_g), StringToFixed(lp_a), StringToFixed(lp_b)), 270.0);
         }
 
         lv_u = UnitLastCreated();
@@ -1122,11 +1123,10 @@ bool GhostOps_Ce0_DetCmd (string lp_cmd, string lp_a, string lp_b) {
     if (lp_cmd == "dtz") {
         // an enemy Zergling (player 2) at the offset (a, b) from the first Ghost: it attacks the Ghost only when the Ghost is DETECTED
         lv_g = GhostOps_Ce0_Ghost1();
-        UnitCreate(1, "Zergling", 0, 2, PointWithOffset(UnitGetPosition(lv_g), StringToFixed(lp_a), StringToFixed(lp_b)), 270.0);
+        UnitCreate(1, "Zergling", 0, 5, PointWithOffset(UnitGetPosition(lv_g), StringToFixed(lp_a), StringToFixed(lp_b)), 270.0);
         go_dtZ = UnitLastCreated();
         UnitSetPropertyFixed(go_dtZ, c_unitPropLifeMax, 3000.0);
         UnitSetPropertyFixed(go_dtZ, c_unitPropLife, 3000.0);
-        UnitIssueOrder(go_dtZ, Order(AbilityCommand("move", 2)), c_orderQueueReplace);
         if (go_dumG != null) {
             UnitGroupAdd(go_dumG, go_dtZ);
         }

@@ -1,0 +1,87 @@
+{
+ "name": "load_intro",
+ "mission": "traynor03",
+ "preset": "defence_next_dev",
+ "why": "load during the intro",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 2
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "cmd",
+   "text": "nofoe"
+  },
+  {
+   "op": "until",
+   "grep": "TRACE gt_StartTimers",
+   "every": 2,
+   "timeout": 60
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "save",
+   "name": "CE0_INTRO"
+  },
+  {
+   "op": "load",
+   "name": "CE0_INTRO"
+  },
+  {
+   "op": "sleep",
+   "s": 30
+  },
+  {
+   "op": "cmd",
+   "text": "dst"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "expect_def",
+   "regex": "scene: Raynor",
+   "count": 1,
+   "note": "the intro was not started a second time by the load"
+  },
+  {
+   "op": "expect_def",
+   "regex": "landing 0 done",
+   "count": 1,
+   "note": "the first landing happened once"
+  },
+  {
+   "op": "expect_def",
+   "regex": "landing 2 done",
+   "count": 1,
+   "note": "the Ghosts landed once"
+  },
+  {
+   "op": "expect_def",
+   "regex": "scene: Swann \\(detector analysis\\)",
+   "count": 1,
+   "note": "the Swann scanner line once"
+  },
+  {
+   "op": "expect",
+   "regex": "DST2 landing 222 marines (16|6|[0-9]+) ghosts 2",
+   "note": "both Ghosts exist, not four"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

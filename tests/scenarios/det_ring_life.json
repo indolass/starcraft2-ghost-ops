@@ -1,0 +1,96 @@
+{
+ "name": "det_ring_life",
+ "mission": "traynor03",
+ "preset": "defence_next_dev",
+ "why": "lifetime of the circles",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "until",
+   "grep": "DST2 landing 222",
+   "cmd": "dst",
+   "every": 4,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "nofoe"
+  },
+  {
+   "op": "cmd",
+   "text": "pausem"
+  },
+  {
+   "op": "cmd",
+   "text": "ghold"
+  },
+  {
+   "op": "until",
+   "grep": "TRACE gt_TransmissionFirstZergWaveIncomingQ",
+   "every": 3,
+   "timeout": 150
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "dtsp 6 0"
+  },
+  {
+   "op": "cmd",
+   "text": "selghosts"
+  },
+  {
+   "op": "sleep",
+   "s": 4
+  },
+  {
+   "op": "shot",
+   "file": "life_0_ghosts.png"
+  },
+  {
+   "op": "cmd",
+   "text": "selonly Marine"
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "shot",
+   "file": "life_1_after_1s.png"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "shot",
+   "file": "life_2_after_4s.png"
+  },
+  {
+   "op": "sleep",
+   "s": 6
+  },
+  {
+   "op": "shot",
+   "file": "life_3_after_10s.png"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}
