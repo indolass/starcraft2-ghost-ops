@@ -536,6 +536,22 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
         return true;
     }
 
+    if (lp_cmd == "nmodels") {
+        // a row of stock units (owner 0) in front of the camera: which of them have a real model in this install and which show the grey placeholder dome
+        lv_scv = GhostOps_Ce0_First("Firebat");
+        lv_p = PointWithOffset(UnitGetPosition(lv_scv), -4.0, 6.0);
+        lv_t = "GasCanister PalletGas ExplodingBarrelLarge TerrazineCanister GhostOpsFuelContainer SupplyDepot ColonistHut";
+        lv_i = 1;
+        while (lv_i <= 7) {
+            UnitCreate(1, StringWord(lv_t, lv_i), 0, 0, PointWithOffset(lv_p, 2.5 * lv_i, 0.0), 270.0);
+            lv_i += 1;
+        }
+
+        CameraPan(1, PointWithOffset(lv_p, 10.0, 0.0), 0.0, -1.0, 10.0, false);
+        GhostOps_Ce0_Write("j", "NMODELS row of " + lv_t);
+        return true;
+    }
+
     if (lp_cmd == "nselfb") {
         // the first Firebat is selected (like a click on him) and the camera is centred on him: the next real key / mouse actions are given from the player's side
         lv_scv = GhostOps_Ce0_First("Firebat");

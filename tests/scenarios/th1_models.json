@@ -1,0 +1,47 @@
+{
+ "name": "th1_models",
+ "mission": "thanson01",
+ "preset": "sniper_next_ce0_dev",
+ "why": "which stock models exist in this install",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 6
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "nstat",
+   "grep": "NSTAT ghosts 2 firebats 2",
+   "every": 5,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "nmodels",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "shot",
+   "file": "models.png"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

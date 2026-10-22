@@ -954,3 +954,9 @@ TRaynor02 (`ce0_dev`, 8 КСМ командой `mine`, без выданных 
 **Перезарядка залпа.** `defence_next`: 20 -> 8 игровых секунд (экспериментальное значение, не баланс); урон 30, 5 ракет, ручное наведение по области, указатель, клавиша A, ПВО и отдельная перезарядка каждой турели сохранены.
 
 **Новая карта и запуск.** `GhostOps_TRaynor03_defence_next.SC2Map` (запускатель: карточка «Оборона и диверсии, версия 2»; версия 1 - отдельная карточка, её карта не менялась). Баланс (цены, урон ×8, число ракет, момент Мэтта) не менялся.
+
+## Status of the visual fixes and real-UI checks (2026-10-23)
+
+- Implemented, NOT confirmed by a screenshot: explicit model paths for the grenade projectile (`GhostOpsAPMissile` -> PodMissile.m3, plus a `CActorMissile`) and for the fuel container (`GhostOpsFuelContainer` -> GasCanister.m3). Jobs T0201 / T0203 (grenade) caught no frame of the projectile in flight (launch to impact 0.62 s game time, the frames taken around it were black); T0202 (container) still showed the grey dome for the custom container unit. Two attempts gave no new information: the look of both objects is an OPEN problem, to be checked by the Owner by eye; the next method is a stock-id unit clone, not more probes.
+- Verified through the real window: the campaign window (25/25 checks on copies of Owner data; the real Owner result stays pending).
+- Not done: real-UI barrel placement scenario (C key, preview, Esc / right click) beyond the calibration probe T0199 (key and command card reach the game; the preview and colours were not captured); full convoy transition test.

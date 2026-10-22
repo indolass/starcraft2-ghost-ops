@@ -1083,7 +1083,8 @@ def hanson_fragments(h, cfg):
             '    <CActorModel id="GhostOpsCBlastModel2" parent="ModelAnimationStyleOneShot">', '        <Model value="ExplodingBarrelDeath"/>', '        <HostSiteOps Ops="SOpTargetPoint"/>', '        <On Terms="Effect.GhostOpsCBlast.Impact" Send="Create"/>', '    </CActorModel>',
             '    <CActorSound id="GhostOpsCBlastSound" parent="SoundOneShot">', '        <Sound value="Terran_ExplosionLarge"/>', '        <On Terms="Effect.GhostOpsCBlast.Impact" Send="Create"/>', '    </CActorSound>', '']
     btn = ['    <CButton id="GhostOpsPlaceContainer">', '        <Icon value="%s"/>' % icon, '        <AlertIcon value="%s"/>' % icon, '        <EditorCategories value="Race:Terran"/>', '    </CButton>', '']
-    model = ['    <CModel id="GhostOpsFuelContainer" parent="GasCanister"/>', '']
+    # an inherited model path was NOT resolved by the engine (the unit showed the grey placeholder dome): the path of the stock gas canister model is written out
+    model = ['    <CModel id="GhostOpsFuelContainer" parent="GasCanister">', '        <Model value="Assets\\Buildings\\Resources\\GasCanister\\GasCanister.m3"/>', '    </CModel>', '']
     return {'ModelData.xml': nl.join(model), 'UnitData.xml': nl.join(unit), 'AbilData.xml': nl.join(abil), 'BehaviorData.xml': nl.join(beh), 'EffectData.xml': nl.join(eff), 'ActorData.xml': nl.join(act), 'ButtonData.xml': nl.join(btn)}
 
 
@@ -1166,7 +1167,7 @@ def tactical_fragments(t, gt=None):
                '    </CUnit>'] + ghost_unit + (['    <CUnit id="GhostOpsAPMissile" parent="PunisherGrenadesLMWeapon">', '        <Mover value="GhostOpsAPMover"/>', '    </CUnit>'] if mover else []) + ['']),
         'MoverData.xml': nl.join(mover + ['']) if mover else '',
         # the projectile unit has no model of its own and showed as a white dome: the stock pod missile of the Odin barrage (smoke trail is part of the model)
-        'ModelData.xml': nl.join(['    <CModel id="GhostOpsAPMissile" parent="MissileBarragePod"/>', '']) if (mover and gr.get('effects')) else '',
+        'ModelData.xml': nl.join(['    <CModel id="GhostOpsAPMissile" parent="MissileBarragePod">', '        <Model value="Assets\\Effects\\Terran\\PodMissile\\PodMissile.m3"/>', '    </CModel>', '']) if (mover and gr.get('effects')) else '',
         'BehaviorData.xml': nl.join(behavior('GhostOpsGarrisonDamage', gm) + extra_beh + ['']),
         'ButtonData.xml': nl.join(button + ['']) if button else '',
         'RequirementData.xml': nl.join([
@@ -1198,7 +1199,7 @@ def tactical_fragments(t, gt=None):
             '        <InitialDelay value="0"/>',
             '    </CEffectCreatePersistent>',
         ] + nuke_damage + effects),
-        'ActorData.xml': nl.join(grenade_actors + ['']) if grenade_actors else '',
+        'ActorData.xml': nl.join(grenade_actors + (['    <CActorMissile id="GhostOpsAPMissile" parent="GenericAttackMissile" unitName="GhostOpsAPMissile"/>'] if mover else []) + ['']) if grenade_actors else '',
     }
 
 
