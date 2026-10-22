@@ -123,7 +123,7 @@ class Adopt(unittest.TestCase):
 
     def test_the_window_draws_the_four_states(self):
         src = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'tools', 'gui_campaign.py'), encoding='utf-8').read()
-        for needle in ('Зачислить в кампанию (один раз)', 'ровно: %d минералов, %d газа', 'Источник: журнал карты', 'cf.step_of(\'traynor02\')[\'preset\']'):
+        for needle in ('Зачислить в кампанию (один раз)', 'ровно: %d минералов, %d газа', 'Источник: ваше прохождение', 'cf.step_of(\'traynor02\')[\'preset\']'):
             self.assertIn(needle, src)
 
 

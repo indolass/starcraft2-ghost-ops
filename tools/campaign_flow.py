@@ -16,7 +16,7 @@ import campaign
 # missions that take part in the campaign sequence, in the order of the first economy experiment
 SEQUENCE = [
     {'mission': 'traynor02', 'preset': 'tactical_next', 'title': 'Вне закона', 'order': False},  # the current version (the earlier operations keep their own profile 'tactical')
-    {'mission': 'traynor03', 'preset': 'standard', 'title': 'Час икс', 'order': True},
+    {'mission': 'traynor03', 'preset': 'defence_next', 'title': 'Час икс', 'order': True},  # the current version; the earlier variants stay selectable in the window
 ]
 ORDER_LABELS = {'marines': 'Морпехи гарнизона', 'bunkers': 'Бункеры', 'turrets': 'Ракетные турели', 'scvs': 'КСМ для ремонта'}
 PREP_TEXT = 'Закупайтесь сейчас. После высадки новых бойцов нам взять негде. Оставьте достаточно людей для обороны — призракам предстоит работа за периметром.'

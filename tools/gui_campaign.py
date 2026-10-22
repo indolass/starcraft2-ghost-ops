@@ -11,6 +11,11 @@ import campaign
 import campaign_flow as cf
 
 RES_NAMES = {'minerals': 'минералов', 'gas': 'газа'}
+VARIANT_TEXT = {
+    'defence_next': '«Оборона и диверсии», версия 2 — ТЕКУЩАЯ, экспериментальная (бункеры и турели строите сами, морпехи прилетают в капсулах, залп турелей по области)',
+    'defence': '«Оборона и диверсии», версия 1 — прежняя (карта, которую вы проходили раньше; без залпа по области)',
+    'standard': 'прежний «Час икс» (заказ готов к старту)'}
+PROFILE_TEXT = {'tactical_next': 'Вне закона, версия 2', 'tactical': 'Вне закона, версия 1'}
 
 
 def stock_text(stock):
@@ -39,7 +44,8 @@ def make_window_class(ctk, pal):
             self.busy = False
             self.watching = False
             self.pending = []
-            self.t3 = 'defence'  # the variant of the second step: 'defence' (new, experimental) or 'standard' (the previous Zero Hour)
+            self.t3 = cf.step_of('traynor03')['preset']  # the variant of the second step: 'defence_next' (current), 'defence' (version 1, the Owner's earlier map) or 'standard' (the previous Zero Hour)
+            self.show_details = False
             self.order = dict(self.flow.order_info('traynor03', self.t3)['recommended'])
             self.grid_columnconfigure(0, weight=1)
             self.grid_rowconfigure(0, weight=1)
@@ -110,18 +116,25 @@ def make_window_class(ctk, pal):
             r = 2
             for p in info['results']:
                 rep = campaign.report(p)
-                src = 'Источник: журнал карты %s (Documents\\StarCraft II\\Banks), результат %s, запуск вне кампании (операция %s), игровое время %s с, профиль карты: %s (хэш данных %s).' % (
-                    os.path.basename(p['source']), p['result_id'], p['op'], p['mission_time'].split('.')[0], p.get('profile') or 'не определён', p.get('data_hash'))
+                src = 'Источник: ваше прохождение «%s», запущенное с карточки запускателя (не из окна кампании); карта записала результат в конце миссии, игровое время %s с.' % (
+                    PROFILE_TEXT.get(p.get('profile'), 'профиль не определён'), p['mission_time'].split('.')[0])
+                tech = 'Технические данные: файл %s (Documents\\StarCraft II\\Banks), результат %s, операция журнала %s, профиль %s, хэш данных %s.' % (
+                    os.path.basename(p['source']), p['result_id'], p['op'], p.get('profile') or 'не определён', p.get('data_hash'))
                 ctk.CTkLabel(f, text='Победа. В запас кампании будет зачислено ровно: %d минералов, %d газа.' % (p['minerals'], p['gas']), font=(FONT, 14, 'bold'), text_color=TEXT,
                              anchor='w').grid(row=r, column=0, sticky='ew', padx=16, pady=(6, 0))
-                ctk.CTkLabel(f, text='\n'.join(campaign.report_lines(rep)) + '\n' + src, font=(FONT, 11), text_color=MUTED, anchor='w', justify='left', wraplength=740).grid(
+                ctk.CTkLabel(f, text='\n'.join(campaign.report_lines(rep)) + '\n' + src + (('\n' + tech) if self.show_details else ''), font=(FONT, 11), text_color=MUTED, anchor='w', justify='left', wraplength=740).grid(
                     row=r + 1, column=0, sticky='ew', padx=16)
+                self.button(f, 'Скрыть подробности' if self.show_details else 'Подробнее', self.toggle_details, width=140).grid(row=r + 2, column=0, sticky='e', padx=16)
                 if info['state'] == 'found':
                     self.button(f, 'Зачислить в кампанию (один раз)', lambda pp=p: self.adopt(pp), primary=True, state='disabled' if info['blocked'] else 'normal', width=260).grid(
                         row=r + 2, column=0, sticky='w', padx=16, pady=(6, 4))
                 r += 3
             ctk.CTkLabel(f, text='Самостоятельный запуск карты с карточки в кампанию не записывается сам: остаток попадает в запас только после вашего подтверждения здесь или как результат операции кампании.',
                          font=(FONT, 11), text_color=MUTED, anchor='w', justify='left', wraplength=740).grid(row=r, column=0, sticky='ew', padx=16, pady=(0, 10))
+
+        def toggle_details(self):
+            self.show_details = not self.show_details
+            self.refresh()
 
         def adopt(self, proposal):
             try:
@@ -169,7 +182,7 @@ def make_window_class(ctk, pal):
             f = self.card(row, '2. «Час икс» — подготовка заказа')
             info = self.flow.order_info('traynor03', self.t3)
             opn = self.flow.open_operation('traynor03')
-            ctk.CTkLabel(f, text=('Вариант: %s. ' % ('«Оборона и диверсии» — НОВЫЙ, экспериментальный (закупленные бункеры и турели строите сами; морпехи прилетают в капсулах)' if self.t3 == 'defence' else 'прежний «Час икс» (заказ готов к старту)')) + 'Рейнор: «%s»' % cf.PREP_TEXT, font=(FONT, 12), text_color=MUTED, anchor='w', justify='left', wraplength=740).grid(row=1, column=0, sticky='ew', padx=16, pady=(0, 6))
+            ctk.CTkLabel(f, text=('Вариант: %s. ' % (VARIANT_TEXT[self.t3])) + 'Рейнор: «%s»' % cf.PREP_TEXT, font=(FONT, 12), text_color=MUTED, anchor='w', justify='left', wraplength=740).grid(row=1, column=0, sticky='ew', padx=16, pady=(0, 6))
             if opn:
                 ctk.CTkLabel(f, text='Операция %s: %s. Заказ зафиксирован и оплачен.' % (opn[0], op_status(opn[1])), font=(FONT, 13), text_color=TEXT, anchor='w',
                              wraplength=740).grid(row=2, column=0, sticky='ew', padx=16, pady=(2, 4))
@@ -177,8 +190,9 @@ def make_window_class(ctk, pal):
                 return
             vb = ctk.CTkFrame(f, fg_color='transparent')
             vb.grid(row=6, column=0, sticky='w', padx=12, pady=(0, 10))
-            self.button(vb, 'Новый: Оборона и диверсии (эксперимент)', lambda: self.set_variant('defence'), primary=(self.t3 == 'defence'), width=300).grid(row=0, column=0, padx=4)
-            self.button(vb, 'Прежний «Час икс»', lambda: self.set_variant('standard'), primary=(self.t3 == 'standard'), width=170).grid(row=0, column=1, padx=4)
+            self.button(vb, 'Оборона и диверсии, версия 2 (текущая)', lambda: self.set_variant('defence_next'), primary=(self.t3 == 'defence_next'), width=300).grid(row=0, column=0, padx=4)
+            self.button(vb, 'Оборона и диверсии, версия 1', lambda: self.set_variant('defence'), primary=(self.t3 == 'defence'), width=230).grid(row=0, column=1, padx=4)
+            self.button(vb, 'Прежний «Час икс»', lambda: self.set_variant('standard'), primary=(self.t3 == 'standard'), width=170).grid(row=0, column=2, padx=4)
             grid = ctk.CTkFrame(f, fg_color='transparent')
             grid.grid(row=2, column=0, sticky='ew', padx=16)
             grid.grid_columnconfigure(0, weight=1)

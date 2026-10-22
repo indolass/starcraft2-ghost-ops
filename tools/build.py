@@ -1165,6 +1165,8 @@ def tactical_fragments(t, gt=None):
                '        <CostResource index="Vespene" value="0"/>',
                '    </CUnit>'] + ghost_unit + (['    <CUnit id="GhostOpsAPMissile" parent="PunisherGrenadesLMWeapon">', '        <Mover value="GhostOpsAPMover"/>', '    </CUnit>'] if mover else []) + ['']),
         'MoverData.xml': nl.join(mover + ['']) if mover else '',
+        # the projectile unit has no model of its own and showed as a white dome: the stock pod missile of the Odin barrage (smoke trail is part of the model)
+        'ModelData.xml': nl.join(['    <CModel id="GhostOpsAPMissile" parent="MissileBarragePod"/>', '']) if (mover and gr.get('effects')) else '',
         'BehaviorData.xml': nl.join(behavior('GhostOpsGarrisonDamage', gm) + extra_beh + ['']),
         'ButtonData.xml': nl.join(button + ['']) if button else '',
         'RequirementData.xml': nl.join([

@@ -19,6 +19,7 @@ monitors.list_monitors()  # makes this process per-monitor DPI aware: window and
 
 user32 = ctypes.windll.user32
 WM_KEYDOWN, WM_KEYUP, WM_CHAR, WM_LBUTTONDOWN, WM_LBUTTONUP, WM_MOUSEMOVE = 0x100, 0x101, 0x102, 0x201, 0x202, 0x200
+WM_RBUTTONDOWN, WM_RBUTTONUP = 0x204, 0x205
 SWP_NOMOVE, SWP_NOSIZE, SWP_NOACTIVATE = 0x2, 0x1, 0x10
 HWND_TOP, HWND_BOTTOM = 0, 1
 VK = {'F10': 0x79, 'ESC': 0x1B, 'ENTER': 0x0D, 'UP': 0x26, 'DOWN': 0x28, 'LEFT': 0x25, 'RIGHT': 0x27, 'TAB': 0x09, 'F9': 0x78, 'F11': 0x7A,
@@ -56,6 +57,17 @@ def click(pid, x, y):
     user32.PostMessageW(hwnd, WM_LBUTTONDOWN, 1, lp)
     time.sleep(0.08)
     user32.PostMessageW(hwnd, WM_LBUTTONUP, 0, lp)
+
+
+def rclick(pid, x, y):
+    """A posted right click (client coordinates): the player's cancel of a targeting mode / a smart command."""
+    hwnd = window(pid)[0]
+    lp = (y << 16) | (x & 0xFFFF)
+    user32.PostMessageW(hwnd, WM_MOUSEMOVE, 0, lp)
+    time.sleep(0.1)
+    user32.PostMessageW(hwnd, WM_RBUTTONDOWN, 2, lp)
+    time.sleep(0.08)
+    user32.PostMessageW(hwnd, WM_RBUTTONUP, 0, lp)
 
 
 def move(pid, x, y):

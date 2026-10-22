@@ -536,6 +536,43 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
         return true;
     }
 
+    if (lp_cmd == "nselfb") {
+        // the first Firebat is selected (like a click on him) and the camera is centred on him: the next real key / mouse actions are given from the player's side
+        lv_scv = GhostOps_Ce0_First("Firebat");
+        UnitClearSelection(1);
+        UnitSelect(lv_scv, 1, true);
+        CameraPan(1, UnitGetPosition(lv_scv), 0.0, -1.0, 10.0, false);
+        GhostOps_Ce0_Write("j", "NSELFB firebat selected at " + FixedToString(PointGetX(UnitGetPosition(lv_scv)), 1) + "," + FixedToString(PointGetY(UnitGetPosition(lv_scv)), 1));
+        return true;
+    }
+
+    if (lp_cmd == "nconts") {
+        lv_i = 0;
+        lv_t = "";
+        while (lv_i < go_hContN) {
+            if (UnitIsAlive(go_hCont[lv_i])) {
+                lv_t = lv_t + "(" + FixedToString(PointGetX(UnitGetPosition(go_hCont[lv_i])), 1) + "," + FixedToString(PointGetY(UnitGetPosition(go_hCont[lv_i])), 1) + ") ";
+            }
+
+            lv_i += 1;
+        }
+
+        lv_scv = GhostOps_Ce0_First("Firebat");
+        GhostOps_Ce0_Write("j", "NCONTS alive " + lv_t + "| firebat at " + FixedToString(PointGetX(UnitGetPosition(lv_scv)), 1) + "," + FixedToString(PointGetY(UnitGetPosition(lv_scv)), 1) + " orders " + IntToString(UnitOrderCount(lv_scv)));
+        return true;
+    }
+
+    if (lp_cmd == "nselmarine") {
+        // nselmarine <i>: an own Marine 3 cells from container i is created and SELECTED (the player then gives the attack command with the real keys / mouse); the camera is on the container
+        lv_p = UnitGetPosition(go_hCont[StringToInt(lp_a)]);
+        UnitCreate(1, "Marine", 0, 1, PointWithOffset(lv_p, -3.0, 0.0), 270.0);
+        UnitClearSelection(1);
+        UnitSelect(UnitLastCreated(), 1, true);
+        CameraPan(1, lv_p, 0.0, -1.0, 10.0, false);
+        GhostOps_Ce0_Write("j", "NSELMARINE marine selected, camera on container " + lp_a);
+        return true;
+    }
+
     if (lp_cmd == "nmarine") {
         // nmarine <i>: an own Marine (not a Ghost) is created 3 cells from container i and ordered to attack it with the ordinary attack
         lv_p = UnitGetPosition(go_hCont[StringToInt(lp_a)]);

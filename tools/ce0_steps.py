@@ -110,6 +110,10 @@ class Scenario:
         sc2_ui.click(ce0_session.load_state()['pid'], s['x'], s['y'])
         self.record('click', x=s['x'], y=s['y'])
 
+    def op_rclick(self, s):
+        sc2_ui.rclick(ce0_session.load_state()['pid'], s['x'], s['y'])
+        self.record('rclick', x=s['x'], y=s['y'])
+
     def op_expect_def(self, s):
         """The same as expect, but over the log Bank of the defence module (GhostOpsDevDef: scenes, landings, waves): `count` = the exact number of matching lines (default: at least one)."""
         rx = re.compile(s['regex'])

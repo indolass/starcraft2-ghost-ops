@@ -78,6 +78,10 @@ class NextData(unittest.TestCase):
         self.assertNotIn('GhostOpsAPImpact', build.catalog_fragments(OLD).get('ActorData.xml', ''))
         self.assertIn('MaxSpeed="20"', self.frags['MoverData.xml']) if 'MoverData.xml' in self.frags else self.assertIn('MaxSpeed="20"', self.frags['UnitData.xml'] + self.frags['EffectData.xml'])
 
+    def test_projectile_has_a_visible_missile_model(self):
+        self.assertIn('<CModel id="GhostOpsAPMissile" parent="MissileBarragePod"/>', self.frags['ModelData.xml'])
+        self.assertNotIn('ModelData.xml', build.catalog_fragments(OLD))  # the earlier profile is unchanged
+
     def test_hotkey_and_texts(self):
         entries = dict(build.text_entries(NEXT)['ruRU'])
         self.assertEqual(entries['Button/Hotkey/GhostOpsArmorPiercing'], 'G')
