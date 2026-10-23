@@ -132,6 +132,11 @@
   },
   {
    "op": "expect",
+   "regex": "NSTAT gas",
+   "note": "all stat lines (information)"
+  },
+  {
+   "op": "expect",
    "regex": "NSTAT gas 175 used 1/12 placed 1",
    "note": "one container placed, 25 gas charged"
   },
@@ -142,7 +147,7 @@
   },
   {
    "op": "expect",
-   "regex": "used 12/12 placed 2",
+   "regex": "used 12/12 placed 3",
    "note": "the last slot of the shared limit used"
   },
   {

@@ -49,6 +49,29 @@ def key(pid, names, pause=0.4):
         time.sleep(pause)
 
 
+def char(pid, text):
+    """Posted WM_KEYDOWN + WM_CHAR + WM_KEYUP for letters (a hotkey that the game reads as a character)."""
+    hwnd = window(pid)[0]
+    for ch in text:
+        code = ord(ch.upper())
+        user32.PostMessageW(hwnd, WM_KEYDOWN, code, 0x00010001)
+        user32.PostMessageW(hwnd, WM_CHAR, ord(ch.lower()), 0x00010001)
+        time.sleep(0.08)
+        user32.PostMessageW(hwnd, WM_KEYUP, code, 0xC0010001)
+        time.sleep(0.3)
+
+
+def scan_key(pid, letter):
+    """Posted key with a real scan code in lParam (the hotkey system of the game reads scan codes)."""
+    hwnd = window(pid)[0]
+    code = ord(letter.upper())
+    sc = user32.MapVirtualKeyW(code, 0)
+    user32.PostMessageW(hwnd, WM_KEYDOWN, code, (sc << 16) | 1)
+    time.sleep(0.08)
+    user32.PostMessageW(hwnd, WM_KEYUP, code, (sc << 16) | 0xC0000001)
+    time.sleep(0.4)
+
+
 def click(pid, x, y):
     hwnd = window(pid)[0]
     lp = (y << 16) | (x & 0xFFFF)

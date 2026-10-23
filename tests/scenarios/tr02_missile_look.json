@@ -57,68 +57,10 @@
    "wait": 0.05
   },
   {
-   "op": "shot",
-   "file": "m1.png"
-  },
-  {
-   "op": "sleep",
-   "s": 0.6
-  },
-  {
-   "op": "shot",
-   "file": "m2.png"
-  },
-  {
-   "op": "sleep",
-   "s": 0.6
-  },
-  {
-   "op": "shot",
-   "file": "m3.png"
-  },
-  {
-   "op": "sleep",
-   "s": 0.6
-  },
-  {
-   "op": "shot",
-   "file": "m4.png"
-  },
-  {
-   "op": "sleep",
-   "s": 0.6
-  },
-  {
-   "op": "shot",
-   "file": "m5.png"
-  },
-  {
-   "op": "sleep",
-   "s": 0.6
-  },
-  {
-   "op": "shot",
-   "file": "m6.png"
-  },
-  {
-   "op": "sleep",
-   "s": 0.6
-  },
-  {
-   "op": "shot",
-   "file": "m7.png"
-  },
-  {
-   "op": "sleep",
-   "s": 0.6
-  },
-  {
-   "op": "shot",
-   "file": "m8.png"
-  },
-  {
-   "op": "sleep",
-   "s": 0.6
+   "op": "burst",
+   "file": "b",
+   "n": 24,
+   "gap": 0
   },
   {
    "op": "cmd",

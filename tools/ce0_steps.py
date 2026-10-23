@@ -102,6 +102,14 @@ class Scenario:
         self.chat(s['text'], s.get('wait', 1.5))
         self.record('cmd', text=s['text'])
 
+    def op_char(self, s):
+        sc2_ui.char(ce0_session.load_state()['pid'], s['text'])
+        self.record('char', text=s['text'])
+
+    def op_scankey(self, s):
+        sc2_ui.scan_key(ce0_session.load_state()['pid'], s['text'])
+        self.record('scankey', text=s['text'])
+
     def op_move(self, s):
         sc2_ui.move(ce0_session.load_state()['pid'], s['x'], s['y'])
         self.record('move', x=s['x'], y=s['y'])
@@ -118,14 +126,14 @@ class Scenario:
         """The same as expect, but over the log Bank of the defence module (GhostOpsDevDef: scenes, landings, waves): `count` = the exact number of matching lines (default: at least one)."""
         rx = re.compile(s['regex'])
         rows = []
-        for f in ce0_session.bank_files('GhostOpsDevDef'):
+        for f in ce0_session.bank_files(s.get('bank', 'GhostOpsDevDef')):
             for k, v in ce0_session.read_bank(f).get('log', {}).items():
                 rows.append(v)
         hits = [t for t in rows if rx.search(t)]
         good = (len(hits) == s['count']) if 'count' in s else bool(hits)
         if not good:
             self.ok = False
-        self.record('expect_def', regex=s['regex'], count=s.get('count'), found=len(hits), ok=good, lines=hits[-20:], note=s.get('note', ''))
+        self.record('expect_def', regex=s['regex'], count=s.get('count'), found=len(hits), ok=good, lines=hits[-80:], note=s.get('note', ''))
 
     def op_sleep(self, s):
         time.sleep(s['s'])
@@ -198,6 +206,34 @@ class Scenario:
         path = s['file'] if os.path.isabs(s['file']) else os.path.join(os.path.dirname(self.result_path), s['file'])  # next to the result, in the job directory
         ok = sc2_ui.shot(ce0_session.load_state()['pid'], path)
         self.record('shot', file=path, ok=bool(ok))
+
+    def op_burst(self, s):
+        """n shots of OUR window in a row; a frame that came out entirely black (the presentation of the game had no new picture: a capture limit, not a picture of the map) is counted and dropped."""
+        base = s['file']
+        pid = ce0_session.load_state()['pid']
+        kept = black = 0
+        for i in range(int(s.get('n', 12))):
+            path = os.path.join(os.path.dirname(self.result_path), '%s%02d.png' % (base, i))
+            if not sc2_ui.shot(pid, path):
+                continue
+            if os.path.getsize(path) < 20000:
+                black += 1
+                os.remove(path)
+            else:
+                kept += 1
+            time.sleep(float(s.get('gap', 0)))
+        self.record('burst', file=base, kept=kept, black=black)
+
+    def op_origin(self, s):
+        """Where the client area starts inside the window picture (the posted mouse messages use client coordinates, the screenshots are of the whole window)."""
+        import ctypes
+        from ctypes import wintypes as wt
+        hwnd, l, t, r, b = sc2_ui.window(ce0_session.load_state()['pid'])
+        pt = wt.POINT(0, 0)
+        ctypes.windll.user32.ClientToScreen(hwnd, ctypes.byref(pt))
+        rc = wt.RECT()
+        ctypes.windll.user32.GetClientRect(hwnd, ctypes.byref(rc))
+        self.record('origin', dx=pt.x - l, dy=pt.y - t, client=(rc.right, rc.bottom), window=(r - l, b - t))
 
     def op_stop(self, s):
         ce0_session.cmd_stop(argparse.Namespace(keep_map=True, hard=False))

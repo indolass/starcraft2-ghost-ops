@@ -40,6 +40,9 @@ SQUAD_TYPES = ('Nova', 'Ghost', 'Medic')
 ABILITIES = ('Snipe', 'EMP', 'TacNukeStrike')
 MAX_FRAGILE = 4
 PROFILE_KEY = 'Param/Value/GhostOpsProfile'
+HOTKEY_PREFIX = 'Button/Hotkey/'
+CRLF = chr(13) + chr(10)
+UTF8_BOM = bytes([0xef, 0xbb, 0xbf])
 TXT_BEGIN = '// GHOSTOPS BEGIN'
 TXT_END = '// GHOSTOPS END'
 # Index of each ability in the standard Ghost's AbilArray (Liberty mod data of client 3.1.4):
@@ -1073,7 +1076,8 @@ def hanson_fragments(h, cfg):
         if mult > 0:
             eff += area('GhostOpsCBlastOwn' + key, 'Ground;Enemy,Neutral,Air,Missile,Stasis,Dead,Hidden,Invulnerable', ct['damage'] * mult)
     eff.append('')
-    act = ['    <CActorUnit id="GhostOpsFuelContainer" parent="GasCanister" unitName="GhostOpsFuelContainer"/>',
+    # same shape as the stock canister actor (parent generic unit, own unitName: the ##unitName## tokens of the generic actor then resolve to OUR model id)
+    act = ['    <CActorUnit id="GhostOpsFuelContainer" parent="GenericUnitStandardNoAutoSoundLinks" unitName="GhostOpsFuelContainer">', '        <On Terms="ActorCreation" Send="Create GasCanisterGlow"/>', '        <StatusBarFlags index="Life" value="0"/>', '    </CActorUnit>',
            '    <CActorModel id="GhostOpsCPointerModel" parent="TerranCursorModel" abil="GhostOpsPlaceContainer"/>', '    <CActorSplat id="GhostOpsCPointerSplat" parent="TerranCursorSplat" abil="GhostOpsPlaceContainer"/>',
            '    <CActorRange id="GhostOpsCPlaceRange" parent="RangeAbil" abil="GhostOpsPlaceContainer"/>']
     if ct.get('show_radius'):
@@ -1082,7 +1086,7 @@ def hanson_fragments(h, cfg):
     act += ['    <CActorModel id="GhostOpsCBlastModel" parent="ModelAnimationStyleOneShot">', '        <Model value="BarrageModel"/>', '        <HostSiteOps Ops="SOpTargetPoint"/>', '        <On Terms="Effect.GhostOpsCBlast.Impact" Send="Create"/>', '    </CActorModel>',
             '    <CActorModel id="GhostOpsCBlastModel2" parent="ModelAnimationStyleOneShot">', '        <Model value="ExplodingBarrelDeath"/>', '        <HostSiteOps Ops="SOpTargetPoint"/>', '        <On Terms="Effect.GhostOpsCBlast.Impact" Send="Create"/>', '    </CActorModel>',
             '    <CActorSound id="GhostOpsCBlastSound" parent="SoundOneShot">', '        <Sound value="Terran_ExplosionLarge"/>', '        <On Terms="Effect.GhostOpsCBlast.Impact" Send="Create"/>', '    </CActorSound>', '']
-    btn = ['    <CButton id="GhostOpsPlaceContainer">', '        <Icon value="%s"/>' % icon, '        <AlertIcon value="%s"/>' % icon, '        <EditorCategories value="Race:Terran"/>', '    </CButton>', '']
+    btn = ['    <CButton id="GhostOpsPlaceContainer">', '        <Icon value="%s"/>' % icon, '        <AlertIcon value="%s"/>' % icon, '        <Hotkey value="Button/Hotkey/GhostOpsPlaceContainer"/>', '        <EditorCategories value="Race:Terran"/>', '    </CButton>', '']
     # an inherited model path was NOT resolved by the engine (the unit showed the grey placeholder dome): the path of the stock gas canister model is written out
     model = ['    <CModel id="GhostOpsFuelContainer" parent="GasCanister">', '        <Model value="Assets\\Buildings\\Resources\\GasCanister\\GasCanister.m3"/>', '    </CModel>', '']
     return {'ModelData.xml': nl.join(model), 'UnitData.xml': nl.join(unit), 'AbilData.xml': nl.join(abil), 'BehaviorData.xml': nl.join(beh), 'EffectData.xml': nl.join(eff), 'ActorData.xml': nl.join(act), 'ButtonData.xml': nl.join(btn)}
@@ -2050,7 +2054,25 @@ def cmd_build(args):
     if new_members:
         arc.update_listfile(new_members)
     manifest['text_patches'] = []
+    manifest['hotkeys'] = []
     for loc, entries in text_entries(cfg).items():
+        # the key of a button is read from GameHotkeys.txt (NOT from GameStrings.txt: a key written there is ignored by the game); one line per layout of the hotkey profile
+        hk = [(k, v) for k, v in entries if k.startswith(HOTKEY_PREFIX)]
+        entries = [(k, v) for k, v in entries if not k.startswith(HOTKEY_PREFIX)]
+        if hk:
+            hk = [(k + suf, v) for k, v in hk for suf in ('', '_USD', '_NRS', '_USDL')]
+            hmember = loc + '.SC2Data' + chr(92) + 'LocalizedData' + chr(92) + 'GameHotkeys.txt'
+            hold = arc.read(hmember)
+            if hold is None:
+                htext = ''.join('%s=%s' % (k, v) + CRLF for k, v in hk)
+                arc.set_file(hmember, UTF8_BOM + htext.encode('utf-8'))
+                arc.update_listfile([hmember])
+                manifest['hotkeys'].append({'member': hmember, 'locale': loc, 'keys': [k for k, _ in hk], 'created': True, 'sha256': sha256(UTF8_BOM + htext.encode('utf-8'))})
+            else:
+                hnew = patch_strings(hold.decode('utf-8-sig'), hk)
+                hbom = UTF8_BOM if hold.startswith(UTF8_BOM) else b''
+                arc.set_file(hmember, hbom + hnew.encode('utf-8'))
+                manifest['hotkeys'].append({'member': hmember, 'locale': loc, 'keys': [k for k, _ in hk], 'created': False})
         member = loc + '.SC2Data' + chr(92) + 'LocalizedData' + chr(92) + 'GameStrings.txt'
         old = arc.read(member)
         if old is None:
@@ -2110,9 +2132,10 @@ def cmd_verify(args):
         patches = [{'member': UNITDATA, 'created': False}] if man.get('nova_fire_control_patch') else []
     existing = [p_['member'].lower() for p_ in patches if not p_['created']]
     tpatches = man.get('text_patches', [])
-    expected = [man['script_member'].lower()] + existing + [t_['member'].lower() for t_ in tpatches]
+    hpatches = man.get('hotkeys', [])
+    expected = [man['script_member'].lower()] + existing + [t_['member'].lower() for t_ in tpatches] + [h_['member'].lower() for h_ in hpatches if not h_['created']]
     check('only %s differ from source (differs: %s)' % (expected, changed), changed == sorted(expected))
-    created = sorted([p_['member'].lower() for p_ in patches if p_['created']] + [x['member'].lower() for x in man.get('audio', [])])
+    created = sorted([p_['member'].lower() for p_ in patches if p_['created']] + [x['member'].lower() for x in man.get('audio', [])] + [h_['member'].lower() for h_ in hpatches if h_['created']])
     added = sorted(n.lower() for n in a_out.names() if not n.startswith('(') and n.lower() not in [x.lower() for x in a_src.names()])
     check('files added to the map: %s' % created, added == created)
     for x in man.get('audio', []):
@@ -2152,6 +2175,12 @@ def cmd_verify(args):
         old_t = a_src.read(t_['member']).decode('utf-8-sig')
         keys = t_.get('keys') or [PROFILE_KEY]
         check('%s: %d text(s) added, restores exactly' % (t_['member'], len(keys)), unpatch_strings(new_t) == old_t and all((k + '=') in new_t for k in keys))
+    for h_ in hpatches:
+        got = a_out.read(h_['member'])
+        if h_['created']:
+            check('%s: %d hotkey line(s), created' % (h_['member'], len(h_['keys'])), got is not None and sha256(got) == h_['sha256'] and all((k + '=') in got.decode('utf-8-sig') for k in h_['keys']))
+        else:
+            check('%s: %d hotkey line(s) added, restores exactly' % (h_['member'], len(h_['keys'])), unpatch_strings(got.decode('utf-8-sig')) == a_src.read(h_['member']).decode('utf-8-sig') and all((k + '=') in got.decode('utf-8-sig') for k in h_['keys']))
     check('script source is ASCII', new.isascii())
     print('VERIFY ' + ('PASSED' if ok else 'FAILED'))
     return 0 if ok else 5

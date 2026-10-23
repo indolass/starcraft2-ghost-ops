@@ -550,10 +550,17 @@ bool GhostOps_Hanson_ContCreated (bool lp_testConds, bool lp_runActions) {
     else if (GhostOps_Hanson_Gas() < go_hContCost) {
         lv_why = 1;
     }
+    else if ((EventUnit() != null) && (DistanceBetweenPoints(UnitGetPosition(EventUnit()), lv_pos) > (go_hContRange + 0.5))) {
+        lv_why = 4;
+    }
     else if (!PointPathingPassable(lv_pos)) {
         lv_why = 3;
     }
     else if (UnitGroupCount(UnitGroup(null, c_playerAny, RegionCircle(lv_pos, go_hContMinFree), UnitFilter((1 << c_targetFilterStructure), 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive) > 0) {
+        lv_why = 3;
+    }
+    else if (UnitGroupCount(UnitGroup("GhostOpsFuelContainer", c_playerAny, RegionCircle(lv_pos, 1.0), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive) > 0) {
+        // another container is already there: nothing is stacked on it and nothing is moved
         lv_why = 3;
     }
 
@@ -564,6 +571,9 @@ bool GhostOps_Hanson_ContCreated (bool lp_testConds, bool lp_runActions) {
         else if (lv_why == 2) {
             GhostOps_Hanson_Say("PlaceFailLimit");
         }
+        else if (lv_why == 4) {
+            GhostOps_Hanson_Say("PlaceFarMsg");
+        }
         else {
             GhostOps_Hanson_Say("PlaceFailSpot");
         }
@@ -572,9 +582,9 @@ bool GhostOps_Hanson_ContCreated (bool lp_testConds, bool lp_runActions) {
         return true;
     }
 
-    PlayerModifyPropertyInt(1, c_playerPropVespene, c_playerPropOperSubtract, go_hContCost);
-    UnitCreate(1, "GhostOpsFuelContainer", 0, go_hContOwner, lv_pos, 270.0);
+    UnitCreate(1, "GhostOpsFuelContainer", c_unitCreateIgnorePlacement, go_hContOwner, lv_pos, 270.0);
     lv_u = UnitLastCreated();
+    PlayerModifyPropertyInt(1, c_playerPropVespene, c_playerPropOperSubtract, go_hContCost);
     UnitSetInfoText(lv_u, StringExternal("Param/Value/GhostOpsH_ContainerUnitName"), StringExternal("Param/Value/GhostOpsH_ContainerInfo"), StringExternal("Param/Value/GhostOpsH_ContainerInfo"));
     UnitSetState(lv_u, c_unitStateTooltipable, true);
     go_hCont[go_hContN] = lv_u;
@@ -639,6 +649,37 @@ bool GhostOps_Hanson_ContFar (bool lp_testConds, bool lp_runActions) {
         GhostOps_Hanson_Log("container order refused: too far");
     }
 
+    return true;
+}
+
+// Orders given by the player's mouse are not reported at the Queue stage: ten times a second every Firebat whose current order is the placement of a container
+// further than the range is stopped before he has walked a cell (the same refusal as above, nothing charged).
+bool GhostOps_Hanson_ContFarTick (bool lp_testConds, bool lp_runActions) {
+    unitgroup lv_g;
+    unit lv_u;
+    order lv_o;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    lv_g = UnitGroup("Firebat", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+    UnitGroupLoopBegin(lv_g);
+    while (UnitGroupLoopCurrent() != null) {
+        lv_u = UnitGroupLoopCurrent();
+        if (UnitOrderCount(lv_u) > 0) {
+            lv_o = UnitOrder(lv_u, 0);
+            if ((AbilityCommandGetAbility(OrderGetAbilityCommand(lv_o)) == "GhostOpsPlaceContainer") && (DistanceBetweenPoints(UnitGetPosition(lv_u), OrderGetTargetPosition(lv_o)) > (go_hContRange + 0.5))) {
+                UnitIssueOrder(lv_u, Order(AbilityCommand("stop", 0)), c_orderQueueReplace);
+                GhostOps_Hanson_Say("PlaceFarMsg");
+                GhostOps_Hanson_Log("container order refused: too far (mouse order)");
+            }
+        }
+
+        UnitGroupLoopStep();
+    }
+
+    UnitGroupLoopEnd();
     return true;
 }
 
@@ -808,6 +849,7 @@ void GhostOps_Hanson_Start () {
         TriggerAddEventUnitAbility(go_hContCreatedTrig, null, AbilityCommand("GhostOpsPlaceContainer", 0), c_unitAbilStageExecute, false);
         go_hContFarTrig = TriggerCreate("GhostOps_Hanson_ContFar");
         TriggerAddEventUnitAbility(go_hContFarTrig, null, AbilityCommand("GhostOpsPlaceContainer", 0), c_unitAbilStageQueue, false);
+        TriggerAddEventTimePeriodic(TriggerCreate("GhostOps_Hanson_ContFarTick"), 0.1, c_timeGame);
         go_hContDiedTrig = TriggerCreate("GhostOps_Hanson_ContDied");
         TriggerAddEventUnitDied(go_hContDiedTrig, null);
     }

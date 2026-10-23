@@ -371,8 +371,8 @@
               "en": "Place a container"
             },
             "ContainerTip": {
-              "ru": "Ставит рядом контейнер с горючей смесью (в пределах {range} от огнемётчика): модель показана под курсором, зелёное место допустимо, красное нет. Цена: {gas} газа, общий запас {limit} штук (без пополнения). Взрывается от первого попадания любого бойца (в том числе обычной атакой по приказу): {damage} урона наземным врагам в радиусе {radius}, воздух не поражается; свои в радиусе получают {friendly}% (на сложном уровне). Esc или правая кнопка отменяют без расходов.",
-              "en": "Places a container of fuel mixture next to the Firebat (within {range} of him): the model follows the cursor, green = placeable, red = not. Price: {gas} gas, shared stock of {limit} (no refill). It explodes from the first hit of any fighter (also an ordinary attack order): {damage} damage to ground enemies within {radius}, air is not hit; own units inside take {friendly}% (hard difficulty). Esc or right click cancel at no cost."
+              "ru": "Горячая клавиша [C]. Ставит рядом контейнер с горючей смесью (в пределах {range} от огнемётчика): модель показана под курсором, зелёное место допустимо, красное нет. Цена: {gas} газа, общий запас {limit} штук (без пополнения). Взрывается от первого попадания любого бойца (в том числе обычной атакой по приказу): {damage} урона наземным врагам в радиусе {radius}, воздух не поражается; свои в радиусе получают {friendly}% (на сложном уровне). Esc или правая кнопка отменяют без расходов.",
+              "en": "Hotkey [C]. Places a container of fuel mixture next to the Firebat (within {range} of him): the model follows the cursor, green = placeable, red = not. Price: {gas} gas, shared stock of {limit} (no refill). It explodes from the first hit of any fighter (also an ordinary attack order): {damage} damage to ground enemies within {radius}, air is not hit; own units inside take {friendly}% (hard difficulty). Esc or right click cancel at no cost."
             },
             "ContainerUnitName": {
               "ru": "Контейнер с горючей смесью",

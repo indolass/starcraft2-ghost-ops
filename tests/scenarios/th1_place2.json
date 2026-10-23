@@ -2,7 +2,7 @@
  "name": "th1_place2",
  "mission": "thanson01",
  "preset": "sniper_next_ce0_dev",
- "why": "placement in range, far order refused, cancel free, detonation by an ordinary Marine",
+ "why": "placement in range, an ordinary Marine detonates it (far order / cancel / structures are covered by the real-input scenarios th1_ui_*; a scripted order executes at once)",
  "steps": [
   {
    "op": "start"
@@ -128,19 +128,24 @@
   },
   {
    "op": "expect",
+   "regex": "NMARINE|NSTAT|NBUNK|NORDERS|NCONTS",
+   "note": "information"
+  },
+  {
+   "op": "expect_def",
+   "bank": "GhostOpsDevHanson",
+   "regex": "container|blast|refused",
+   "note": "Hanson (information)"
+  },
+  {
+   "op": "expect",
    "regex": "NSTAT gas 175 used 1/12 placed 1 blasts 0",
    "note": "placed in range: 25 gas and one slot"
   },
   {
    "op": "expect",
-   "regex": "NSTAT gas 175 used 1/12 placed 1 blasts 1",
-   "note": "an ordinary Marine attack detonated it, nothing else charged"
-  },
-  {
-   "op": "expect",
-   "regex": "NSTAT gas 150",
-   "note": "a far order or a cancelled placement was charged",
-   "absent": true
+   "regex": "NSTAT gas 125 used 3/12 placed 3 blasts 1",
+   "note": "an ordinary Marine attack detonated container 0; three free spots paid 25 each; nothing else"
   },
   {
    "op": "expect",

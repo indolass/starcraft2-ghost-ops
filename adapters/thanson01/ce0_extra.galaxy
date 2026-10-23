@@ -326,6 +326,27 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
     point lv_p;
     int lv_i;
     string lv_t;
+    unitgroup lv_g;
+
+    if (lp_cmd == "nship") {
+        // the convoy reaches the colony ship: every unit of the colonists' player is put 4 cells from the ship region and ordered to move into it (the original then loads, counts and removes them)
+        lv_g = UnitGroup(null, 4, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32))), 0);
+        lv_i = 0;
+        UnitGroupLoopBegin(lv_g);
+        while (!UnitGroupLoopDone()) {
+            // only the units the original sent with the convoy (it marks them with custom value 0 = 21)
+            if (UnitGetCustomValue(UnitGroupLoopCurrent(), 0) == 21.0) {
+                UnitSetPosition(UnitGroupLoopCurrent(), PointWithOffset(RegionGetCenter(RegionFromId(2)), -4.0, 0.0), false);
+                UnitIssueOrder(UnitGroupLoopCurrent(), OrderTargetingPoint(AbilityCommand("move", 0), RegionGetCenter(RegionFromId(2))), c_orderQueueReplace);
+                lv_i += 1;
+            }
+
+            UnitGroupLoopStep();
+        }
+        UnitGroupLoopEnd();
+        GhostOps_Ce0_Write("j", "NSHIP " + IntToString(lv_i) + " units sent to the ship");
+        return true;
+    }
 
     if (lp_cmd == "nblast") {
         lv_p = UnitGetPosition(go_hCont[StringToInt(lp_a)]);
