@@ -67,6 +67,11 @@ def profiles_of(mission_id):
     presets = raw.get('presets')
     if not presets:
         return []
+    for n, p in presets.items():  # the composition of a free test squad is shown on the card BEFORE the start (the number lives in the config)
+        if '{marines}' in p.get('card', ''):
+            fs = (build.resolve_config(adapter, n)[0].get('hanson') or {}).get('free_squad') or {}
+            p = dict(p, card=p['card'].replace('{marines}', str(fs.get('marines', 0))))
+            presets = dict(presets, **{n: p})
     return [{'name': n, 'label': p['label'], 'card': p.get('card', ''), 'details': p.get('details', []),
              'experimental': bool(p.get('experimental')), 'badge': p.get('badge', '')} for n, p in presets.items() if not p.get('hidden')]
 
@@ -122,8 +127,10 @@ def hanson_lines(cfg):
     sn = gt['snipe']
     num = lambda v: ('%g' % v).replace('.', ',')  # noqa: E731
     roles = {r: sum(1 for t in h['turrets']['list'] if t['role'] == r) for r in ('base', 'houses', 'air')}
-    return [
-        'Призрак: один, здоровье %s/%s, не восполняется; появляется рядом со стартовым отрядом' % (gt['ghost_life'], gt['ghost_life']),
+    fs = h.get('free_squad') or {}
+    free = ['Тест — бесплатный отряд: 2 призрака, %d морпехов, огнемётчики и медики миссии; конечный отряд без пополнения; запас кампании не тратится, результат в кампанию не зачисляется' % fs['marines']] if fs.get('enabled') else []
+    return free + [
+        'Призраки: %d, здоровье %s/%s, не восполняется; появляются рядом со стартовым отрядом' % (sum(1 for u in cfg['operatives']['squad'] if u == 'Ghost'), gt['ghost_life'], gt['ghost_life']),
         'Маскировка постоянная, энергию не тратит; детекторы раскрывают штатно; EMP и ядерный удар отключены',
         'Snipe: %s энергии, урон %g (убивает любую вражескую боевую цель, здания и союзники исключены), подготовка %s с, перезарядка %s с' % (
             num(sn['cost']), sn['damage'], num(sn['cast_time']), num(sn['cooldown'])),

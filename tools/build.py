@@ -655,6 +655,9 @@ def validate_hanson(cfg):
     at = h.get('autotest')
     if at is not None and (not isinstance(at, dict) or at.get('mode') not in (1, 2, 3, 4, 5, 6, 7)):
         errs.append('hanson.autotest.mode must be 1..7')
+    fs = h.get('free_squad')
+    if fs is not None and (not isinstance(fs, dict) or not isinstance(fs.get('enabled'), bool) or not isinstance(fs.get('marines'), int) or isinstance(fs.get('marines'), bool) or not 0 <= fs['marines'] <= 60):
+        errs.append('hanson.free_squad needs enabled (boolean) and marines (integer 0..60)')
     sq = cfg['operatives']['squad']
     if sq not in (['Ghost'], ['Ghost', 'Ghost']):
         errs.append('hanson variant: the squad is one Ghost or two Ghosts')
@@ -1450,6 +1453,9 @@ def gen_hanson(cfg):
                   '    go_hContFriendHard = %.4f;' % ct['friendly']['hard'], '    go_hContFriendOther = %.4f;' % ct['friendly']['other']]
     if fu.get('enabled'):
         lines.append('    go_hFuelCost = %d;' % fu['gas_cost'])
+    fsq = h.get('free_squad') or {}
+    if fsq.get('enabled'):
+        lines.append('    go_hFreeMarines = %d;' % fsq['marines'])
     hud = h.get('hud') or {}
     if hud:
         lines += ['    go_hHudX = %d;' % hud['offset_x'], '    go_hHudY = %d;' % hud['offset_y'], '    go_hHudW = %d;' % hud['width'], '    go_hHudH = %d;' % hud['height']]

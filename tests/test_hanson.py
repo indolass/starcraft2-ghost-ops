@@ -79,12 +79,30 @@ class HansonConfig(unittest.TestCase):
     def test_dev_preset_is_hidden(self):
         raw = build.load_json(ADAPTER['config'])
         self.assertTrue(raw['presets']['sniper_dev']['hidden'])
-        self.assertEqual([p['name'] for p in launcher_core.profiles_of('thanson01')], ['sniper', 'sniper_next'])
+        self.assertEqual([p['name'] for p in launcher_core.profiles_of('thanson01')], ['sniper', 'sniper_next', 'sniper_next_free'])
         self.assertEqual(launcher_core.default_profile('thanson01'), 'sniper')
         self.assertEqual(launcher_core.mission_info('thanson01')['status'], 'Эксперимент')
         dev, _ = build.resolve_config(ADAPTER, 'sniper_dev')
         self.assertTrue(dev['hanson']['debug_log'])
         self.assertEqual(build.validate_config(dev), [])
+
+    def test_free_test_squad_variant(self):
+        cfg, _ = build.resolve_config(ADAPTER, 'sniper_next_free')
+        self.assertEqual(build.validate_config(cfg), [])
+        fs = cfg['hanson']['free_squad']
+        self.assertTrue(fs['enabled'])
+        self.assertGreater(fs['marines'], 0)
+        base, _ = build.resolve_config(ADAPTER, 'sniper_next')
+        self.assertNotIn('free_squad', base['hanson'])  # the prepared-detonations variant itself is unchanged
+        for key in ('containers', 'convoy_fuel', 'ghost_tuning', 'scenario'):  # sniper rifles, containers, waves and prices are not simplified
+            self.assertEqual(cfg[key] if key in cfg else cfg['hanson'].get(key), base[key] if key in base else base['hanson'].get(key), key)
+        self.assertIn('go_hFreeMarines = %d;' % fs['marines'], build.gen_hanson(cfg))
+        self.assertNotIn('go_hFreeMarines', build.gen_hanson(base))
+        card = next(p for p in launcher_core.profiles_of('thanson01') if p['name'] == 'sniper_next_free')
+        self.assertEqual(card['label'], 'Тест — бесплатный отряд')
+        self.assertIn('%d морпехов' % fs['marines'], card['card'])
+        self.assertIn('Тест — бесплатный отряд', launcher_core.detail_lines('thanson01', 'sniper_next_free')[0])
+        self.assertNotEqual(build.output_name(ADAPTER, 'sniper_next_free'), build.output_name(ADAPTER, 'sniper_next'))  # a new map file: nothing existing is overwritten
 
     def test_snipe_fragment_excludes_friendly_targets_only_when_asked(self):
         abil = build.ghost_tuning_fragments(self.cfg['ghost_tuning'])['AbilData.xml']

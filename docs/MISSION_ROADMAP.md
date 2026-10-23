@@ -969,3 +969,7 @@ Open / not verified:
 - The preview model under the pointer and the colours of the footprint (valid/invalid) before the click: not photographable with posted input; the engine's own refusal message and the no-charge rule are verified.
 - A separate smoke trail of the grenade; the look at night; sounds by ear; premature route events of the second convoy (only its payment, announcements and sends were counted).
 - Scripted orders execute at once, so "cancel before the cast" is verified only with the real Esc / right button (th1_cancel.json was removed).
+
+### THanson01 test variant "Тест — бесплатный отряд" (preset `sniper_next_free`, 2026-10-23)
+
+Temporary test kit, NOT an approved balance. Started straight from the mission card (no "Zero Hour", purchases or campaign stock; the campaign stock is not spent and the result is never credited, since the variant has no campaign link). Squad: the 2 Ghosts, Firebats and Medics of the prepared-detonations variant plus a finite group of controllable Marines created once at the start (no refill); the number is `hanson.free_squad.marines` in `config/thanson01.json` (16 for the first playthrough) and is shown on the card and under "Подробнее". Sniper rifles, containers (25 gas, shared stock 12), waves and the convoy price (100 gas) are exactly those of `sniper_next`. Own map file `GhostOps_THanson01_sniper_next_free.SC2Map`; no existing map is touched. Checked: census of a probe launch (Ghost 2, Firebat 2, Medic 2, Marine 16, one creation line in the log, T0238). Not checked: the playthrough itself.

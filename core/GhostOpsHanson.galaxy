@@ -64,6 +64,8 @@ trigger go_hContFarTrig;
 fixed go_hContFriendHard;
 fixed go_hContFriendOther;
 int go_hFuelCost;
+// free test squad (config hanson.free_squad): extra Marines at the start, a finite squad
+int go_hFreeMarines;
 int go_hHudX;
 int go_hHudY;
 int go_hHudW;
@@ -829,8 +831,23 @@ bool GhostOps_Hanson_StoryTick (bool lp_testConds, bool lp_runActions) {
 //--------------------------------------------------------------------------------------------------
 // Start (from the adapter, once)
 //--------------------------------------------------------------------------------------------------
+void GhostOps_Hanson_MakeFreeMarines () {
+    int lv_i;
+
+    lv_i = 0;
+    while (lv_i < go_hFreeMarines) {
+        UnitCreate(1, "Marine", 0, 1, Point(go_hGhostX - 3.0 - IntToFixed(lv_i % 6) * 1.1, go_hGhostY - 2.2 + IntToFixed(lv_i / 6) * 1.1), 270.0);
+        lv_i += 1;
+    }
+
+    if (go_hFreeMarines > 0) {
+        GhostOps_Hanson_Log("free test squad: " + IntToString(go_hFreeMarines) + " Marines created, a finite squad");
+    }
+}
+
 void GhostOps_Hanson_Start () {
     GhostOps_Hanson_MakeTurrets();
+    GhostOps_Hanson_MakeFreeMarines();
     if (go_hLock) {
         GhostOps_Hanson_LockTick(true, true);
         go_hLockTrig = TriggerCreate("GhostOps_Hanson_LockTick");

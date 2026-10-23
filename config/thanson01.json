@@ -555,6 +555,56 @@
         }
       }
     },
+    "sniper_next_free": {
+      "label": "Тест — бесплатный отряд",
+      "message": "Ghost Ops — Тест, бесплатный отряд",
+      "message_en": "Ghost Ops - Test, free squad",
+      "experimental": true,
+      "badge": "без закупок",
+      "extends": "sniper_next",
+      "card": "Тест — бесплатный отряд. Подготовленные подрывы без «Часа икс» и закупок: 2 призрака, {marines} морпехов, огнемётчики и медики. Отряд конечный, пополнения нет. Запас кампании не тратится, результат в кампанию не зачисляется.",
+      "details": [
+        "ТЕСТОВЫЙ КОМПЛЕКТ, не утверждённый баланс: бесплатный подготовленный отряд, запуск прямо с карточки, без «Часа икс», закупок и требований к запасу кампании",
+        "Состав: 2 призрака, управляемые морпехи (число задано в конфиге: hanson.free_squad.marines), огнемётчики и медики миссии. Конечный отряд: потери не восполняются",
+        "Снайперки, контейнеры (25 газа, общий запас 12), волны и цена рейса (100 газа) - такие же, как в «Подготовленных подрывах»: проверяется именно их играбельность",
+        "Запас кампании не списывается; результат этого прохождения в кампанию не зачисляется"
+      ],
+      "overrides": {
+        "hanson": {
+          "free_squad": {
+            "enabled": true,
+            "marines": 16
+          }
+        }
+      }
+    },
+    "sniper_next_free_ce0_dev": {
+      "label": "Тест, бесплатный отряд, проба CE-0 (отладка)",
+      "message": "Ghost Ops - Test, free squad, CE-0 probe (dev)",
+      "message_en": "Ghost Ops - Test, free squad, CE-0 probe (dev)",
+      "hidden": true,
+      "extends": "sniper_next_free",
+      "card": "Technical probe",
+      "details": [
+        "Development only"
+      ],
+      "overrides": {
+        "hanson": {
+          "debug_log": true
+        },
+        "ce0": {
+          "operation_id": "CE0-TH01F",
+          "census_types": [
+            "Ghost",
+            "Firebat",
+            "Medic",
+            "Marine",
+            "MissileTurret",
+            "GhostOpsFuelContainer"
+          ]
+        }
+      }
+    },
     "sniper_next_dev": {
       "label": "Подготовленные подрывы (отладка)",
       "message": "Ghost Ops — Подготовленные подрывы (отладка)",
