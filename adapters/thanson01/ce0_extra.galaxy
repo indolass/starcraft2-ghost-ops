@@ -3,6 +3,8 @@
 // Turret-kit experiment (NOT a rule of any playable profile, no price): which real events does the game give for a structure built by an
 // SCV, so that the contract's kit rule "N ordered = N free builds; start reserves, cancel returns, completion spends, death of a finished
 // turret returns nothing" can be implemented? All counters are saved globals (they travel with a save, like any gameplay state).
+// the dev scenario of the finale: while set, the original check "colonists saved >= quota" sees the quota (a hook in gt_VictoryPlayerSavesEnoughColonists_Func); the standard victory chain does the rest
+bool go_ce0Win;
 int go_kOrdered;
 int go_kReserved;
 int go_kSpent;
@@ -547,6 +549,22 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
         }
 
         GhostOps_Ce0_Write("j", lv_t + " | turret unit exists in catalog: " + CatalogFieldValueGet(c_gameCatalogUnit, "MissileTurret", "CostResource[Minerals]", 1));
+        return true;
+    }
+
+    if (lp_cmd == "nwin") {
+        go_ce0Win = true;
+        GhostOps_Ce0_Write("j", "NWIN the quota of saved colonists is forced for the standard victory check (dev scenario, not a playthrough)");
+        return true;
+    }
+
+    if (lp_cmd == "nselscv") {
+        // the first SCV is selected and the camera is on it (the next real key / mouse actions are given from the player's side)
+        lv_scv = GhostOps_Ce0_First("SCV");
+        UnitClearSelection(1);
+        UnitSelect(lv_scv, 1, true);
+        CameraPan(1, UnitGetPosition(lv_scv), 0.0, -1.0, 10.0, false);
+        GhostOps_Ce0_Write("j", "NSELSCV scv selected at " + FixedToString(PointGetX(UnitGetPosition(lv_scv)), 1) + "," + FixedToString(PointGetY(UnitGetPosition(lv_scv)), 1));
         return true;
     }
 

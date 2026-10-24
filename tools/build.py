@@ -88,7 +88,7 @@ HANSON_TEXT_KEYS = ('BtnPreparing', 'BtnReady', 'BtnActive', 'ReadyMsg', 'SentMs
 HANSON_ROLES = ('base', 'houses', 'air')
 # optional texts of the prepared-detonation variant (containers, gas, HUD, messages); a profile may define any of them, the module reads only what its options need
 HANSON_EXTRA_TEXT_KEYS = ('PlaceFarMsg', 'GasSourceLost', 'ContainerTag', 'GasUnit', 'NeedGas', 'FuelPaidMsg', 'FuelShortMsg', 'HudGas', 'HudContainers', 'HudLeft', 'HudOf', 'HudPrice', 'HudFuelPrice', 'HudNoGasForBox', 'HudShort',
-                          'KitsTitle', 'KitsOut', 'KitsHint', 'ContainerName', 'ContainerTip', 'ContainerUnitName', 'ContainerInfo', 'PlaceFailGas', 'PlaceFailLimit', 'PlaceFailSpot', 'RaynorName', 'SwannName')
+                          'KitsTitle', 'KitsOut', 'KitsHint', 'KitsReservedMsg', 'KitsFreedMsg', 'ContainerName', 'ContainerTip', 'ContainerUnitName', 'ContainerInfo', 'PlaceFailGas', 'PlaceFailLimit', 'PlaceFailSpot', 'RaynorName', 'SwannName')
 HANSON_TEXT_DEFAULTS = {
     'GasUnit': {'ru': '\u0433\u0430\u0437\u0430', 'en': 'gas'},
     'NeedGas': {'ru': '\u041a\u043e\u043b\u043e\u043d\u043d\u0430 \u0433\u043e\u0442\u043e\u0432\u0430. \u041d\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u0433\u0430\u0437\u0430:', 'en': 'The convoy is ready. Gas missing:'},
@@ -580,8 +580,12 @@ def validate_campaign(cfg):
     if not isinstance(c.get('operation_id'), str) or not re.fullmatch(r'[A-Za-z0-9_-]{1,40}', c.get('operation_id', '')):
         errs.append('campaign.operation_id must be 1..40 characters of [A-Za-z0-9_-]')
     for k in c:
-        if k not in ('operation_id',):
+        if k not in ('operation_id', 'bank_name'):
             errs.append('campaign.%s is not supported' % k)
+    if 'bank_name' in c:  # a development profile may write its journal into its OWN Bank, so that a test never touches the Owner's campaign Bank
+        name = (cfg.get('profile') or {}).get('name', '')
+        if not str(name).endswith('_dev') or not re.fullmatch(r'GhostOpsDev[A-Za-z0-9]{1,16}', str(c['bank_name'])):
+            errs.append('campaign.bank_name is development only (profile name ending with _dev, value GhostOpsDev<letters>)')
     return errs
 
 
@@ -595,7 +599,7 @@ def data_hash(cfg):
 def gen_campaign(cfg):
     """GhostOps_Camp_Apply(): constants of the campaign journal module."""
     c = cfg['campaign']
-    return chr(10).join(['// Generated campaign journal configuration', 'void GhostOps_Camp_Apply () {', '    go_cpEnabled = true;', '    go_cpOp = "%s";' % c['operation_id'],
+    return chr(10).join(['// Generated campaign journal configuration', 'void GhostOps_Camp_Apply () {', '    go_cpEnabled = true;', '    go_cpOp = "%s";' % c['operation_id'], '    go_cpBankName = "%s";' % c.get('bank_name', 'GhostOpsCampaign'),
                          '    go_cpMission = "%s";' % cfg['mission'], '    go_cpHash = "%s";' % data_hash(cfg), '}', ''])
 
 

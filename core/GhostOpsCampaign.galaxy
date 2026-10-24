@@ -2,7 +2,7 @@
 // GhostOps Campaign journal (MIT). Built only into maps whose resolved configuration has the key "campaign" (see docs/MISSION_SETTINGS_AND_CAMPAIGN_ECONOMY.md,
 // section 14). The map owns nothing of the campaign: it only
 //   - gives the attempt an identity (a saved global made once at a fresh start; a load brings the saved one back),
-//   - writes a small journal into the Bank "GhostOpsCampaign" (section j: START / LOADED / DEFEAT, section r: RESULT),
+//   - writes a small journal into the Bank "GhostOpsCampaign" (a development profile may name its own Bank GhostOpsDev..., config campaign.bank_name) (section j: START / LOADED / DEFEAT, section r: RESULT),
 //   - counts what the report needs (start stock, resource pallets found) and reads the resources before the standard victory sequence.
 // The RESULT row is a PROPOSAL. The launcher decides whether it is accepted (once). Measured in the installed game: a load restores the Bank to its saved state, so
 // nothing here is ever read back as gameplay state; the Bank is written, never read.
@@ -11,6 +11,7 @@ bool go_cpEnabled;
 bool go_cpStarted;
 bool go_cpResultDone;
 string go_cpOp;
+string go_cpBankName;
 string go_cpMission;
 string go_cpHash;
 string go_cpAttempt;
@@ -27,7 +28,7 @@ void GhostOps_Camp_Apply ();
 void GhostOps_Camp_Write (string lp_section, string lp_text) {
     int lv_n;
 
-    go_cpBank = BankLoad("GhostOpsCampaign", 1);
+    go_cpBank = BankLoad(go_cpBankName, 1);
     BankOptionSet(go_cpBank, c_bankOptionSignature, false);
     lv_n = 0;
     if (BankKeyExists(go_cpBank, "meta", "n")) {

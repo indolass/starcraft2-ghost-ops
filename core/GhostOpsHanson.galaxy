@@ -905,6 +905,17 @@ void GhostOps_Hanson_KitObjective () {
     }
 
     if (lv_left != go_hKitShown) {
+        if ((go_hKitShown > lv_left) && (lv_left > 0) && (GhostOps_Hanson_KitsReserved() > 0)) {
+            UIDisplayMessage(PlayerGroupAll(), c_messageAreaDirective, StringExternal("Param/Value/GhostOpsH_KitsReservedMsg") + StringToText(" ") + IntToText(lv_left));
+        }
+        else if ((go_hKitShown >= 0) && (go_hKitShown < lv_left)) {
+            UIDisplayMessage(PlayerGroupAll(), c_messageAreaDirective, StringExternal("Param/Value/GhostOpsH_KitsFreedMsg") + StringToText(" ") + IntToText(lv_left));
+        }
+
+        if ((lv_left == 0) && (go_hKitShown != 0)) {
+            UIDisplayMessage(PlayerGroupAll(), c_messageAreaDirective, StringExternal("Param/Value/GhostOpsH_KitsOut"));
+        }
+
         go_hKitShown = lv_left;
         ObjectiveSetName(go_hObjKits, StringExternal("Param/Value/GhostOpsH_KitsTitle") + StringToText(": ") + IntToText(lv_left) + StringToText(" / ") + IntToText(go_hKitOrdered));
     }

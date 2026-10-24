@@ -46,6 +46,36 @@
       "function": "gt_IntroSequence_Func",
       "after": "TriggerExecute(gt_StartGame, true, false);",
       "call": "GhostOps_Camp_Start();"
+    },
+    {
+      "function": "gt_DefeatBaseDead_Func",
+      "after": "gv_gameOver = true;",
+      "call": "GhostOps_Camp_OnDefeat();"
+    },
+    {
+      "function": "gt_DefeatTacticalPhase_Func",
+      "after": "gv_gameOver = true;",
+      "call": "GhostOps_Camp_OnDefeat();"
+    },
+    {
+      "function": "gt_DefeatColonyShipDead_Func",
+      "after": "gv_gameOver = true;",
+      "call": "GhostOps_Camp_OnDefeat();"
+    },
+    {
+      "function": "gt_DefeatColonistHutsDie_Func",
+      "after": "gv_gameOver = true;",
+      "call": "GhostOps_Camp_OnDefeat();"
+    },
+    {
+      "function": "gt_DefeatTooManyColonistsDie_Func",
+      "after": "gv_gameOver = true;",
+      "call": "GhostOps_Camp_OnDefeat();"
+    },
+    {
+      "function": "gt_VictoryPlayerSavesEnoughColonists_Func",
+      "after": "gv_gameOver = true;",
+      "call": "GhostOps_Camp_OnVictory();"
     }
   ],
   "init_hook": {
@@ -73,6 +103,11 @@
       "function": "gt_Victory_Func",
       "before": "VictoryPanelAddAchievement(\"THanson01_1\");",
       "call": "GhostOps_Ce0_OnVictory();"
+    },
+    {
+      "function": "gt_VictoryPlayerSavesEnoughColonists_Func",
+      "before": "// Conditions",
+      "call": "if (go_ce0Win) { gv_colonistsSaved = gv_colonistsSaveQuota; }"
     }
   ]
 }

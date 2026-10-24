@@ -16,7 +16,7 @@ import time
 APP_DIR = os.path.join(os.environ.get('APPDATA') or os.path.expanduser('~'), 'GhostOps')
 DEFAULT_PATH = os.path.join(APP_DIR, 'campaign.json')
 DOCS = os.path.join(os.path.expanduser('~'), 'Documents', 'StarCraft II')
-BANK_NAME = 'GhostOpsCampaign'
+BANK_NAME = os.environ.get('GHOSTOPS_CAMPAIGN_BANK') or 'GhostOpsCampaign'  # tests name their own development Bank (GhostOpsDev...): the Owner's Bank is never read or written by a test
 STANDALONE = 'STANDALONE'          # the operation id of builds that are not part of the campaign (practice, standalone tests)
 RES = ('minerals', 'gas')
 

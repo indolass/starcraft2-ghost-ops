@@ -88,3 +88,42 @@ class Kits(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
+
+class Journal(unittest.TestCase):
+    """The journal of THanson01: a victory is a proposal, a defeat never is (no income)."""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp()
+        os.environ['GHOSTOPS_CAMPAIGN_FILE'] = os.path.join(self.tmp, 'campaign.json')
+        os.environ['GHOSTOPS_BANK_DIR'] = self.tmp
+        campaign.APP_DIR = self.tmp
+        self.flow = cf.CampaignFlow(Fake())
+
+    def tearDown(self):
+        os.environ.pop('GHOSTOPS_CAMPAIGN_FILE', None)
+        os.environ.pop('GHOSTOPS_BANK_DIR', None)
+
+    def bank(self, rows):
+        keys = ''.join('<Key name="e%d"><Value string="%s"/></Key>' % (i, r) for i, r in enumerate(rows, 1))
+        open(campaign.bank_file(), 'w', encoding='utf-8').write('<Bank version="1"><Section name="j">%s</Section></Bank>' % keys)
+
+    def test_defeat_offers_nothing_and_credits_nothing(self):
+        s = self.flow.state()
+        s['stock'] = {'minerals': 3000, 'gas': 700}
+        campaign.commit(self.flow.path, s)
+        ok, msg, op = self.flow.start_new('thanson01', PRESET, {'turret_kits': 2})
+        self.assertTrue(ok, msg)
+        stock = self.flow.stock()
+        self.bank(['1|1.00|A9|START op=%s mission=thanson01 hash=HK startMin=200 startGas=50' % op,
+                   '2|300.00|A9|DEFEAT op=%s mission=thanson01 hash=HK min=900 gas=10' % op])
+        got = self.flow.after_exit()
+        self.assertEqual(got['proposals'], [])
+        self.assertEqual(self.flow.stock(), stock)
+
+    def test_the_hooks_of_the_victory_and_the_defeats_exist(self):
+        a = json.load(open(os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'adapters', 'thanson01', 'adapter.json'), encoding='utf-8'))
+        calls = {(h['function'], h['call']) for h in a['campaign_hooks']}
+        self.assertIn(('gt_VictoryPlayerSavesEnoughColonists_Func', 'GhostOps_Camp_OnVictory();'), calls)
+        for f in ('gt_DefeatBaseDead_Func', 'gt_DefeatTacticalPhase_Func', 'gt_DefeatColonyShipDead_Func', 'gt_DefeatColonistHutsDie_Func', 'gt_DefeatTooManyColonistsDie_Func'):
+            self.assertIn((f, 'GhostOps_Camp_OnDefeat();'), calls)
