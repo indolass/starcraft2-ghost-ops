@@ -67,13 +67,51 @@ class Config(unittest.TestCase):
         self.assertIn('Behavior/Name/GhostOpsNoFuel', ent)
 
     def test_card_shows_the_mode_and_the_composition(self):
-        card = next(p for p in launcher_core.profiles_of('thanson02') if p['name'] == 'epidemic_free')
+        names = [p['name'] for p in launcher_core.profiles_of('thanson02')]
+        self.assertEqual(names, ['epidemic_free', 'epidemic_free_r2'])
+        card = next(p for p in launcher_core.profiles_of('thanson02') if p['name'] == 'epidemic_free_r2')
         self.assertIn('Свободный тест', card['card'])
-        self.assertIn('%d морпехов' % self.cfg['hanson']['free_squad']['marines'], card['card'])
-        self.assertEqual([p['name'] for p in launcher_core.profiles_of('thanson02')], ['epidemic_free'])
-        self.assertIn('Режим «Свободный тест»', launcher_core.detail_lines('thanson02', 'epidemic_free')[0])
+        nm, st = self.cfg['hanson']['free_squad']['marines'], self.cfg['epidemic']['stock_marines']
+        # the total and the added reinforcement are told apart
+        self.assertIn('всего %d (%d штатных и %d добавленных)' % (nm + st, st, nm), card['card'])
+        self.assertIn('Режим «Свободный тест»', launcher_core.detail_lines('thanson02', 'epidemic_free_r2')[0])
+        lines = ' '.join(launcher_core.detail_lines('thanson02', 'epidemic_free_r2'))
+        self.assertIn('всего %d (%d штатных миссии и %d добавленных тестом)' % (nm + st, st, nm), lines)
+        self.assertIn('Наземный залп', lines)
         self.assertIsNotNone(launcher_core.mission_info('thanson02'))
+        self.assertNotEqual(build.output_name(ADAPTER, 'epidemic_free_r2'), build.output_name(ADAPTER, 'epidemic_free'))
         self.assertNotEqual(build.output_name(ADAPTER, 'epidemic_free'), build.output_name(build.load_adapter('thanson01'), 'sniper_next_free_r2'))
+
+    def test_the_salvo_is_in_revision_2_only_and_has_the_numbers_of_defence_next(self):
+        old, _ = build.resolve_config(ADAPTER, 'epidemic_free')
+        self.assertNotIn('salvo', old['epidemic'])
+        self.assertNotIn('GhostOpsTurretSalvo', build.catalog_fragments(old)['AbilData.xml'])
+        cfg2 = build.resolve_config(ADAPTER, 'epidemic_free_r2')[0]
+        sv = cfg2['epidemic']['salvo']
+        dn = build.resolve_config(build.load_adapter('traynor03'), 'defence_next')[0]['defence']['salvo']
+        self.assertEqual({k: sv[k] for k in dn}, dn)
+        frags = build.catalog_fragments(cfg2)
+        self.assertEqual(frags['UnitData.xml'].count('<CUnit id="MissileTurret">'), 1)  # merged with the kit data
+        self.assertEqual(frags['UnitData.xml'].count('CostResource index="Minerals" value="0"'), 1)
+        for needle in ('GhostOpsTurretSalvo', 'GhostOpsSalvoAim', 'GhostOpsSalvoMain'):
+            self.assertIn(needle, ''.join(frags.values()))
+        self.assertIn('<Cooldown TimeUse="%g"/>' % sv['cooldown'], frags['AbilData.xml'])
+        ent = dict(build.text_entries(cfg2)['ruRU'])
+        self.assertIn('Button/Tooltip/GhostOpsTurretSalvo', ent)
+        self.assertNotIn('{', ent['Button/Tooltip/GhostOpsTurretSalvo'])
+        self.assertIn('%g' % sv['damage'], ent['Button/Tooltip/GhostOpsTurretSalvo'])
+        self.assertEqual(ent['Button/Hotkey/GhostOpsTurretSalvo'], 'A')
+
+    def test_container_texts_tell_the_real_rule_and_the_numbers_of_the_settings(self):
+        ct = self.cfg['hanson']['containers']
+        ent = dict(build.text_entries(self.cfg)['ruRU'])
+        tip, info = ent['Button/Tooltip/GhostOpsPlaceContainer'], ent[build.HANSON_TEXT_PREFIX + 'ContainerInfo']
+        self.assertNotIn('{', tip + info)
+        self.assertNotIn('призрака', info)
+        self.assertIn('призрак и Snipe не нужны', info)
+        base = ct['damage']
+        self.assertIn('%g (%g основных и %g дополнительных)' % (base * (1 + ct['structure_bonus']), base, base * ct['structure_bonus']), tip)
+        self.assertNotIn('×2', tip)
 
 
 class Hooks(unittest.TestCase):

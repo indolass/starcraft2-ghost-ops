@@ -1,0 +1,37 @@
+{
+ "name": "th2_census",
+ "mission": "thanson02",
+ "preset": "epidemic_free_ce0_dev",
+ "why": "the number of Marines at the start (stock + added) for the card text",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "cmd",
+   "text": "snap",
+   "wait": 1.5
+  },
+  {
+   "op": "expect",
+   "regex": "Marine",
+   "note": "census at the start"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

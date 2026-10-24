@@ -228,3 +228,6 @@ at 16/4/4/8 (1640), garrison x8 until the Owner's review (no more automatic tuni
 
 
 2026-10-24: **THanson01 revision 2 finished and THanson02 "Epidemic" first playable free test** (preset `epidemic_free`, EXPERIMENT; numbers not approved; no human playthrough). Evacuation: real-interface turret from kits and container, campaign result path (victory / defeat / repeat) on separate data, explicit modes "Кампания" / "Свободный тест". Epidemic: hellion fuel and the abandoned gas truck (one scripted rescue route, save / load keeps the fuel), day-protected buildings, one night transport, containers vs structures, standard victory; plain launches of the final maps are free of ScriptError. Statuses, numbers and limits: `docs/MISSION_ROADMAP.md` (last section).
+
+
+2026-10-24 (later): **THanson02 "Epidemic" revision 2 (`epidemic_free_r2`)**: the manual ground salvo of the turrets built from the kits (hotkey A, aiming circle, Esc / right button cancel, independent cooldown; the starting numbers are the ones of `defence_next`), corrected container / structure damage texts (600 = 200 + 400 extra), a clear squad composition on the card (14 Marines = 6 stock + 8 added), and the Evacuation resource text (a victory credits the MINERALS and GAS left on the map once, unspent kits are not paid back). Statuses and checks: `docs/MISSION_ROADMAP.md` (last section).

@@ -1,5 +1,11 @@
 // CE-0 probe: THanson02 specific state and commands (development only; compiled only with the config key "ce0").
 // Commands are typed into the chat of the test window (the queue scenarios do it). Nothing here is part of a playable build.
+unit[24] go_ce0Dum;
+fixed[24] go_ce0DumLife;
+int go_ce0DumN;
+point go_ce0Aim;
+unit go_ce0Air;
+
 unit GhostOps_Ce0_First (string lp_type) {
     return UnitGroupUnit(UnitGroup(lp_type, 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), 1);
 }
@@ -377,6 +383,12 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
             lv_u = GhostOps_Ce0_First("SCV");
         }
 
+        if ((lp_cmd == "eselscv") && (lp_a == "fix")) {
+            // a fixed starting point, so that the same real click always lands on the same free place
+            UnitSetPosition(lv_u, Point(72.6, 87.5), false);
+            UnitIssueOrder(lv_u, Order(AbilityCommand("stop", 0)), c_orderQueueReplace);
+        }
+
         UnitClearSelection(1);
         UnitSelect(lv_u, 1, true);
         CameraPan(1, UnitGetPosition(lv_u), 0.0, -1.0, 10.0, false);
@@ -412,6 +424,122 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
         }
 
         GhostOps_Ce0_Write("j", "ECONT placed " + IntToString(go_hContN) + " alive " + lv_t + "| turret kits left " + IntToString(GhostOps_Hanson_KitsLeft()));
+        return true;
+    }
+
+    if (lp_cmd == "eturrets") {
+        lv_g = UnitGroup("MissileTurret", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+        lv_t = "";
+        lv_i = 1;
+        while (lv_i <= UnitGroupCount(lv_g, c_unitCountAll)) {
+            lv_u = UnitGroupUnit(lv_g, lv_i);
+            lv_t = lv_t + "(" + FixedToString(PointGetX(UnitGetPosition(lv_u)), 1) + "," + FixedToString(PointGetY(UnitGetPosition(lv_u)), 1) + " life " + FixedToString(UnitGetPropertyFixed(lv_u, c_unitPropLife, c_unitPropCurrent), 0) + " build " + FixedToString(UnitGetPropertyFixed(lv_u, c_unitPropLifePercent, c_unitPropCurrent), 0) + "%) ";
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", "ETURRETS " + IntToString(UnitGroupCount(lv_g, c_unitCountAlive)) + " " + lv_t + "kits left " + IntToString(GhostOps_Hanson_KitsLeft()));
+        return true;
+    }
+
+    if (lp_cmd == "eselt") {
+        lv_u = GhostOps_Ce0_First("MissileTurret");
+        UnitClearSelection(1);
+        UnitSelect(lv_u, 1, true);
+        CameraPan(1, UnitGetPosition(lv_u), 0.0, -1.0, 10.0, false);
+        GhostOps_Ce0_Write("j", "ESELT turret selected at " + FixedToString(PointGetX(UnitGetPosition(lv_u)), 1) + "," + FixedToString(PointGetY(UnitGetPosition(lv_u)), 1));
+        return true;
+    }
+
+    if (lp_cmd == "edum") {
+        // edum <dx> <dy>: a 3x3 grid of paused enemy Ultralisks around the point (turret + offset), the aim point of the salvo test
+        lv_u = GhostOps_Ce0_First("MissileTurret");
+        go_ce0Aim = PointWithOffset(UnitGetPosition(lv_u), StringToFixed(lp_a), StringToFixed(lp_b));
+        go_ce0DumN = 0;
+        lv_i = -1;
+        while (lv_i <= 1) {
+            lv_j = -1;
+            while (lv_j <= 1) {
+                UnitCreate(1, "Ultralisk", c_unitCreateIgnorePlacement, 3, PointWithOffset(go_ce0Aim, 1.4 * IntToFixed(lv_i), 1.4 * IntToFixed(lv_j)), 270.0);
+                go_ce0Dum[go_ce0DumN] = UnitLastCreated();
+                go_ce0DumLife[go_ce0DumN] = UnitGetPropertyFixed(UnitLastCreated(), c_unitPropLife, c_unitPropCurrent);
+                go_ce0DumN += 1;
+                lv_j += 1;
+            }
+
+            lv_i += 1;
+        }
+
+        lv_n = 0;
+        while (lv_n < go_ce0DumN) {
+            libNtve_gf_PauseUnit(go_ce0Dum[lv_n], true);
+            lv_n += 1;
+        }
+
+        // the own fighters are paused (they would shoot the dummies and spoil the damage figures of the salvo); the turret and the SCV stay free
+        lv_g = UnitGroup(null, 1, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterStructure) | (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32))), 0);
+        UnitGroupLoopBegin(lv_g);
+        while (!UnitGroupLoopDone()) {
+            if (UnitGetType(UnitGroupLoopCurrent()) != "SCV") {
+                libNtve_gf_PauseUnit(UnitGroupLoopCurrent(), true);
+            }
+
+            UnitGroupLoopStep();
+        }
+
+        UnitGroupLoopEnd();
+
+        GhostOps_Ce0_Write("j", "EDUM " + IntToString(go_ce0DumN) + " dummies at " + FixedToString(PointGetX(go_ce0Aim), 1) + "," + FixedToString(PointGetY(go_ce0Aim), 1));
+        return true;
+    }
+
+    if (lp_cmd == "edmg") {
+        lv_n = 0;
+        lv_c = 0;
+        lv_t = "";
+        while (lv_n < go_ce0DumN) {
+            if (UnitIsAlive(go_ce0Dum[lv_n])) {
+                lv_k = go_ce0Dum[lv_n];
+                if (UnitGetPropertyFixed(lv_k, c_unitPropLife, c_unitPropCurrent) < go_ce0DumLife[lv_n]) {
+                    lv_c += 1;
+                }
+
+                lv_t = lv_t + FixedToString(go_ce0DumLife[lv_n] - UnitGetPropertyFixed(lv_k, c_unitPropLife, c_unitPropCurrent), 0) + " ";
+            } else {
+                lv_c += 1;
+                lv_t = lv_t + "dead ";
+            }
+
+            lv_n += 1;
+        }
+
+        GhostOps_Ce0_Write("j", "EDMG damaged " + IntToString(lv_c) + " of " + IntToString(go_ce0DumN) + " | " + lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "eval") {
+        // the salvo order of the first turret at the aim point WITHOUT giving it: 1 = ready, 0 = cooling down
+        lv_u = GhostOps_Ce0_First("MissileTurret");
+        GhostOps_Ce0_Write("j", "EVAL ready " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(lv_u, OrderTargetingPoint(AbilityCommand("GhostOpsTurretSalvo", 0), go_ce0Aim)))) + " ability " + IntToString(GhostOps_Ce0_B(UnitAbilityExists(lv_u, "GhostOpsTurretSalvo"))) + " game time " + FixedToString(GameGetMissionTime(), 1));
+        return true;
+    }
+
+    if (lp_cmd == "eair") {
+        // eair: a paused enemy Mutalisk 4 cells from the first turret (the automatic anti-air fire must kill / hurt it); eair with a = "life" reports it
+        if (lp_a == "life") {
+            if (UnitIsAlive(go_ce0Air)) {
+                GhostOps_Ce0_Write("j", "EAIR alive life " + FixedToString(UnitGetPropertyFixed(go_ce0Air, c_unitPropLife, c_unitPropCurrent), 0));
+            } else {
+                GhostOps_Ce0_Write("j", "EAIR dead");
+            }
+
+            return true;
+        }
+
+        lv_u = GhostOps_Ce0_First("MissileTurret");
+        UnitCreate(1, "Mutalisk", c_unitCreateIgnorePlacement, 3, PointWithOffset(UnitGetPosition(lv_u), 4.0, 0.0), 270.0);
+        go_ce0Air = UnitLastCreated();
+        libNtve_gf_PauseUnit(go_ce0Air, true);
+        GhostOps_Ce0_Write("j", "EAIR created life " + FixedToString(UnitGetPropertyFixed(go_ce0Air, c_unitPropLife, c_unitPropCurrent), 0));
         return true;
     }
 

@@ -200,16 +200,16 @@
         "en": "Place a container"
       },
       "ContainerTip": {
-        "ru": "Горячая клавиша [C]. Ставит рядом контейнер с горючей смесью (в пределах {range} от огнемётчика): модель показана под курсором, зелёное место допустимо, красное нет. Цена: {gas} газа, общий запас {limit} штук (без пополнения). Взрывается от первого попадания бойца: {damage} урона наземным врагам и {structure_damage} по их зданиям в радиусе {radius}, воздух не поражается; ночью заражённые здания уязвимы, днём защищённые не получают урона. Свои в радиусе получают {friendly}% (на сложном уровне). Esc или правая кнопка отменяют без расходов.",
-        "en": "Hotkey [C]. Places a container of fuel mixture next to the Firebat (within {range} of him): the model follows the cursor, green = placeable, red = not. Price: {gas} gas, shared stock of {limit} (no refill). It explodes from the first hit of a fighter: {damage} damage to ground enemies and {structure_damage} to their structures within {radius}, air is not hit; by night infested structures are vulnerable, the ones shielded by day take no damage. Own units inside take {friendly}% (hard difficulty). Esc or right click cancel at no cost."
+        "ru": "Горячая клавиша [C]. Ставит рядом контейнер с горючей смесью (в пределах {range} от огнемётчика): модель показана под курсором, зелёное место допустимо, красное нет. Цена: {gas} газа, общий запас {limit} штук (без пополнения). Взрывается от первого попадания при прямой атаке любого бойца игрока (призрак и Snipe не нужны): урон наземным врагам {damage}, по их зданиям {structure_damage} ({damage} основных и {structure_extra} дополнительных) в радиусе {radius}; воздух не поражается. Ночью заражённые здания уязвимы, днём защищённые не получают урона. Свои в радиусе получают {friendly}% урона только на сложном уровне. Esc или правая кнопка отменяют без расходов.",
+        "en": "Hotkey [C]. Places a container of fuel mixture next to the Firebat (within {range} of him): the model follows the cursor, green = placeable, red = not. Price: {gas} gas, shared stock of {limit} (no refill). It explodes from the first hit of a direct attack of any fighter of the player (a Ghost and Snipe are not needed): damage to ground enemies {damage}, to their structures {structure_damage} ({damage} basic and {structure_extra} extra) within {radius}; air is not hit. By night infested structures are vulnerable, the ones shielded by day take no damage. Own units inside take {friendly}% only on the hard difficulty. Esc or right click cancel at no cost."
       },
       "ContainerUnitName": {
         "ru": "Контейнер с горючей смесью",
         "en": "Fuel mixture container"
       },
       "ContainerInfo": {
-        "ru": "Взрывается от первого попадания призрака (выстрел или Snipe). Круг показывает зону поражения. Свои в зоне тоже пострадают.",
-        "en": "Explodes from the first Ghost hit (rifle or Snipe). The circle shows the blast zone. Own units inside are hurt too."
+        "ru": "Взрывается от первого попадания при прямой атаке бойца игрока: призрак и Snipe не нужны. Круг показывает зону поражения. Свои в зоне страдают только на сложном уровне ({friendly}% урона).",
+        "en": "Explodes from the first hit of a direct attack of a fighter of the player: a Ghost and Snipe are not needed. The circle shows the blast zone. Own units inside are hurt only on the hard difficulty ({friendly}% damage)."
       },
       "PlaceFailGas": {
         "ru": "Не хватает газа для контейнера.",
@@ -369,6 +369,7 @@
     "hellions": {
       "extra": 2
     },
+    "stock_marines": 6,
     "night_cloak": {
       "net_per_second": -2.5
     },
@@ -533,26 +534,63 @@
       }
     ]
   },
-  "default_preset": "epidemic_free",
+  "default_preset": "epidemic_free_r2",
   "presets": {
     "epidemic_free": {
-      "label": "Эпидемия — Тест: бесплатный отряд",
+      "label": "Эпидемия — Тест: бесплатный отряд (ревизия 1)",
       "message": "Ghost Ops — Эпидемия, тест: бесплатный отряд",
       "message_en": "Ghost Ops - Epidemic, test: free squad",
       "experimental": true,
       "badge": "свободный тест",
-      "card": "Режим «Свободный тест»: бесплатный конечный отряд, без списаний и переноса в кампанию. Оригинальная «Эпидемия» с топливом геллионов, газовозом, защищёнными днём зданиями, ночным транспортом, взрывными контейнерами и комплектами турелей. Два призрака, {marines} морпехов, огнемётчики, медики; {kits} комплектов турелей, {hellions} лишних геллионов к штатным. Пополнения армии нет.",
+      "card": "Режим «Свободный тест»: бесплатный конечный отряд, без списаний и переноса в кампанию. Оригинальная «Эпидемия» с топливом геллионов, газовозом, защищёнными днём зданиями, ночным транспортом, взрывными контейнерами и комплектами турелей. Два призрака; морпехи: всего {marines_total} ({marines_stock} штатных и {marines} добавленных); огнемётчики, медики; {kits} комплектов турелей; геллионы: штатные и {hellions} добавленных. Наземного залпа у турелей нет. Пополнения армии нет.",
       "details": [
         "ТЕСТОВЫЙ КОМПЛЕКТ, не утверждённый баланс; в кампанию не пишет и результата не предлагает"
       ],
       "overrides": {}
+    },
+    "epidemic_free_r2": {
+      "label": "Эпидемия — Тест: бесплатный отряд (ревизия 2)",
+      "message": "Ghost Ops — Эпидемия, тест: бесплатный отряд, ревизия 2",
+      "message_en": "Ghost Ops - Epidemic, test: free squad, revision 2",
+      "experimental": true,
+      "badge": "свободный тест, ревизия 2",
+      "extends": "epidemic_free",
+      "card": "Режим «Свободный тест»: бесплатный конечный отряд, без списаний и переноса в кампанию. Оригинальная «Эпидемия» с топливом геллионов, газовозом, защищёнными днём зданиями, ночным транспортом, взрывными контейнерами и комплектами турелей. Новое в ревизии 2: наземный залп построенных турелей (кнопка и клавиша A, перезарядка {salvo_cd} с у каждой турели). Состав: 2 призрака; морпехи: всего {marines_total} ({marines_stock} штатных и {marines} добавленных); огнемётчики, медики; геллионы: штатные и {hellions} добавленных; {kits} комплектов турелей. Пополнения армии нет.",
+      "details": [
+        "ТЕСТОВЫЙ КОМПЛЕКТ, не утверждённый баланс; в кампанию не пишет и результата не предлагает",
+        "Ревизия 1 (`epidemic_free`) сохранена без залпа: карточка «Эпидемия — Тест: бесплатный отряд»"
+      ],
+      "overrides": {
+        "epidemic": {
+          "salvo": {
+            "range": 11,
+            "missiles": 5,
+            "interval": 0.4,
+            "radius": 1.5,
+            "damage": 30,
+            "cooldown": 8,
+            "spread": 1.0,
+            "hotkey": "A",
+            "texts": {
+              "Name": {
+                "ru": "Наземный залп",
+                "en": "Ground salvo"
+              },
+              "Tip": {
+                "ru": "Наземный залп [A]. Укажите область в пределах {range}: круг на земле показывает весь охват обстрела ({area}). {missiles} ракет падают по очереди в разные точки круга, по {damage} урона каждая (до {total} при всех попаданиях); поражаются только наземные враги, свои не задеваются, ресурсы не тратятся. Перезарядка {cooldown} с, у каждой турели своя. Esc или правая кнопка отменяют наведение без выстрела и без перезарядки. Против воздуха турель стреляет сама.",
+                "en": "Ground salvo [A]. Choose an area within {range}: the circle on the ground shows the whole area of the barrage ({area}). {missiles} missiles land one after another at different points of the circle, {damage} damage each (up to {total} if all hit); only ground enemies are hurt, your units never are, nothing is spent. Cooldown {cooldown} s, every turret has its own. Esc or right click cancel the aiming with no shot and no cooldown. Against air the turret fires by itself."
+              }
+            }
+          }
+        }
+      }
     },
     "epidemic_free_ce0_dev": {
       "label": "Эпидемия, проба CE-0 (отладка)",
       "message": "Ghost Ops - Epidemic, CE-0 probe (dev)",
       "message_en": "Ghost Ops - Epidemic, CE-0 probe (dev)",
       "hidden": true,
-      "extends": "epidemic_free",
+      "extends": "epidemic_free_r2",
       "card": "Technical probe",
       "details": [
         "Development only"
@@ -566,6 +604,9 @@
           "dev_cycle": {
             "day": 150,
             "night": 120
+          },
+          "salvo": {
+            "cooldown": 24
           }
         },
         "ce0": {

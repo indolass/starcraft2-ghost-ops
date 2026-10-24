@@ -283,6 +283,23 @@ def validate_zerohour(cfg):
     return errs
 
 
+def validate_salvo(sv, where):
+    """The manual ground salvo of a Missile Turret (shared by the defence variant and THanson02): errors of the numbers, [] when valid."""
+    errs = []
+    for k, (lo, hi) in {'range': (3, 20), 'interval': (0.1, 3), 'radius': (0.5, 6), 'damage': (1, 400), 'cooldown': (1, 300)}.items():
+        if not _num(sv.get(k)) or not lo <= sv[k] <= hi:
+            errs.append('%s.%s must be a number %s..%s' % (where, k, lo, hi))
+    if not isinstance(sv.get('missiles'), int) or isinstance(sv.get('missiles'), bool) or not 1 <= sv['missiles'] <= 12:
+        errs.append('%s.missiles must be an integer 1..12' % where)
+    if 'hotkey' in sv and not (isinstance(sv['hotkey'], str) and len(sv['hotkey']) == 1 and sv['hotkey'].isalpha() and sv['hotkey'].isupper()):
+        errs.append('%s.hotkey must be one capital letter (the standard-layout hotkey of the button)' % where)
+    if 'spread' in sv and (not _num(sv['spread']) or not 0 <= sv['spread'] <= 6):
+        errs.append('%s.spread must be a number 0..6 (radius of the circle of impact points; 0 = every missile hits the centre)' % where)
+    if _num(sv.get('radius')) and _num(sv.get('spread', 0)) and sv.get('radius', 0) + sv.get('spread', 0) > 8:
+        errs.append('%s.radius + spread (the whole area the pointer shows) must not exceed 8' % where)
+    return errs
+
+
 def validate_defence(cfg):
     """TRaynor03 "defence" variant (config key "defence"). Every number of the variant is a setting; unknown keys are errors."""
     d = cfg['defence']
@@ -302,18 +319,7 @@ def validate_defence(cfg):
     for k, (lo, hi) in {'first_at': (1, 600), 'rest_at': (1, 900), 'ghosts_at': (1, 900)}.items():
         if not _num(ln.get(k)) or not lo <= ln[k] <= hi:
             errs.append('defence.landing.%s must be a number %s..%s (game seconds after the start of control)' % (k, lo, hi))
-    sv = d.get('salvo', {})
-    for k, (lo, hi) in {'range': (3, 20), 'interval': (0.1, 3), 'radius': (0.5, 6), 'damage': (1, 400), 'cooldown': (1, 300)}.items():
-        if not _num(sv.get(k)) or not lo <= sv[k] <= hi:
-            errs.append('defence.salvo.%s must be a number %s..%s' % (k, lo, hi))
-    if not isinstance(sv.get('missiles'), int) or isinstance(sv.get('missiles'), bool) or not 1 <= sv['missiles'] <= 12:
-        errs.append('defence.salvo.missiles must be an integer 1..12')
-    if 'hotkey' in sv and not (isinstance(sv['hotkey'], str) and len(sv['hotkey']) == 1 and sv['hotkey'].isalpha() and sv['hotkey'].isupper()):
-        errs.append('defence.salvo.hotkey must be one capital letter (the standard-layout hotkey of the button)')
-    if 'spread' in sv and (not _num(sv['spread']) or not 0 <= sv['spread'] <= 6):
-        errs.append('defence.salvo.spread must be a number 0..6 (radius of the circle of impact points; 0 = every missile hits the centre)')
-    if _num(sv.get('radius')) and _num(sv.get('spread', 0)) and sv.get('radius', 0) + sv.get('spread', 0) > 8:
-        errs.append('defence.salvo.radius + spread (the whole area the pointer shows) must not exceed 8')
+    errs += validate_salvo(d.get('salvo', {}), 'defence.salvo')
     wv = d.get('waves', {})
     if not _num(wv.get('power')) or not 1 <= wv['power'] <= 2:
         errs.append('defence.waves.power must be 1 (share) or 2 (share squared)')
@@ -501,19 +507,17 @@ def salvo_pattern(n, spread):
     return pts
 
 
-def defence_fragments(d):
-    """Catalog overrides of the defence variant (map local): Bunker / Missile Turret are free to build for the kit logic and need only the Command Center, the turret gets
-    the manual ground salvo (separate Ghost Ops data; the weapon of every other Missile Turret of the game is not touched)."""
+def salvo_fragments(sv, with_cost=True):
+    """Catalog data of the manual ground salvo of the Missile Turret (ability GhostOpsTurretSalvo; separate Ghost Ops data, the weapon of every other Missile Turret is not touched).
+    Shared by the defence variant (TRaynor03) and THanson02; `with_cost` False when another part already zeroes the build cost of the turret (turret kits)."""
     g = lambda v: '%g' % v  # noqa: E731
-    sv = d['salvo']
     nl = chr(10)
     periods = ['            <PeriodicPeriodArray value="0"/>'] + ['            <PeriodicPeriodArray value="%s"/>' % g(sv['interval']) for _ in range(sv['missiles'] - 1)]
     offsets = ['        <PeriodicOffsetArray value="%s,%s"/>' % (g(round(x, 3)), g(round(y, 3))) for x, y in salvo_pattern(sv['missiles'], sv.get('spread', 0))]
     aim = sv['radius'] + sv.get('spread', 0)  # the whole area the pointer shows: the circle of impact points plus the blast radius of one missile
     return {
         'UnitData.xml': nl.join([
-            '    <CUnit id="Bunker">', '        <CostResource index="Minerals" value="0"/>', '    </CUnit>',
-            '    <CUnit id="MissileTurret">', '        <CostResource index="Minerals" value="0"/>', '        <AbilArray Link="GhostOpsTurretSalvo"/>',
+            '    <CUnit id="MissileTurret">'] + (['        <CostResource index="Minerals" value="0"/>'] if with_cost else []) + ['        <AbilArray Link="GhostOpsTurretSalvo"/>',
             '        <CardLayouts index="0">',
             # hotkey A: the button takes the place of the stock "Attack" button of the turret card (index 3 of the stock layout of the Liberty data; the `attack` ability stays in the
             # unit, so the automatic fire does not change) and aliases the standard "Attack" hotkey; any other hotkey: an extra button, the stock card stays
@@ -521,10 +525,6 @@ def defence_fragments(d):
              else '            <LayoutButtons Face="GhostOpsTurretSalvo" Type="AbilCmd" AbilCmd="GhostOpsTurretSalvo,Execute" Row="1" Column="1"/>'),
             '        </CardLayouts>', '    </CUnit>', '']),
         'AbilData.xml': nl.join([
-            '    <CAbilBuild id="TerranBuild">',
-            '        <InfoArray index="Build6">', '            <Button Requirements="HaveCommandCenter"/>', '        </InfoArray>',
-            '        <InfoArray index="Build7">', '            <Button Requirements="HaveCommandCenter"/>', '        </InfoArray>',
-            '    </CAbilBuild>',
             '    <CAbilEffectTarget id="GhostOpsTurretSalvo">', '        <EditorCategories value="Race:Terran,AbilityorEffectType:Units"/>',
             '        <Effect index="0" value="GhostOpsSalvoMain"/>', '        <Range value="%s"/>' % g(sv['range']), '        <Arc value="360"/>', '        <CastIntroTime value="0"/>',
             '        <Flags index="RequireTargetVision" value="1"/>', '        <CursorEffect value="GhostOpsSalvoAim"/>',
@@ -556,6 +556,26 @@ def defence_fragments(d):
             '    <CEffectDamage id="GhostOpsSalvoDamage">', '        <EditorCategories value="Race:Terran"/>', '        <Kind value="Splash"/>', '        <Amount value="%s"/>' % g(sv['damage']),
             '        <Flags index="Notification" value="1"/>', '        <ResponseFlags index="Acquire" value="1"/>', '    </CEffectDamage>', '']),
     }
+
+
+def salvo_text(v, sv):
+    """A salvo text with the numbers of the configuration put in (`{range}` `{missiles}` `{radius}` `{area}` `{damage}` `{total}` `{cooldown}`)."""
+    g = lambda x: ('%g' % x)  # noqa: E731
+    return (v.replace('{range}', g(sv['range'])).replace('{missiles}', g(sv['missiles'])).replace('{radius}', g(sv['radius'])).replace('{area}', g(sv['radius'] + sv.get('spread', 0)))
+            .replace('{damage}', g(sv['damage'])).replace('{total}', g(sv['damage'] * sv['missiles'])).replace('{cooldown}', g(sv['cooldown'])))
+
+
+def defence_fragments(d):
+    """Catalog overrides of the defence variant (map local): Bunker / Missile Turret are free to build for the kit logic and need only the Command Center, the turret gets
+    the manual ground salvo (`salvo_fragments`)."""
+    nl = chr(10)
+    frags = salvo_fragments(d['salvo'])
+    pre = {
+        'UnitData.xml': nl.join(['    <CUnit id="Bunker">', '        <CostResource index="Minerals" value="0"/>', '    </CUnit>', '']),
+        'AbilData.xml': nl.join(['    <CAbilBuild id="TerranBuild">', '        <InfoArray index="Build6">', '            <Button Requirements="HaveCommandCenter"/>', '        </InfoArray>',
+                                 '        <InfoArray index="Build7">', '            <Button Requirements="HaveCommandCenter"/>', '        </InfoArray>', '    </CAbilBuild>', '']),
+    }
+    return {k: pre.get(k, '') + v for k, v in frags.items()}
 
 
 def kits_hint(tk, lang):
@@ -1308,6 +1328,7 @@ def catalog_fragments(cfg):
             frags[name] = frags.get(name, '') + frag
     if 'UnitData.xml' in frags:
         frags['UnitData.xml'] = merge_same_id(frags['UnitData.xml'], 'CUnit', 'Ghost')
+        frags['UnitData.xml'] = merge_same_id(frags['UnitData.xml'], 'CUnit', 'MissileTurret')
     facial = {c['id']: c['facial'] for c in (cfg.get('audio') or {}).get('clips', []) if c.get('facial')}
     sounds = ['    <CSound id="%s" parent="SM_Old">%s        <Mode value="2D"/>%s        <AssetArray File="%s"%s/>%s    </CSound>' % (
         cid, chr(10), chr(10), member, (' FacialAnim="%s"' % facial[cid]) if cid in facial else '', chr(10)) for cid, _, member in audio_clips(cfg)]
@@ -1555,6 +1576,16 @@ def validate_epidemic(cfg):
     for k in ('base', 'fuel', 'truck', 'hellions', 'night_cloak', 'protected', 'transport', 'hud'):
         if not isinstance(e.get(k), dict):
             errs.append('epidemic.%s must be an object' % k)
+    if 'stock_marines' in e and not (isinstance(e['stock_marines'], int) and not isinstance(e['stock_marines'], bool) and 0 <= e['stock_marines'] <= 100):
+        errs.append('epidemic.stock_marines must be an integer 0..100 (information for the card: the Marines the original mission gives)')
+    if 'salvo' in e:
+        sv = e['salvo']
+        errs += validate_salvo(sv, 'epidemic.salvo') if isinstance(sv, dict) else ['epidemic.salvo must be an object']
+        tx = sv.get('texts') if isinstance(sv, dict) else None
+        if not (isinstance(tx, dict) and set(tx) == {'Name', 'Tip'} and all(isinstance(v, dict) and all(isinstance(v.get(l), str) and v[l] for l in ('ru', 'en')) for v in tx.values())):
+            errs.append('epidemic.salvo.texts must be {Name, Tip} with ru and en texts')
+        if not (cfg.get('hanson') or {}).get('turret_kits', {}).get('enabled'):
+            errs.append('epidemic.salvo needs hanson.turret_kits (the salvo belongs to turrets the player builds)')
     if errs:
         return errs
     for k, lo, hi in (('x', 0, 400), ('y', 0, 400), ('radius', 3, 60)):
@@ -1637,7 +1668,7 @@ def epidemic_fragments(e):
     nl = chr(10)
     f, t = e['fuel'], e['truck']
     bs = chr(92)
-    return {
+    frags = {
         'UnitData.xml': nl.join([
             '    <CUnit id="Hellion">', '        <EnergyStart value="%s"/>' % g(round(f['tank'] * f['base_fill_poor'], 3)), '        <EnergyMax value="%s"/>' % g(f['tank']), '        <EnergyRegenRate value="0"/>', '    </CUnit>',
             '    <CUnit id="TankerTruck">', '        <LifeStart value="%s"/>' % g(t['life']), '        <LifeMax value="%s"/>' % g(t['life']), '        <Speed value="%s"/>' % g(t['speed']),
@@ -1651,6 +1682,11 @@ def epidemic_fragments(e):
             '    <CBehaviorBuff id="GhostOpsTruckShow">', '        <InfoFlags index="Hidden" value="1"/>', '    </CBehaviorBuff>',
             '    <CBehaviorBuff id="GhostOpsDayShield">', '        <InfoFlags index="Hidden" value="1"/>', '        <DamageResponse Chance="1" ModifyFraction="-1"/>', '    </CBehaviorBuff>', '']),
     }
+    if e.get('salvo'):
+        # the turrets of the player (kits) get the manual ground salvo; the build cost is already zeroed by the kit data
+        for name, frag in salvo_fragments(e['salvo'], with_cost=False).items():
+            frags[name] = frags.get(name, '') + frag
+    return frags
 
 
 def gen_zerohour(cfg):
@@ -1887,7 +1923,7 @@ def text_entries(cfg):
         for loc, lang in (('ruRU', 'ru'), ('enUS', 'en')):
             ht = dict(HANSON_TEXT_DEFAULTS, **hs['texts'])
             cts = hs.get('containers') or {}
-            fill = lambda v: v if not cts else (v.replace('{gas}', '%g' % cts['gas_cost']).replace('{limit}', '%g' % cts['limit']).replace('{damage}', '%g' % cts['damage']).replace('{structure_damage}', '%g' % (cts['damage'] * (1 + cts.get('structure_bonus', 0)))).replace('{radius}', '%g' % cts['radius']).replace('{range}', '%g' % cts['place_range']).replace('{friendly}', '%g' % round(100 * cts['friendly']['hard'], 1)))  # noqa: E731
+            fill = lambda v: v if not cts else (v.replace('{gas}', '%g' % cts['gas_cost']).replace('{limit}', '%g' % cts['limit']).replace('{damage}', '%g' % cts['damage']).replace('{structure_damage}', '%g' % (cts['damage'] * (1 + cts.get('structure_bonus', 0)))).replace('{structure_extra}', '%g' % (cts['damage'] * cts.get('structure_bonus', 0))).replace('{radius}', '%g' % cts['radius']).replace('{range}', '%g' % cts['place_range']).replace('{friendly}', '%g' % round(100 * cts['friendly']['hard'], 1)))  # noqa: E731
             for k in HANSON_TEXT_KEYS + tuple(k for k in HANSON_EXTRA_TEXT_KEYS if k in ht):
                 out.setdefault(loc, []).append((HANSON_TEXT_PREFIX + k, fill(ht[k][lang])))
             if (hs.get('turret_kits') or {}).get('enabled'):
@@ -1907,6 +1943,11 @@ def text_entries(cfg):
                 out.setdefault(loc, []).append((EPI_TEXT_PREFIX + k, ep['texts'][k][lang]))
             out.setdefault(loc, []).append(('Behavior/Name/GhostOpsNoFuel', ep['texts']['NoFuelName'][lang]))
             out.setdefault(loc, []).append(('Behavior/Description/GhostOpsNoFuel', ep['texts']['NoFuelDesc'][lang]))
+            if ep.get('salvo'):
+                esv = ep['salvo']
+                out.setdefault(loc, []).append(('Button/Name/GhostOpsTurretSalvo', salvo_text(esv['texts']['Name'][lang], esv)))
+                out.setdefault(loc, []).append(('Button/Tooltip/GhostOpsTurretSalvo', salvo_text(esv['texts']['Tip'][lang], esv)))
+                out.setdefault(loc, []).append(('Button/Hotkey/GhostOpsTurretSalvo', esv.get('hotkey', 'G')))
     zh = cfg.get('zerohour')
     if zh:
         for loc, lang in (('ruRU', 'ru'), ('enUS', 'en')):
