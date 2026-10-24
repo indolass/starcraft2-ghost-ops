@@ -204,6 +204,8 @@ construction events, save / load completeness, saving methods, operation set nam
 
 2026-10-21 (later): **TRaynor03 «Оборона и диверсии» (preset `defence`) implemented as an EXPERIMENT** (player-built kit bunkers / turrets, pod landing, manual ground salvo, wave weakening by marked incubator groups, Matt message with a short target reveal); separate map `GhostOps_TRaynor03_defence`, the previous *Zero Hour* untouched. Real-game checks and limits: `docs/MISSION_ROADMAP.md` 7.8. No full playthrough yet; numbers are not Owner-approved.
 
+2026-10-24 (Owner order): working rules for developing, checking and handing over missions are in `CLAUDE.md` ("Developing, checking and handing over missions to the Owner"); the current queue (TRaynor02 projectile look, TRaynor03 detectors / garrison / nuke area, THanson01 container + convoy + turret kits, THanson02 first episode) is `docs/MISSION_ROADMAP.md` 3.1. Documents only, nothing implemented by this entry.
+
 2026-10-20 (queue of docs/MISSION_ROADMAP.md): CE-0 DONE; **CE-1 implemented** (map journal, launcher-side campaign state with one atomic commit, campaign window of the launcher, unique per-operation
 map files); **TRaynor03 «Час икс» built as an EXPERIMENT** (pre-ordered garrison, two Ghosts, two missiles, victory = 20 game minutes AND all marked hatcheries, production lock, post-timer waves); scenes of the first three
 missions (portrait + text; clips exist only for the older short lines). Prices / limits / waves of TRaynor03 are experimental numbers, not Owner-approved. THanson01 economy (1000 / 500, turret kits, mercenaries)
