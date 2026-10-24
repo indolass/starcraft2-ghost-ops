@@ -1,0 +1,80 @@
+{
+ "name": "th2_container_damage",
+ "mission": "thanson02",
+ "preset": "epidemic_free_cycle_dev",
+ "why": "a container blast on infested structures: nothing to a day-shielded one, normal damage to an unshielded one by day, useful damage to a shielded one at night",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "cmd",
+   "text": "ecb InfestedCC",
+   "wait": 9
+  },
+  {
+   "op": "cmd",
+   "text": "ecb InfestedMercHaven",
+   "wait": 9
+  },
+  {
+   "op": "expect",
+   "regex": "ECB",
+   "note": "information day"
+  },
+  {
+   "op": "expect_def",
+   "bank": "GhostOpsDevHanson",
+   "regex": "container",
+   "note": "Hanson log (information) day"
+  },
+  {
+   "op": "until",
+   "cmd": "eclock",
+   "grep": "night 1/1",
+   "every": 6,
+   "timeout": 200
+  },
+  {
+   "op": "cmd",
+   "text": "ecb InfestedStarport",
+   "wait": 9
+  },
+  {
+   "op": "cmd",
+   "text": "ecb InfestedArmory",
+   "wait": 9
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "expect",
+   "regex": "ECB",
+   "note": "information"
+  },
+  {
+   "op": "expect_def",
+   "bank": "GhostOpsDevHanson",
+   "regex": "container",
+   "note": "Hanson log (information)"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

@@ -1,0 +1,22 @@
+//==================================================================================================
+// GhostOps adapter: Outbreak / Epidemic (THanson02), free test version. All mission specific knowledge lives here.
+// Player 1 is the human player. gt_IntroSequence_Func (the only way into the playable part) calls GhostOps_OnMissionStart() right after it has started gt_StartGame
+// (see adapter.json); GhostOps_ClaimStart() makes the start happen exactly once. The modules are core/GhostOpsHanson.galaxy (containers of the Firebats, the turret kits, the
+// development lock, the free test squad) and core/GhostOpsEpidemic.galaxy (hellion fuel, the gas truck, protected buildings, the night transport); the other hooks of adapter.json
+// call the second one. The original squad (6 Marines, 4 Firebats, 4 Medics, 6 SCVs) and the base are not changed.
+//==================================================================================================
+void GhostOps_OnMissionStart () {
+    if (!GhostOps_ClaimStart()) {
+        return;
+    }
+
+    GhostOps_ApplyHansonConfig();
+    GhostOps_Init();
+    GhostOps_SetPlayerCovered(1, true);
+    GhostOps_SpawnOperatives(1, Point(go_hGhostX, go_hGhostY));
+    GhostOps_Start();
+    GhostOps_Hanson_Start();
+    GhostOps_Epi_Start();
+    GhostOps_ReportProfile();
+    GhostOps_ReportDifficulty(1);
+}

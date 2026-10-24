@@ -1,0 +1,334 @@
+{
+ "schema": "ghostops.lines/1",
+ "mission_id": "thanson02",
+ "variant": "epidemic_free",
+ "title": "THanson02 Epidemic - free test squad (epidemic_free)",
+ "order": 41,
+ "table_rev": 1,
+ "languages": [
+  "ru",
+  "en"
+ ],
+ "speakers": {
+  "swann": "Swann",
+  "tychus": "Tychus",
+  "hanson": "Hanson"
+ },
+ "scenes": [
+  {
+   "id": "S1_GAS",
+   "title": "Swann: the local gas is bad",
+   "context": "the first time a hellion runs dry far from the base",
+   "group": "swann"
+  },
+  {
+   "id": "S2_TRUCK",
+   "title": "Tychus: the abandoned tanker",
+   "context": "right after S1",
+   "group": "tychus"
+  },
+  {
+   "id": "S3_CAPTURE",
+   "title": "Swann: how the refuelling works",
+   "context": "when infantry captures the tanker",
+   "group": "swann"
+  },
+  {
+   "id": "S4_BASE",
+   "title": "Swann: the local fuel is prepared",
+   "context": "when the captured tanker is back at the base",
+   "group": "swann"
+  },
+  {
+   "id": "S5_SHIP",
+   "title": "Swann: the night transport",
+   "context": "the first night the transport arrives",
+   "group": "swann"
+  },
+  {
+   "id": "S6_PROT",
+   "title": "Hanson: protected structures",
+   "context": "the first attack on a day-protected structure",
+   "group": "hanson"
+  },
+  {
+   "id": "S7_MESSAGES",
+   "title": "System messages",
+   "context": "transport arrival / dawn / losses",
+   "group": "swann"
+  }
+ ],
+ "consumers": {},
+ "lines": [
+  {
+   "id": "L_GAS",
+   "key": "thanson02/epidemic_free/L_GAS",
+   "speaker": "swann",
+   "scene": "S1_GAS",
+   "order": 10,
+   "context": "Swann: the local gas is bad",
+   "condition": "the first time a hellion runs dry far from the base",
+   "route": "variant",
+   "mode": "record",
+   "text": {
+    "ru": "Местный газ — дрянь: машины на нём далеко не уедут. Подтяните пехоту к стоящим геллионам и верните их на базу до темноты.",
+    "en": "The local gas is garbage: the machines will not get far on it. Bring infantry to the stalled hellions and get them back to the base before dark."
+   },
+   "origin_text": {
+    "ru": "Местный газ — дрянь: машины на нём далеко не уедут. Подтяните пехоту к стоящим геллионам и верните их на базу до темноты.",
+    "en": "The local gas is garbage: the machines will not get far on it. Bring infantry to the stalled hellions and get them back to the base before dark."
+   },
+   "hash": "a7ea713a4631cabfeb88a308eda7a7d1bdf018b2dd79c040d2ef5fc810f4d914",
+   "rev": 1,
+   "edited_by": "seed",
+   "edited_utc": "2026-10-24T00:00:00Z",
+   "binding": {
+    "config": "thanson02.json",
+    "path": "epidemic.texts.L_GAS"
+   }
+  },
+  {
+   "id": "L_TRUCK",
+   "key": "thanson02/epidemic_free/L_TRUCK",
+   "speaker": "tychus",
+   "scene": "S2_TRUCK",
+   "order": 20,
+   "context": "Tychus: the abandoned tanker",
+   "condition": "right after S1",
+   "route": "variant",
+   "mode": "record",
+   "text": {
+    "ru": "Эй, Джим! Контрабандисты бросили полный газовоз с хорошим топливом. Я отметил его на карте: заберите, пока его не нашли зерги.",
+    "en": "Hey, Jim! Smugglers left a full tanker with good fuel. I marked it on the map: take it before the zerg find it."
+   },
+   "origin_text": {
+    "ru": "Эй, Джим! Контрабандисты бросили полный газовоз с хорошим топливом. Я отметил его на карте: заберите, пока его не нашли зерги.",
+    "en": "Hey, Jim! Smugglers left a full tanker with good fuel. I marked it on the map: take it before the zerg find it."
+   },
+   "hash": "46ff774f4a1ae9b5c30d6f04c0df02b65219ab8ad037432f329894fdd3aba3b2",
+   "rev": 1,
+   "edited_by": "seed",
+   "edited_utc": "2026-10-24T00:00:00Z",
+   "binding": {
+    "config": "thanson02.json",
+    "path": "epidemic.texts.L_TRUCK"
+   }
+  },
+  {
+   "id": "L_CAPTURE",
+   "key": "thanson02/epidemic_free/L_CAPTURE",
+   "speaker": "swann",
+   "scene": "S3_CAPTURE",
+   "order": 30,
+   "context": "Swann: how the refuelling works",
+   "condition": "when infantry captures the tanker",
+   "route": "variant",
+   "mode": "record",
+   "text": {
+    "ru": "Газовоз ваш. Подведите его к остановившимся геллионам: рядом с ним они заправятся сами, без кликов. Топливо уйдёт из цистерны — берегите машину.",
+    "en": "The tanker is yours. Bring it next to the stalled hellions: they refuel by themselves, no clicks. The fuel leaves the tank, so keep the truck safe."
+   },
+   "origin_text": {
+    "ru": "Газовоз ваш. Подведите его к остановившимся геллионам: рядом с ним они заправятся сами, без кликов. Топливо уйдёт из цистерны — берегите машину.",
+    "en": "The tanker is yours. Bring it next to the stalled hellions: they refuel by themselves, no clicks. The fuel leaves the tank, so keep the truck safe."
+   },
+   "hash": "49cce1ae8ce4ff369b33030ed65a27646b61ce5ca3a978d741319b12ec13db4a",
+   "rev": 1,
+   "edited_by": "seed",
+   "edited_utc": "2026-10-24T00:00:00Z",
+   "binding": {
+    "config": "thanson02.json",
+    "path": "epidemic.texts.L_CAPTURE"
+   }
+  },
+  {
+   "id": "L_BASE",
+   "key": "thanson02/epidemic_free/L_BASE",
+   "speaker": "swann",
+   "scene": "S4_BASE",
+   "order": 40,
+   "context": "Swann: the local fuel is prepared",
+   "condition": "when the captured tanker is back at the base",
+   "route": "variant",
+   "mode": "record",
+   "text": {
+    "ru": "Получилось наладить подготовку местного топлива: на базе геллионы заправляются полностью, а газовоз можно пополнять за добытый газ.",
+    "en": "We managed to prepare the local fuel: hellions now fill up completely at the base, and the tanker can be refilled for the gas you mine."
+   },
+   "origin_text": {
+    "ru": "Получилось наладить подготовку местного топлива: на базе геллионы заправляются полностью, а газовоз можно пополнять за добытый газ.",
+    "en": "We managed to prepare the local fuel: hellions now fill up completely at the base, and the tanker can be refilled for the gas you mine."
+   },
+   "hash": "9174d2d4405a74489b13d78b2e0968c8723c8f86e66ff842ef59faf73a03fc50",
+   "rev": 1,
+   "edited_by": "seed",
+   "edited_utc": "2026-10-24T00:00:00Z",
+   "binding": {
+    "config": "thanson02.json",
+    "path": "epidemic.texts.L_BASE"
+   }
+  },
+  {
+   "id": "L_SHIP",
+   "key": "thanson02/epidemic_free/L_SHIP",
+   "speaker": "swann",
+   "scene": "S5_SHIP",
+   "order": 50,
+   "context": "Swann: the night transport",
+   "condition": "the first night the transport arrives",
+   "route": "variant",
+   "mode": "record",
+   "text": {
+    "ru": "Транспорт днём занят эвакуацией в другом районе, а ночью он в вашем распоряжении. Он один — берегите его. Грузите отряд, задавайте маршрут и успейте до рассвета.",
+    "en": "The transport is busy evacuating another district by day, and at night it is yours. There is only one: keep it safe. Load a squad, set the route and be back before dawn."
+   },
+   "origin_text": {
+    "ru": "Транспорт днём занят эвакуацией в другом районе, а ночью он в вашем распоряжении. Он один — берегите его. Грузите отряд, задавайте маршрут и успейте до рассвета.",
+    "en": "The transport is busy evacuating another district by day, and at night it is yours. There is only one: keep it safe. Load a squad, set the route and be back before dawn."
+   },
+   "hash": "d908a74d6c2231ce3e516de47515b94d0f416de52a15291ae141d7428889152d",
+   "rev": 1,
+   "edited_by": "seed",
+   "edited_utc": "2026-10-24T00:00:00Z",
+   "binding": {
+    "config": "thanson02.json",
+    "path": "epidemic.texts.L_SHIP"
+   }
+  },
+  {
+   "id": "L_PROT",
+   "key": "thanson02/epidemic_free/L_PROT",
+   "speaker": "hanson",
+   "scene": "S6_PROT",
+   "order": 60,
+   "context": "Hanson: protected structures",
+   "condition": "the first attack on a day-protected structure",
+   "route": "variant",
+   "mode": "record",
+   "text": {
+    "ru": "Мутация защищает заражённые структуры от солнечного света: днём наше оружие их не пробивает. Дождитесь ночи, тогда их можно уничтожить.",
+    "en": "The mutation shields infested structures from sunlight: by day our weapons cannot break them. Wait for the night, then they can be destroyed."
+   },
+   "origin_text": {
+    "ru": "Мутация защищает заражённые структуры от солнечного света: днём наше оружие их не пробивает. Дождитесь ночи, тогда их можно уничтожить.",
+    "en": "The mutation shields infested structures from sunlight: by day our weapons cannot break them. Wait for the night, then they can be destroyed."
+   },
+   "hash": "0fe9d5dcaedfd99eb82f21811f38a3535b8c0ef81d5007c4724f60f6a3313a96",
+   "rev": 1,
+   "edited_by": "seed",
+   "edited_utc": "2026-10-24T00:00:00Z",
+   "binding": {
+    "config": "thanson02.json",
+    "path": "epidemic.texts.L_PROT"
+   }
+  },
+  {
+   "id": "MSGSHIPHERE",
+   "key": "thanson02/epidemic_free/MSGSHIPHERE",
+   "speaker": "swann",
+   "scene": "S7_MESSAGES",
+   "order": 70,
+   "context": "System messages",
+   "condition": "transport arrival / dawn / losses",
+   "route": "variant",
+   "mode": "text_only",
+   "text": {
+    "ru": "Транспорт прибыл на базу: до рассвета он в вашем распоряжении.",
+    "en": "The transport has arrived at the base: it is yours until the dawn."
+   },
+   "origin_text": {
+    "ru": "Транспорт прибыл на базу: до рассвета он в вашем распоряжении.",
+    "en": "The transport has arrived at the base: it is yours until the dawn."
+   },
+   "hash": "20f33dcfa1403de8b4ca1d88513b95e48b2b63dbcbd89060e60eb1a25c3b7c14",
+   "rev": 1,
+   "edited_by": "seed",
+   "edited_utc": "2026-10-24T00:00:00Z",
+   "binding": {
+    "config": "thanson02.json",
+    "path": "epidemic.texts.MsgShipHere"
+   }
+  },
+  {
+   "id": "MSGDAWN",
+   "key": "thanson02/epidemic_free/MSGDAWN",
+   "speaker": "swann",
+   "scene": "S7_MESSAGES",
+   "order": 80,
+   "context": "System messages",
+   "condition": "transport arrival / dawn / losses",
+   "route": "variant",
+   "mode": "text_only",
+   "text": {
+    "ru": "Скоро рассвет: новые рейсы закрываются. Закончите текущий и вернитесь на базу.",
+    "en": "The dawn is near: new rides close. Finish the current one and return to the base."
+   },
+   "origin_text": {
+    "ru": "Скоро рассвет: новые рейсы закрываются. Закончите текущий и вернитесь на базу.",
+    "en": "The dawn is near: new rides close. Finish the current one and return to the base."
+   },
+   "hash": "eea857f225dbeb8d9e2ec7bb442b075a98f5e08228a92d3e50a1bf1ff068e7c2",
+   "rev": 1,
+   "edited_by": "seed",
+   "edited_utc": "2026-10-24T00:00:00Z",
+   "binding": {
+    "config": "thanson02.json",
+    "path": "epidemic.texts.MsgDawn"
+   }
+  },
+  {
+   "id": "MSGSHIPLOST",
+   "key": "thanson02/epidemic_free/MSGSHIPLOST",
+   "speaker": "swann",
+   "scene": "S7_MESSAGES",
+   "order": 90,
+   "context": "System messages",
+   "condition": "transport arrival / dawn / losses",
+   "route": "variant",
+   "mode": "text_only",
+   "text": {
+    "ru": "Транспорт потерян. Новый не придёт; ночные цели доступны наземному отряду.",
+    "en": "The transport is lost. No new one will come; the night targets are reachable on foot."
+   },
+   "origin_text": {
+    "ru": "Транспорт потерян. Новый не придёт; ночные цели доступны наземному отряду.",
+    "en": "The transport is lost. No new one will come; the night targets are reachable on foot."
+   },
+   "hash": "aa78da1fa37016e3f0307a77fc46428289359cf2cfbbabdf85cc21cb3eb7692d",
+   "rev": 1,
+   "edited_by": "seed",
+   "edited_utc": "2026-10-24T00:00:00Z",
+   "binding": {
+    "config": "thanson02.json",
+    "path": "epidemic.texts.MsgShipLost"
+   }
+  },
+  {
+   "id": "MSGTRUCKLOST",
+   "key": "thanson02/epidemic_free/MSGTRUCKLOST",
+   "speaker": "swann",
+   "scene": "S7_MESSAGES",
+   "order": 100,
+   "context": "System messages",
+   "condition": "transport arrival / dawn / losses",
+   "route": "variant",
+   "mode": "text_only",
+   "text": {
+    "ru": "Газовоз потерян. Остаются заправка машин у базы и ночные операции.",
+    "en": "The tanker is lost. The base refuelling and the night operations remain."
+   },
+   "origin_text": {
+    "ru": "Газовоз потерян. Остаются заправка машин у базы и ночные операции.",
+    "en": "The tanker is lost. The base refuelling and the night operations remain."
+   },
+   "hash": "7596ba65e127be74d0f8cbda12016a2b95d5ab7f5b4548095dd9a49f3748ee64",
+   "rev": 1,
+   "edited_by": "seed",
+   "edited_utc": "2026-10-24T00:00:00Z",
+   "binding": {
+    "config": "thanson02.json",
+    "path": "epidemic.texts.MsgTruckLost"
+   }
+  }
+ ]
+}

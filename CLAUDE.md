@@ -17,8 +17,10 @@ Use `python tools/test_launch.py --mission M --preset P --seconds N [--keep] [--
 4. Only the process started by the test launch is controlled (new `SC2_x64.exe` PID, window ownership checked). If a game is already
    running, the test launch is refused: the Owner's game is never moved, minimised, muted or closed.
 5. The Owner's permanent settings (Variables.txt, graphics, volume) are not changed; everything is a parameter of one launch.
-6. Screenshots of the test window: `python tools/sc2_ui.py PID shot FILE` (PrintWindow of OUR window only; works while other windows
-   cover it; never grab the screen area, a DPI-unaware process captures the wrong monitor). Keys and clicks into the test game
+6. Screenshots of the test window: `python tools/sc2_ui.py PID shot FILE` (PrintWindow of OUR window only; never grab the screen area, a DPI-unaware process
+   captures the wrong monitor). The capture returns an ALL-BLACK frame at random moments (measured 2026-10-23, also when nothing covered the window): a black frame is a
+   LIMIT OF THE CAPTURE, never a result about the map; take a burst (`burst` op of `tools/ce0_steps.py`: n shots, black ones dropped) or repeat the shot a moment later,
+   and report "no picture obtained" instead of a verdict when none is clean. Keys and clicks into the test game
    (`sc2_ui.py PID key ...`, posted window messages, no focus change) and any size other than 1024x768 must be announced to the Owner before
    such a launch. Saves made by such tests (`GHOSTOPS_TEST_*.SC2Save`) are deleted afterwards; the mute loop must run for the whole life of a
    kept game (`mute_process.ps1 -Seconds N`).
@@ -62,7 +64,7 @@ Use `python tools/test_launch.py --mission M --preset P --seconds N [--keep] [--
 - A test must not touch the Owner's data: jobs use their own campaign file / bank directory / session state (`GHOSTOPS_*` variables set by the runner); probes write only the `GhostOpsDev*` Banks; saves are `CE0_*` and are deleted afterwards.
 - Replica TEXTS come from the shared lines table of the voice lab (`build/shared_lines_dir.txt`; `docs/ARCHITECTURE.md` "Shared lines table"): edit a text in the studio or the table, not in `config/*.json` (the config text is only the fallback). `tools/lines_table.py` is an unchanged copy of the lab module - do not edit it here. Tests must not read the lab folder.
 
-- Compare with the ORIGINAL before blaming the mod: profile `orig_trace_dev` (original mission + trace only) and the `TRACE` / `arr` probes of the `*_dev` profiles; a scene of ours must not take the shared trigger queue before `gt_StartTimers` (it delays the original timers); screenshots of a test window are black while the window is covered, and the original pans the camera to the first wave at about 84 s (a screenshot test must wait for it).
+- Compare with the ORIGINAL before blaming the mod: profile `orig_trace_dev` (original mission + trace only) and the `TRACE` / `arr` probes of the `*_dev` profiles; a scene of ours must not take the shared trigger queue before `gt_StartTimers` (it delays the original timers); a black screenshot is a capture limit (rule 6 of the first section), not a result, and the original pans the camera to the first wave at about 84 s (a screenshot test must wait for it).
 
 ## Developing, checking and handing over missions to the Owner (Owner order, 2026-10-24)
 

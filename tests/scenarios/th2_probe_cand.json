@@ -1,0 +1,92 @@
+{
+ "name": "th2_probe_cand",
+ "mission": "thanson02",
+ "preset": "epidemic_free_ce0_dev",
+ "why": "ground path costs of the candidate places of the gas truck",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "cmd",
+   "text": "ecand 104",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "ecand 108",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "ecand 112",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "ecand 116",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "ecand 120",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "ecand 124",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "ecand 128",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "ecand 132",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "ecand 136",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "ecand 140",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "ecand 144",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "ecand 148",
+   "wait": 1.2
+  },
+  {
+   "op": "expect",
+   "regex": "ECAND",
+   "note": "information"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

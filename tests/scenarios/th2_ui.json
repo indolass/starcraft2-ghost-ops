@@ -1,0 +1,189 @@
+{
+ "name": "th2_ui",
+ "mission": "thanson02",
+ "preset": "epidemic_free_ce0_dev",
+ "why": "the real keys and clicks on the new map: Firebat -> C -> place a container, a Marine A+click detonates it, SCV -> B -> T -> a turret from the kits",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "cmd",
+   "text": "eselfb",
+   "wait": 1.2
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "shot",
+   "file": "u0.png"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "C"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "shot",
+   "file": "u1.png"
+  },
+  {
+   "op": "click",
+   "x": 560,
+   "y": 330
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "shot",
+   "file": "u2.png"
+  },
+  {
+   "op": "cmd",
+   "text": "econt",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "eselmar",
+   "wait": 1.2
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "key",
+   "keys": [
+    "A"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "click",
+   "x": 512,
+   "y": 384
+  },
+  {
+   "op": "sleep",
+   "s": 5
+  },
+  {
+   "op": "shot",
+   "file": "u3.png"
+  },
+  {
+   "op": "cmd",
+   "text": "econt",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "eselscv",
+   "wait": 1.2
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "key",
+   "keys": [
+    "B"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "key",
+   "keys": [
+    "T"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "shot",
+   "file": "u4.png"
+  },
+  {
+   "op": "click",
+   "x": 720,
+   "y": 310
+  },
+  {
+   "op": "sleep",
+   "s": 4
+  },
+  {
+   "op": "shot",
+   "file": "u5.png"
+  },
+  {
+   "op": "click",
+   "x": 440,
+   "y": 440
+  },
+  {
+   "op": "sleep",
+   "s": 4
+  },
+  {
+   "op": "shot",
+   "file": "u6.png"
+  },
+  {
+   "op": "cmd",
+   "text": "econt",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "econt",
+   "wait": 1.2
+  },
+  {
+   "op": "expect",
+   "regex": "ESEL|ECONT|ESELMAR",
+   "note": "information"
+  },
+  {
+   "op": "expect_def",
+   "bank": "GhostOpsDevHanson",
+   "regex": "container|kit",
+   "note": "Hanson log (information)"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

@@ -76,13 +76,10 @@ F. Проверить связку, собрать и установить по�
 - ОТКРЫТО: проверка и настройка фактической области поражения ядерной ракеты.
 
 **THanson01 «Эвакуация» (рекомендуемая версия — ревизия 2, `sniper_next_r2`; тест — `sniper_next_free_r2`; `sniper_next` — прежняя, сохранена для продолжения)**
-- ОТКРЫТО: вид контейнера и установка через обычный интерфейс (клавиша C, место и дальность, цена, взрыв) — довести как один эпизод и пройти настоящим вводом.
-- ОТКРЫТО: полный переход от первой колонны ко второй (в проверке подтверждены оплата, объявления и отправки; ранние маршрутные события не сверены).
-- ОТКРЫТО: завершить согласованную систему комплектов турелей для строительства игроком (учёт подтверждён; не проверены кнопка строительства для живого игрока, цена и число, результат миссии в кампании).
+- СДЕЛАНО (2026-10-24, см. последний раздел): контейнер и турель из комплекта через настоящий ввод; результат кампании (победа, поражение, повтор без двойного зачёта); режимы «Кампания» / «Свободный тест»; переход колонны 1 → 2 в сценарии. НЕ ПРОВЕРЕНО человеком: ощущение кнопки, цена и число комплектов, баланс.
 
-**THanson02 «Эпидемия» — первый этап реализации**
-Законченный эпизод: выезд геллионов → нехватка топлива → сообщения Свонна и Тайкуса → поиск и захват газовоза → заправка → возвращение. Место газовоза Owner выбирает по открытой рабочей копии (`tmp/editor_view/THanson02_view.SC2Map`); газовоз, враги, топливо и сценарий ещё НЕ добавлены.
-Затем: проверка нагрузки на оборону и подключение согласованных ночных операций. Остальные согласованные идеи (раздел 8, таблица) остаются в плане: это порядок реализации, а не их отмена.
+**THanson02 «Эпидемия» — первая играбельная версия (`epidemic_free`, 2026-10-24)**
+Свободный тест с конечным отрядом реализован и проверен сценариями (маршрут спасения газовоза, день / ночь, транспорт, контейнеры по зданиям, победа, реальный ввод). Подробности, числа и пределы — в последнем разделе. Остальные согласованные идеи (раздел 8, таблица) остаются в плане: это порядок реализации, а не их отмена.
 
 ## 4. Общие правила проекта
 
@@ -432,9 +429,9 @@ F. Проверить связку, собрать и установить по�
 
 | Миссия | Состояние | Следующий замысел |
 |---|---|---|
-| THanson01 «Эвакуация» | sniper по отчёту реализован; перепроверить статус Owner | Ручной запуск конвоя; один призрак с постоянной маскировкой и экспериментальным скорострельным Snipe; сохранённые налёты, сильное ПВО базы. Позже подготовка 1000/500, комплекты турелей и ограниченные наёмники |
+| THanson01 «Эвакуация» | [ИСТОРИЧЕСКАЯ СТРОКА до 2026-10-22; актуальный состав (два призрака, контейнеры, комплекты турелей, ревизия 2) и состояние: раздел 3.1 и 8.1] sniper по отчёту реализован; перепроверить статус Owner | Ручной запуск конвоя; один призрак с постоянной маскировкой и экспериментальным скорострельным Snipe; сохранённые налёты, сильное ПВО базы. Позже подготовка 1000/500, комплекты турелей и ограниченные наёмники |
 | TTychus01 «Хватай и беги» | Концепция согласована, реализация не подтверждена | Нет развития; сильный гарнизон у базы; обычные мародёры и медик; два призрака с постоянной маскировкой и штатным Snipe; зоны обнаруженных детекторов; сохранить сюрприз стражей |
-| THanson02 «Эпидемия» | Концепция и исследование | Днём подготовка, ночью рискованные вылазки; часть зданий уязвима ночью; ограниченная ночная маскировка; один транспорт. Детали оружия и ресурсов не утверждены |
+| THanson02 «Эпидемия» | [с 2026-10-24 реализован свободный тест `epidemic_free`: раздел «THanson02» в конце файла; ниже замысел] Концепция и исследование | Днём подготовка, ночью рискованные вылазки; часть зданий уязвима ночью; ограниченная ночная маскировка; один транспорт. Детали оружия и ресурсов не утверждены |
 | Остальная терранская кампания | Позже | Последовательный разбор каждой миссии и отдельный тест |
 | Протосские миссии | Идея | Тактические операции тёмных тамплиеров; рабочее название «Невидимые войны» |
 
@@ -1013,3 +1010,37 @@ Temporary test kit, NOT an approved balance. Started straight from the mission c
 - **Normal variant (`sniper_next_r2`):** from the campaign window, step 3 "Эвакуация": the pre-order of kits (recommended **15**, limit 30; the hint names the sectors: base / colonists' houses / air approaches = 8 / 4 / 3, built from `turret_kits.sectors`, the same positions the removed ready turrets had). Cost = kits x 75 minerals (price EXPERIMENTAL) + the preparation fee 1000 / 500 (the one number the contract 9.2 calls agreed); a shortage is shown, no credit. Paid once per operation (a restart does not pay again), the order reaches the map through the operation plan (`go_hKitOrdered`). The map writes only the START row of the campaign journal: a victory of this mission does NOT change the campaign stock yet. A launch from the launcher card uses the recommended order as a test budget (never charged).
 - **Checked in the game (dev probe, 3 kits ordered):** the order is valid only after the base is handed over (Ghost enters the settlement); start -> reserved (left 2); the real Esc cancel of the structure -> freed (left 3); completion -> spent; a damaged-and-killed unfinished turret -> consumed; a finished turret killed -> nothing returns; no kit left -> the build order is refused (T0239-T0249); save at a reserved kit -> cancel -> load -> reserved again, then the construction finishes with ONE spent kit.
 - **Not checked / open:** the look and the place of the build button for the real player (a real click on the SCV card); the number 15 and the price are test numbers; the campaign result of THanson01 (victory proposal) is not connected; the price / fee are not approved.
+
+
+### THanson01 revision 2 finished and THanson02 "Epidemic" first playable free test (2026-10-24)
+
+Status words: [ЭКСПЕРИМЕНТ] = built and checked by scripts / scenarios, numbers are test values, NOT Owner-approved. No human playthrough of either mission was done by the developer; the balance and how interesting a run is are for the Owner.
+
+**THanson01 revision 2 (`sniper_next_r2`, free test `sniper_next_free_r2`)**
+- Launch modes are named on the cards: "Кампания" (`sniper_next_r2`: campaign window step 3, preparation 1000 minerals + 500 gas agreed, 75 minerals per turret kit EXPERIMENTAL, recommended 15, limit 30 EXPERIMENTAL) and "Свободный тест" (`sniper_next_free_r2`: nothing charged, nothing credited, never offered for crediting).
+- Turret from the kit through the REAL interface (checked on `thanson01`, scenarios `th1_ui_*`, `th1_kits_ui`; also on `thanson02`, T0270): select the SCV -> B -> T (button "Построить ракетную турель") -> click a free place -> the kit is reserved (kits left 8 -> 7), no mineral charge; with no kit the order is refused with a message. An invalid spot gives the stock "placement impossible" text (T0269).
+- Campaign result (`tools/th1_campaign_e2e.py`, separate data, a dev scenario forces the quota - NOT a playthrough): payment -> start -> victory ends the operation -> the remainder of unspent kits is offered once -> accepted once; a second read / restart does not credit twice; a defeat gives no income; continue / restart does not charge again. The map writes only the journal rows; the launcher commits.
+- Container as one episode (real keys, T0270 and the earlier `th1_hotkey_c`, `th1_ui_*`): select a Firebat -> C -> the pointer shows the range and the model -> click -> a container is placed (gas 100 -> 75, "9 of 10 left") -> a Marine with A + click detonates it by the FIRST hit -> a visible blast; cancelling with Esc costs nothing; a second container on the same spot is refused; a far order is walked to the range. In `thanson02` the blast also damages ENEMY STRUCTURES twice as hard (`structure_bonus` 2).
+- Convoy 1 -> 2 transition: scenario `th1_convoy_cycle` (payment, announcements, departure, return, second convoy).
+- Not checked: the feel of the build button for a human, the price and the number of kits, a human playthrough.
+
+**THanson02 "Epidemic" (`epidemic_free`, card "Эпидемия — Тест: бесплатный отряд")**
+The original installed map (story, day / night, enemy, victory = all counted infested structures destroyed) with a Ghost Ops layer: `core/GhostOpsEpidemic.galaxy` + `core/GhostOpsHanson.galaxy` (containers, kits) + the detector analysis of the stock maps; adapter `adapters/thanson02/`, config `config/thanson02.json`. Own map file `GhostOps_THanson02_epidemic_free.SC2Map`; no campaign link, nothing charged.
+- Squad: 2 Ghosts (45 life; Snipe without energy cost; day cloak free, night cloak net -2.5 energy per second, a bar per Ghost), the stock Marines / Firebats / Medics / SCVs, 2 extra Hellions (`epidemic.hellions.extra`) on top of the story drop, no production, no permanent map vision. 8 turret kits (`hanson.turret_kits.order`, recommended 8, limit 20), containers: C, 25 gas, 10 in all, 200 damage radius 3 (x2 on structures).
+- Fuel: tank 100, 1 per cell travelled, base gas fills only 45% (`base_fill_poor`); an empty hellion stops (speed x0.01 buff), still shoots, repairs and is refuelled; the energy bar and "Нет топлива" are shown, incl. the group selection. Scenes (each once, saved, texts through the lines bridge, no new voice): bad gas (Swann) -> abandoned truck (Tychus) -> mark + 6 s reveal of radius 14 + persistent minimap mark; after the capture Swann explains the field refuelling; after the return the local gas is "prepared" (hellions refill to 100%) and the truck is refilled from the map gas (1 gas = 4 fuel).
+- Truck: placed by ground path costs from the base (config `epidemic.truck`, 96,132), 5 infested + 3 civilians around, neutral until captured once by at least 2 infantry, vulnerable afterwards, its loss is not a defeat. Field refuelling within 6 cells is automatic and the fuel really leaves the truck.
+- Day / night: up to 6 big infested buildings (CC, Starport, Factory, Armory, EngBay) are protected by day (a shield behaviour, labelled, Hanson explains once on the first daytime attack) and vulnerable at night; they still count for the standard victory.
+- Night transport (a Medivac, from night 2): standard load / unload, the player sets the route, a warning 60 s before dawn, after dawn new rides are closed but the current one may finish, it leaves after the unload; identity, health and death are saved, a dead transport is not replaced, victory does not depend on it.
+- Saves restore: fuel, truck, transport, scenes, the day / night clock, protection, kits, containers.
+
+Checked in the game (queue jobs, protected test launch; dev presets `epidemic_free_ce0_dev`, `epidemic_free_cycle_dev` with a CE-0 probe, removed from `Maps\GhostOps` afterwards):
+- Plain launches of the final maps (`thanson02 epidemic_free`, `thanson01 sniper_next_r2` and `_free_r2`): ScriptError has no compile / load error (T0264-T0266).
+- Rescue route (T0268, scripted orders, NOT a human run): hellions sent far by day run dry (fuel 0, `dry=1`), the scenes of Swann / Tychus play, infantry captures the truck (fuel 400), refuelling takes 400 -> 300 from the truck while the first hellion grows 0 -> 100; save at 300 -> load -> 300 restored, the other hellions are refilled until the truck is empty (0.0), the truck returns to the base, "local fuel prepared", the truck is refilled 10 -> 310 from the gas. No fuel appeared or vanished at the load.
+- Day / night, transport (T0262): the transport arrives at night 2 (health 150), loads 4, flies, 90 life after damage, save / load at night, the dawn warning, at dawn `open 0` (no new ride) while the current ride finished; unloaded, left, returned the next night as the same unit with 90 life, killed -> no replacement at night 4. Day protection: the first daytime attack on a protected building plays the Hanson scene once.
+- Containers vs structures (T0267): a blast on a shielded building by day does 1 damage, on an unshielded one 600, at night on a shielded one 600.
+- Standard victory (T0258): every counted structure killed (144 -> 0) -> the original victory chain -> result.
+- Real UI (T0270): Firebat -> C -> placed, Marine A + click -> detonated, SCV -> B -> T -> click -> a kit reserved.
+
+Experimental numbers (all in `config/thanson02.json`, none approved): tank 100, 1 per cell, base fill 45%, field radius 6, truck fuel 400 / speed 2.0 / life 150 / capture 2 units / 5 + 3 defenders, 2 extra hellions, night cloak -2.5, 2 Ghosts of 45 life, 8 kits, 10 containers at 25 gas, structure bonus x2, up to 6 protected buildings, transport from night 2 with a 60 s warning.
+
+Open / limits (honest): no human playthrough; the look of the truck ring, the protected label and the transport route on screen were seen only in single screenshots (the capture gives black frames at random); the scenes were read from logs, not heard (no new voice); the dev probes shorten the day / night cycle, the plain map keeps the original lengths; whether 2 extra hellions and 8 kits make the mission playable is for the Owner to judge.

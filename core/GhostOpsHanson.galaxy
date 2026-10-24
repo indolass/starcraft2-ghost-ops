@@ -55,6 +55,7 @@ bool go_hContOn;
 bool go_hAllowRefinery;        // the one exception of the development lock: the gas source may be rebuilt
 bool go_hGasWarned;            // the "gas source lost" message was shown (saved with the game)
 bool go_hFuelOn;
+bool go_hContStrBonus;
 int go_hContLimit;
 int go_hContCost;
 int go_hContOwner;
@@ -641,6 +642,10 @@ bool GhostOps_Hanson_ContDied (bool lp_testConds, bool lp_runActions) {
     if ((lv_k != null) && ((UnitGetOwner(lv_k) == 1) || (UnitGetOwner(lv_k) == 4))) {
         go_hContBlasts += 1;
         UnitCreateEffectPoint(lv_k, "GhostOpsCBlast", lv_pos);
+        if (go_hContStrBonus) {
+            UnitCreateEffectPoint(lv_k, "GhostOpsCBlastStr", lv_pos);
+        }
+
         if (PlayerDifficulty(1) >= 3) {
             if (go_hContFriendHard > 0.0) {
                 UnitCreateEffectPoint(lv_k, "GhostOpsCBlastOwnHard", lv_pos);
@@ -1071,6 +1076,8 @@ void GhostOps_Hanson_MakeFreeMarines () {
 }
 
 void GhostOps_Hanson_Start () {
+    go_hDlg = c_invalidDialogId;
+    go_hHudDlg = c_invalidDialogId;
     GhostOps_Hanson_MakeTurrets();
     GhostOps_Hanson_MakeFreeMarines();
     if (go_hKitOn) {
@@ -1088,6 +1095,10 @@ void GhostOps_Hanson_Start () {
 
     if (go_hCommand) {
         GhostOps_Hanson_CreateUI();
+    }
+
+    if (go_hCommand || go_hContOn || go_hFuelOn) {
+        // the dialogs are built again after a load (the convoy button of THanson01, the gas / container line of both missions)
         go_hLoadTrig = TriggerCreate("GhostOps_Hanson_OnLoad");
         TriggerAddEventLoadGameDone(go_hLoadTrig);
     }

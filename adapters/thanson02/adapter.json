@@ -1,0 +1,76 @@
+{
+  "schema_version": 1,
+  "mission": "thanson02",
+  "title": "Outbreak",
+  "source_map_file": "THanson02.SC2Map",
+  "output_map_file": "GhostOps_THanson02.SC2Map",
+  "script_member": "MapScript.galaxy",
+  "adapter_source": "adapters/thanson02/adapter.galaxy",
+  "config": "config/thanson02.json",
+  "modules": [
+    "core/GhostOpsHanson.galaxy",
+    "core/GhostOpsEpidemic.galaxy"
+  ],
+  "generators": [
+    "hanson",
+    "epidemic"
+  ],
+  "detector_analysis": true,
+  "start_hooks": [
+    {
+      "function": "gt_IntroSequence_Func",
+      "after": "TriggerExecute(gt_StartGame, true, false);",
+      "call": "GhostOps_OnMissionStart();"
+    }
+  ],
+  "extra_hooks": [
+    {
+      "function": "gt_TimerCycling_Func",
+      "after": "gv_night += 1;",
+      "call": "GhostOps_Epi_OnNight(gv_night, gv_nIGHT_DURATION);"
+    },
+    {
+      "function": "gt_TimerCycling_Func",
+      "after": "gv_day += 1;",
+      "call": "GhostOps_Epi_OnDay(gv_day, gv_dAY_DURATION);"
+    },
+    {
+      "function": "gt_IntroHellions_Func",
+      "after": "libNtve_gf_RescueUnit2(lv_introHellionGroup, gv_pLAYER_01_USER, true);",
+      "call": "GhostOps_Epi_ExtraHellions(RegionGetCenter(RegionFromId(20)));"
+    },
+    {
+      "function": "gt_Init06Difficulties_Func",
+      "after": "gv_nightDefenderCooldown = libNtve_gf_DifficultyValueFixed(16.0, 12.0, 8.0, 8.0);",
+      "call": "GhostOps_ApplyEpidemicConfig(); if (go_eDevDay > 0.0) { gv_dAY_DURATION = go_eDevDay; gv_nIGHT_DURATION = go_eDevNight; }"
+    }
+  ],
+  "init_hook": {
+    "function": "gt_Initialization_Func",
+    "before": "libCamp_gf_LoadCampaignData(libCamp_ge_MapID_MapTHanson02);",
+    "call": "GhostOps_CaptureInit();"
+  },
+  "required_markers": [
+    "gt_StartGame",
+    "gt_IntroSequence_Func",
+    "gt_TimerCycling_Func",
+    "gt_IntroHellions_Func",
+    "gt_Init06Difficulties_Func",
+    "gt_Initialization_Func",
+    "gt_VictoryInfestationPurged_Func",
+    "void InitLibs"
+  ],
+  "ce0_extra": "adapters/thanson02/ce0_extra.galaxy",
+  "ce0_hooks": [
+    {
+      "function": "gt_IntroSequence_Func",
+      "after": "TriggerExecute(gt_StartGame, true, false);",
+      "call": "GhostOps_Ce0_Start();"
+    },
+    {
+      "function": "gt_Victory_Func",
+      "before": "VictoryPanelAddAchievement(\"THanson02_1\");",
+      "call": "GhostOps_Ce0_OnVictory();"
+    }
+  ]
+}

@@ -1,0 +1,243 @@
+{
+ "name": "th2_day_night",
+ "mission": "thanson02",
+ "preset": "epidemic_free_cycle_dev",
+ "why": "the transport cycle: arrives at night 2, load, fly, save / load, dawn (the ride may end, no new ride), unload, leaves, comes back as the same unit, dies and is not replaced",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "cmd",
+   "text": "eprot",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "ecam 115 31",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "eatkprot",
+   "wait": 1.2
+  },
+  {
+   "op": "sleep",
+   "s": 14
+  },
+  {
+   "op": "cmd",
+   "text": "estat",
+   "wait": 1.2
+  },
+  {
+   "op": "shot",
+   "file": "d1.png"
+  },
+  {
+   "op": "expect",
+   "regex": "EPROT|ESTAT",
+   "note": "information day protection"
+  },
+  {
+   "op": "until",
+   "cmd": "eclock",
+   "grep": "night 1/2",
+   "every": 6,
+   "timeout": 330
+  },
+  {
+   "op": "cmd",
+   "text": "eship",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "ehurtship 90",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "eshipload 4",
+   "wait": 1.2
+  },
+  {
+   "op": "sleep",
+   "s": 12
+  },
+  {
+   "op": "cmd",
+   "text": "eship",
+   "wait": 1.2
+  },
+  {
+   "op": "shot",
+   "file": "t1.png"
+  },
+  {
+   "op": "cmd",
+   "text": "eshipgo 100 108",
+   "wait": 1.2
+  },
+  {
+   "op": "sleep",
+   "s": 14
+  },
+  {
+   "op": "cmd",
+   "text": "eship",
+   "wait": 1.2
+  },
+  {
+   "op": "expect",
+   "regex": "ESHIP",
+   "note": "information ship at night 2"
+  },
+  {
+   "op": "save",
+   "name": "CE0_TH2_B"
+  },
+  {
+   "op": "load",
+   "name": "CE0_TH2_B"
+  },
+  {
+   "op": "sleep",
+   "s": 4
+  },
+  {
+   "op": "cmd",
+   "text": "eship",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "eclock",
+   "wait": 1.2
+  },
+  {
+   "op": "expect",
+   "regex": "ESHIP|ECLOCK",
+   "note": "information after the load"
+  },
+  {
+   "op": "until",
+   "cmd": "eclock",
+   "grep": "night 0/2",
+   "every": 6,
+   "timeout": 200
+  },
+  {
+   "op": "cmd",
+   "text": "eship",
+   "wait": 1.2
+  },
+  {
+   "op": "sleep",
+   "s": 5
+  },
+  {
+   "op": "cmd",
+   "text": "eship",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "eshipgo 78 104",
+   "wait": 1.2
+  },
+  {
+   "op": "sleep",
+   "s": 16
+  },
+  {
+   "op": "cmd",
+   "text": "eshipunl 78 104",
+   "wait": 1.2
+  },
+  {
+   "op": "sleep",
+   "s": 22
+  },
+  {
+   "op": "cmd",
+   "text": "eship",
+   "wait": 1.2
+  },
+  {
+   "op": "shot",
+   "file": "t2.png"
+  },
+  {
+   "op": "expect",
+   "regex": "ESHIP",
+   "note": "information dawn: ride finished, unloaded, left"
+  },
+  {
+   "op": "until",
+   "cmd": "eclock",
+   "grep": "night 1/3",
+   "every": 6,
+   "timeout": 200
+  },
+  {
+   "op": "cmd",
+   "text": "eship",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "ekillship",
+   "wait": 1.2
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "eship",
+   "wait": 1.2
+  },
+  {
+   "op": "until",
+   "cmd": "eclock",
+   "grep": "night 1/4",
+   "every": 8,
+   "timeout": 300
+  },
+  {
+   "op": "cmd",
+   "text": "eship",
+   "wait": 1.2
+  },
+  {
+   "op": "expect",
+   "regex": "ESHIP|ECLOCK",
+   "note": "information the transport after its death: no replacement"
+  },
+  {
+   "op": "expect_def",
+   "bank": "GhostOpsDevEpi",
+   "regex": ".",
+   "note": "Epi log (information)"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

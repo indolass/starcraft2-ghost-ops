@@ -81,7 +81,7 @@ ACADEMY_REMOVED_ABILS = (3, 4, 5, 6)
 # a CSound entry with the clip id makes it playable with SoundLink("<id>", 0).
 AUDIO_DIR = 'Assets' + chr(92) + 'Sounds' + chr(92) + 'GhostOps' + chr(92)
 AUDIO_ID = re.compile(r'GhostOps[A-Za-z0-9]{3,40}')
-TALK_GROUPS = ('raynor', 'swann', 'horner', 'marine', 'adjutant', 'ghost')  # index = group number of GhostOps_Talk() in core/GhostOpsCore.galaxy
+TALK_GROUPS = ('raynor', 'swann', 'horner', 'marine', 'adjutant', 'ghost', 'tychus', 'hanson')  # index = group number of GhostOps_Talk() in core/GhostOpsCore.galaxy
 SCENE_TEXT_PREFIX = 'Param/Value/GhostOpsScene_'
 HANSON_TEXT_PREFIX = 'Param/Value/GhostOpsH_'
 HANSON_TEXT_KEYS = ('BtnPreparing', 'BtnReady', 'BtnActive', 'ReadyMsg', 'SentMsg')
@@ -188,6 +188,8 @@ def validate_config(cfg):
         errs += validate_scene(cfg)
     if cfg.get('hanson') is not None:
         errs += validate_hanson(cfg)
+    if cfg.get('epidemic') is not None:
+        errs += validate_epidemic(cfg)
     if cfg.get('ce0') is not None:
         errs += validate_ce0(cfg)
     if cfg.get('campaign') is not None:
@@ -705,6 +707,8 @@ def validate_hanson(cfg):
             for k, (lo, hi) in {'limit': (1, 24), 'gas_cost': (0, 500), 'damage': (1, 2000), 'radius': (0.5, 8), 'life': (1, 500), 'place_range': (0.5, 6), 'min_free': (0, 4)}.items():
                 if not _num(ct.get(k)) or not lo <= ct[k] <= hi:
                     errs.append('hanson.containers.%s must be a number %s..%s' % (k, lo, hi))
+            if 'structure_bonus' in ct and not (_num(ct['structure_bonus']) and 0 <= ct['structure_bonus'] <= 6):
+                errs.append('hanson.containers.structure_bonus must be a number 0..6 (extra blast damage on enemy structures, x damage)')
             if ct.get('owner') not in (0, 15):
                 errs.append('hanson.containers.owner must be 0 (neutral)')
             fr = ct.get('friendly')
@@ -1116,6 +1120,9 @@ def hanson_fragments(h, cfg):
            '    <CEffectEnumArea id="GhostOpsContainerArea">', '        <EditorCategories value="Race:Terran"/>', '        <AreaArray Radius="%s"/>' % g(ct['radius']), '        <SearchFilters value="Ground;Missile,Dead,Hidden"/>', '    </CEffectEnumArea>']
     # enemies: ground, no air, no neutral (the other containers: no chain detonation), no missiles; own side: the same without enemies, damage = damage x the multiplier
     eff += area('GhostOpsCBlast', 'Ground;Player,Ally,Neutral,Air,Missile,Stasis,Dead,Hidden,Invulnerable', ct['damage'])
+    if ct.get('structure_bonus', 0) > 0:
+        # an extra blast on enemy STRUCTURES only (a container is a weak weapon against a building): damage x bonus on top of the normal blast
+        eff += area('GhostOpsCBlastStr', 'Ground,Structure;Player,Ally,Neutral,Air,Missile,Stasis,Dead,Hidden,Invulnerable', ct['damage'] * ct['structure_bonus'])
     for key, mult in (('Hard', ct['friendly']['hard']), ('Other', ct['friendly']['other'])):
         if mult > 0:
             eff += area('GhostOpsCBlastOwn' + key, 'Ground;Enemy,Neutral,Air,Missile,Stasis,Dead,Hidden,Invulnerable', ct['damage'] * mult)
@@ -1293,6 +1300,9 @@ def catalog_fragments(cfg):
         for name, frag in hanson_fragments(cfg['hanson'], cfg).items():
             if frag:
                 frags[name] = frags.get(name, '') + frag
+    if cfg.get('epidemic'):
+        for name, frag in epidemic_fragments(cfg['epidemic']).items():
+            frags[name] = frags.get(name, '') + frag
     if cfg.get('detector_analysis') and cfg['detector_analysis'].get('enabled'):
         for name, frag in detector_analysis_fragments(cfg['detector_analysis']).items():
             frags[name] = frags.get(name, '') + frag
@@ -1494,7 +1504,7 @@ def gen_hanson(cfg):
     lines += ['    go_hAllowRefinery = %s;' % b(h.get('allow_refinery')), '    go_hContOn = %s;' % b(ct.get('enabled')), '    go_hFuelOn = %s;' % b(fu.get('enabled'))]
     if ct.get('enabled'):
         lines += ['    go_hContLimit = %d;' % ct['limit'], '    go_hContCost = %d;' % ct['gas_cost'], '    go_hContOwner = %d;' % ct['owner'], '    go_hContMinFree = %.2f;' % ct['min_free'], '    go_hContRange = %.2f;' % ct['place_range'],
-                  '    go_hContFriendHard = %.4f;' % ct['friendly']['hard'], '    go_hContFriendOther = %.4f;' % ct['friendly']['other']]
+                  '    go_hContFriendHard = %.4f;' % ct['friendly']['hard'], '    go_hContFriendOther = %.4f;' % ct['friendly']['other'], '    go_hContStrBonus = %s;' % ('true' if ct.get('structure_bonus', 0) > 0 else 'false')]
     if fu.get('enabled'):
         lines.append('    go_hFuelCost = %d;' % fu['gas_cost'])
     tkc = h.get('turret_kits') or {}
@@ -1516,6 +1526,131 @@ def gen_hanson(cfg):
         lines.append('    GhostOps_ApplyHansonTestConfig();')
     lines += ['}', '']
     return chr(10).join(lines)
+
+
+EPI_TEXT_PREFIX = 'Param/Value/GhostOpsE_'
+EPI_TEXT_KEYS = ('SwannName', 'TychusName', 'HansonName', 'L_GAS', 'L_TRUCK', 'L_CAPTURE', 'L_BASE', 'L_SHIP', 'L_PROT', 'MsgTruckLost', 'MsgShipHere', 'MsgShipLost', 'MsgDawn',
+                 'HudSel', 'HudMin', 'HudAll', 'HudDry', 'HudTruck', 'HudTruckFree', 'HudTruckLost', 'ProtDay', 'ProtNight', 'ObjTruckTitle', 'ObjTruckText', 'NoFuelName', 'NoFuelDesc')
+
+
+def validate_epidemic(cfg):
+    """THanson02 "Outbreak" free test version (config key "epidemic"; core/GhostOpsEpidemic.galaxy). Every number is an experimental first value, never an Owner-approved one."""
+    e = cfg['epidemic']
+    errs = []
+    if not isinstance(e, dict):
+        return ['epidemic must be an object']
+
+    def num(d, k, lo, hi, where):
+        v = d.get(k) if isinstance(d, dict) else None
+        if not (_num(v) and lo <= v <= hi):
+            errs.append('epidemic.%s.%s must be a number %g..%g' % (where, k, lo, hi))
+
+    if not isinstance(e.get('debug_log'), bool):
+        errs.append('epidemic.debug_log must be boolean')
+    if 'dev_cycle' in e:
+        name = (cfg.get('profile') or {}).get('name', '')
+        dc = e['dev_cycle']
+        if not str(name).endswith('_dev') or not (isinstance(dc, dict) and set(dc) == {'day', 'night'} and all(_num(v) and 60 <= v <= 600 for v in dc.values())):
+            errs.append('epidemic.dev_cycle is development only (profile name ending with _dev, {"day": 60..600, "night": 60..600})')
+    for k in ('base', 'fuel', 'truck', 'hellions', 'night_cloak', 'protected', 'transport', 'hud'):
+        if not isinstance(e.get(k), dict):
+            errs.append('epidemic.%s must be an object' % k)
+    if errs:
+        return errs
+    for k, lo, hi in (('x', 0, 400), ('y', 0, 400), ('radius', 3, 60)):
+        num(e['base'], k, lo, hi, 'base')
+    for k, lo, hi in (('tank', 10, 1000), ('per_cell', 0.1, 20), ('base_fill_poor', 0.05, 1), ('base_fill_good', 0.05, 1), ('base_rate', 1, 200), ('field_radius', 2, 20), ('field_rate', 1, 200), ('max_step', 2, 50)):
+        num(e['fuel'], k, lo, hi, 'fuel')
+    t = e['truck']
+    for k, lo, hi in (('x', 0, 400), ('y', 0, 400), ('fuel_max', 10, 5000), ('fuel_start', 0, 5000), ('speed', 0.5, 4), ('life', 50, 1000), ('capture_radius', 2, 20), ('capture_units', 1, 12),
+                      ('gas_to_fuel', 0.1, 50), ('base_refill_rate', 1, 500), ('reveal_radius', 4, 40), ('reveal_seconds', 1, 30)):
+        num(t, k, lo, hi, 'truck')
+    d = t.get('defenders')
+    if not isinstance(d, dict):
+        errs.append('epidemic.truck.defenders must be an object')
+    else:
+        for k, lo, hi in (('infested_terran', 0, 20), ('civilian', 0, 20), ('radius', 2, 15)):
+            num(d, k, lo, hi, 'truck.defenders')
+    num(e['hellions'], 'extra', 0, 10, 'hellions')
+    num(e['night_cloak'], 'net_per_second', -50, 0, 'night_cloak')
+    p = e['protected']
+    num(p, 'max', 0, 8, 'protected')
+    if not (isinstance(p.get('types'), list) and p['types'] and len(p['types']) <= 8 and all(re.fullmatch(r'[A-Za-z0-9]{3,40}', str(x)) for x in p['types'])):
+        errs.append('epidemic.protected.types must be 1..8 unit type ids')
+    tr = e['transport']
+    if not isinstance(tr.get('enabled'), bool):
+        errs.append('epidemic.transport.enabled must be boolean')
+    num(tr, 'first_night', 1, 20, 'transport')
+    num(tr, 'dock_radius', 4, 60, 'transport')
+    num(tr, 'warn_seconds', 10, 200, 'transport')
+    dk = tr.get('dock')
+    if not (isinstance(dk, list) and len(dk) == 2 and all(_num(v) and 0 <= v <= 400 for v in dk)):
+        errs.append('epidemic.transport.dock must be [x, y]')
+    for k, lo, hi in (('offset_x', 0, 800), ('offset_y', 0, 800), ('width', 100, 900), ('height', 20, 200)):
+        num(e['hud'], k, lo, hi, 'hud')
+    texts = e.get('texts')
+    if not isinstance(texts, dict) or set(texts) != set(EPI_TEXT_KEYS):
+        errs.append('epidemic.texts must have exactly the keys %s' % (EPI_TEXT_KEYS,))
+    else:
+        for k, v in texts.items():
+            if not isinstance(v, dict) or not all(isinstance(v.get(l), str) and v[l] and chr(10) not in v[l] for l in ('ru', 'en')):
+                errs.append('epidemic.texts.%s needs non-empty single-line ru and en texts' % k)
+    if not cfg.get('ghost_tuning'):
+        errs.append('epidemic needs ghost_tuning (the Ghost override of this mission)')
+    if not cfg.get('hanson'):
+        errs.append('epidemic needs the hanson key (containers, turret kits, free squad of the same module family)')
+    return errs
+
+
+def gen_epidemic(cfg):
+    """GhostOps_ApplyEpidemicConfig(): constants of the THanson02 module."""
+    e = cfg.get('epidemic')
+    if not e:
+        return chr(10).join(['// Generated THanson02 configuration', 'void GhostOps_ApplyEpidemicConfig () {', '    go_eEnabled = false;', '}', ''])
+    gt = cfg['ghost_tuning']
+    f, t, tr, p = e['fuel'], e['truck'], e['transport'], e['protected']
+    b = lambda v: 'true' if v else 'false'  # noqa: E731
+    lines = ['// Generated THanson02 configuration', 'void GhostOps_ApplyEpidemicConfig () {', '    go_eEnabled = true;', '    go_eDebug = %s;' % b(e['debug_log']),
+             '    go_eBase = Point(%.4f, %.4f);' % (e['base']['x'], e['base']['y']), '    go_eBaseR = %.2f;' % e['base']['radius'],
+             '    go_eTank = %.2f;' % f['tank'], '    go_ePerCell = %.3f;' % f['per_cell'], '    go_eFillPoor = %.3f;' % f['base_fill_poor'], '    go_eFillGood = %.3f;' % f['base_fill_good'],
+             '    go_eBaseRate = %.2f;' % f['base_rate'], '    go_eFieldR = %.2f;' % f['field_radius'], '    go_eFieldRate = %.2f;' % f['field_rate'], '    go_eMaxStep = %.2f;' % f['max_step'],
+             '    go_eTruckAt = Point(%.4f, %.4f);' % (t['x'], t['y']), '    go_eTruckFuelMax = %.2f;' % t['fuel_max'], '    go_eTruckFuel0 = %.2f;' % t['fuel_start'],
+             '    go_eCapR = %.2f;' % t['capture_radius'], '    go_eCapN = %d;' % t['capture_units'], '    go_eGasToFuel = %.3f;' % t['gas_to_fuel'], '    go_eTruckBaseRate = %.2f;' % t['base_refill_rate'],
+             '    go_eRevealR = %.2f;' % t['reveal_radius'], '    go_eRevealSec = %.2f;' % t['reveal_seconds'],
+             '    go_eDefTerran = %d;' % t['defenders']['infested_terran'], '    go_eDefCivil = %d;' % t['defenders']['civilian'], '    go_eDefR = %.2f;' % t['defenders']['radius'],
+             '    go_eExtraHell = %d;' % e['hellions']['extra'],
+             '    go_eNightNet = %.3f;' % e['night_cloak']['net_per_second'], '    go_eDayNet = 0.0;', '    go_eRegen = %.3f;' % gt['regen_per_second'],
+             '    go_eDevDay = %.1f;' % (e.get('dev_cycle') or {}).get('day', 0), '    go_eDevNight = %.1f;' % (e.get('dev_cycle') or {}).get('night', 0),
+             '    go_eProtMax = %d;' % p['max'], '    go_eProtTypeN = %d;' % len(p['types'])]
+    for i, name in enumerate(p['types']):
+        lines.append('    go_eProtType[%d] = "%s";' % (i, name))
+    lines += ['    go_eShipOn = %s;' % b(tr['enabled']), '    go_eShipFirstNight = %d;' % tr['first_night'], '    go_eDock = Point(%.4f, %.4f);' % (tr['dock'][0], tr['dock'][1]),
+              '    go_eDockR = %.2f;' % tr['dock_radius'], '    go_eWarnSec = %.1f;' % tr['warn_seconds'],
+              '    go_eHudX = %d;' % e['hud']['offset_x'], '    go_eHudY = %d;' % e['hud']['offset_y'], '    go_eHudW = %d;' % e['hud']['width'], '    go_eHudH = %d;' % e['hud']['height'], '}', '']
+    return chr(10).join(lines)
+
+
+def epidemic_fragments(e):
+    """Catalog overrides of the mission (map local): the Hellion carries its fuel as the energy bar, the gas truck is a stock TankerTruck with a fuel stock and a speed of the config,
+    an empty hellion gets a buff that stops it (it still shoots, is repaired and refuelled)."""
+    g = lambda v: '%g' % v  # noqa: E731
+    nl = chr(10)
+    f, t = e['fuel'], e['truck']
+    bs = chr(92)
+    return {
+        'UnitData.xml': nl.join([
+            '    <CUnit id="Hellion">', '        <EnergyStart value="%s"/>' % g(round(f['tank'] * f['base_fill_poor'], 3)), '        <EnergyMax value="%s"/>' % g(f['tank']), '        <EnergyRegenRate value="0"/>', '    </CUnit>',
+            '    <CUnit id="TankerTruck">', '        <LifeStart value="%s"/>' % g(t['life']), '        <LifeMax value="%s"/>' % g(t['life']), '        <Speed value="%s"/>' % g(t['speed']),
+            '        <EnergyStart value="%s"/>' % g(t['fuel_start']), '        <EnergyMax value="%s"/>' % g(t['fuel_max']), '        <EnergyRegenRate value="0"/>', '    </CUnit>', '']),
+        # the circle of the refuelling radius around the truck while the player has it selected (the same way as the circle of a container)
+        'ActorData.xml': nl.join(['    <CActorRange id="GhostOpsTruckRadius">', '        <Range value="%s"/>' % g(f['field_radius']), '        <On Terms="Behavior.GhostOpsTruckShow.On" Send="Create"/>',
+                                  '        <On Terms="Behavior.GhostOpsTruckShow.Off" Send="Destroy"/>', '    </CActorRange>', '']),
+        'BehaviorData.xml': nl.join([
+            '    <CBehaviorBuff id="GhostOpsNoFuel">', '        <Alignment value="Negative"/>', '        <InfoIcon value="Assets' + bs + 'Textures' + bs + 'btn-ability-terran-slow.dds"/>',
+            '        <EditorCategories value="Race:Terran,AbilityorEffectType:Units"/>', '        <Modification MoveSpeedMultiplier="0.01"/>', '    </CBehaviorBuff>',
+            '    <CBehaviorBuff id="GhostOpsTruckShow">', '        <InfoFlags index="Hidden" value="1"/>', '    </CBehaviorBuff>',
+            '    <CBehaviorBuff id="GhostOpsDayShield">', '        <InfoFlags index="Hidden" value="1"/>', '        <DamageResponse Chance="1" ModifyFraction="-1"/>', '    </CBehaviorBuff>', '']),
+    }
 
 
 def gen_zerohour(cfg):
@@ -1752,7 +1887,7 @@ def text_entries(cfg):
         for loc, lang in (('ruRU', 'ru'), ('enUS', 'en')):
             ht = dict(HANSON_TEXT_DEFAULTS, **hs['texts'])
             cts = hs.get('containers') or {}
-            fill = lambda v: v if not cts else (v.replace('{gas}', '%g' % cts['gas_cost']).replace('{limit}', '%g' % cts['limit']).replace('{damage}', '%g' % cts['damage']).replace('{radius}', '%g' % cts['radius']).replace('{range}', '%g' % cts['place_range']).replace('{friendly}', '%g' % round(100 * cts['friendly']['hard'], 1)))  # noqa: E731
+            fill = lambda v: v if not cts else (v.replace('{gas}', '%g' % cts['gas_cost']).replace('{limit}', '%g' % cts['limit']).replace('{damage}', '%g' % cts['damage']).replace('{structure_damage}', '%g' % (cts['damage'] * (1 + cts.get('structure_bonus', 0)))).replace('{radius}', '%g' % cts['radius']).replace('{range}', '%g' % cts['place_range']).replace('{friendly}', '%g' % round(100 * cts['friendly']['hard'], 1)))  # noqa: E731
             for k in HANSON_TEXT_KEYS + tuple(k for k in HANSON_EXTRA_TEXT_KEYS if k in ht):
                 out.setdefault(loc, []).append((HANSON_TEXT_PREFIX + k, fill(ht[k][lang])))
             if (hs.get('turret_kits') or {}).get('enabled'):
@@ -1765,6 +1900,13 @@ def text_entries(cfg):
                 out.setdefault(loc, []).append(('Button/Tooltip/GhostOpsPlaceContainer', fill(ht['ContainerTip'][lang])))
                 out.setdefault(loc, []).append(('Button/Hotkey/GhostOpsPlaceContainer', hs['containers']['hotkey']))
                 out.setdefault(loc, []).append(('Unit/Name/GhostOpsFuelContainer', ht['ContainerUnitName'][lang]))
+    ep = cfg.get('epidemic')
+    if ep:
+        for loc, lang in (('ruRU', 'ru'), ('enUS', 'en')):
+            for k in EPI_TEXT_KEYS:
+                out.setdefault(loc, []).append((EPI_TEXT_PREFIX + k, ep['texts'][k][lang]))
+            out.setdefault(loc, []).append(('Behavior/Name/GhostOpsNoFuel', ep['texts']['NoFuelName'][lang]))
+            out.setdefault(loc, []).append(('Behavior/Description/GhostOpsNoFuel', ep['texts']['NoFuelDesc'][lang]))
     zh = cfg.get('zerohour')
     if zh:
         for loc, lang in (('ruRU', 'ru'), ('enUS', 'en')):
@@ -1795,6 +1937,8 @@ def build_block(adapter, cfg):
         extra += gen_zerohour(cfg) + '\n' + gen_defence(cfg, adapter) + '\n'
     if 'hanson' in gens:
         extra += gen_hanson_test(cfg) + '\n' + gen_hanson(cfg) + '\n'
+    if 'epidemic' in gens:
+        extra += gen_epidemic(cfg) + '\n'
     if cfg.get('scene'):
         extra += gen_scene(cfg) + '\n'
     if adapter.get('detector_analysis'):

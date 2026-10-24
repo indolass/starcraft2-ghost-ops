@@ -1,0 +1,609 @@
+{
+  "schema_version": 4,
+  "mission": "thanson02",
+  "operatives": {
+    "squad": [
+      "Ghost",
+      "Ghost"
+    ],
+    "start_hold_fire": false,
+    "ghost_permanent_cloak": false,
+    "ghost_start_cloaked": true,
+    "disabled_abilities": []
+  },
+  "army": {
+    "fragile_units": []
+  },
+  "base_support": {
+    "damage_multiplier": 1
+  },
+  "experimental": {
+    "invulnerable_allies": false
+  },
+  "scenario": {
+    "waves": "original",
+    "timers": "original",
+    "victory": "original"
+  },
+  "nukes_granted": 0,
+  "difficulty": {
+    "expected": 3,
+    "show_message": false
+  },
+  "ghost_tuning": {
+    "energy_start": 100,
+    "energy_max": 100,
+    "regen_per_second": 1.25,
+    "cloak_activation_cost": 0,
+    "cloak_net_per_second": 0,
+    "ghost_life": 45,
+    "snipe": {
+      "cost": 0,
+      "damage": 250,
+      "cast_time": 0.3,
+      "cooldown": 2.0,
+      "exclude_friendly": true,
+      "container_target": true
+    },
+    "remove_abilities": [
+      "TacNukeStrike",
+      "EMP"
+    ]
+  },
+  "panel": {
+    "enabled": true,
+    "texts": {
+      "Name0": {
+        "ru": "Призрак 1",
+        "en": "Ghost 1"
+      },
+      "Name1": {
+        "ru": "Призрак 2",
+        "en": "Ghost 2"
+      },
+      "Dead": {
+        "ru": "погиб",
+        "en": "dead"
+      },
+      "Infinite": {
+        "ru": "Маскировка: без расхода (день)",
+        "en": "Cloak: free (day)"
+      },
+      "Cloak": {
+        "ru": "маскировка",
+        "en": "cloak"
+      },
+      "Seconds": {
+        "ru": "с",
+        "en": "s"
+      },
+      "Regen": {
+        "ru": "Восстановление",
+        "en": "Recovery"
+      },
+      "Hold": {
+        "ru": "наведение",
+        "en": "aiming"
+      },
+      "Ready": {
+        "ru": "готов",
+        "en": "ready"
+      },
+      "Grenades": {
+        "ru": "гранаты",
+        "en": "grenades"
+      },
+      "Footer": {
+        "ru": "Днём маскировка бесплатна, ночью тратит энергию",
+        "en": "Free cloak by day, it costs energy by night"
+      }
+    }
+  },
+  "detector_analysis": {
+    "enabled": true,
+    "texts": {
+      "Name": {
+        "ru": "Анализ детекторов",
+        "en": "Detector analysis"
+      },
+      "Tip": {
+        "ru": "Показывает зоны обнаружения видимых вражеских детекторов. Внутри этих зон маскировка не скрывает призрака от противника.",
+        "en": "Shows the detection zones of visible enemy detectors. Inside these zones the cloak does not hide the Ghost from the enemy."
+      }
+    }
+  },
+  "hanson": {
+    "debug_log": false,
+    "lock_development": true,
+    "convoy_command": false,
+    "ghost_spawn": [
+      80.0,
+      100.0
+    ],
+    "button": {
+      "width": 380,
+      "height": 56,
+      "offset_x": 16,
+      "offset_y": 230
+    },
+    "turrets": {
+      "owner": 4,
+      "list": []
+    },
+    "texts": {
+      "BtnPreparing": {
+        "ru": "Колонисты собираются",
+        "en": "Colonists are gathering"
+      },
+      "BtnReady": {
+        "ru": "ОТПРАВИТЬ КОНВОЙ",
+        "en": "SEND THE CONVOY"
+      },
+      "BtnActive": {
+        "ru": "Колонна в пути",
+        "en": "The convoy is on the road"
+      },
+      "ReadyMsg": {
+        "ru": "Колонна готова. Ожидаем приказа.",
+        "en": "The convoy is ready. Awaiting your order."
+      },
+      "SentMsg": {
+        "ru": "Колонна в пути. Прикрывайте колонистов.",
+        "en": "The convoy is on its way. Cover the colonists."
+      },
+      "GasUnit": {
+        "ru": "газа",
+        "en": "gas"
+      },
+      "NeedGas": {
+        "ru": "Колонна готова. Не хватает газа:",
+        "en": "The convoy is ready. Gas missing:"
+      },
+      "FuelPaidMsg": {
+        "ru": "Колонна заправлена. Списано газа:",
+        "en": "The convoy is fuelled. Gas spent:"
+      },
+      "FuelShortMsg": {
+        "ru": "Не хватает газа для отправки колонны:",
+        "en": "Not enough gas to send the convoy:"
+      },
+      "HudGas": {
+        "ru": "Газ",
+        "en": "Gas"
+      },
+      "HudContainers": {
+        "ru": "Контейнеры",
+        "en": "Containers"
+      },
+      "HudLeft": {
+        "ru": "осталось",
+        "en": "left"
+      },
+      "HudOf": {
+        "ru": "из",
+        "en": "of"
+      },
+      "HudPrice": {
+        "ru": "цена",
+        "en": "price"
+      },
+      "HudFuelPrice": {
+        "ru": "Рейс",
+        "en": "Trip"
+      },
+      "HudNoGasForBox": {
+        "ru": "газа не хватает",
+        "en": "not enough gas"
+      },
+      "ContainerName": {
+        "ru": "Поставить контейнер",
+        "en": "Place a container"
+      },
+      "ContainerTip": {
+        "ru": "Горячая клавиша [C]. Ставит рядом контейнер с горючей смесью (в пределах {range} от огнемётчика): модель показана под курсором, зелёное место допустимо, красное нет. Цена: {gas} газа, общий запас {limit} штук (без пополнения). Взрывается от первого попадания бойца: {damage} урона наземным врагам и {structure_damage} по их зданиям в радиусе {radius}, воздух не поражается; ночью заражённые здания уязвимы, днём защищённые не получают урона. Свои в радиусе получают {friendly}% (на сложном уровне). Esc или правая кнопка отменяют без расходов.",
+        "en": "Hotkey [C]. Places a container of fuel mixture next to the Firebat (within {range} of him): the model follows the cursor, green = placeable, red = not. Price: {gas} gas, shared stock of {limit} (no refill). It explodes from the first hit of a fighter: {damage} damage to ground enemies and {structure_damage} to their structures within {radius}, air is not hit; by night infested structures are vulnerable, the ones shielded by day take no damage. Own units inside take {friendly}% (hard difficulty). Esc or right click cancel at no cost."
+      },
+      "ContainerUnitName": {
+        "ru": "Контейнер с горючей смесью",
+        "en": "Fuel mixture container"
+      },
+      "ContainerInfo": {
+        "ru": "Взрывается от первого попадания призрака (выстрел или Snipe). Круг показывает зону поражения. Свои в зоне тоже пострадают.",
+        "en": "Explodes from the first Ghost hit (rifle or Snipe). The circle shows the blast zone. Own units inside are hurt too."
+      },
+      "PlaceFailGas": {
+        "ru": "Не хватает газа для контейнера.",
+        "en": "Not enough gas for a container."
+      },
+      "PlaceFailLimit": {
+        "ru": "Запас контейнеров исчерпан.",
+        "en": "No containers left."
+      },
+      "PlaceFailSpot": {
+        "ru": "Здесь контейнер поставить нельзя.",
+        "en": "A container cannot be placed here."
+      },
+      "RaynorName": {
+        "ru": "Рейнор",
+        "en": "Raynor"
+      },
+      "SwannName": {
+        "ru": "Свонн",
+        "en": "Swann"
+      },
+      "HudShort": {
+        "ru": "не хватает",
+        "en": "missing"
+      },
+      "ContainerTag": {
+        "ru": "Взрывной контейнер",
+        "en": "Explosive container"
+      },
+      "GasSourceLost": {
+        "ru": "Источник газа потерян, газа на рейс не хватает. Отстройте перерабатывающий завод (75 минералов) и поставьте на газ СКВ.",
+        "en": "The gas source is lost and the gas does not cover a trip. Rebuild the Refinery (75 minerals) and put SCVs on gas."
+      },
+      "PlaceFarMsg": {
+        "ru": "Контейнер можно ставить только рядом с огнемётчиком.",
+        "en": "A container can only be placed close to the Firebat."
+      },
+      "KitsTitle": {
+        "ru": "Комплекты ракетных турелей",
+        "en": "Missile turret kits"
+      },
+      "KitsOut": {
+        "ru": "Комплекты ракетных турелей закончились: новую турель построить нельзя.",
+        "en": "No turret kits left: a new turret cannot be built."
+      },
+      "KitsReservedMsg": {
+        "ru": "Комплект турели занят под стройку. Свободных комплектов:",
+        "en": "A turret kit is reserved for the construction. Kits free:"
+      },
+      "KitsFreedMsg": {
+        "ru": "Стройка отменена, комплект возвращён. Свободных комплектов:",
+        "en": "Construction cancelled, the kit is back. Kits free:"
+      }
+    },
+    "containers": {
+      "enabled": true,
+      "limit": 10,
+      "gas_cost": 25,
+      "damage": 200,
+      "radius": 3.0,
+      "life": 1,
+      "owner": 0,
+      "place_range": 4.0,
+      "min_free": 1.2,
+      "hotkey": "C",
+      "friendly": {
+        "hard": 0.25,
+        "other": 0.0
+      },
+      "show_radius": true,
+      "structure_bonus": 2.0
+    },
+    "hud": {
+      "offset_x": 16,
+      "offset_y": 300,
+      "width": 420,
+      "height": 44
+    },
+    "allow_refinery": true,
+    "turret_kits": {
+      "enabled": true,
+      "limit": 20,
+      "recommended": 8,
+      "order": {
+        "turret_kits": 8
+      },
+      "price": {
+        "minerals": 75,
+        "gas": 0
+      },
+      "preparation": {
+        "minerals": 0,
+        "gas": 0
+      },
+      "sectors": [
+        {
+          "role": "base",
+          "count": 4,
+          "ru": "подходы к базе с севера и запада",
+          "en": "the approaches of the base from the north and west"
+        },
+        {
+          "role": "houses",
+          "count": 2,
+          "ru": "дома беженцев",
+          "en": "the refugees' houses"
+        },
+        {
+          "role": "air",
+          "count": 2,
+          "ru": "склады и башня обзора",
+          "en": "the depots and the sensor tower"
+        }
+      ]
+    },
+    "free_squad": {
+      "enabled": true,
+      "marines": 8
+    }
+  },
+  "epidemic": {
+    "debug_log": false,
+    "base": {
+      "x": 73.5,
+      "y": 91.5,
+      "radius": 18.0
+    },
+    "fuel": {
+      "tank": 100,
+      "per_cell": 1.0,
+      "base_fill_poor": 0.45,
+      "base_fill_good": 1.0,
+      "base_rate": 15,
+      "field_radius": 6.0,
+      "field_rate": 25,
+      "max_step": 12
+    },
+    "truck": {
+      "x": 96.0,
+      "y": 132.0,
+      "fuel_max": 400,
+      "fuel_start": 400,
+      "speed": 2.0,
+      "life": 150,
+      "capture_radius": 8.0,
+      "capture_units": 2,
+      "gas_to_fuel": 4.0,
+      "base_refill_rate": 20,
+      "reveal_radius": 14.0,
+      "reveal_seconds": 6.0,
+      "defenders": {
+        "infested_terran": 5,
+        "civilian": 3,
+        "radius": 5.0
+      }
+    },
+    "hellions": {
+      "extra": 2
+    },
+    "night_cloak": {
+      "net_per_second": -2.5
+    },
+    "protected": {
+      "types": [
+        "InfestedCC",
+        "InfestedStarport",
+        "InfestedFactory",
+        "InfestedArmory",
+        "InfestedEngBay"
+      ],
+      "max": 6
+    },
+    "transport": {
+      "enabled": true,
+      "first_night": 2,
+      "dock": [
+        78.0,
+        104.0
+      ],
+      "dock_radius": 16.0,
+      "warn_seconds": 60
+    },
+    "hud": {
+      "offset_x": 16,
+      "offset_y": 250,
+      "width": 440,
+      "height": 44
+    },
+    "texts": {
+      "SwannName": {
+        "ru": "Свонн",
+        "en": "Swann"
+      },
+      "TychusName": {
+        "ru": "Тайкус",
+        "en": "Tychus"
+      },
+      "HansonName": {
+        "ru": "Хэнсон",
+        "en": "Hanson"
+      },
+      "L_GAS": {
+        "ru": "Местный газ — дрянь: машины на нём далеко не уедут. Подтяните пехоту к стоящим геллионам и верните их на базу до темноты.",
+        "en": "The local gas is garbage: the machines will not get far on it. Bring infantry to the stalled hellions and get them back to the base before dark."
+      },
+      "L_TRUCK": {
+        "ru": "Эй, Джим! Контрабандисты бросили полный газовоз с хорошим топливом. Я отметил его на карте: заберите, пока его не нашли зерги.",
+        "en": "Hey, Jim! Smugglers left a full tanker with good fuel. I marked it on the map: take it before the zerg find it."
+      },
+      "L_CAPTURE": {
+        "ru": "Газовоз ваш. Подведите его к остановившимся геллионам: рядом с ним они заправятся сами, без кликов. Топливо уйдёт из цистерны — берегите машину.",
+        "en": "The tanker is yours. Bring it next to the stalled hellions: they refuel by themselves, no clicks. The fuel leaves the tank, so keep the truck safe."
+      },
+      "L_BASE": {
+        "ru": "Получилось наладить подготовку местного топлива: на базе геллионы заправляются полностью, а газовоз можно пополнять за добытый газ.",
+        "en": "We managed to prepare the local fuel: hellions now fill up completely at the base, and the tanker can be refilled for the gas you mine."
+      },
+      "L_SHIP": {
+        "ru": "Транспорт днём занят эвакуацией в другом районе, а ночью он в вашем распоряжении. Он один — берегите его. Грузите отряд, задавайте маршрут и успейте до рассвета.",
+        "en": "The transport is busy evacuating another district by day, and at night it is yours. There is only one: keep it safe. Load a squad, set the route and be back before dawn."
+      },
+      "L_PROT": {
+        "ru": "Мутация защищает заражённые структуры от солнечного света: днём наше оружие их не пробивает. Дождитесь ночи, тогда их можно уничтожить.",
+        "en": "The mutation shields infested structures from sunlight: by day our weapons cannot break them. Wait for the night, then they can be destroyed."
+      },
+      "MsgTruckLost": {
+        "ru": "Газовоз потерян. Остаются заправка машин у базы и ночные операции.",
+        "en": "The tanker is lost. The base refuelling and the night operations remain."
+      },
+      "MsgShipHere": {
+        "ru": "Транспорт прибыл на базу: до рассвета он в вашем распоряжении.",
+        "en": "The transport has arrived at the base: it is yours until the dawn."
+      },
+      "MsgShipLost": {
+        "ru": "Транспорт потерян. Новый не придёт; ночные цели доступны наземному отряду.",
+        "en": "The transport is lost. No new one will come; the night targets are reachable on foot."
+      },
+      "MsgDawn": {
+        "ru": "Скоро рассвет: новые рейсы закрываются. Закончите текущий и вернитесь на базу.",
+        "en": "The dawn is near: new rides close. Finish the current one and return to the base."
+      },
+      "HudSel": {
+        "ru": "Топливо выделенных геллионов",
+        "en": "Fuel of the selected hellions"
+      },
+      "HudMin": {
+        "ru": "меньше всего",
+        "en": "lowest"
+      },
+      "HudAll": {
+        "ru": "Геллионы",
+        "en": "Hellions"
+      },
+      "HudDry": {
+        "ru": "без топлива",
+        "en": "out of fuel"
+      },
+      "HudTruck": {
+        "ru": "Газовоз, топливо",
+        "en": "Tanker fuel"
+      },
+      "HudTruckFree": {
+        "ru": "Газовоз брошен: захватите его пехотой",
+        "en": "The tanker is abandoned: capture it with infantry"
+      },
+      "HudTruckLost": {
+        "ru": "Газовоз потерян",
+        "en": "The tanker is lost"
+      },
+      "ProtDay": {
+        "ru": "Защищено днём",
+        "en": "Shielded by day"
+      },
+      "ProtNight": {
+        "ru": "Уязвимо ночью",
+        "en": "Vulnerable at night"
+      },
+      "ObjTruckTitle": {
+        "ru": "Газовоз с хорошим топливом",
+        "en": "The tanker with good fuel"
+      },
+      "ObjTruckText": {
+        "ru": "Брошенный газовоз отмечен на карте. Подведите к нему пехоту: он станет вашим. Затем подвезите его к остановившимся геллионам.",
+        "en": "The abandoned tanker is marked on the map. Bring infantry next to it and it becomes yours. Then drive it to the stalled hellions."
+      },
+      "NoFuelName": {
+        "ru": "Нет топлива",
+        "en": "Out of fuel"
+      },
+      "NoFuelDesc": {
+        "ru": "Бак пуст: машина стоит, но стреляет, чинится и заправляется.",
+        "en": "The tank is empty: the machine is stuck but still shoots, can be repaired and refuelled."
+      }
+    }
+  },
+  "audio": {
+    "talk": [
+      {
+        "id": "GhostOpsTalkSwann1",
+        "facial": "THanson02Swann00001",
+        "seconds": 8.7,
+        "group": "swann"
+      },
+      {
+        "id": "GhostOpsTalkSwann2",
+        "facial": "THanson01Swann00046",
+        "seconds": 7.4,
+        "group": "swann"
+      },
+      {
+        "id": "GhostOpsTalkTychus1",
+        "facial": "THanson02Tychus00036",
+        "seconds": 6.0,
+        "group": "tychus"
+      },
+      {
+        "id": "GhostOpsTalkHanson1",
+        "facial": "THanson02Hanson00038",
+        "seconds": 6.0,
+        "group": "hanson"
+      }
+    ]
+  },
+  "default_preset": "epidemic_free",
+  "presets": {
+    "epidemic_free": {
+      "label": "Эпидемия — Тест: бесплатный отряд",
+      "message": "Ghost Ops — Эпидемия, тест: бесплатный отряд",
+      "message_en": "Ghost Ops - Epidemic, test: free squad",
+      "experimental": true,
+      "badge": "свободный тест",
+      "card": "Режим «Свободный тест»: бесплатный конечный отряд, без списаний и переноса в кампанию. Оригинальная «Эпидемия» с топливом геллионов, газовозом, защищёнными днём зданиями, ночным транспортом, взрывными контейнерами и комплектами турелей. Два призрака, {marines} морпехов, огнемётчики, медики; {kits} комплектов турелей, {hellions} лишних геллионов к штатным. Пополнения армии нет.",
+      "details": [
+        "ТЕСТОВЫЙ КОМПЛЕКТ, не утверждённый баланс; в кампанию не пишет и результата не предлагает"
+      ],
+      "overrides": {}
+    },
+    "epidemic_free_ce0_dev": {
+      "label": "Эпидемия, проба CE-0 (отладка)",
+      "message": "Ghost Ops - Epidemic, CE-0 probe (dev)",
+      "message_en": "Ghost Ops - Epidemic, CE-0 probe (dev)",
+      "hidden": true,
+      "extends": "epidemic_free",
+      "card": "Technical probe",
+      "details": [
+        "Development only"
+      ],
+      "overrides": {
+        "hanson": {
+          "debug_log": true
+        },
+        "epidemic": {
+          "debug_log": true,
+          "dev_cycle": {
+            "day": 150,
+            "night": 120
+          }
+        },
+        "ce0": {
+          "operation_id": "CE0-TH02",
+          "census_types": [
+            "Ghost",
+            "Firebat",
+            "Marine",
+            "Hellion",
+            "TankerTruck",
+            "Medivac",
+            "MissileTurret",
+            "GhostOpsFuelContainer"
+          ]
+        }
+      }
+    },
+    "epidemic_free_cycle_dev": {
+      "label": "Эпидемия, короткие сутки (отладка)",
+      "message": "Ghost Ops - Epidemic, short cycle (dev)",
+      "message_en": "Ghost Ops - Epidemic, short cycle (dev)",
+      "hidden": true,
+      "extends": "epidemic_free_ce0_dev",
+      "card": "Technical probe: a shortened day / night for the check of the transitions",
+      "details": [
+        "Development only"
+      ],
+      "overrides": {
+        "epidemic": {
+          "dev_cycle": {
+            "day": 60,
+            "night": 60
+          },
+          "transport": {
+            "warn_seconds": 25
+          }
+        }
+      }
+    }
+  }
+}

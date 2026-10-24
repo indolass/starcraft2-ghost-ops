@@ -1,0 +1,72 @@
+{
+ "name": "th2_victory",
+ "mission": "thanson02",
+ "preset": "epidemic_free_cycle_dev",
+ "why": "the standard victory after the counted infested structures are destroyed (dev: killed by the probe; NOT a playthrough)",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "cmd",
+   "text": "ecount",
+   "wait": 1.2
+  },
+  {
+   "op": "until",
+   "cmd": "eclock",
+   "grep": "night 1/1",
+   "every": 6,
+   "timeout": 200
+  },
+  {
+   "op": "cmd",
+   "text": "ecount",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "ekillall",
+   "wait": 1.2
+  },
+  {
+   "op": "sleep",
+   "s": 10
+  },
+  {
+   "op": "cmd",
+   "text": "ecount",
+   "wait": 1.2
+  },
+  {
+   "op": "sleep",
+   "s": 40
+  },
+  {
+   "op": "expect",
+   "regex": "ECOUNT|EKILLALL",
+   "note": "information"
+  },
+  {
+   "op": "expect",
+   "regex": "victory",
+   "note": "the standard victory chain reached the end (result row)"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

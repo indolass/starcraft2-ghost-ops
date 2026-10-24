@@ -1,0 +1,482 @@
+// CE-0 probe: THanson02 specific state and commands (development only; compiled only with the config key "ce0").
+// Commands are typed into the chat of the test window (the queue scenarios do it). Nothing here is part of a playable build.
+unit GhostOps_Ce0_First (string lp_type) {
+    return UnitGroupUnit(UnitGroup(lp_type, 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), 1);
+}
+
+string GhostOps_Ce0_Extra () {
+    string lv_s;
+    int lv_i;
+    int lv_alive;
+    int lv_dry;
+
+    lv_alive = 0;
+    lv_dry = 0;
+    lv_i = 0;
+    while (lv_i < go_eHellN) {
+        if (UnitIsAlive(go_eHell[lv_i])) {
+            lv_alive += 1;
+            if (go_eHellDry[lv_i]) {
+                lv_dry += 1;
+            }
+        }
+
+        lv_i += 1;
+    }
+
+    lv_s = "epi stage=" + IntToString(go_eStage) + " night=" + IntToString(BoolToInt(go_eIsNight)) + "/" + IntToString(go_eNightNo) + " hell=" + IntToString(lv_alive) + " dry=" + IntToString(lv_dry);
+    lv_s = lv_s + " kits=" + IntToString(GhostOps_Hanson_KitsLeft());
+    return lv_s;
+}
+
+void GhostOps_Ce0_MissionStart () {
+}
+
+string GhostOps_Ce0_Pt (point lp_p) {
+    return FixedToString(PointGetX(lp_p), 1) + "," + FixedToString(PointGetY(lp_p), 1);
+}
+
+string GhostOps_Ce0_TypeOf (string lp_cmd) {
+    string lv_k;
+
+    lv_k = StringSub(lp_cmd, 4, 4);
+    if (lv_k == "h") {
+        return "Hellion";
+    }
+
+    if (lv_k == "m") {
+        return "Marine";
+    }
+
+    if (lv_k == "g") {
+        return "Ghost";
+    }
+
+    if (lv_k == "f") {
+        return "Firebat";
+    }
+
+    return "TankerTruck";
+}
+
+void GhostOps_Ce0_Move (string lp_cmd, bool lp_teleport, string lp_x, string lp_y) {
+    unitgroup lv_g;
+    unit lv_u;
+    point lv_p;
+    int lv_i;
+    int lv_n;
+
+    lv_g = UnitGroup(GhostOps_Ce0_TypeOf(lp_cmd), 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+    lv_n = UnitGroupCount(lv_g, c_unitCountAll);
+    lv_i = 1;
+    while (lv_i <= lv_n) {
+        lv_u = UnitGroupUnit(lv_g, lv_i);
+        lv_p = Point(StringToFixed(lp_x) + (IntToFixed(lv_i % 4) * 1.2), StringToFixed(lp_y) + (IntToFixed(lv_i / 4) * 1.2));
+        if (lp_teleport) {
+            UnitSetPosition(lv_u, lv_p, false);
+        }
+        else {
+            UnitIssueOrder(lv_u, OrderTargetingPoint(AbilityCommand("move", 0), lv_p), c_orderQueueReplace);
+        }
+
+        lv_i += 1;
+    }
+
+    GhostOps_Ce0_Write("j", "EMOVE " + lp_cmd + " " + IntToString(lv_n) + " units to " + lp_x + "," + lp_y);
+}
+
+bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
+    unitgroup lv_g;
+    unit lv_u;
+    unit lv_k;
+    point lv_p;
+    int lv_i;
+    int lv_j;
+    int lv_n;
+    int lv_c;
+    string lv_t;
+
+    if (lp_cmd == "epath") {
+        // ground path cost from the Command Center to the area centers and to a grid of passable points (the place of the gas truck is chosen from this)
+        lv_t = "EPATH areas";
+        lv_p = Point(28.8, 139.7);
+        lv_t = lv_t + " A1=" + IntToString(PointPathingCost(go_eBase, lv_p));
+        lv_p = Point(49.3, 154.9);
+        lv_t = lv_t + " A2=" + IntToString(PointPathingCost(go_eBase, lv_p));
+        lv_p = Point(108.3, 152.1);
+        lv_t = lv_t + " A4=" + IntToString(PointPathingCost(go_eBase, lv_p));
+        lv_p = Point(124.7, 114.5);
+        lv_t = lv_t + " A5=" + IntToString(PointPathingCost(go_eBase, lv_p));
+        lv_p = Point(126.7, 83.7);
+        lv_t = lv_t + " A6=" + IntToString(PointPathingCost(go_eBase, lv_p));
+        lv_p = Point(103.6, 63.0);
+        lv_t = lv_t + " A7=" + IntToString(PointPathingCost(go_eBase, lv_p));
+        lv_p = Point(115.6, 35.0);
+        lv_t = lv_t + " A8=" + IntToString(PointPathingCost(go_eBase, lv_p));
+        lv_p = Point(58.3, 29.4);
+        lv_t = lv_t + " A9=" + IntToString(PointPathingCost(go_eBase, lv_p));
+        lv_p = Point(28.2, 47.8);
+        lv_t = lv_t + " A10=" + IntToString(PointPathingCost(go_eBase, lv_p));
+        lv_p = Point(67.9, 52.7);
+        lv_t = lv_t + " A11=" + IntToString(PointPathingCost(go_eBase, lv_p));
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "egrid") {
+        // egrid <y0>: one row (y0) of the grid x = 56..136 step 4: "x:cost" for passable points, cost relative to the base
+        lv_t = "EGRID y=" + lp_a;
+        lv_i = 56;
+        while (lv_i <= 136) {
+            lv_p = Point(IntToFixed(lv_i), StringToFixed(lp_a));
+            if (PointPathingPassable(lv_p)) {
+                lv_t = lv_t + " " + IntToString(lv_i) + ":" + IntToString(PointPathingCost(go_eBase, lv_p));
+            }
+
+            lv_i += 4;
+        }
+
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "ecand") {
+        // ecand <y>: a row of candidate places for the gas truck (x = 80..120 step 4): "x:base/A5/A4/A2" ground path costs of the passable points
+        lv_t = "ECAND y=" + lp_a;
+        lv_i = 80;
+        while (lv_i <= 120) {
+            lv_p = Point(IntToFixed(lv_i), StringToFixed(lp_a));
+            if (PointPathingPassable(lv_p)) {
+                lv_t = lv_t + " " + IntToString(lv_i) + ":" + IntToString(PointPathingCost(go_eBase, lv_p)) + "/" + IntToString(PointPathingCost(Point(124.7, 114.5), lv_p)) + "/" + IntToString(PointPathingCost(Point(108.3, 152.1), lv_p)) + "/" + IntToString(PointPathingCost(Point(49.3, 154.9), lv_p));
+            }
+
+            lv_i += 4;
+        }
+
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "estat") {
+        lv_t = "ESTAT stage " + IntToString(go_eStage) + " night " + IntToString(BoolToInt(go_eIsNight)) + " scenes";
+        lv_i = 0;
+        while (lv_i < 6) {
+            lv_t = lv_t + " " + IntToString(BoolToInt(go_eScene[lv_i]));
+            lv_i += 1;
+        }
+
+        lv_t = lv_t + " | truck ";
+        if (UnitIsAlive(go_eTruck)) {
+            lv_t = lv_t + "owner " + IntToString(UnitGetOwner(go_eTruck)) + " fuel " + FixedToString(UnitGetPropertyFixed(go_eTruck, c_unitPropEnergy, c_unitPropCurrent), 1) + " at " + GhostOps_Ce0_Pt(UnitGetPosition(go_eTruck));
+        }
+        else {
+            lv_t = lv_t + "dead/none";
+        }
+
+        lv_t = lv_t + " | hellions";
+        lv_i = 0;
+        while (lv_i < go_eHellN) {
+            if (UnitIsAlive(go_eHell[lv_i])) {
+                lv_t = lv_t + " [" + FixedToString(UnitGetPropertyFixed(go_eHell[lv_i], c_unitPropEnergy, c_unitPropCurrent), 1) + " dry=" + IntToString(BoolToInt(go_eHellDry[lv_i])) + " at " + GhostOps_Ce0_Pt(UnitGetPosition(go_eHell[lv_i])) + "]";
+            }
+            else {
+                lv_t = lv_t + " [dead]";
+            }
+
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "eship") {
+        lv_t = "ESHIP made " + IntToString(BoolToInt(go_eShipMade)) + " dead " + IntToString(BoolToInt(go_eShipDead)) + " away " + IntToString(BoolToInt(go_eShipAway)) + " open " + IntToString(BoolToInt(go_eNightOpen));
+        if (go_eShipMade && UnitIsAlive(go_eShip)) {
+            lv_t = lv_t + " life " + FixedToString(UnitGetPropertyFixed(go_eShip, c_unitPropLife, c_unitPropCurrent), 0) + " at " + GhostOps_Ce0_Pt(UnitGetPosition(go_eShip)) + " cargo " + IntToString(UnitGroupCount(UnitCargoGroup(go_eShip), c_unitCountAlive)) + " hidden " + IntToString(BoolToInt(UnitTestState(go_eShip, c_unitStateHidden)));
+        }
+
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "eprot") {
+        lv_t = "EPROT";
+        lv_i = 0;
+        while (lv_i < go_eProtN) {
+            lv_t = lv_t + " [" + UnitGetType(go_eProt[lv_i]) + " alive " + IntToString(BoolToInt(UnitIsAlive(go_eProt[lv_i]))) + " shield " + IntToString(UnitBehaviorCount(go_eProt[lv_i], "GhostOpsDayShield")) + " at " + GhostOps_Ce0_Pt(UnitGetPosition(go_eProt[lv_i])) + "]";
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "eghost") {
+        lv_t = "EGHOST";
+        lv_g = UnitGroup("Ghost", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+        lv_n = UnitGroupCount(lv_g, c_unitCountAll);
+        lv_i = 1;
+        while (lv_i <= lv_n) {
+            lv_u = UnitGroupUnit(lv_g, lv_i);
+            lv_t = lv_t + " [energy " + FixedToString(UnitGetPropertyFixed(lv_u, c_unitPropEnergy, c_unitPropCurrent), 1) + " cloak " + IntToString(BoolToInt(GhostOps_CloakOn(lv_u))) + " life " + FixedToString(UnitGetPropertyFixed(lv_u, c_unitPropLife, c_unitPropCurrent), 0) + "]";
+            lv_i += 1;
+        }
+
+        lv_t = lv_t + " drain " + CatalogFieldValueGet(c_gameCatalogBehavior, "GhostCloak", "Modification.VitalRegenArray[Energy]", 1) + " pnNet " + FixedToString(go_pnNet, 2);
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "ecloak") {
+        lv_g = UnitGroup("Ghost", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+        lv_n = UnitGroupCount(lv_g, c_unitCountAll);
+        lv_i = 1;
+        while (lv_i <= lv_n) {
+            UnitIssueOrder(UnitGroupUnit(lv_g, lv_i), Order(AbilityCommand("GhostCloak", 0)), c_orderQueueReplace);
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", "ECLOAK ordered " + IntToString(lv_n));
+        return true;
+    }
+
+    if (lp_cmd == "efuel") {
+        // efuel <v>: every hellion gets the fuel v (a test shortcut)
+        lv_i = 0;
+        while (lv_i < go_eHellN) {
+            if (UnitIsAlive(go_eHell[lv_i])) {
+                UnitSetPropertyFixed(go_eHell[lv_i], c_unitPropEnergy, StringToFixed(lp_a));
+            }
+
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", "EFUEL set " + lp_a);
+        return true;
+    }
+
+    if ((lp_cmd == "etph") || (lp_cmd == "etpm") || (lp_cmd == "etpg") || (lp_cmd == "etpf") || (lp_cmd == "etpt")) {
+        // etph|etpm|etpg|etpf|etpt <x> <y>: all Hellions / Marines / Ghosts / Firebats / the Truck(owned) of the player are put around (x, y)
+        GhostOps_Ce0_Move(lp_cmd, true, lp_a, lp_b);
+        return true;
+    }
+
+    if ((lp_cmd == "egoh") || (lp_cmd == "egom") || (lp_cmd == "egog") || (lp_cmd == "egof") || (lp_cmd == "egot")) {
+        GhostOps_Ce0_Move(lp_cmd, false, lp_a, lp_b);
+        return true;
+    }
+
+    if (lp_cmd == "eshipload") {
+        // eshipload <n>: n Marines are put next to the transport and the transport is ordered to load them (the stock Load order)
+        if (go_eShipMade && UnitIsAlive(go_eShip)) {
+            lv_g = UnitGroup("Marine", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+            lv_n = UnitGroupCount(lv_g, c_unitCountAll);
+            lv_c = StringToInt(lp_a);
+            lv_i = 1;
+            while ((lv_i <= lv_n) && (lv_i <= lv_c)) {
+                lv_u = UnitGroupUnit(lv_g, lv_i);
+                UnitSetPosition(lv_u, PointWithOffset(UnitGetPosition(go_eShip), 2.0 + IntToFixed(lv_i % 3), 0.0), false);
+                UnitIssueOrder(go_eShip, OrderTargetingUnit(AbilityCommand("MedivacTransport", 0), lv_u), c_orderQueueAddToEnd);
+                lv_i += 1;
+            }
+
+            GhostOps_Ce0_Write("j", "ESHIPLOAD ordered " + IntToString(lv_c));
+        }
+
+        return true;
+    }
+
+    if (lp_cmd == "eshipgo") {
+        if (go_eShipMade && UnitIsAlive(go_eShip)) {
+            UnitIssueOrder(go_eShip, OrderTargetingPoint(AbilityCommand("move", 0), Point(StringToFixed(lp_a), StringToFixed(lp_b))), c_orderQueueReplace);
+            GhostOps_Ce0_Write("j", "ESHIPGO ordered to " + lp_a + "," + lp_b);
+        }
+
+        return true;
+    }
+
+    if (lp_cmd == "eshipunl") {
+        if (go_eShipMade && UnitIsAlive(go_eShip)) {
+            UnitIssueOrder(go_eShip, OrderTargetingPoint(AbilityCommand("MedivacTransport", 2), Point(StringToFixed(lp_a), StringToFixed(lp_b))), c_orderQueueReplace);
+            GhostOps_Ce0_Write("j", "ESHIPUNL unload ordered at " + lp_a + "," + lp_b);
+        }
+
+        return true;
+    }
+
+    if (lp_cmd == "ehurtship") {
+        if (go_eShipMade && UnitIsAlive(go_eShip)) {
+            UnitSetPropertyFixed(go_eShip, c_unitPropLife, StringToFixed(lp_a));
+            GhostOps_Ce0_Write("j", "EHURTSHIP life set " + lp_a);
+        }
+
+        return true;
+    }
+
+    if (lp_cmd == "ekillship") {
+        if (go_eShipMade && UnitIsAlive(go_eShip)) {
+            UnitKill(go_eShip);
+        }
+
+        return true;
+    }
+
+    if (lp_cmd == "ekilltruck") {
+        if (UnitIsAlive(go_eTruck)) {
+            UnitKill(go_eTruck);
+        }
+
+        return true;
+    }
+
+    if (lp_cmd == "egotruckhell") {
+        // egotruckhell: the (captured) truck is ordered to drive to the first stopped hellion (the real route, no teleport)
+        lv_i = 0;
+        while (lv_i < go_eHellN) {
+            if (UnitIsAlive(go_eHell[lv_i]) && go_eHellDry[lv_i] && UnitIsAlive(go_eTruck)) {
+                UnitIssueOrder(go_eTruck, OrderTargetingPoint(AbilityCommand("move", 0), UnitGetPosition(go_eHell[lv_i])), c_orderQueueReplace);
+                GhostOps_Ce0_Write("j", "EGOTRUCKHELL truck ordered to " + GhostOps_Ce0_Pt(UnitGetPosition(go_eHell[lv_i])));
+                return true;
+            }
+
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", "EGOTRUCKHELL no stopped hellion");
+        return true;
+    }
+
+    if (lp_cmd == "ecb") {
+        // ecb <StructureType>: a container is created next to the first infested structure of the type and a Ghost shoots it (the real Snipe order): the life of the structure before / after
+        lv_g = UnitGroup(lp_a, 3, RegionEntireMap(), UnitFilter((1 << c_targetFilterStructure), 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+        lv_u = UnitGroupUnit(lv_g, 1);
+        if (lv_u == null) {
+            GhostOps_Ce0_Write("j", "ECB no structure of the type " + lp_a);
+            return true;
+        }
+
+        lv_p = UnitGetPosition(lv_u);
+        UnitCreate(1, "GhostOpsFuelContainer", c_unitCreateIgnorePlacement, 0, PointWithOffset(lv_p, 3.0, 0.0), 270.0);
+        lv_k = UnitLastCreated();
+        UnitSetPosition(GhostOps_Ce0_First("Ghost"), PointWithOffset(lv_p, 9.0, 0.0), false);
+        Wait(1.0, c_timeGame);
+        lv_t = "ECB " + lp_a + " life before " + FixedToString(UnitGetPropertyFixed(lv_u, c_unitPropLife, c_unitPropCurrent), 0) + " shield " + IntToString(UnitBehaviorCount(lv_u, "GhostOpsDayShield"));
+        UnitIssueOrder(GhostOps_Ce0_First("Ghost"), OrderTargetingUnit(AbilityCommand("Snipe", 0), lv_k), c_orderQueueReplace);
+        Wait(5.0, c_timeGame);
+        lv_t = lv_t + " container alive " + IntToString(BoolToInt(UnitIsAlive(lv_k))) + " after " + FixedToString(UnitGetPropertyFixed(lv_u, c_unitPropLife, c_unitPropCurrent), 0) + " alive " + IntToString(BoolToInt(UnitIsAlive(lv_u)));
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if ((lp_cmd == "eselfb") || (lp_cmd == "eselscv")) {
+        // eselfb / eselscv: the first Firebat / SCV is selected and the camera is on him (the next real keys / clicks come from the player's side)
+        if (lp_cmd == "eselfb") {
+            lv_u = GhostOps_Ce0_First("Firebat");
+        } else {
+            lv_u = GhostOps_Ce0_First("SCV");
+        }
+
+        UnitClearSelection(1);
+        UnitSelect(lv_u, 1, true);
+        CameraPan(1, UnitGetPosition(lv_u), 0.0, -1.0, 10.0, false);
+        GhostOps_Ce0_Write("j", "ESEL " + lp_cmd + " selected at " + FixedToString(PointGetX(UnitGetPosition(lv_u)), 1) + "," + FixedToString(PointGetY(UnitGetPosition(lv_u)), 1));
+        return true;
+    }
+
+    if (lp_cmd == "eselmar") {
+        // eselmar: a Marine is created 3 cells from the first container and SELECTED, the camera is on the container (the attack command is then given with the real keys / mouse)
+        if (go_hContN < 1) {
+            GhostOps_Ce0_Write("j", "ESELMAR no container");
+            return true;
+        }
+
+        lv_p = UnitGetPosition(go_hCont[0]);
+        UnitCreate(1, "Marine", 0, 1, PointWithOffset(lv_p, -3.0, 0.0), 270.0);
+        UnitClearSelection(1);
+        UnitSelect(UnitLastCreated(), 1, true);
+        CameraPan(1, lv_p, 0.0, -1.0, 10.0, false);
+        GhostOps_Ce0_Write("j", "ESELMAR marine selected, camera on the container");
+        return true;
+    }
+
+    if (lp_cmd == "econt") {
+        lv_i = 0;
+        lv_t = "";
+        while (lv_i < go_hContN) {
+            if (UnitIsAlive(go_hCont[lv_i])) {
+                lv_t = lv_t + "(" + FixedToString(PointGetX(UnitGetPosition(go_hCont[lv_i])), 1) + "," + FixedToString(PointGetY(UnitGetPosition(go_hCont[lv_i])), 1) + ") ";
+            }
+
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", "ECONT placed " + IntToString(go_hContN) + " alive " + lv_t + "| turret kits left " + IntToString(GhostOps_Hanson_KitsLeft()));
+        return true;
+    }
+
+    if (lp_cmd == "ecam") {
+        CameraPan(1, Point(StringToFixed(lp_a), StringToFixed(lp_b)), 0.0, -1.0, 10.0, false);
+        return true;
+    }
+
+    if (lp_cmd == "espd") {
+        GameSetSpeedValue(StringToInt(lp_a));
+        GhostOps_Ce0_Write("j", "ESPD " + lp_a);
+        return true;
+    }
+
+    if (lp_cmd == "eclock") {
+        GhostOps_Ce0_Write("j", "ECLOCK mission time " + FixedToString(GameGetMissionTime(), 1) + " night " + IntToString(BoolToInt(go_eIsNight)) + "/" + IntToString(go_eNightNo));
+        return true;
+    }
+
+    if (lp_cmd == "eselhell") {
+        UnitClearSelection(1);
+        lv_i = 0;
+        while (lv_i < go_eHellN) {
+            if (UnitIsAlive(go_eHell[lv_i])) {
+                UnitSelect(go_eHell[lv_i], 1, true);
+            }
+
+            lv_i += 1;
+        }
+
+        return true;
+    }
+
+    if (lp_cmd == "eatkprot") {
+        // eatkprot: the first Marine of the player attacks the first protected building (the day explanation scene)
+        lv_u = GhostOps_Ce0_First("Marine");
+        if ((lv_u != null) && (go_eProtN > 0)) {
+            UnitSetPosition(lv_u, PointWithOffset(UnitGetPosition(go_eProt[0]), 6.0, 0.0), false);
+            UnitIssueOrder(lv_u, OrderTargetingUnit(AbilityCommand("attack", 0), go_eProt[0]), c_orderQueueReplace);
+            GhostOps_Ce0_Write("j", "EATKPROT marine ordered to attack the protected " + UnitGetType(go_eProt[0]));
+        }
+
+        return true;
+    }
+
+    if (lp_cmd == "ekillall") {
+        // ekillall: every infested structure that the original victory counts (player 3, structure, PreventDefeat) is killed (the dev way to reach the standard victory chain)
+        lv_g = UnitGroup(null, 3, RegionEntireMap(), UnitFilter((1 << c_targetFilterStructure) | (1 << c_targetFilterPreventDefeat), 0, (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32))), 0);
+        lv_n = UnitGroupCount(lv_g, c_unitCountAll);
+        lv_i = 1;
+        while (lv_i <= lv_n) {
+            UnitKill(UnitGroupUnit(lv_g, lv_i));
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", "EKILLALL " + IntToString(lv_n) + " counted structures killed");
+        return true;
+    }
+
+    if (lp_cmd == "ecount") {
+        lv_g = UnitGroup(null, 3, RegionEntireMap(), UnitFilter((1 << c_targetFilterStructure) | (1 << c_targetFilterPreventDefeat), 0, (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32))), 0);
+        GhostOps_Ce0_Write("j", "ECOUNT structures the victory counts: " + IntToString(UnitGroupCount(lv_g, c_unitCountAlive)));
+        return true;
+    }
+
+    return false;
+}
+

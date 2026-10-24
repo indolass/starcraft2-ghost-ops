@@ -1,0 +1,123 @@
+{
+ "name": "th2_probe_paths",
+ "mission": "thanson02",
+ "preset": "epidemic_free_ce0_dev",
+ "why": "first launch of the new map: compiles, starts, ground path costs from the base",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "cmd",
+   "text": "estat",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "epath",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "egrid 40",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "egrid 45",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "egrid 50",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "egrid 55",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "egrid 60",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "egrid 65",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "egrid 70",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "egrid 75",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "egrid 80",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "egrid 85",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "egrid 90",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "egrid 95",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "egrid 100",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "eghost",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "eprot",
+   "wait": 1.2
+  },
+  {
+   "op": "expect",
+   "regex": "EPATH|EGRID|ESTAT|EGHOST|EPROT",
+   "note": "information"
+  },
+  {
+   "op": "expect_def",
+   "bank": "GhostOpsDevEpi",
+   "regex": ".",
+   "note": "Epi log (information)"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

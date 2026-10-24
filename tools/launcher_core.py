@@ -46,6 +46,9 @@ MISSIONS = [
     {'id': 'thanson01', 'title': 'Эвакуация', 'subtitle': 'Evacuation', 'status': 'Эксперимент',
      'description': 'Конечный отряд призраков. Конвои колонистов уходят только по вашей команде, а Snipe призрака снимает '
                     'опасных врагов по одному выстрелу. Профиль «Подготовленные подрывы»: два призрака, взрывные контейнеры огнемётчиков и газ за рейс. Производство и строительство запрещены, поселение прикрыто ПВО. Противники — Blizzard Hard.'},
+    {'id': 'thanson02', 'title': 'Эпидемия', 'subtitle': 'Outbreak', 'status': 'Эксперимент',
+     'description': 'Оригинальная «Эпидемия»: заражённые структуры нужно уничтожить днём и ночью. Геллионы Свонна едут на топливе, местный газ плохой: брошенный газовоз с хорошим '
+                    'топливом нужно найти, захватить пехотой и довезти. Днём часть зданий защищена, ночью работает один транспорт. Свободный тест: бесплатный отряд, без кампании.'},
     {'id': 'traynor03', 'title': 'Час икс', 'subtitle': 'Zero Hour', 'status': 'Эксперимент',
      'description': 'Предварительно заказанный гарнизон базы, два призрака с постоянной маскировкой и две ядерные ракеты. Победа: прошло 20 минут до прибытия корабля '
                     'И уничтожены все отмеченные инкубаторы; если цели остались, корабль ждёт. Отдельный запуск использует рекомендуемый заказ и тестовый бюджет, '
@@ -68,9 +71,11 @@ def profiles_of(mission_id):
     if not presets:
         return []
     for n, p in presets.items():  # the composition of a free test squad is shown on the card BEFORE the start (the number lives in the config)
-        if '{marines}' in p.get('card', '') or '{kits}' in p.get('card', ''):
-            hh = build.resolve_config(adapter, n)[0].get('hanson') or {}
-            p = dict(p, card=p['card'].replace('{marines}', str((hh.get('free_squad') or {}).get('marines', 0))).replace('{kits}', str(((hh.get('turret_kits') or {}).get('order') or {}).get('turret_kits', 0))))
+        if '{marines}' in p.get('card', '') or '{kits}' in p.get('card', '') or '{hellions}' in p.get('card', ''):
+            rc = build.resolve_config(adapter, n)[0]
+            hh = rc.get('hanson') or {}
+            p = dict(p, card=p['card'].replace('{marines}', str((hh.get('free_squad') or {}).get('marines', 0))).replace('{kits}', str(((hh.get('turret_kits') or {}).get('order') or {}).get('turret_kits', 0)))
+                     .replace('{hellions}', str(((rc.get('epidemic') or {}).get('hellions') or {}).get('extra', 0))))
             presets = dict(presets, **{n: p})
     return [{'name': n, 'label': p['label'], 'card': p.get('card', ''), 'details': p.get('details', []),
              'experimental': bool(p.get('experimental')), 'badge': p.get('badge', '')} for n, p in presets.items() if not p.get('hidden')]
@@ -103,6 +108,8 @@ def detail_lines(mission_id, preset):
         return zerohour_lines(cfg)
     if cfg.get('tactical'):
         return tactical_lines(cfg)
+    if cfg.get('epidemic'):
+        return epidemic_lines(cfg)
     if cfg.get('hanson'):
         return hanson_lines(cfg)
     life = gt.get('ghost_life', 100)
@@ -143,6 +150,34 @@ def hanson_lines(cfg):
             len(h['turrets']['list']), roles['base'], roles['houses'], roles['air'])) if h['turrets']['list'] else 'Готовых ракетных турелей на карте нет (см. комплекты выше)',
         'Колонисты, союзная охрана и её пополнение, налёты и условия победы / поражения — штатные. Противники: Blizzard Hard',
         'Время — в игровых секундах',
+    ]
+
+
+def epidemic_lines(cfg):
+    """Exact characteristics of the free test version of THanson02 "Epidemic" (taken from the resolved configuration; every number is an experimental first value)."""
+    e, h, gt = cfg['epidemic'], cfg['hanson'], cfg['ghost_tuning']
+    f, t = e['fuel'], e['truck']
+    num = lambda v: ('%g' % v).replace('.', ',')  # noqa: E731
+    fs = h.get('free_squad') or {}
+    tk = h.get('turret_kits') or {}
+    ct = h.get('containers') or {}
+    nc = e['night_cloak']['net_per_second']
+    return [
+        'Режим «Свободный тест»: бесплатный конечный отряд, без списаний и переноса в кампанию; результат в кампанию не предлагается',
+        'Состав: 2 призрака (%s здоровья), %d морпехов сверх штатных 6, штатные огнемётчики (4) и медики (4), КСМ; к штатным геллионам Свонна добавлено %d. Производства боевых войск нет, пополнения нет' % (
+            gt['ghost_life'], fs.get('marines', 0), e['hellions']['extra']),
+        'Топливо геллионов: бак %s, расход %s на пройденную клетку; на базе местный газ заполняет только %d%% бака; без топлива машина стоит, но стреляет, чинится и заправляется (запас виден полосой энергии)' % (
+            num(f['tank']), num(f['per_cell']), round(100 * f['base_fill_poor'])),
+        'Газовоз: брошен, не атакуется до захвата; рядом %d зараженных; пехота (не меньше %d бойцов) захватывает его один раз. Запас %s, скорость %s; заправка геллионов рядом автоматическая, топливо уходит из цистерны' % (
+            t['defenders']['infested_terran'] + t['defenders']['civilian'], t['capture_units'], num(t['fuel_max']), num(t['speed'])),
+        'После возвращения газовоза на базу геллионы заправляются полностью, газовоз пополняется за газ карты (1 газ = %s топлива)' % num(t['gas_to_fuel']),
+        'Днём до %d больших заражённых зданий защищены (неуязвимы, подписаны), ночью уязвимы; все они входят в штатное условие победы' % e['protected']['max'],
+        'Ночью (со %d-й) один транспорт: погрузка и высадка штатные, маршрут вы задаёте сами; перед рассветом предупреждение; после рассвета новые рейсы закрыты, текущий можно закончить; погибший транспорт не заменяется' % e['transport']['first_night'],
+        'Призраки: днём маскировка без расхода, ночью net %s энергии в секунду (энергия %g, восстановление %s); Snipe %g урона без расхода энергии, перезаряд %s с' % (
+            num(nc), gt['energy_max'], num(gt['regen_per_second']), gt['snipe']['damage'], num(gt['snipe']['cooldown'])),
+        'Контейнеры огнемётчиков: клавиша C, %d газа, всего %d, взрыв %g урона в радиусе %s; комплекты ракетных турелей: %d (строите сами, бесплатно, по числу комплектов)' % (
+            ct.get('gas_cost', 0), ct.get('limit', 0), ct.get('damage', 0), num(ct.get('radius', 0)), (tk.get('order') or {}).get('turret_kits', 0)),
+        'Оригинальные вступление, сюжет, день и ночь, противник и победа (уничтожены все заражённые структуры) сохранены. Противники: Blizzard. Время — в игровых секундах',
     ]
 
 

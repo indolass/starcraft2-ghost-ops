@@ -9,7 +9,8 @@ the squad, the rules and what is changed differ per mission:
 | *Liberation Day* (TRaynor01) | profiles easy / hard / extreme (experiments); a short scene with the wounded squad | 2 Ghosts (easy, hard), 1 Ghost (extreme) |
 | *The Outlaws* (TRaynor02) | tactical variant (experiment): the Ghosts arrive by transport, a nuclear strike aimed by the Spotter; the death of the Spotter before the launch is added as a defeat | 2 Ghosts |
 | *Zero Hour* (TRaynor03) | experiment: a pre-ordered garrison (bought with the campaign remainder), virus (garrison weapons work only inside the base circle), two missiles, victory = 20 game minutes AND all marked hatcheries, waves go on after the timer | 2 Ghosts with a free permanent cloak |
-| *Evacuation* (THanson01) | sniper cover (experiment): manual convoy command, one Ghost with a free permanent cloak | 1 Ghost |
+| *Evacuation* (THanson01) | sniper cover (experiment, `sniper`), prepared detonations (`sniper_next`; revision 2 `sniper_next_r2`: turret kits instead of ready turrets, campaign order, campaign result; test `sniper_next_free_r2`): manual convoy command, fuel containers | 1 Ghost (`sniper`), 2 Ghosts (the others) |
+| *Outbreak* (THanson02) | free test (experiment, `epidemic_free`): hellion fuel and the abandoned gas truck, day-shielded structures, one night transport, containers and turret kits; the original story, day / night and victory kept | 2 Ghosts |
 | older prototype configurations (TRaynor02 `prototype`, TTychus01) | squad of Nova + two Ghosts + two Medics with a free permanent cloak and an army damage bonus (x2 / x3) | Nova, 2 Ghosts, 2 Medics |
 
 Original scenario, waves and victory stay as Blizzard made them **except where a mission variant says otherwise** (TRaynor03 changes the victory condition and adds waves after the timer; TRaynor02 adds a defeat;
@@ -25,7 +26,7 @@ copy. Everything else in the map is kept byte for byte, and `verify` proves it.
 
 ```
 core/        mission independent Galaxy code (squad, protection)
-adapters/    one folder per mission (traynor01, traynor02, thanson01, ttychus01): anchors + mission specific Galaxy
+adapters/    one folder per mission (traynor01, traynor02, traynor03, thanson01, thanson02, ttychus01): anchors + mission specific Galaxy
 config/      one configuration per mission (schema_version 4, as `validate_config` in tools/build.py demands), turned into Galaxy constants at build time
 tools/       sc2mpq.py (MPQ reader/writer), galaxy_lint.py, build.py
 tests/       python -m unittest discover -s tests
@@ -246,3 +247,8 @@ In the normal mode a missing clip is **never skipped silently**: the build stops
 ## Licence
 
 Code, tools and docs: [MIT](LICENSE). Blizzard data and maps are not part of this repository.
+
+
+### Outbreak (THanson02): free test (experiment, added 2026-10-24, numbers NOT Owner-approved)
+
+Map `<SC2>\Maps\GhostOps\GhostOps_THanson02_epidemic_free.SC2Map`, launcher card *Эпидемия — Тест: бесплатный отряд* (`python tools/build.py launch --mission thanson02 --preset epidemic_free`). The original mission with a finite squad: 2 Ghosts (45 life, free Snipe, day cloak free / night cloak drains energy), the stock infantry, 2 extra Hellions, 8 turret kits, 10 containers (key C). Hellions run on fuel (the local gas is poor): they stop far from the base, Swann and Tychus point to an abandoned gas truck that infantry must capture and bring to the stalled Hellions (automatic refuelling in a radius, the fuel leaves the truck). By day a few big infested buildings are protected, at night they are vulnerable and one transport can carry troops (it leaves at dawn). Victory is the stock one. Nothing is charged or credited. Details and checks: `docs/MISSION_ROADMAP.md` (last section).
