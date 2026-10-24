@@ -66,6 +66,24 @@ fixed go_hContFriendOther;
 int go_hFuelCost;
 // free test squad (config hanson.free_squad): extra Marines at the start, a finite squad
 int go_hFreeMarines;
+// turret kits (config hanson.turret_kits): the ordered number of Missile Turrets may be built by the SCVs for free (catalog cost 0), never more.
+// Start of construction reserves a kit, cancelling frees it, completion spends it, the death of a finished turret returns nothing, the death of an unfinished one
+// (not cancelled by the player: damage or an enemy next to it) consumes the kit. Every counter is a saved global, so a load restores them.
+bool go_hKitOn;
+int go_hKitOrdered;
+int go_hKitSpent;
+int go_hKitConsumed;
+int go_hTrkN;
+unit[24] go_hTrk;
+int[24] go_hTrkState;
+fixed[24] go_hTrkLife;
+point[24] go_hTrkPos;
+fixed[24] go_hTrkHurtAt;
+int go_hKitShown;
+int go_hObjKits;
+bool go_hObjKitsMade;
+trigger go_hKitTrig;
+int GhostOps_Hanson_KitsLeft ();
 int go_hHudX;
 int go_hHudY;
 int go_hHudW;
@@ -251,6 +269,11 @@ bool GhostOps_Hanson_LockTick (bool lp_testConds, bool lp_runActions) {
     if (go_hAllowRefinery) {
         // the only source of gas of this variant is one Refinery: losing it must not be a dead end, so rebuilding it (75 minerals, an SCV) stays possible
         TechTreeUnitAllow(1, "Refinery", true);
+    }
+
+    if (go_hKitOn) {
+        // the second exception of the lock: the ordered turrets (the kit tick keeps this in step with the kits left)
+        TechTreeUnitAllow(1, "MissileTurret", GhostOps_Hanson_KitsLeft() > 0);
     }
 
     if (go_hContOn) {
@@ -831,6 +854,197 @@ bool GhostOps_Hanson_StoryTick (bool lp_testConds, bool lp_runActions) {
 //--------------------------------------------------------------------------------------------------
 // Start (from the adapter, once)
 //--------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------
+// Turret kits
+//--------------------------------------------------------------------------------------------------
+int GhostOps_Hanson_KitsReserved () {
+    int lv_k;
+    int lv_c;
+
+    lv_c = 0;
+    lv_k = 0;
+    while (lv_k < go_hTrkN) {
+        if (go_hTrkState[lv_k] == 1) {
+            lv_c += 1;
+        }
+
+        lv_k += 1;
+    }
+
+    return lv_c;
+}
+
+int GhostOps_Hanson_KitsLeft () {
+    return go_hKitOrdered - go_hKitSpent - go_hKitConsumed - GhostOps_Hanson_KitsReserved();
+}
+
+bool GhostOps_Hanson_EnemyNear (point lp_pos) {
+    int lv_p;
+
+    lv_p = 2;
+    while (lv_p <= 4) {
+        if (UnitGroupCount(UnitGroup(null, lv_p, RegionCircle(lp_pos, 6.0), UnitFilter(0, 0, (1 << c_targetFilterStructure), (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive) > 0) {
+            return true;
+        }
+
+        lv_p += 1;
+    }
+
+    return false;
+}
+
+void GhostOps_Hanson_KitObjective () {
+    int lv_left;
+
+    lv_left = GhostOps_Hanson_KitsLeft();
+    if (!go_hObjKitsMade) {
+        go_hObjKitsMade = true;
+        ObjectiveCreate(StringExternal("Param/Value/GhostOpsH_KitsTitle"), StringExternal("Param/Value/GhostOpsH_KitsHint"), c_objectiveStateActive, false);
+        go_hObjKits = ObjectiveLastCreated();
+        go_hKitShown = -1;
+    }
+
+    if (lv_left != go_hKitShown) {
+        go_hKitShown = lv_left;
+        ObjectiveSetName(go_hObjKits, StringExternal("Param/Value/GhostOpsH_KitsTitle") + StringToText(": ") + IntToText(lv_left) + StringToText(" / ") + IntToText(go_hKitOrdered));
+    }
+}
+
+int GhostOps_Hanson_FindTrk (unit lp_u) {
+    int lv_k;
+
+    lv_k = 0;
+    while (lv_k < go_hTrkN) {
+        if ((go_hTrkState[lv_k] != 0) && (go_hTrk[lv_k] == lp_u)) {
+            return lv_k;
+        }
+
+        lv_k += 1;
+    }
+
+    return -1;
+}
+
+void GhostOps_Hanson_KitScan () {
+    unitgroup lv_g;
+    int lv_n;
+    int lv_i;
+    int lv_k;
+    int lv_slot;
+    unit lv_u;
+
+    lv_g = UnitGroup("MissileTurret", 1, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32)) | (1 << (c_targetFilterHidden - 32))), 0);
+    lv_n = UnitGroupCount(lv_g, c_unitCountAll);
+    lv_i = 1;
+    while (lv_i <= lv_n) {
+        lv_u = UnitGroupUnit(lv_g, lv_i);
+        if (GhostOps_Hanson_FindTrk(lv_u) < 0) {
+            // a turret the tracker does not know yet: a construction that has just started
+            if (GhostOps_Hanson_KitsLeft() <= 0) {
+                // over the kits (cost 0, so there is nothing to refund): the construction is cancelled on the spot
+                if (UnitTestState(lv_u, c_unitStateUnderConstruction)) {
+                    UnitIssueOrder(lv_u, Order(AbilityCommand("CancelBuilding", 0)), c_orderQueueReplace);
+                }
+
+                GhostOps_Hanson_Log("over the kits: a turret construction was cancelled");
+                UIDisplayMessage(PlayerGroupAll(), c_messageAreaDirective, StringExternal("Param/Value/GhostOpsH_KitsOut"));
+            }
+            else {
+                lv_slot = -1;
+                lv_k = 0;
+                while ((lv_k < go_hTrkN) && (lv_slot < 0)) {
+                    if (go_hTrkState[lv_k] == 0) {
+                        lv_slot = lv_k;
+                    }
+
+                    lv_k += 1;
+                }
+
+                if ((lv_slot < 0) && (go_hTrkN < 24)) {
+                    lv_slot = go_hTrkN;
+                    go_hTrkN += 1;
+                }
+
+                if (lv_slot >= 0) {
+                    go_hTrk[lv_slot] = lv_u;
+                    go_hTrkLife[lv_slot] = UnitGetPropertyFixed(lv_u, c_unitPropLife, c_unitPropCurrent);
+                    go_hTrkPos[lv_slot] = UnitGetPosition(lv_u);
+                    go_hTrkHurtAt[lv_slot] = -100.0;
+                    if (UnitTestState(lv_u, c_unitStateUnderConstruction)) {
+                        go_hTrkState[lv_slot] = 1;
+                        GhostOps_Hanson_Log("kit reserved");
+                    }
+                    else {
+                        go_hTrkState[lv_slot] = 2;
+                    }
+                }
+            }
+        }
+
+        lv_i += 1;
+    }
+}
+
+bool GhostOps_Hanson_KitTick (bool lp_testConds, bool lp_runActions) {
+    int lv_k;
+    unit lv_u;
+    bool lv_valid;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    GhostOps_Hanson_KitScan();
+    lv_k = 0;
+    while (lv_k < go_hTrkN) {
+        if (go_hTrkState[lv_k] != 0) {
+            lv_u = go_hTrk[lv_k];
+            lv_valid = UnitIsValid(lv_u) && (UnitGetType(lv_u) != "");
+            if (lv_valid && UnitIsAlive(lv_u)) {
+                if (go_hTrkState[lv_k] == 1) {
+                    // a drop of life between two ticks means damage: that tells a destroyed construction from a cancelled one
+                    if (UnitGetPropertyFixed(lv_u, c_unitPropLife, c_unitPropCurrent) < (go_hTrkLife[lv_k] - 0.01)) {
+                        go_hTrkHurtAt[lv_k] = GameGetMissionTime();
+                    }
+
+                    go_hTrkLife[lv_k] = UnitGetPropertyFixed(lv_u, c_unitPropLife, c_unitPropCurrent);
+                    go_hTrkPos[lv_k] = UnitGetPosition(lv_u);
+                }
+
+                if ((go_hTrkState[lv_k] == 1) && !UnitTestState(lv_u, c_unitStateUnderConstruction)) {
+                    go_hTrkState[lv_k] = 2;
+                    go_hKitSpent += 1;
+                    GhostOps_Hanson_Log("kit spent (construction finished)");
+                }
+            }
+            else {
+                if (go_hTrkState[lv_k] == 1) {
+                    if ((GameGetMissionTime() - go_hTrkHurtAt[lv_k] < 4.0) || GhostOps_Hanson_EnemyNear(go_hTrkPos[lv_k])) {
+                        // damaged or an enemy next to it: it was destroyed, the kit is gone; a cancelled construction is neither
+                        go_hKitConsumed += 1;
+                        GhostOps_Hanson_Log("unfinished turret destroyed: kit consumed");
+                    }
+                    else {
+                        GhostOps_Hanson_Log("construction cancelled: kit freed");
+                    }
+                }
+                else {
+                    GhostOps_Hanson_Log("finished turret lost: no kit returned");
+                }
+
+                go_hTrkState[lv_k] = 0;
+            }
+        }
+
+        lv_k += 1;
+    }
+
+    // the build button follows the kits left
+    TechTreeUnitAllow(1, "MissileTurret", GhostOps_Hanson_KitsLeft() > 0);
+    GhostOps_Hanson_KitObjective();
+    return true;
+}
+
 void GhostOps_Hanson_MakeFreeMarines () {
     int lv_i;
 
@@ -848,6 +1062,13 @@ void GhostOps_Hanson_MakeFreeMarines () {
 void GhostOps_Hanson_Start () {
     GhostOps_Hanson_MakeTurrets();
     GhostOps_Hanson_MakeFreeMarines();
+    if (go_hKitOn) {
+        GhostOps_Hanson_Log("turret kits ordered: " + IntToString(go_hKitOrdered));
+        go_hKitTrig = TriggerCreate("GhostOps_Hanson_KitTick");
+        TriggerAddEventTimePeriodic(go_hKitTrig, 0.25, c_timeGame);
+        TriggerExecute(go_hKitTrig, true, true);
+    }
+
     if (go_hLock) {
         GhostOps_Hanson_LockTick(true, true);
         go_hLockTrig = TriggerCreate("GhostOps_Hanson_LockTick");

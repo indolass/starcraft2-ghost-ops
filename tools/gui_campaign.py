@@ -36,7 +36,7 @@ def make_window_class(ctk, pal):
             super().__init__(app, fg_color=BG)
             self.app = app
             self.flow = flow or cf.CampaignFlow(cf.BuildCampaignBackend())
-            self.title('Кампания — Вне закона → Час икс')
+            self.title('Кампания — Вне закона → Час икс → Эвакуация')
             self.geometry('820x800')
             self.minsize(700, 640)
             self.transient(app)
@@ -47,6 +47,8 @@ def make_window_class(ctk, pal):
             self.t3 = cf.step_of('traynor03')['preset']  # the variant of the second step: 'defence_next' (current), 'defence' (version 1, the Owner's earlier map) or 'standard' (the previous Zero Hour)
             self.show_details = False
             self.order = dict(self.flow.order_info('traynor03', self.t3)['recommended'])
+            self.e_preset = cf.step_of('thanson01')['preset']  # the third step: Evacuation, revision 2 (turret kits)
+            self.order3 = dict(self.flow.order_info('thanson01', self.e_preset)['recommended'])
             self.grid_columnconfigure(0, weight=1)
             self.grid_rowconfigure(0, weight=1)
             self.body = ctk.CTkScrollableFrame(self, fg_color='transparent')
@@ -86,6 +88,7 @@ def make_window_class(ctk, pal):
             self._draw_standalone(5)
             self._draw_step1(3)
             self._draw_step2(4)
+            self._draw_step3(6)
 
         def _draw_pending(self, row):
             if not self.pending:
@@ -220,7 +223,57 @@ def make_window_class(ctk, pal):
             self.button(bar, 'Оплатить и начать', lambda: self.run_async(lambda: self.flow.start_new('traynor03', self.t3, dict(self.order))), primary=True,
                         state='normal' if q['ok'] and not self.busy else 'disabled').grid(row=0, column=1, padx=4)
 
+        def _draw_step3(self, row):
+            """3. Evacuation (THanson01, revision 2): the pre-order of turret kits. There are no ready turrets on the map: the player builds the ordered number himself."""
+            f = self.card(row, '3. «Эвакуация» (ревизия 2) — заказ комплектов турелей')
+            info = self.flow.order_info('thanson01', self.e_preset)
+            opn = self.flow.open_operation('thanson01')
+            if opn:
+                ctk.CTkLabel(f, text='Операция %s: %s. Заказ зафиксирован и оплачен.' % (opn[0], op_status(opn[1])), font=(FONT, 13), text_color=TEXT, anchor='w',
+                             wraplength=740).grid(row=2, column=0, sticky='ew', padx=16, pady=(2, 4))
+                self._op_buttons(f, 3, 'thanson01', self.e_preset)
+                return
+            ctk.CTkLabel(f, text='Готовых турелей на карте нет. Закажите комплекты ракетных турелей: на карте СКВ строят ровно столько турелей бесплатно, место выбираете вы. '
+                                 'Отмена стройки возвращает комплект, достройка тратит, гибель достроенной не возвращает, гибель недостроенной сжигает комплект.',
+                         font=(FONT, 12), text_color=MUTED, anchor='w', justify='left', wraplength=740).grid(row=1, column=0, sticky='ew', padx=16, pady=(0, 4))
+            grid = ctk.CTkFrame(f, fg_color='transparent')
+            grid.grid(row=2, column=0, sticky='ew', padx=16)
+            grid.grid_columnconfigure(0, weight=1)
+            k = 'turret_kits'
+            pr = info['prices'][k]
+            price = '%d мин.' % pr['minerals'] + (' + %d газа' % pr['gas'] if pr['gas'] else '')
+            ctk.CTkLabel(grid, text='%s (по %s, не более %d; рекомендуется %d)' % (cf.ORDER_LABELS[k], price, info['limits'][k], info['recommended'][k]), font=(FONT, 13),
+                         text_color=TEXT, anchor='w').grid(row=0, column=0, sticky='ew', pady=3)
+            self.button(grid, '−', lambda: self.change3(-1), width=36).grid(row=0, column=1, padx=4)
+            ctk.CTkLabel(grid, text=str(self.order3[k]), font=(FONT, 15, 'bold'), text_color=TEXT, width=36).grid(row=0, column=2)
+            self.button(grid, '+', lambda: self.change3(1), width=36).grid(row=0, column=3, padx=4)
+            ctk.CTkLabel(f, text=info['hint'], font=(FONT, 12, 'bold'), text_color=AMBER, anchor='w', justify='left', wraplength=740).grid(row=3, column=0, sticky='ew', padx=16, pady=(6, 2))
+            q = self.flow.quote('thanson01', self.e_preset, self.order3)
+            cost, short = q['cost'], q['short']
+            prep = info['preparation']
+            line = 'Стоимость: %d минералов, %d газа (комплекты + подготовка %d / %d). В запасе: %d / %d.' % (cost['minerals'], cost['gas'], prep['minerals'], prep['gas'], q['stock']['minerals'], q['stock']['gas'])
+            if short:
+                line += '  НЕ ХВАТАЕТ: ' + ', '.join('%d %s' % (v, RES_NAMES[kk]) for kk, v in short.items()) + '. Доплат, кредита и автоматической выдачи нет.'
+            ctk.CTkLabel(f, text=line, font=(FONT, 13, 'bold'), text_color=RED if short else GREEN, anchor='w', justify='left', wraplength=740).grid(row=4, column=0, sticky='ew', padx=16, pady=(4, 2))
+            ctk.CTkLabel(f, text='Цена комплекта и число комплектов экспериментальные, не утверждены Owner (config/thanson01.json, hanson.turret_kits); подготовка 1000 / 500 — ранее согласованная сумма. '
+                                 'Результат этой миссии в кампанию пока не записывается: победа здесь запас не меняет.',
+                         font=(FONT, 11), text_color=MUTED, anchor='w', justify='left', wraplength=740).grid(row=5, column=0, sticky='ew', padx=16)
+            bar = ctk.CTkFrame(f, fg_color='transparent')
+            bar.grid(row=6, column=0, sticky='w', padx=12, pady=(6, 12))
+            self.button(bar, 'Рекомендуемый заказ', self.use_recommended3).grid(row=0, column=0, padx=4)
+            self.button(bar, 'Оплатить и начать', lambda: self.run_async(lambda: self.flow.start_new('thanson01', self.e_preset, dict(self.order3))), primary=True,
+                        state='normal' if q['ok'] and not self.busy else 'disabled').grid(row=0, column=1, padx=4)
+
         # ---------------------------------------------------------------- actions
+        def change3(self, delta):
+            info = self.flow.order_info('thanson01', self.e_preset)
+            self.order3['turret_kits'] = max(0, min(info['limits']['turret_kits'], self.order3['turret_kits'] + delta))
+            self.refresh()
+
+        def use_recommended3(self):
+            self.order3 = dict(self.flow.order_info('thanson01', self.e_preset)['recommended'])
+            self.refresh()
+
         def change(self, key, delta):
             info = self.flow.order_info('traynor03', self.t3)
             self.order[key] = max(info['min'].get(key, 0), min(info['limits'][key], self.order[key] + delta))

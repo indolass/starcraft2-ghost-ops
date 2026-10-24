@@ -79,7 +79,7 @@ class HansonConfig(unittest.TestCase):
     def test_dev_preset_is_hidden(self):
         raw = build.load_json(ADAPTER['config'])
         self.assertTrue(raw['presets']['sniper_dev']['hidden'])
-        self.assertEqual([p['name'] for p in launcher_core.profiles_of('thanson01')], ['sniper', 'sniper_next', 'sniper_next_free'])
+        self.assertEqual([p['name'] for p in launcher_core.profiles_of('thanson01')], ['sniper', 'sniper_next', 'sniper_next_r2', 'sniper_next_free_r2'])
         self.assertEqual(launcher_core.default_profile('thanson01'), 'sniper')
         self.assertEqual(launcher_core.mission_info('thanson01')['status'], 'Эксперимент')
         dev, _ = build.resolve_config(ADAPTER, 'sniper_dev')
@@ -87,22 +87,49 @@ class HansonConfig(unittest.TestCase):
         self.assertEqual(build.validate_config(dev), [])
 
     def test_free_test_squad_variant(self):
-        cfg, _ = build.resolve_config(ADAPTER, 'sniper_next_free')
+        cfg, _ = build.resolve_config(ADAPTER, 'sniper_next_free_r2')
         self.assertEqual(build.validate_config(cfg), [])
         fs = cfg['hanson']['free_squad']
         self.assertTrue(fs['enabled'])
         self.assertGreater(fs['marines'], 0)
-        base, _ = build.resolve_config(ADAPTER, 'sniper_next')
+        base, _ = build.resolve_config(ADAPTER, 'sniper_next_r2')
         self.assertNotIn('free_squad', base['hanson'])  # the prepared-detonations variant itself is unchanged
         for key in ('containers', 'convoy_fuel', 'ghost_tuning', 'scenario'):  # sniper rifles, containers, waves and prices are not simplified
             self.assertEqual(cfg[key] if key in cfg else cfg['hanson'].get(key), base[key] if key in base else base['hanson'].get(key), key)
         self.assertIn('go_hFreeMarines = %d;' % fs['marines'], build.gen_hanson(cfg))
         self.assertNotIn('go_hFreeMarines', build.gen_hanson(base))
-        card = next(p for p in launcher_core.profiles_of('thanson01') if p['name'] == 'sniper_next_free')
-        self.assertEqual(card['label'], 'Тест — бесплатный отряд')
+        card = next(p for p in launcher_core.profiles_of('thanson01') if p['name'] == 'sniper_next_free_r2')
+        self.assertTrue(card['label'].startswith('Тест — бесплатный отряд'))
         self.assertIn('%d морпехов' % fs['marines'], card['card'])
-        self.assertIn('Тест — бесплатный отряд', launcher_core.detail_lines('thanson01', 'sniper_next_free')[0])
-        self.assertNotEqual(build.output_name(ADAPTER, 'sniper_next_free'), build.output_name(ADAPTER, 'sniper_next'))  # a new map file: nothing existing is overwritten
+        self.assertIn('Тест — бесплатный отряд', launcher_core.detail_lines('thanson01', 'sniper_next_free_r2')[0])
+        self.assertNotEqual(build.output_name(ADAPTER, 'sniper_next_free_r2'), build.output_name(ADAPTER, 'sniper_next'))  # a new map file: nothing existing is overwritten
+
+    def test_turret_kits_replace_the_ready_turrets(self):
+        old, _ = build.resolve_config(ADAPTER, 'sniper_next')
+        self.assertEqual(len(old['hanson']['turrets']['list']), 15)  # the earlier revision is unchanged
+        self.assertNotIn('turret_kits', old['hanson'])
+        for name in ('sniper_next_r2', 'sniper_next_free_r2', 'sniper_next_r2_ce0_dev'):
+            cfg, _ = build.resolve_config(ADAPTER, name)
+            self.assertEqual(build.validate_config(cfg), [], name)
+            self.assertEqual(cfg['hanson']['turrets']['list'], [], name)  # no ready turrets in revision 2
+            tk = cfg['hanson']['turret_kits']
+            self.assertEqual(sum(x['count'] for x in tk['sectors']), tk['recommended'])
+            self.assertIn('go_hKitOrdered = %d;' % tk['order']['turret_kits'], build.gen_hanson(cfg))
+        free, _ = build.resolve_config(ADAPTER, 'sniper_next_free_r2')
+        self.assertFalse(free.get('campaign'))  # a test run is never a campaign operation
+        self.assertEqual(free['hanson']['turret_kits']['order']['turret_kits'], 15)
+        norm, _ = build.resolve_config(ADAPTER, 'sniper_next_r2')
+        self.assertEqual(norm['campaign']['operation_id'], 'STANDALONE')
+        frag = build.hanson_fragments(norm['hanson'], norm)
+        self.assertIn('MissileTurret', frag['UnitData.xml'])
+        self.assertIn('Build6', frag['AbilData.xml'])
+        self.assertNotIn('MissileTurret', build.hanson_fragments(old['hanson'], old).get('UnitData.xml', ''))  # the earlier revision keeps the stock turret cost
+        hint = build.kits_hint(norm['hanson']['turret_kits'], 'ru')
+        self.assertIn('Рекомендуется 15', hint)
+        self.assertIn('Param/Value/GhostOpsH_KitsHint', ''.join(k for k, _ in [(build.HANSON_TEXT_PREFIX + 'KitsHint', 0)]))
+        self.assertIn(build.HANSON_TEXT_PREFIX + 'KitsHint', dict(build.text_entries(norm)['ruRU']))
+        plan_cfg = build.deep_merge(norm, {'hanson': {'turret_kits': {'order': {'turret_kits': 6}}}})
+        self.assertIn('go_hKitOrdered = 6;', build.gen_hanson(plan_cfg))
 
     def test_snipe_fragment_excludes_friendly_targets_only_when_asked(self):
         abil = build.ghost_tuning_fragments(self.cfg['ghost_tuning'])['AbilData.xml']

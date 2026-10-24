@@ -19,8 +19,12 @@ sys.path.insert(0, os.path.join(ROOT, 'tmp', 'thirdparty', 'ctk'))
 os.environ.setdefault('GHOSTOPS_LINES_DIR', os.path.join(ROOT, 'tests', 'no_shared_lines_here'))
 
 REAL_APPDATA = os.environ.get('APPDATA')
-REAL_BANK = os.path.join(os.path.expanduser('~'), 'Documents', 'StarCraft II', 'Banks', 'GhostOpsCampaign.SC2Bank')
-REAL_CAMPAIGN = os.path.join(REAL_APPDATA, 'GhostOps', 'campaign.json')
+# the fixture is the Owner's FROZEN state of 2026-10-22 (backup folder made before the first adoption work): the live files keep changing as the Owner plays
+FIXTURE = os.path.join(REAL_APPDATA, 'GhostOps', 'backup_20261023_owner_remainder')
+REAL_BANK = os.path.join(FIXTURE, 'GhostOpsCampaign.SC2Bank')
+REAL_CAMPAIGN = os.path.join(FIXTURE, 'campaign.json')
+LIVE_CAMPAIGN = os.path.join(REAL_APPDATA, 'GhostOps', 'campaign.json')
+LIVE_HASH = __import__('hashlib').sha256(open(LIVE_CAMPAIGN, 'rb').read()).hexdigest() if os.path.isfile(LIVE_CAMPAIGN) else None
 
 tmp = tempfile.mkdtemp(prefix='ghostops_ui_')
 os.environ['APPDATA'] = tmp  # campaign.APP_DIR (plans, bank_archive) lives in the temporary folder
@@ -120,6 +124,7 @@ def main():
     w = open_window(root, flow)
     text = alltext(w)
     check('the found standalone result is shown and waits for acceptance', 'ожидает принятия' in text, text[:0])
+    check('step 3 (Evacuation, revision 2): the kit order shows the recommended number, the sectors hint and the shortage', '3. «Эвакуация»' in text and 'Рекомендуется 15' in text and 'НЕ ХВАТАЕТ' in text and 'Комплекты ракетных турелей' in text)
     check('exact numbers 5636 minerals / 275 gas', '5636 минералов, 275 газа' in text)
     check('the source is plain text (profile "Вне закона, версия 2", launcher card, game time)', 'Вне закона, версия 2' in text and 'запущенное с карточки запускателя' in text and '876 с' in text)
     check('technical ids are behind "Подробнее", not shown by default', 'A676049589-499230426' not in text and '2fbc909853f73d1c' not in text and button(w, 'Подробнее') is not None)
@@ -228,8 +233,8 @@ def main():
     w7.destroy()
     root.destroy()
     # the Owner's real files are untouched
-    real_state = json.load(open(REAL_CAMPAIGN, encoding='utf-8'))
-    check('the real campaign.json of the Owner is untouched (stock 0 / 0, nothing accepted)', real_state['stock'] == {'minerals': 0, 'gas': 0} and not real_state['accepted_results'] and not real_state['operations'])
+    live_now = __import__('hashlib').sha256(open(LIVE_CAMPAIGN, 'rb').read()).hexdigest() if os.path.isfile(LIVE_CAMPAIGN) else None
+    check('the live campaign.json of the Owner is byte-for-byte untouched by this check', live_now == LIVE_HASH)
     shutil.rmtree(tmp, ignore_errors=True)
     print('FAILED: %d' % len(FAILS) if FAILS else 'ALL PASSED')
     return 1 if FAILS else 0

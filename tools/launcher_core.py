@@ -68,9 +68,9 @@ def profiles_of(mission_id):
     if not presets:
         return []
     for n, p in presets.items():  # the composition of a free test squad is shown on the card BEFORE the start (the number lives in the config)
-        if '{marines}' in p.get('card', ''):
-            fs = (build.resolve_config(adapter, n)[0].get('hanson') or {}).get('free_squad') or {}
-            p = dict(p, card=p['card'].replace('{marines}', str(fs.get('marines', 0))))
+        if '{marines}' in p.get('card', '') or '{kits}' in p.get('card', ''):
+            hh = build.resolve_config(adapter, n)[0].get('hanson') or {}
+            p = dict(p, card=p['card'].replace('{marines}', str((hh.get('free_squad') or {}).get('marines', 0))).replace('{kits}', str(((hh.get('turret_kits') or {}).get('order') or {}).get('turret_kits', 0))))
             presets = dict(presets, **{n: p})
     return [{'name': n, 'label': p['label'], 'card': p.get('card', ''), 'details': p.get('details', []),
              'experimental': bool(p.get('experimental')), 'badge': p.get('badge', '')} for n, p in presets.items() if not p.get('hidden')]
@@ -129,15 +129,18 @@ def hanson_lines(cfg):
     roles = {r: sum(1 for t in h['turrets']['list'] if t['role'] == r) for r in ('base', 'houses', 'air')}
     fs = h.get('free_squad') or {}
     free = ['Тест — бесплатный отряд: 2 призрака, %d морпехов, огнемётчики и медики миссии; конечный отряд без пополнения; запас кампании не тратится, результат в кампанию не зачисляется' % fs['marines']] if fs.get('enabled') else []
-    return free + [
+    tk = h.get('turret_kits') or {}
+    kits = ['Ракетные турели: готовых на карте нет; комплектов %d (рекомендуется %d), строите сами бесплатно, строго по числу комплектов; отмена возвращает комплект, достроенная турель его тратит, гибель достроенной не возвращает, гибель недостроенной сжигает. Участки: %s' % (
+        tk['order']['turret_kits'], tk['recommended'], '; '.join('%s - %d' % (x['ru'], x['count']) for x in tk['sectors']))] if tk.get('enabled') else []
+    return free + kits + [
         'Призраки: %d, здоровье %s/%s, не восполняется; появляются рядом со стартовым отрядом' % (sum(1 for u in cfg['operatives']['squad'] if u == 'Ghost'), gt['ghost_life'], gt['ghost_life']),
         'Маскировка постоянная, энергию не тратит; детекторы раскрывают штатно; EMP и ядерный удар отключены',
         'Snipe: %s энергии, урон %g (убивает любую вражескую боевую цель, здания и союзники исключены), подготовка %s с, перезарядка %s с' % (
             num(sn['cost']), sn['damage'], num(sn['cast_time']), num(sn['cooldown'])),
         'Производство, строительство, найм и исследования запрещены; существующие SCV добывают и чинят',
         'Конвой уходит по кнопке «Отправить конвой» (по команде игрока), только когда колонисты собраны',
-        'Ракетные турели (ПВО): %d — база %d, дома колонистов %d, воздушные подходы %d; чинятся SCV, новые строить нельзя' % (
-            len(h['turrets']['list']), roles['base'], roles['houses'], roles['air']),
+        ('Ракетные турели (ПВО): %d — база %d, дома колонистов %d, воздушные подходы %d; чинятся SCV, новые строить нельзя' % (
+            len(h['turrets']['list']), roles['base'], roles['houses'], roles['air'])) if h['turrets']['list'] else 'Готовых ракетных турелей на карте нет (см. комплекты выше)',
         'Колонисты, союзная охрана и её пополнение, налёты и условия победы / поражения — штатные. Противники: Blizzard Hard',
         'Время — в игровых секундах',
     ]

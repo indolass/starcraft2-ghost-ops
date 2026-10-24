@@ -37,6 +37,17 @@
       "call": "GhostOps_Hanson_Probe(gv_missionPhase, gv_escortIndex, gv_convoyTrucksSent, gv_colonistsSaved, gv_colonistsKilled, gv_doomsdayWavesSent);"
     }
   ],
+  "order_section": "hanson",
+  "order_path": [
+    "turret_kits"
+  ],
+  "campaign_hooks": [
+    {
+      "function": "gt_IntroSequence_Func",
+      "after": "TriggerExecute(gt_StartGame, true, false);",
+      "call": "GhostOps_Camp_Start();"
+    }
+  ],
   "init_hook": {
     "function": "gt_Initialization_Func",
     "before": "libCamp_gf_LoadCampaignData(4);",

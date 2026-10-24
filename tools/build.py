@@ -88,7 +88,7 @@ HANSON_TEXT_KEYS = ('BtnPreparing', 'BtnReady', 'BtnActive', 'ReadyMsg', 'SentMs
 HANSON_ROLES = ('base', 'houses', 'air')
 # optional texts of the prepared-detonation variant (containers, gas, HUD, messages); a profile may define any of them, the module reads only what its options need
 HANSON_EXTRA_TEXT_KEYS = ('PlaceFarMsg', 'GasSourceLost', 'ContainerTag', 'GasUnit', 'NeedGas', 'FuelPaidMsg', 'FuelShortMsg', 'HudGas', 'HudContainers', 'HudLeft', 'HudOf', 'HudPrice', 'HudFuelPrice', 'HudNoGasForBox', 'HudShort',
-                          'ContainerName', 'ContainerTip', 'ContainerUnitName', 'ContainerInfo', 'PlaceFailGas', 'PlaceFailLimit', 'PlaceFailSpot', 'RaynorName', 'SwannName')
+                          'KitsTitle', 'KitsOut', 'KitsHint', 'ContainerName', 'ContainerTip', 'ContainerUnitName', 'ContainerInfo', 'PlaceFailGas', 'PlaceFailLimit', 'PlaceFailSpot', 'RaynorName', 'SwannName')
 HANSON_TEXT_DEFAULTS = {
     'GasUnit': {'ru': '\u0433\u0430\u0437\u0430', 'en': 'gas'},
     'NeedGas': {'ru': '\u041a\u043e\u043b\u043e\u043d\u043d\u0430 \u0433\u043e\u0442\u043e\u0432\u0430. \u041d\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u0433\u0430\u0437\u0430:', 'en': 'The convoy is ready. Gas missing:'},
@@ -556,6 +556,14 @@ def defence_fragments(d):
     }
 
 
+def kits_hint(tk, lang):
+    """The text that says which sectors the recommended kits are meant to cover (built from `sectors`, so it never disagrees with the numbers)."""
+    parts = ['%s - %d' % (x[lang], x['count']) for x in tk['sectors']]
+    head = {'ru': 'Рекомендуется %d комплектов: ', 'en': 'Recommended %d kits: '}[lang] % tk['recommended']
+    tail = {'ru': '. Строит СКВ, место выбираете вы.', 'en': '. SCVs build them, you choose the place.'}[lang]
+    return head + '; '.join(parts) + tail
+
+
 def zerohour_cost(cfg, order=None):
     """{'minerals': n, 'gas': n} of an order at the prices of the configuration (a plan can never change a price)."""
     z = cfg['zerohour']
@@ -655,6 +663,30 @@ def validate_hanson(cfg):
     at = h.get('autotest')
     if at is not None and (not isinstance(at, dict) or at.get('mode') not in (1, 2, 3, 4, 5, 6, 7)):
         errs.append('hanson.autotest.mode must be 1..7')
+    tk = h.get('turret_kits')
+    if tk is not None:
+        if not isinstance(tk, dict) or not isinstance(tk.get('enabled'), bool):
+            errs.append('hanson.turret_kits needs enabled (boolean)')
+        elif tk['enabled']:
+            lim = tk.get('limit')
+            if not isinstance(lim, int) or isinstance(lim, bool) or not 1 <= lim <= 60:
+                errs.append('hanson.turret_kits.limit must be an integer 1..60')
+            else:
+                for k in ('recommended',):
+                    if not isinstance(tk.get(k), int) or isinstance(tk.get(k), bool) or not 0 <= tk[k] <= lim:
+                        errs.append('hanson.turret_kits.%s must be an integer 0..limit' % k)
+                o = tk.get('order')
+                if not isinstance(o, dict) or set(o) != {'turret_kits'} or not isinstance(o['turret_kits'], int) or isinstance(o['turret_kits'], bool) or not 0 <= o['turret_kits'] <= lim:
+                    errs.append('hanson.turret_kits.order must be {"turret_kits": 0..limit}')
+            for k in ('price', 'preparation'):
+                v = tk.get(k)
+                if not (isinstance(v, dict) and set(v) == {'minerals', 'gas'} and all(isinstance(x, int) and not isinstance(x, bool) and 0 <= x <= 5000 for x in v.values())):
+                    errs.append('hanson.turret_kits.%s must be {"minerals": n, "gas": n}' % k)
+            sc = tk.get('sectors')
+            if not isinstance(sc, list) or not sc or not all(isinstance(x, dict) and x.get('role') in HANSON_ROLES and isinstance(x.get('count'), int) and x.get('ru') and x.get('en') for x in sc):
+                errs.append('hanson.turret_kits.sectors needs entries with role, count, ru and en')
+            if not isinstance(h.get('turrets', {}).get('list'), list) or len(h['turrets']['list']) != 0:
+                errs.append('hanson.turret_kits: the ready (pre-placed) turrets are replaced by kits: hanson.turrets.list must be empty')
     fs = h.get('free_squad')
     if fs is not None and (not isinstance(fs, dict) or not isinstance(fs.get('enabled'), bool) or not isinstance(fs.get('marines'), int) or isinstance(fs.get('marines'), bool) or not 0 <= fs['marines'] <= 60):
         errs.append('hanson.free_squad needs enabled (boolean) and marines (integer 0..60)')
@@ -1043,8 +1075,13 @@ def hanson_fragments(h, cfg):
     g = lambda v: '%g' % v  # noqa: E731
     nl = chr(10)
     ct = h.get('containers') or {}
+    kit = {}
+    if (h.get('turret_kits') or {}).get('enabled'):
+        # the turret kits: the Missile Turret costs nothing to build (the kit was ordered, no second payment) and needs only the Command Center (the stock requirement is an Engineering Bay)
+        kit = {'UnitData.xml': nl.join(['    <CUnit id="MissileTurret">', '        <CostResource index="Minerals" value="0"/>', '    </CUnit>', '']),
+               'AbilData.xml': nl.join(['    <CAbilBuild id="TerranBuild">', '        <InfoArray index="Build6">', '            <Button Requirements="HaveCommandCenter"/>', '        </InfoArray>', '    </CAbilBuild>', ''])}
     if not ct.get('enabled'):
-        return {}
+        return kit
     bs = chr(92)
     icon = 'Assets' + bs + 'Textures' + bs + 'btn-upgrade-terran-infernalpreigniter.dds'
     unit = ['    <CUnit id="GhostOpsFuelContainer" parent="ExplodingBarrelLarge">',
@@ -1092,7 +1129,10 @@ def hanson_fragments(h, cfg):
     btn = ['    <CButton id="GhostOpsPlaceContainer">', '        <Icon value="%s"/>' % icon, '        <AlertIcon value="%s"/>' % icon, '        <Hotkey value="Button/Hotkey/GhostOpsPlaceContainer"/>', '        <EditorCategories value="Race:Terran"/>', '    </CButton>', '']
     # an inherited model path was NOT resolved by the engine (the unit showed the grey placeholder dome): the path of the stock gas canister model is written out
     model = ['    <CModel id="GhostOpsFuelContainer" parent="GasCanister">', '        <Model value="Assets\\Buildings\\Resources\\GasCanister\\GasCanister.m3"/>', '    </CModel>', '']
-    return {'ModelData.xml': nl.join(model), 'UnitData.xml': nl.join(unit), 'AbilData.xml': nl.join(abil), 'BehaviorData.xml': nl.join(beh), 'EffectData.xml': nl.join(eff), 'ActorData.xml': nl.join(act), 'ButtonData.xml': nl.join(btn)}
+    out = {'ModelData.xml': nl.join(model), 'UnitData.xml': nl.join(unit), 'AbilData.xml': nl.join(abil), 'BehaviorData.xml': nl.join(beh), 'EffectData.xml': nl.join(eff), 'ActorData.xml': nl.join(act), 'ButtonData.xml': nl.join(btn)}
+    for fname, frag in kit.items():
+        out[fname] = out[fname] + nl + frag
+    return out
 
 
 def tactical_fragments(t, gt=None):
@@ -1453,6 +1493,9 @@ def gen_hanson(cfg):
                   '    go_hContFriendHard = %.4f;' % ct['friendly']['hard'], '    go_hContFriendOther = %.4f;' % ct['friendly']['other']]
     if fu.get('enabled'):
         lines.append('    go_hFuelCost = %d;' % fu['gas_cost'])
+    tkc = h.get('turret_kits') or {}
+    if tkc.get('enabled'):
+        lines += ['    go_hKitOn = true;', '    go_hKitOrdered = %d;' % tkc['order']['turret_kits']]
     fsq = h.get('free_squad') or {}
     if fsq.get('enabled'):
         lines.append('    go_hFreeMarines = %d;' % fsq['marines'])
@@ -1708,6 +1751,8 @@ def text_entries(cfg):
             fill = lambda v: v if not cts else (v.replace('{gas}', '%g' % cts['gas_cost']).replace('{limit}', '%g' % cts['limit']).replace('{damage}', '%g' % cts['damage']).replace('{radius}', '%g' % cts['radius']).replace('{range}', '%g' % cts['place_range']).replace('{friendly}', '%g' % round(100 * cts['friendly']['hard'], 1)))  # noqa: E731
             for k in HANSON_TEXT_KEYS + tuple(k for k in HANSON_EXTRA_TEXT_KEYS if k in ht):
                 out.setdefault(loc, []).append((HANSON_TEXT_PREFIX + k, fill(ht[k][lang])))
+            if (hs.get('turret_kits') or {}).get('enabled'):
+                out.setdefault(loc, []).append((HANSON_TEXT_PREFIX + 'KitsHint', kits_hint(hs['turret_kits'], lang)))
             for ln in hs.get('lines') or []:
                 v = ln['text'][lang]
                 out.setdefault(loc, []).append((HANSON_TEXT_PREFIX + 'L_' + ln['id'], EXPLAIN_STYLE[0] + v + EXPLAIN_STYLE[1]))
@@ -1939,7 +1984,10 @@ def context(args):
             section = adapter.get('order_section')
             if not section:
                 raise ConfigError('mission %s takes no order' % args.mission)
-            cfg = deep_merge(cfg, {section: {'order': plan['order']}})
+            patch = {'order': plan['order']}
+            for key in reversed(adapter.get('order_path', [])):  # a mission whose order lives deeper than the section (THanson01: hanson.turret_kits.order)
+                patch = {key: patch}
+            cfg = deep_merge(cfg, {section: patch})
         adapter = json.loads(json.dumps(adapter))
         adapter['_op'] = plan['operation_id']
     return apply_ce0(adapter, cfg), cfg, preset

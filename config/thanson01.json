@@ -557,6 +557,7 @@
     },
     "sniper_next_free": {
       "label": "Тест — бесплатный отряд",
+      "hidden": true,
       "message": "Ghost Ops — Тест, бесплатный отряд",
       "message_en": "Ghost Ops - Test, free squad",
       "experimental": true,
@@ -599,6 +600,128 @@
             "Firebat",
             "Medic",
             "Marine",
+            "MissileTurret",
+            "GhostOpsFuelContainer"
+          ]
+        }
+      }
+    },
+    "sniper_next_r2": {
+      "label": "Подготовленные подрывы — ревизия 2",
+      "message": "Ghost Ops — Подготовленные подрывы, ревизия 2",
+      "message_en": "Ghost Ops - Prepared detonations, revision 2",
+      "experimental": true,
+      "badge": "ревизия 2",
+      "extends": "sniper_next",
+      "card": "Готовых турелей нет: вы заказываете комплекты ракетных турелей (рекомендуется 15) и строите их сами там, где нужно. Остальное как в «Подготовленных подрывах»: два призрака, взрывные контейнеры, колонна по команде за газ.",
+      "details": [
+        "Ракетные турели не стоят на карте: игрок получает заказанные комплекты и строит турели сам (бесплатно, строго по числу комплектов, без повторной оплаты)",
+        "Из окна кампании заказ оплачивается один раз (цена комплекта экспериментальная); с карточки запуска идёт рекомендуемый заказ как тестовый, запас кампании не тратится"
+      ],
+      "overrides": {
+        "campaign": {
+          "operation_id": "STANDALONE"
+        },
+        "hanson": {
+          "turrets": {
+            "list": []
+          },
+          "turret_kits": {
+            "enabled": true,
+            "limit": 30,
+            "recommended": 15,
+            "order": {
+              "turret_kits": 15
+            },
+            "price": {
+              "minerals": 75,
+              "gas": 0
+            },
+            "preparation": {
+              "minerals": 1000,
+              "gas": 500
+            },
+            "sectors": [
+              {
+                "role": "base",
+                "count": 8,
+                "ru": "база колонистов на западе карты (юго-запад и склады)",
+                "en": "the colonists' base in the west (south-west and the depots)"
+              },
+              {
+                "role": "houses",
+                "count": 4,
+                "ru": "дома колонистов вдоль маршрута колонны",
+                "en": "the colonists' houses along the convoy road"
+              },
+              {
+                "role": "air",
+                "count": 3,
+                "ru": "воздушные подходы севернее базы и у восточных домов",
+                "en": "the air approaches north of the base and by the eastern houses"
+              }
+            ]
+          },
+          "texts": {
+            "KitsTitle": {
+              "ru": "Комплекты ракетных турелей",
+              "en": "Missile turret kits"
+            },
+            "KitsOut": {
+              "ru": "Комплекты ракетных турелей закончились: новую турель построить нельзя.",
+              "en": "No turret kits left: a new turret cannot be built."
+            }
+          }
+        }
+      }
+    },
+    "sniper_next_free_r2": {
+      "label": "Тест — бесплатный отряд (ревизия 2)",
+      "message": "Ghost Ops — Тест, бесплатный отряд, ревизия 2",
+      "message_en": "Ghost Ops - Test, free squad, revision 2",
+      "experimental": true,
+      "badge": "без закупок",
+      "extends": "sniper_next_r2",
+      "card": "Тест — бесплатный отряд. Без «Часа икс» и закупок: 2 призрака, {marines} морпехов, огнемётчики, медики и {kits} комплектов ракетных турелей (строите сами). Всё конечное, пополнения нет. Запас кампании не тратится, результат в кампанию не зачисляется.",
+      "details": [
+        "ТЕСТОВЫЙ КОМПЛЕКТ, не утверждённый баланс: запуск прямо с карточки, без закупок и требований к запасу кампании"
+      ],
+      "overrides": {
+        "campaign": null,
+        "hanson": {
+          "free_squad": {
+            "enabled": true,
+            "marines": 16
+          }
+        }
+      }
+    },
+    "sniper_next_r2_ce0_dev": {
+      "label": "Подготовленные подрывы, ревизия 2, проба CE-0 (отладка)",
+      "message": "Ghost Ops - Prepared detonations r2, CE-0 probe (dev)",
+      "message_en": "Ghost Ops - Prepared detonations r2, CE-0 probe (dev)",
+      "hidden": true,
+      "extends": "sniper_next_r2",
+      "card": "Technical probe",
+      "details": [
+        "Development only"
+      ],
+      "overrides": {
+        "campaign": null,
+        "hanson": {
+          "debug_log": true,
+          "turret_kits": {
+            "order": {
+              "turret_kits": 3
+            }
+          }
+        },
+        "ce0": {
+          "operation_id": "CE0-TH01R2",
+          "census_types": [
+            "Ghost",
+            "Firebat",
+            "SCV",
             "MissileTurret",
             "GhostOpsFuelContainer"
           ]

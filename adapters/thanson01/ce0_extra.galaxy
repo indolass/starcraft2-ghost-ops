@@ -53,6 +53,11 @@ int GhostOps_Ce0_KitFree () {
 }
 
 void GhostOps_Ce0_KitGate () {
+    if (go_hKitOn) {
+        // the turret kits of the mission module own the gate of the turret: the old probe must not close it
+        return;
+    }
+
     TechTreeUnitAllow(1, "MissileTurret", GhostOps_Ce0_KitFree() > 0);
 }
 
@@ -520,7 +525,54 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
         // prepared detonations: the numbers that matter (gas, limit, placed, blasts, convoy state) and the ghosts / firebats
         GhostOps_Ce0_Write("j", "NSTAT gas " + IntToString(GhostOps_Hanson_Gas()) + " used " + IntToString(go_hContUsed) + "/" + IntToString(go_hContLimit) + " placed " + IntToString(go_hContN) + " blasts " + IntToString(go_hContBlasts) + " cmd " + IntToString(go_hCmdState) + " story " + IntToString(go_hStoryState));
         GhostOps_Ce0_Write("j", "NSTAT convoy sent " + IntToString(go_hSent) + " escort " + IntToString(go_hEscort) + " phase " + IntToString(go_hPhase) + " saved " + IntToString(go_hSaved) + " killed " + IntToString(go_hKilled) + " gate " + IntToString(GhostOps_Hanson_B(go_hGateOpen)));
+        if (go_hKitOn) {
+            GhostOps_Ce0_Write("j", "NSTAT kits ordered " + IntToString(go_hKitOrdered) + " spent " + IntToString(go_hKitSpent) + " consumed " + IntToString(go_hKitConsumed) + " reserved " + IntToString(GhostOps_Hanson_KitsReserved()) + " left " + IntToString(GhostOps_Hanson_KitsLeft()));
+        }
+
         GhostOps_Ce0_Write("j", "NSTAT ghosts " + IntToString(UnitGroupCount(UnitGroup("Ghost", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive)) + " firebats " + IntToString(UnitGroupCount(UnitGroup("Firebat", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive)) + " containers alive " + IntToString(UnitGroupCount(UnitGroup("GhostOpsFuelContainer", c_playerAny, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive)));
+        return true;
+    }
+
+    if (lp_cmd == "nallow") {
+        // nallow: the turret is allowed by hand and the order validity is measured at once, then with each other build index
+        TechTreeUnitAllow(1, "MissileTurret", true);
+        lv_scv = GhostOps_Ce0_First("SCV");
+        lv_cc = GhostOps_Ce0_First("CommandCenter");
+        lv_p = PointWithOffset(UnitGetPosition(lv_cc), -2.0, -6.0);
+        lv_t = "NALLOW scv " + UnitGetType(lv_scv) + " cc " + UnitGetType(lv_cc);
+        lv_i = 0;
+        while (lv_i < 8) {
+            lv_t = lv_t + " " + IntToString(lv_i) + "=" + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(lv_scv, OrderTargetingPoint(AbilityCommand("TerranBuild", lv_i), lv_p))));
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", lv_t + " | turret unit exists in catalog: " + CatalogFieldValueGet(c_gameCatalogUnit, "MissileTurret", "CostResource[Minerals]", 1));
+        return true;
+    }
+
+    if (lp_cmd == "nkits") {
+        GhostOps_Ce0_Write("j", "NKITS ordered " + IntToString(go_hKitOrdered) + " spent " + IntToString(go_hKitSpent) + " consumed " + IntToString(go_hKitConsumed) + " reserved " + IntToString(GhostOps_Hanson_KitsReserved()) + " left " + IntToString(GhostOps_Hanson_KitsLeft()));
+        return true;
+    }
+
+    if (lp_cmd == "killhurt") {
+        // killhurt <slot>: the unfinished turret of the probe slot is damaged (life 1) and, 0.6 s later, killed: a DESTROYED construction (a plain kill looks like a cancel)
+        lv_i = StringToInt(lp_a);
+        if (lv_i < 0) {
+            // -1: the last probe slot that is under construction
+            lv_i = 7;
+            while ((lv_i >= 0) && (go_kState[lv_i] != 1)) {
+                lv_i -= 1;
+            }
+        }
+
+        if ((lv_i >= 0) && (lv_i < 8) && (go_kUnit[lv_i] != null) && UnitIsAlive(go_kUnit[lv_i])) {
+            UnitSetPropertyFixed(go_kUnit[lv_i], c_unitPropLife, 1.0);
+            Wait(0.6, c_timeGame);
+            UnitKill(go_kUnit[lv_i]);
+            GhostOps_Ce0_Write("j", "KILLHURT slot " + lp_a + " damaged and killed");
+        }
+
         return true;
     }
 
@@ -762,6 +814,13 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
     if (lp_cmd == "sel") {
         // sel <slot>: the camera goes to the turret and it is selected (then the Escape key = the player's real cancel of a building under construction)
         lv_i = StringToInt(lp_a);
+        if (lv_i < 0) {
+            lv_i = 7;
+            while ((lv_i >= 0) && (go_kState[lv_i] != 1)) {
+                lv_i -= 1;
+            }
+        }
+
         if ((lv_i >= 0) && (lv_i < 8) && (go_kUnit[lv_i] != null) && UnitIsAlive(go_kUnit[lv_i])) {
             CameraPan(1, UnitGetPosition(go_kUnit[lv_i]), 0.0, -1.0, 10.0, false);
             UnitSelect(go_kUnit[lv_i], 1, true);
@@ -774,6 +833,13 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
     if (lp_cmd == "cancelbuild") {
         // the player's cancel of the unfinished turret (the command of the structure itself)
         lv_i = StringToInt(lp_a);
+        if (lv_i < 0) {
+            lv_i = 7;
+            while ((lv_i >= 0) && (go_kState[lv_i] != 1)) {
+                lv_i -= 1;
+            }
+        }
+
         if ((lv_i >= 0) && (lv_i < 8) && (go_kUnit[lv_i] != null) && UnitIsAlive(go_kUnit[lv_i])) {
             UnitIssueOrder(go_kUnit[lv_i], Order(AbilityCommand("CancelBuilding", 0)), c_orderQueueReplace);
             GhostOps_Ce0_Write("j", "CANCEL ordered for slot " + lp_a + " (CancelBuilding 0)");

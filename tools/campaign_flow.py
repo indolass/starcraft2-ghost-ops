@@ -17,8 +17,9 @@ import campaign
 SEQUENCE = [
     {'mission': 'traynor02', 'preset': 'tactical_next', 'title': 'Вне закона', 'order': False},  # the current version (the earlier operations keep their own profile 'tactical')
     {'mission': 'traynor03', 'preset': 'defence_next', 'title': 'Час икс', 'order': True},  # the current version; the earlier variants stay selectable in the window
+    {'mission': 'thanson01', 'preset': 'sniper_next_r2', 'title': 'Эвакуация', 'order': True},  # turret kits (revision 2); the map writes no result for the campaign yet  # the current version; the earlier variants stay selectable in the window
 ]
-ORDER_LABELS = {'marines': 'Морпехи гарнизона', 'bunkers': 'Бункеры', 'turrets': 'Ракетные турели', 'scvs': 'КСМ для ремонта'}
+ORDER_LABELS = {'marines': 'Морпехи гарнизона', 'bunkers': 'Бункеры', 'turrets': 'Ракетные турели', 'scvs': 'КСМ для ремонта', 'turret_kits': 'Комплекты ракетных турелей'}
 PREP_TEXT = 'Закупайтесь сейчас. После высадки новых бойцов нам взять негде. Оставьте достаточно людей для обороны — призракам предстоит работа за периметром.'
 
 
@@ -89,11 +90,24 @@ class CampaignFlow:
         """Limits, prices, the recommended order and its cost, from the resolved configuration (the plan can never change them)."""
         adapter = build.load_adapter(mission)
         cfg, _ = build.resolve_config(adapter, preset)
+        tk = (cfg.get('hanson') or {}).get('turret_kits')
+        if mission == 'thanson01' and tk and tk.get('enabled'):
+            rec = {'turret_kits': tk['recommended']}
+            return {'limits': {'turret_kits': tk['limit']}, 'prices': {'turret_kits': tk['price']}, 'recommended': rec, 'default': dict(tk['order']), 'items': ['turret_kits'], 'min': {},
+                    'recommended_cost': self.order_cost(cfg, mission, rec), 'test_budget': None, 'preparation': dict(tk['preparation']), 'hint': build.kits_hint(tk, 'ru')}
         z = cfg.get('zerohour')
         if not z:
             return None
         return {'limits': z['limits'], 'prices': z['prices'], 'recommended': z['recommended'], 'default': z['order'], 'items': build.ZH_ORDER_ITEMS, 'min': dict(z.get('min', {})),
                 'recommended_cost': build.zerohour_cost(cfg, z['recommended']), 'test_budget': z['test_budget']}
+
+    def order_cost(self, cfg, mission, order):
+        """{'minerals', 'gas'} of an order at the prices of the resolved configuration: Zero Hour - the item prices; Evacuation - the kits at the kit price
+        plus the preparation fee (a plan can never change a price)."""
+        if mission == 'thanson01':
+            tk = cfg['hanson']['turret_kits']
+            return {r: int(order['turret_kits']) * tk['price'][r] + tk['preparation'][r] for r in ('minerals', 'gas')}
+        return build.zerohour_cost(cfg, order)
 
     def quote(self, mission, preset, order):
         """Validates an order against the resolved limits and prices and against the campaign stock. Returns
@@ -114,7 +128,7 @@ class CampaignFlow:
                 if not errors:
                     adapter = build.load_adapter(mission)
                     cfg, _ = build.resolve_config(adapter, preset)
-                    cost = build.zerohour_cost(cfg, order)
+                    cost = self.order_cost(cfg, mission, order)
         elif order:
             errors.append('у этой миссии нет закупок')
         stock = self.stock()
