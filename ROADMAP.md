@@ -231,3 +231,6 @@ at 16/4/4/8 (1640), garrison x8 until the Owner's review (no more automatic tuni
 
 
 2026-10-24 (later): **THanson02 "Epidemic" revision 2 (`epidemic_free_r2`)**: the manual ground salvo of the turrets built from the kits (hotkey A, aiming circle, Esc / right button cancel, independent cooldown; the starting numbers are the ones of `defence_next`), corrected container / structure damage texts (600 = 200 + 400 extra), a clear squad composition on the card (14 Marines = 6 stock + 8 added), and the Evacuation resource text (a victory credits the MINERALS and GAS left on the map once, unspent kits are not paid back). Statuses and checks: `docs/MISSION_ROADMAP.md` (last section).
+
+
+2026-10-25: **документная фиксация прохождения Owner** («Эвакуация» и «Эпидемия» не пройдены из-за гибели отряда; «Час икс» пока неиграбелен; «Вне закона» принят). Закреплены согласованные изменения (общие способности без потери между миссиями, стабильный анализ детекторов, вступление и КСМ «Эвакуации», газовое ограничение контейнеров, новая схема снайперского выстрела, бункеры в тесте «Эпидемии», ослабленный гарнизон, метки повстанцев, гранатомёты, дальность и область ядерного удара, индикация «2/2» в «Часе икс»), числа остаются экспериментальными. Реализация не начата. Подробности: `docs/MISSION_ROADMAP.md` (последний раздел), `docs/MISSION_SETTINGS_AND_CAMPAIGN_ECONOMY.md`.

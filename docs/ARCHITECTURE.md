@@ -285,3 +285,6 @@ Agreed mechanic and experimental numbers: `docs/MISSION_ROADMAP.md` 8.1, economy
 
 
 **Shared turret salvo (2026-10-24).** `tools/build.py` `salvo_fragments(sv, with_cost)` holds the catalog data of the manual ground salvo (`GhostOpsTurretSalvo`: ability with a cooldown per unit, aiming effect, Odin-style cursor actors, missile effects); `defence_fragments` (TRaynor03) and `epidemic_fragments` (THanson02, key `epidemic.salvo`, validated by `validate_salvo`) both use it, and the two Missile Turret blocks are merged per id. The tooltip numbers come from the settings (`salvo_text`). The ability needs no script: it is present for every turret that the player builds.
+
+
+**Общие способности и явные отличия миссий (требование Owner, 2026-10-25; реализация не начата).** Способность, перешедшая из одной миссии в другую (наземный залп турелей, метки повстанцев, бронебойный гранатомёт, анализ детекторов, взрывные контейнеры), должна иметь одну реализацию и одинаковое управление; миссии различаются настройками (наличие, урон, дальность, боезапас, перезарядка, сюжетное открытие), а не копиями кода. Нового универсального движка способностей не проектируется: используются существующие модули. Фактическое состояние (что есть и в какой миссии), расхождения и критерии проверки: `docs/MISSION_ROADMAP.md`, последний раздел (таблица применимости).
