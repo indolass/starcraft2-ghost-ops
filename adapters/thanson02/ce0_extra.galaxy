@@ -5,6 +5,7 @@ fixed[24] go_ce0DumLife;
 int go_ce0DumN;
 point go_ce0Aim;
 unit go_ce0Air;
+int go_ce0ScvN;
 
 unit GhostOps_Ce0_First (string lp_type) {
     return UnitGroupUnit(UnitGroup(lp_type, 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), 1);
@@ -398,12 +399,12 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
 
     if (lp_cmd == "eselmar") {
         // eselmar: a Marine is created 3 cells from the first container and SELECTED, the camera is on the container (the attack command is then given with the real keys / mouse)
-        if (go_hContN < 1) {
+        if (GhostOps_Hanson_ContAlive() < 1) {
             GhostOps_Ce0_Write("j", "ESELMAR no container");
             return true;
         }
 
-        lv_p = UnitGetPosition(go_hCont[0]);
+        lv_p = UnitGetPosition(GhostOps_Hanson_ContNth(0));
         UnitCreate(1, "Marine", 0, 1, PointWithOffset(lv_p, -3.0, 0.0), 270.0);
         UnitClearSelection(1);
         UnitSelect(UnitLastCreated(), 1, true);
@@ -415,15 +416,15 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
     if (lp_cmd == "econt") {
         lv_i = 0;
         lv_t = "";
-        while (lv_i < go_hContN) {
-            if (UnitIsAlive(go_hCont[lv_i])) {
-                lv_t = lv_t + "(" + FixedToString(PointGetX(UnitGetPosition(go_hCont[lv_i])), 1) + "," + FixedToString(PointGetY(UnitGetPosition(go_hCont[lv_i])), 1) + ") ";
+        while (lv_i < GhostOps_Hanson_ContAlive()) {
+            if (UnitIsAlive(GhostOps_Hanson_ContNth(lv_i))) {
+                lv_t = lv_t + "(" + FixedToString(PointGetX(UnitGetPosition(GhostOps_Hanson_ContNth(lv_i))), 1) + "," + FixedToString(PointGetY(UnitGetPosition(GhostOps_Hanson_ContNth(lv_i))), 1) + ") ";
             }
 
             lv_i += 1;
         }
 
-        GhostOps_Ce0_Write("j", "ECONT placed " + IntToString(go_hContN) + " alive " + lv_t + "| turret kits left " + IntToString(GhostOps_Hanson_KitsLeft()));
+        GhostOps_Ce0_Write("j", "ECONT placed " + IntToString(GhostOps_Hanson_ContAlive()) + " alive " + lv_t + "| turret kits left " + IntToString(GhostOps_Hanson_KitsLeft()));
         return true;
     }
 
@@ -540,6 +541,126 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
         go_ce0Air = UnitLastCreated();
         libNtve_gf_PauseUnit(go_ce0Air, true);
         GhostOps_Ce0_Write("j", "EAIR created life " + FixedToString(UnitGetPropertyFixed(go_ce0Air, c_unitPropLife, c_unitPropCurrent), 0));
+        return true;
+    }
+
+    if ((lp_cmd == "ebgrid") || (lp_cmd == "ebuildb")) {
+        // ebgrid: which places around the Command Center accept a Bunker order of the first SCV (the free places of the next scenario); ebuildb <dx> <dy>: that SCV builds a Bunker at the offset
+        lv_u = GhostOps_Ce0_First("SCV");
+        lv_k = GhostOps_Ce0_First("CommandCenter");
+        lv_j = -1;
+        lv_i = 0;
+        while (lv_i < 24) {
+            if (CatalogFieldValueGet(c_gameCatalogAbil, "TerranBuild", "InfoArray[" + IntToString(lv_i) + "].Unit", 1) == "Bunker") {
+                lv_j = lv_i;
+            }
+
+            lv_i += 1;
+        }
+
+        if (lp_cmd == "ebuildb") {
+            UnitIssueOrder(lv_u, OrderTargetingPoint(AbilityCommand("TerranBuild", lv_j), PointWithOffset(UnitGetPosition(lv_k), StringToFixed(lp_a), StringToFixed(lp_b))), c_orderQueueReplace);
+            GhostOps_Ce0_Write("j", "EBUILDB order index " + IntToString(lv_j) + " at " + lp_a + "," + lp_b);
+            return true;
+        }
+
+        lv_t = "EBGRID index " + IntToString(lv_j) + " valid:";
+        lv_n = -14;
+        while (lv_n <= 14) {
+            lv_c = -14;
+            while (lv_c <= 14) {
+                if (UnitOrderIsValid(lv_u, OrderTargetingPoint(AbilityCommand("TerranBuild", lv_j), PointWithOffset(UnitGetPosition(lv_k), IntToFixed(lv_n), IntToFixed(lv_c))))) {
+                    lv_t = lv_t + " " + IntToString(lv_n) + "," + IntToString(lv_c);
+                }
+
+                lv_c += 4;
+            }
+
+            lv_n += 4;
+        }
+
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "escvat") {
+        // escvat <x> <y>: the NEXT SCV of the group (a counter, a new one every call) is put at the point, stopped, selected, the camera on him: the next real keys (B, U, click) build from there
+        go_ce0ScvN += 1;
+        lv_u = UnitGroupUnit(UnitGroup("SCV", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), go_ce0ScvN);
+        UnitSetPosition(lv_u, Point(StringToFixed(lp_a), StringToFixed(lp_b)), false);
+        UnitIssueOrder(lv_u, Order(AbilityCommand("stop", 0)), c_orderQueueReplace);
+        UnitClearSelection(1);
+        UnitSelect(lv_u, 1, true);
+        CameraPan(1, UnitGetPosition(lv_u), 0.0, -1.0, 10.0, false);
+        GhostOps_Ce0_Write("j", "ESCVAT scv " + IntToString(go_ce0ScvN) + " at " + lp_a + "," + lp_b);
+        return true;
+    }
+
+    if (lp_cmd == "eenemy") {
+        // eenemy: the enemy fighters (players 2..4) within 45 cells of the Command Center and the kills of the Marines, Bunkers and Ghosts of the player: did the attack come, and who stopped it
+        lv_k = GhostOps_Ce0_First("CommandCenter");
+        lv_c = 0;
+        lv_i = 2;
+        while (lv_i <= 4) {
+            lv_c += UnitGroupCount(UnitGroup(null, lv_i, RegionCircle(UnitGetPosition(lv_k), 45.0), UnitFilter(0, 0, (1 << c_targetFilterStructure), (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive);
+            lv_i += 1;
+        }
+
+        lv_n = 0;
+        lv_g = UnitGroup(null, 1, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32))), 0);
+        UnitGroupLoopBegin(lv_g);
+        while (UnitGroupLoopCurrent() != null) {
+            lv_n += FixedToInt(UnitGetPropertyFixed(UnitGroupLoopCurrent(), c_unitPropKills, c_unitPropCurrent));
+            UnitGroupLoopStep();
+        }
+
+        UnitGroupLoopEnd();
+        GhostOps_Ce0_Write("j", "EENEMY enemy fighters within 45 of the base " + IntToString(lv_c) + " | kills of the living units of the player " + IntToString(lv_n) + " | CC life " + FixedToString(UnitGetPropertyFixed(lv_k, c_unitPropLife, c_unitPropCurrent), 0));
+        return true;
+    }
+
+    if (lp_cmd == "ebunk") {
+        // the bunkers of the player: place, life, how many Marines inside; the bunker kits (ordered / spent / consumed / reserved / left)
+        lv_g = UnitGroup("Bunker", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+        lv_t = "";
+        lv_i = 1;
+        while (lv_i <= UnitGroupCount(lv_g, c_unitCountAll)) {
+            lv_u = UnitGroupUnit(lv_g, lv_i);
+            lv_t = lv_t + "(" + FixedToString(PointGetX(UnitGetPosition(lv_u)), 1) + "," + FixedToString(PointGetY(UnitGetPosition(lv_u)), 1) + " life " + FixedToString(UnitGetPropertyFixed(lv_u, c_unitPropLife, c_unitPropCurrent), 0) + " inside " + IntToString(UnitGroupCount(UnitCargoGroup(lv_u), c_unitCountAlive)) + ") ";
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", "EBUNK " + IntToString(UnitGroupCount(lv_g, c_unitCountAlive)) + " " + lv_t + "| radar ghost1 " + IntToString(UnitBehaviorCount(GhostOps_Ce0_First("Ghost"), "HeroDetectorRadar")) + " | kits ordered " + IntToString(go_hBkOrdered) + " spent " + IntToString(go_hBkSpent) + " consumed " + IntToString(go_hBkConsumed) + " reserved " + IntToString(GhostOps_Hanson_KitsReservedF(1)) + " left " + IntToString(GhostOps_Hanson_KitsLeftF(1)));
+        return true;
+    }
+
+    if (lp_cmd == "eloadb") {
+        // eloadb: the four next Marines of the group go into every finished bunker by the ordinary right-click order
+        lv_g = UnitGroup("Bunker", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+        lv_c = 0;
+        lv_n = 0;
+        UnitGroupLoopBegin(lv_g);
+        while (UnitGroupLoopCurrent() != null) {
+            lv_u = UnitGroupLoopCurrent();
+            if (!UnitTestState(lv_u, c_unitStateUnderConstruction)) {
+                lv_j = 0;
+                while (lv_j < 4) {
+                    lv_n += 1;
+                    lv_k = UnitGroupUnit(UnitGroup("Marine", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), lv_n);
+                    if (lv_k != null) {
+                        UnitIssueOrder(lv_k, OrderTargetingUnit(AbilityCommand("smart", 0), lv_u), c_orderQueueReplace);
+                        lv_c += 1;
+                    }
+
+                    lv_j += 1;
+                }
+            }
+
+            UnitGroupLoopStep();
+        }
+
+        UnitGroupLoopEnd();
+        GhostOps_Ce0_Write("j", "ELOADB orders given to " + IntToString(lv_c) + " Marines");
         return true;
     }
 

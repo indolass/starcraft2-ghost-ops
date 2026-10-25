@@ -39,7 +39,7 @@ class NextConfig(unittest.TestCase):
 
     def test_validation_rejects_broken_options(self):
         for path, value in (
-                (('hanson', 'containers', 'limit'), 0),
+                (('hanson', 'containers', 'limit'), -1),
                 (('hanson', 'containers', 'friendly'), {'hard': 2, 'other': 0}),
                 (('hanson', 'containers', 'hotkey'), 'c'),
                 (('hanson', 'containers', 'owner'), 1),

@@ -70,18 +70,36 @@ def profiles_of(mission_id):
     presets = raw.get('presets')
     if not presets:
         return []
-    for n, p in presets.items():  # the composition of a free test squad is shown on the card BEFORE the start (the number lives in the config)
-        if '{marines}' in p.get('card', '') or '{kits}' in p.get('card', '') or '{hellions}' in p.get('card', ''):
-            rc = build.resolve_config(adapter, n)[0]
-            hh = rc.get('hanson') or {}
-            ee = rc.get('epidemic') or {}
-            nm = (hh.get('free_squad') or {}).get('marines', 0)
-            p = dict(p, card=p['card'].replace('{marines_total}', str(nm + ee.get('stock_marines', 0))).replace('{marines_stock}', str(ee.get('stock_marines', 0)))
-                     .replace('{salvo_cd}', ('%g' % ee['salvo']['cooldown']) if ee.get('salvo') else '').replace('{marines}', str(nm)).replace('{kits}', str(((hh.get('turret_kits') or {}).get('order') or {}).get('turret_kits', 0)))
-                     .replace('{hellions}', str(((rc.get('epidemic') or {}).get('hellions') or {}).get('extra', 0))))
+    for n, p in presets.items():  # the composition of a free test squad is shown on the card BEFORE the start (the numbers live in the config)
+        if '{' in p.get('card', ''):
+            p = dict(p, card=fill_card(p['card'], build.resolve_config(adapter, n)[0]))
             presets = dict(presets, **{n: p})
     return [{'name': n, 'label': p['label'], 'card': p.get('card', ''), 'details': p.get('details', []),
              'experimental': bool(p.get('experimental')), 'badge': p.get('badge', '')} for n, p in presets.items() if not p.get('hidden')]
+
+
+def fill_card(card, rc):
+    """The numbers of a card from the RESOLVED configuration (one source for the card, the order, the plan and the test): marines, kits, SCVs, bunkers, hellions, salvo."""
+    hh, ee = rc.get('hanson') or {}, rc.get('epidemic') or {}
+    fsq = hh.get('free_squad') or {}
+    nm = fsq.get('marines', 0)
+    tk = hh.get('turret_kits') or {}
+    scv = tk.get('scv') or {}
+    bk = hh.get('bunker_kits') or {}
+    ex_scv = (tk.get('order') or {}).get('scvs', 0) + fsq.get('scvs', 0)
+    stock_scv = scv.get('stock', ee.get('stock_scvs', 0))
+    sv = ee.get('salvo') or hh.get('salvo') or {}
+    rep = {'{marines_total}': str(nm + ee.get('stock_marines', 0)), '{marines_stock}': str(ee.get('stock_marines', 0)), '{marines}': str(nm),
+           '{salvo_cd}': ('%g' % sv['cooldown']) if sv else '', '{kits}': str((tk.get('order') or {}).get('turret_kits', 0)),
+           '{hellions}': str((ee.get('hellions') or {}).get('extra', 0)),
+           '{scvs_total}': str(stock_scv + ex_scv), '{scvs_stock}': str(stock_scv), '{scvs_extra}': str(ex_scv),
+           '{bunkers}': str((bk.get('order') or {}).get('bunker_kits', 0)), '{bunker_places}': str(4 * (bk.get('order') or {}).get('bunker_kits', 0))}
+    zh = rc.get('zerohour') or {}
+    zo = zh.get('order') or {}
+    rep.update({'{marines_t}': str(zo.get('marines', 0)), '{bunkers_t}': str(zo.get('bunkers', 0)), '{turrets_t}': str(zo.get('turrets', 0)), '{scvs_t}': str(zo.get('scvs', 0))})
+    for k, v in rep.items():
+        card = card.replace(k, v)
+    return card
 
 
 def installed_map_info(mission_id, preset, game_dir=None, no_voice=False):
@@ -140,13 +158,28 @@ def hanson_lines(cfg):
     fs = h.get('free_squad') or {}
     free = ['Тест — бесплатный отряд: 2 призрака, %d морпехов, огнемётчики и медики миссии; конечный отряд без пополнения; запас кампании не тратится, результат в кампанию не зачисляется' % fs['marines']] if fs.get('enabled') else []
     tk = h.get('turret_kits') or {}
+    scv = tk.get('scv') or {}
+    extra_scv = (tk.get('order') or {}).get('scvs', 0) + (fs.get('scvs', 0) if fs.get('enabled') else 0)
     kits = ['Ракетные турели: готовых на карте нет; комплектов %d (рекомендуется %d), строите сами бесплатно, строго по числу комплектов; отмена возвращает комплект, достроенная турель его тратит, гибель достроенной не возвращает, гибель недостроенной сжигает. Участки: %s' % (
         tk['order']['turret_kits'], tk['recommended'], '; '.join('%s - %d' % (x['ru'], x['count']) for x in tk['sectors']))] if tk.get('enabled') else []
-    return free + kits + [
+    scv_line = ['КСМ: всего %d (штатных %d + дополнительных %d: заказ / рекомендация; они появляются при передаче базы); обучение КСМ в миссии не открывается' % (
+        scv.get('stock', 0) + extra_scv, scv.get('stock', 0), extra_scv)] if scv else []
+    salvo_line = ['Наземный залп турелей (кнопка и клавиша %s, круг прицела %s): %d ракет по %g урона наземным врагам, дальность %g, перезарядка %g с у каждой турели; Esc / правая кнопка отменяют без выстрела' % (
+        h['salvo'].get('hotkey', 'G'), num(h['salvo']['radius'] + h['salvo'].get('spread', 0)), h['salvo']['missiles'], h['salvo']['damage'], h['salvo']['range'], h['salvo']['cooldown'])] if h.get('salvo') else []
+    rs = sn.get('rifle_shot')
+    cont_line = []
+    ct = h.get('containers') or {}
+    if ct.get('enabled'):
+        cont_line = ['Взрывные контейнеры (C): %d газа за контейнер, %s; взрыв от первого прямого попадания бойца игрока (призрак не нужен): %g урона по наземным врагам в радиусе %s' % (
+            ct['gas_cost'], ('общий запас %d' % ct['limit']) if ct['limit'] else 'общего лимита нет, число ограничено газом', ct['damage'], num(ct['radius']))]
+    det_line = ['Анализ детекторов: круги зон обнаружения видимых вражеских детекторов показываются всё время, пока призрак жив (не зависят от выделения)'] if (cfg.get('detector_analysis') or {}).get('always') else []
+    shot_line = (['Снайперский выстрел (R): клик по врагу, рядом (помощь прицеливанию в радиусе %s, один ближайший видимый враг) или в пустую точку (выстрел в землю без урона); дальность %g, '
+                  'урон %g одной цели, перезарядка %s с, энергия не тратится; промах тоже перезаряжается' % (num(rs['assist_radius']), rs['range'], sn['damage'], num(sn['cooldown']))]) if rs else []
+    return free + scv_line + kits + salvo_line + cont_line + det_line + shot_line + [
         'Призраки: %d, здоровье %s/%s, не восполняется; появляются рядом со стартовым отрядом' % (sum(1 for u in cfg['operatives']['squad'] if u == 'Ghost'), gt['ghost_life'], gt['ghost_life']),
         'Маскировка постоянная, энергию не тратит; детекторы раскрывают штатно; EMP и ядерный удар отключены',
-        'Snipe: %s энергии, урон %g (убивает любую вражескую боевую цель, здания и союзники исключены), подготовка %s с, перезарядка %s с' % (
-            num(sn['cost']), sn['damage'], num(sn['cast_time']), num(sn['cooldown'])),
+        ('Snipe: %s энергии, урон %g (убивает любую вражескую боевую цель, здания и союзники исключены), подготовка %s с, перезарядка %s с' % (
+            num(sn['cost']), sn['damage'], num(sn['cast_time']), num(sn['cooldown']))) if not rs else 'Снайперский выстрел заменяет Snipe: см. выше',
         'Производство, строительство, найм и исследования запрещены; существующие SCV добывают и чинят',
         'Конвой уходит по кнопке «Отправить конвой» (по команде игрока), только когда колонисты собраны',
         ('Ракетные турели (ПВО): %d — база %d, дома колонистов %d, воздушные подходы %d; чинятся SCV, новые строить нельзя' % (
@@ -169,6 +202,10 @@ def epidemic_lines(cfg):
         'Режим «Свободный тест»: бесплатный конечный отряд, без списаний и переноса в кампанию; результат в кампанию не предлагается',
         'Состав: 2 призрака (%s здоровья); морпехи: всего %d (%d штатных миссии и %d добавленных тестом); штатные огнемётчики (4) и медики (4), КСМ; геллионы: штатные Свонна и %d добавленных. Производства боевых войск нет, пополнения нет' % (
             gt['ghost_life'], fs.get('marines', 0) + e.get('stock_marines', 0), e.get('stock_marines', 0), fs.get('marines', 0), e['hellions']['extra']),
+        ('КСМ: всего %d (%d штатных миссии и %d добавленных тестом; они появляются в первую секунду)' % (e.get('stock_scvs', 0) + fs.get('scvs', 0), e.get('stock_scvs', 0), fs.get('scvs', 0))) if fs.get('scvs') else 'КСМ: только штатные',
+        ('Комплекты бункеров: %d (по 4 места = %d мест гарнизона); бункеры строит и размещает игрок бесплатно, строго по числу комплектов; отмена возвращает комплект, достройка тратит, гибель достроенного не возвращает' % (
+            h['bunker_kits']['order']['bunker_kits'], 4 * h['bunker_kits']['order']['bunker_kits'])) if (h.get('bunker_kits') or {}).get('enabled') else 'Комплектов бункеров в этой ревизии нет',
+        'Анализ детекторов: %s' % ('круги видимых вражеских детекторов показываются постоянно, пока призрак жив' if (cfg.get('detector_analysis') or {}).get('always') else 'круги показываются, пока призрак выделен (ревизии 1-2)'),
         'Топливо геллионов: бак %s, расход %s на пройденную клетку; на базе местный газ заполняет только %d%% бака; без топлива машина стоит, но стреляет, чинится и заправляется (запас виден полосой энергии)' % (
             num(f['tank']), num(f['per_cell']), round(100 * f['base_fill_poor'])),
         'Газовоз: брошен, не атакуется до захвата; рядом %d зараженных; пехота (не меньше %d бойцов) захватывает его один раз. Запас %s, скорость %s; заправка геллионов рядом автоматическая, топливо уходит из цистерны' % (

@@ -1,0 +1,120 @@
+{
+ "name": "th2r3_bunker",
+ "mission": "thanson02",
+ "preset": "epidemic_free_ce0_dev",
+ "why": "a bunker from a kit through the real interface (SCV, B, U, click), Marines into it, the kits follow",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "cmd",
+   "text": "snap",
+   "wait": 1.3
+  },
+  {
+   "op": "expect",
+   "regex": "SNAP.*Marine=18.*SCV=12",
+   "note": "the composition of the test at the start: 18 Marines (6 + 12), 12 SCVs (6 + 6)"
+  },
+  {
+   "op": "cmd",
+   "text": "eselscv fix",
+   "wait": 1.3
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "key",
+   "keys": [
+    "B"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "U"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "shot",
+   "file": "b0_menu.png"
+  },
+  {
+   "op": "click",
+   "x": 720,
+   "y": 310
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "ebunk",
+   "wait": 1.3
+  },
+  {
+   "op": "until",
+   "cmd": "ebunk",
+   "grep": "EBUNK 1 .*life 400",
+   "every": 5,
+   "timeout": 80
+  },
+  {
+   "op": "cmd",
+   "text": "eloadb",
+   "wait": 1.3
+  },
+  {
+   "op": "sleep",
+   "s": 15
+  },
+  {
+   "op": "cmd",
+   "text": "ebunk",
+   "wait": 1.3
+  },
+  {
+   "op": "shot",
+   "file": "b1_bunker.png"
+  },
+  {
+   "op": "expect",
+   "regex": "EBUNK|ELOADB",
+   "note": "bunker from a kit, Marines inside"
+  },
+  {
+   "op": "expect_def",
+   "bank": "GhostOpsDevHanson",
+   "regex": "kit|bunker",
+   "note": "Hanson log"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

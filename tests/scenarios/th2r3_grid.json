@@ -1,0 +1,37 @@
+{
+ "name": "th2r3_grid",
+ "mission": "thanson02",
+ "preset": "epidemic_free_ce0_dev",
+ "why": "free places for the bunkers around the Command Center",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "cmd",
+   "text": "ebgrid",
+   "wait": 2.5
+  },
+  {
+   "op": "expect",
+   "regex": "EBGRID",
+   "note": "valid places for a bunker"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

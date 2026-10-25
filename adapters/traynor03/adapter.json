@@ -68,6 +68,21 @@
       "function": "gt_RebelMarines03Rescued_Func",
       "after": "gv_rebelFightersRescued += 1;",
       "call": "GhostOps_ZH_OnRescue(3);"
+    },
+    {
+      "function": "gt_TransmissionRebelMarines01RescuedQ_Func",
+      "after": "libNtve_gf_RescueUnit(UnitGroupLoopCurrent(), gv_pLAYER01_USER, true);",
+      "call": "GhostOps_Tac_OnRescue(UnitGroupLoopCurrent());"
+    },
+    {
+      "function": "gt_TransmissionRebelMarines02RescuedQ_Func",
+      "after": "libNtve_gf_RescueUnit(UnitGroupLoopCurrent(), gv_pLAYER01_USER, true);",
+      "call": "GhostOps_Tac_OnRescue(UnitGroupLoopCurrent());"
+    },
+    {
+      "function": "gt_TransmissionRebelMarines03RescuedQ_Func",
+      "after": "libNtve_gf_RescueUnit(UnitGroupLoopCurrent(), gv_pLAYER01_USER, true);",
+      "call": "GhostOps_Tac_OnRescue(UnitGroupLoopCurrent());"
     }
   ],
   "campaign_hooks": [

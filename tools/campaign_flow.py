@@ -17,9 +17,9 @@ import campaign
 SEQUENCE = [
     {'mission': 'traynor02', 'preset': 'tactical_next', 'title': 'Вне закона', 'order': False},  # the current version (the earlier operations keep their own profile 'tactical')
     {'mission': 'traynor03', 'preset': 'defence_next', 'title': 'Час икс', 'order': True},  # the current version; the earlier variants stay selectable in the window
-    {'mission': 'thanson01', 'preset': 'sniper_next_r2', 'title': 'Эвакуация', 'order': True},  # turret kits (revision 2); the map writes no result for the campaign yet  # the current version; the earlier variants stay selectable in the window
+    {'mission': 'thanson01', 'preset': 'sniper_next_r3', 'title': 'Эвакуация', 'order': True},  # revision 3: turret kits + extra SCVs (earlier operations keep their own profile)  # the current version; the earlier variants stay selectable in the window
 ]
-ORDER_LABELS = {'marines': 'Морпехи гарнизона', 'bunkers': 'Бункеры', 'turrets': 'Ракетные турели', 'scvs': 'КСМ для ремонта', 'turret_kits': 'Комплекты ракетных турелей'}
+ORDER_LABELS = {'marines': 'Морпехи гарнизона', 'bunkers': 'Бункеры', 'turrets': 'Ракетные турели', 'scvs': 'КСМ для ремонта', 'scvs_extra': 'Дополнительные КСМ', 'turret_kits': 'Комплекты ракетных турелей'}
 PREP_TEXT = 'Закупайтесь сейчас. После высадки новых бойцов нам взять негде. Оставьте достаточно людей для обороны — призракам предстоит работа за периметром.'
 
 
@@ -92,9 +92,17 @@ class CampaignFlow:
         cfg, _ = build.resolve_config(adapter, preset)
         tk = (cfg.get('hanson') or {}).get('turret_kits')
         if mission == 'thanson01' and tk and tk.get('enabled'):
+            scv = tk.get('scv')
             rec = {'turret_kits': tk['recommended']}
-            return {'limits': {'turret_kits': tk['limit']}, 'prices': {'turret_kits': tk['price']}, 'recommended': rec, 'default': dict(tk['order']), 'items': ['turret_kits'], 'min': {},
-                    'recommended_cost': self.order_cost(cfg, mission, rec), 'test_budget': None, 'preparation': dict(tk['preparation']), 'hint': build.kits_hint(tk, 'ru')}
+            limits, prices, items = {'turret_kits': tk['limit']}, {'turret_kits': tk['price']}, ['turret_kits']
+            if scv:
+                # revision 3: the extra SCVs of the order; the recommendation is the TOTAL number (the stock SCVs of the mission included), the order holds only the extra ones
+                rec['scvs'] = scv['recommended_total'] - scv['stock']
+                limits['scvs'], prices['scvs'], items = scv['limit_extra'], scv['price'], items + ['scvs']
+                limits = {'turret_kits': tk['limit'], 'scvs': scv['limit_extra']}
+                prices = {'turret_kits': tk['price'], 'scvs': scv['price']}
+            return {'limits': limits, 'prices': prices, 'recommended': rec, 'default': dict(tk['order']), 'items': items, 'min': {},
+                    'recommended_cost': self.order_cost(cfg, mission, rec), 'test_budget': None, 'preparation': dict(tk['preparation']), 'hint': build.kits_hint(tk, 'ru'), 'scv': scv}
         z = cfg.get('zerohour')
         if not z:
             return None
@@ -106,7 +114,8 @@ class CampaignFlow:
         plus the preparation fee (a plan can never change a price)."""
         if mission == 'thanson01':
             tk = cfg['hanson']['turret_kits']
-            return {r: int(order['turret_kits']) * tk['price'][r] + tk['preparation'][r] for r in ('minerals', 'gas')}
+            sp = (tk.get('scv') or {}).get('price', {'minerals': 0, 'gas': 0})
+            return {r: int(order['turret_kits']) * tk['price'][r] + int(order.get('scvs', 0)) * sp[r] + tk['preparation'][r] for r in ('minerals', 'gas')}
         return build.zerohour_cost(cfg, order)
 
     def quote(self, mission, preset, order):

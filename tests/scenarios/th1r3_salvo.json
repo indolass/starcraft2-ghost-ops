@@ -1,0 +1,347 @@
+{
+ "name": "th1r3_salvo",
+ "mission": "thanson01",
+ "preset": "sniper_next_r3_ce0_dev",
+ "why": "the ground salvo of a turret built from a kit in Evacuation r3: A, aiming, Esc / right button cancel, fire, cooldown, save / load during it",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 6
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "nstat",
+   "grep": "NSTAT ghosts 2 firebats 2",
+   "every": 5,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "enter",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 25
+  },
+  {
+   "op": "cmd",
+   "text": "abil",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "nscvat 0 -6",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "key",
+   "keys": [
+    "B"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "key",
+   "keys": [
+    "T"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "shot",
+   "file": "v0_build_menu.png"
+  },
+  {
+   "op": "click",
+   "x": 800,
+   "y": 384
+  },
+  {
+   "op": "sleep",
+   "s": 4
+  },
+  {
+   "op": "until",
+   "cmd": "nstat",
+   "grep": "NSTAT kits ordered 15 spent 1",
+   "every": 5,
+   "timeout": 120
+  },
+  {
+   "op": "expect",
+   "regex": "NSTAT kits ordered 15 spent 1",
+   "note": "a turret was built from a kit through the real keys"
+  },
+  {
+   "op": "cmd",
+   "text": "nselt",
+   "wait": 1.2
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "shot",
+   "file": "v1a_after_eselt.png"
+  },
+  {
+   "op": "expect",
+   "regex": "NSELT",
+   "note": "turret selected (probe)"
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "cmd",
+   "text": "nsdum -5 0",
+   "wait": 1.2
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "expect",
+   "regex": "NSDUM",
+   "note": "dummies created (probe)"
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "shot",
+   "file": "v1_turret_selected.png"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "A"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "shot",
+   "file": "v2_after_A.png"
+  },
+  {
+   "op": "move",
+   "x": 272,
+   "y": 384
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "shot",
+   "file": "v3_aiming.png"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "cmd",
+   "text": "nsdmg",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "nseval",
+   "wait": 1.2
+  },
+  {
+   "op": "expect",
+   "regex": "NSDMG damaged 0 of 9",
+   "note": "Esc: no shot"
+  },
+  {
+   "op": "expect",
+   "regex": "NSEVAL ready 1 ability 1",
+   "note": "Esc: no cooldown, the ability is there"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "A"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "rclick",
+   "x": 272,
+   "y": 384
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "cmd",
+   "text": "nsdmg",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "nseval",
+   "wait": 1.2
+  },
+  {
+   "op": "key",
+   "keys": [
+    "A"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "click",
+   "x": 272,
+   "y": 384
+  },
+  {
+   "op": "burst",
+   "file": "v4_salvo_",
+   "n": 2,
+   "gap": 0.0
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "cmd",
+   "text": "nsdmg",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "nseval",
+   "wait": 1.2
+  },
+  {
+   "op": "expect",
+   "regex": "NSDMG damaged [1-9]",
+   "note": "the salvo hurt the ground enemies"
+  },
+  {
+   "op": "expect",
+   "regex": "NSEVAL ready 0",
+   "note": "the cooldown runs after the salvo and is still running after the save / load (2 lines)",
+   "count": 2
+  },
+  {
+   "op": "shot",
+   "file": "v5_cooldown.png"
+  },
+  {
+   "op": "save",
+   "name": "CE0_TH2_S"
+  },
+  {
+   "op": "load",
+   "name": "CE0_TH2_S"
+  },
+  {
+   "op": "sleep",
+   "s": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "nsdmg",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "nseval",
+   "wait": 1.2
+  },
+  {
+   "op": "sleep",
+   "s": 26
+  },
+  {
+   "op": "cmd",
+   "text": "nsdmg",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "nseval",
+   "wait": 1.2
+  },
+  {
+   "op": "shot",
+   "file": "v6_after_load.png"
+  },
+  {
+   "op": "expect",
+   "regex": "NSEVAL ready 1 ability 1",
+   "note": "after the cooldown the ability is ready again (not lost)"
+  },
+  {
+   "op": "sleep",
+   "s": 10
+  },
+  {
+   "op": "expect",
+   "regex": "NSDMG",
+   "note": "the anti-air fire"
+  },
+  {
+   "op": "expect",
+   "regex": "NS(DMG|EVAL)",
+   "note": "all salvo probe lines in order"
+  },
+  {
+   "op": "expect_def",
+   "bank": "GhostOpsDevHanson",
+   "regex": "kit",
+   "note": "Hanson log (information)"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

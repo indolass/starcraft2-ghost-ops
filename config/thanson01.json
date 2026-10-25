@@ -165,7 +165,7 @@
       }
     }
   },
-  "default_preset": "sniper",
+  "default_preset": "sniper_next_r3",
   "presets": {
     "sniper": {
       "label": "Снайперское прикрытие",
@@ -811,6 +811,248 @@
             "Ghost",
             "Firebat",
             "Medic",
+            "MissileTurret",
+            "GhostOpsFuelContainer"
+          ]
+        }
+      }
+    },
+    "sniper_next_r3": {
+      "label": "Эвакуация — ревизия 3 (кампания)",
+      "message": "Ghost Ops — Эвакуация, ревизия 3",
+      "message_en": "Ghost Ops - Evacuation, revision 3",
+      "experimental": true,
+      "badge": "Для проверки · кампания",
+      "extends": "sniper_next_r2",
+      "card": "Режим «Кампания» — из окна «Кампания», шаг 3: оплаченный заказ (комплекты турелей и дополнительные КСМ), при победе остаток минералов и газа на карте можно зачислить в запас кампании (один раз). Запуск с этой карточки — тест: рекомендуемый заказ бесплатно ({kits} комплектов турелей, КСМ: {scvs_total} = {scvs_stock} штатных + {scvs_extra} дополнительных), результат не зачисляется. Новое в ревизии 3: наземный залп турелей (A), новый снайперский выстрел (R: выстрел всегда состоится, промах тоже), контейнеры без общего лимита (ограничивает газ), вступление после передачи базы, стабильный анализ детекторов.",
+      "details": [
+        "Ревизия 3: прежние ревизии сохранены для продолжения прохождений",
+        "Предзаказ: комплекты ракетных турелей и дополнительные КСМ (штатных 4); обучение КСМ в миссии не открывается",
+        "Результат победы: предлагается зачислить остаток минералов и газа, оставшихся на карте; зачисляется один раз. Неиспользованные комплекты деньгами не возвращаются"
+      ],
+      "overrides": {
+        "hanson": {
+          "turret_kits": {
+            "enabled": true,
+            "limit": 30,
+            "recommended": 15,
+            "order": {
+              "turret_kits": 15,
+              "scvs": 8
+            },
+            "price": {
+              "minerals": 75,
+              "gas": 0
+            },
+            "preparation": {
+              "minerals": 1000,
+              "gas": 500
+            },
+            "sectors": [
+              {
+                "role": "base",
+                "count": 8,
+                "ru": "база колонистов на западе карты (юго-запад и склады)",
+                "en": "the colonists' base in the west (south-west and the depots)"
+              },
+              {
+                "role": "houses",
+                "count": 4,
+                "ru": "дома колонистов вдоль маршрута колонны",
+                "en": "the colonists' houses along the convoy road"
+              },
+              {
+                "role": "air",
+                "count": 3,
+                "ru": "воздушные подходы севернее базы и у восточных домов",
+                "en": "the air approaches north of the base and by the eastern houses"
+              }
+            ],
+            "scv": {
+              "stock": 4,
+              "recommended_total": 12,
+              "limit_extra": 16,
+              "price": {
+                "minerals": 50,
+                "gas": 0
+              }
+            }
+          },
+          "texts": {
+            "KitsTitle": {
+              "ru": "Комплекты ракетных турелей",
+              "en": "Missile turret kits"
+            },
+            "KitsOut": {
+              "ru": "Комплекты ракетных турелей закончились: новую турель построить нельзя.",
+              "en": "No turret kits left: a new turret cannot be built."
+            },
+            "KitsReservedMsg": {
+              "ru": "Начато строительство турели. Свободных комплектов:",
+              "en": "A turret construction has started. Free kits:"
+            },
+            "KitsFreedMsg": {
+              "ru": "Строительство турели отменено. Свободных комплектов:",
+              "en": "The turret construction was cancelled. Free kits:"
+            },
+            "ContainerTip": {
+              "ru": "Горячая клавиша [C]. Ставит рядом контейнер с горючей смесью (в пределах {range} от огнемётчика): модель показана под курсором, зелёное место допустимо, красное нет. Цена: {gas} газа, общий запас {limit} штук (без пополнения). Взрывается от первого попадания при прямой атаке любого бойца игрока (в том числе обычной атакой по приказу; призрак и Snipe не нужны): {damage} урона наземным врагам в радиусе {radius}, воздух не поражается; свои в радиусе получают {friendly}% урона только на сложном уровне. Esc или правая кнопка отменяют без расходов.",
+              "en": "Hotkey [C]. Places a container of fuel mixture next to the Firebat (within {range} of him): the model follows the cursor, green = placeable, red = not. Price: {gas} gas, shared stock of {limit} (no refill). It explodes from the first hit of a direct attack of any fighter of the player (also an ordinary attack order; a Ghost and Snipe are not needed): {damage} damage to ground enemies within {radius}, air is not hit; own units inside take {friendly}% damage only on the hard difficulty. Esc or right click cancel at no cost."
+            },
+            "ContainerInfo": {
+              "ru": "Взрывается от первого попадания при прямой атаке бойца игрока: призрак и Snipe не нужны. Круг показывает зону поражения. Свои в зоне страдают только на сложном уровне ({friendly}% урона).",
+              "en": "Explodes from the first hit of a direct attack of a fighter of the player: a Ghost and Snipe are not needed. The circle shows the blast zone. Own units inside are hurt only on the hard difficulty ({friendly}% damage)."
+            }
+          },
+          "containers": {
+            "limit": 0
+          },
+          "salvo": {
+            "range": 11,
+            "missiles": 5,
+            "interval": 0.4,
+            "radius": 1.5,
+            "damage": 30,
+            "cooldown": 8,
+            "spread": 1.0,
+            "hotkey": "A",
+            "texts": {
+              "Name": {
+                "ru": "Наземный залп",
+                "en": "Ground salvo"
+              },
+              "Tip": {
+                "ru": "Наземный залп [A]. Укажите область в пределах {range}: круг на земле показывает весь охват обстрела ({area}). {missiles} ракет падают по очереди в разные точки круга, по {damage} урона каждая (до {total} при всех попаданиях); поражаются только наземные враги, свои не задеваются, ресурсы не тратятся. Перезарядка {cooldown} с, у каждой турели своя. Esc или правая кнопка отменяют наведение без выстрела и без перезарядки. Против воздуха турель стреляет сама.",
+                "en": "Ground salvo [A]. Choose an area within {range}: the circle on the ground shows the whole area of the barrage ({area}). {missiles} missiles land one after another at different points of the circle, {damage} damage each (up to {total} if all hit); only ground enemies are hurt, your units never are, nothing is spent. Cooldown {cooldown} s, every turret has its own. Esc or right click cancel the aiming with no shot and no cooldown. Against air the turret fires by itself."
+              }
+            }
+          },
+          "story": {
+            "first_delay": 20,
+            "gap": 3.0,
+            "event": "base_handed",
+            "after_delay": 5.0,
+            "chars_per_second": 12,
+            "min_seconds": 5
+          }
+        },
+        "ghost_tuning": {
+          "snipe": {
+            "cost": 0,
+            "damage": 250,
+            "cast_time": 0.3,
+            "cooldown": 1.6,
+            "exclude_friendly": true,
+            "container_target": true,
+            "rifle_shot": {
+              "range": 10,
+              "assist_radius": 2.0,
+              "ability_range": 40,
+              "texts": {
+                "Name": {
+                  "ru": "Снайперский выстрел",
+                  "en": "Sniper shot"
+                },
+                "Tip": {
+                  "ru": "Снайперский выстрел [R]. Клик по врагу: выстрел по нему. Клик рядом: выстрел по ближайшему видимому врагу в радиусе {assist}. Пустая точка: выстрел в землю, без урона. Дальность {range}: клик дальше даёт выстрел в сторону клика на предельную дальность, призрак не выходит из укрытия. Одна цель, {damage} урона, без урона по площади, энергия не тратится. Промах тоже запускает перезарядку {cooldown} с. Контейнер взрывается от прямого попадания.",
+                  "en": "Sniper shot [R]. Click an enemy: a shot at him. Click near: a shot at the nearest visible enemy within {assist}. An empty point: a shot at the ground, no damage. Range {range}: a farther click fires toward the click at the limit of the range, the Ghost does not leave his cover. One target, {damage} damage, no area damage, no energy. A miss also starts the cooldown of {cooldown} s. A container explodes from a direct hit."
+                }
+              }
+            }
+          }
+        },
+        "detector_analysis": {
+          "enabled": true,
+          "always": true,
+          "texts": {
+            "Name": {
+              "ru": "Анализ детекторов",
+              "en": "Detector analysis"
+            },
+            "Tip": {
+              "ru": "Пока призрак жив, показывает зоны обнаружения видимых вражеских детекторов поблизости; внутри этих зон маскировка не скрывает призрака. Детекторы в тумане войны не показываются.",
+              "en": "While the Ghost lives it shows the detection zones of the visible enemy detectors nearby; inside them the cloak does not hide the Ghost. Detectors in the fog of war are not shown."
+            }
+          }
+        }
+      }
+    },
+    "sniper_next_free_r3": {
+      "label": "Эвакуация — ревизия 3 (бесплатный тест)",
+      "message": "Ghost Ops — Эвакуация, ревизия 3, бесплатный тест",
+      "message_en": "Ghost Ops - Evacuation, revision 3, free test",
+      "experimental": true,
+      "badge": "Для проверки · свободный тест",
+      "extends": "sniper_next_r3",
+      "card": "Режим «Свободный тест»: бесплатный отряд, без списаний и переноса в кампанию; результат в кампанию не зачисляется. Без «Часа икс» и закупок: 2 призрака, огнемётчики, медики, {marines} морпехов, {kits} комплектов ракетных турелей и КСМ: всего {scvs_total} ({scvs_stock} штатных + {scvs_extra} дополнительных, они появляются при передаче базы). Всё конечное, пополнения нет. Новое в ревизии 3: наземный залп турелей (A), новый снайперский выстрел (R), контейнеры без общего лимита (ограничивает газ), вступление после передачи базы, стабильный анализ детекторов.",
+      "details": [
+        "ТЕСТОВЫЙ КОМПЛЕКТ, не утверждённый баланс: запуск прямо с карточки, без закупок и требований к запасу кампании",
+        "Состав и число комплектов — из одного источника с рекомендацией заказа"
+      ],
+      "overrides": {
+        "campaign": null,
+        "hanson": {
+          "free_squad": {
+            "enabled": true,
+            "marines": 16
+          }
+        }
+      }
+    },
+    "sniper_next_r3_ce0_dev": {
+      "label": "Эвакуация, ревизия 3, проба CE-0 (отладка)",
+      "message": "Ghost Ops - Evacuation r3, CE-0 probe (dev)",
+      "message_en": "Ghost Ops - Evacuation r3, CE-0 probe (dev)",
+      "hidden": true,
+      "extends": "sniper_next_free_r3",
+      "card": "Technical probe",
+      "details": [
+        "Development only"
+      ],
+      "overrides": {
+        "campaign": null,
+        "hanson": {
+          "debug_log": true,
+          "salvo": {
+            "cooldown": 24
+          }
+        },
+        "ce0": {
+          "operation_id": "CE0-TH01R2",
+          "census_types": [
+            "Ghost",
+            "Firebat",
+            "SCV",
+            "MissileTurret",
+            "GhostOpsFuelContainer"
+          ]
+        }
+      }
+    },
+    "sniper_next_r3_campaign_dev": {
+      "label": "Эвакуация, ревизия 3, результат кампании (отладка)",
+      "message": "Ghost Ops - Evacuation r3, campaign probe (dev)",
+      "message_en": "Ghost Ops - Evacuation r3, campaign probe (dev)",
+      "hidden": true,
+      "extends": "sniper_next_r3",
+      "card": "Technical probe",
+      "details": [
+        "Development only"
+      ],
+      "overrides": {
+        "campaign": {
+          "operation_id": "STANDALONE",
+          "bank_name": "GhostOpsDevCamp"
+        },
+        "hanson": {
+          "debug_log": true
+        },
+        "ce0": {
+          "operation_id": "CE0-TH01C",
+          "census_types": [
+            "Ghost",
+            "Firebat",
+            "SCV",
             "MissileTurret",
             "GhostOpsFuelContainer"
           ]

@@ -79,8 +79,8 @@ class HansonConfig(unittest.TestCase):
     def test_dev_preset_is_hidden(self):
         raw = build.load_json(ADAPTER['config'])
         self.assertTrue(raw['presets']['sniper_dev']['hidden'])
-        self.assertEqual([p['name'] for p in launcher_core.profiles_of('thanson01')], ['sniper', 'sniper_next', 'sniper_next_r2', 'sniper_next_free_r2'])
-        self.assertEqual(launcher_core.default_profile('thanson01'), 'sniper')
+        self.assertEqual([p['name'] for p in launcher_core.profiles_of('thanson01')], ['sniper', 'sniper_next', 'sniper_next_r2', 'sniper_next_free_r2', 'sniper_next_r3', 'sniper_next_free_r3'])
+        self.assertEqual(launcher_core.default_profile('thanson01'), 'sniper_next_r3')
         self.assertEqual(launcher_core.mission_info('thanson01')['status'], 'Эксперимент')
         dev, _ = build.resolve_config(ADAPTER, 'sniper_dev')
         self.assertTrue(dev['hanson']['debug_log'])
@@ -168,7 +168,7 @@ class HansonCode(unittest.TestCase):
         hooks = {(h['function'], h['where']): h for h in build.hook_list(ADAPTER)}
         self.assertEqual(sorted(hooks), [
             ('gt_ConvoySpawned_Func', 'before'), ('gt_DoomsdayZergAI_Func', 'before'), ('gt_Gathercolonistspriortoevacuation_Func', 'before'),
-            ('gt_Initialization_Func', 'before'), ('gt_IntroSequence_Func', 'after')])
+            ('gt_Initialization_Func', 'before'), ('gt_IntroSequence_Func', 'after'), ('gt_SwitchtoEscortPhaseQ_Func', 'after'), ('gt_SwitchtoEscortPhase_Func', 'before')])
         self.assertEqual(hooks[('gt_ConvoySpawned_Func', 'before')]['call'], 'if (GhostOps_Hanson_Hold(TriggerGetCurrent())) { return true; }')
         self.assertEqual(hooks[('gt_IntroSequence_Func', 'after')]['call'], 'GhostOps_OnMissionStart();')
 
@@ -211,7 +211,7 @@ class HansonCode(unittest.TestCase):
         self.assertEqual(man['audio'], [])
         arc = sc2mpq.Archive(build.read(os.path.join(ROOT, 'dist', 'GhostOps_THanson01_sniper.SC2Map')))
         script = arc.read('MapScript.galaxy').decode('utf-8-sig')
-        self.assertEqual(script.count(build.HOOK_TAG), 5)
+        self.assertEqual(script.count(build.HOOK_TAG), 7)
         self.assertEqual(script.count('GhostOps_Hanson_Hold(TriggerGetCurrent())'), 1)
 
 

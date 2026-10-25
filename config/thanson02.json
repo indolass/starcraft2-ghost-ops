@@ -370,6 +370,7 @@
       "extra": 2
     },
     "stock_marines": 6,
+    "stock_scvs": 6,
     "night_cloak": {
       "net_per_second": -2.5
     },
@@ -534,7 +535,7 @@
       }
     ]
   },
-  "default_preset": "epidemic_free_r2",
+  "default_preset": "epidemic_free_r3",
   "presets": {
     "epidemic_free": {
       "label": "Эпидемия — Тест: бесплатный отряд (ревизия 1)",
@@ -585,12 +586,66 @@
         }
       }
     },
+    "epidemic_free_r3": {
+      "label": "Эпидемия — Тест: бесплатный отряд (ревизия 3)",
+      "message": "Ghost Ops — Эпидемия, тест: бесплатный отряд, ревизия 3",
+      "message_en": "Ghost Ops - Epidemic, test: free squad, revision 3",
+      "experimental": true,
+      "badge": "Для проверки · свободный тест",
+      "extends": "epidemic_free_r2",
+      "card": "Режим «Свободный тест»: бесплатный конечный отряд, без списаний и переноса в кампанию. Оригинальная «Эпидемия» с топливом геллионов, газовозом, защищёнными днём зданиями, ночным транспортом, взрывными контейнерами, наземным залпом турелей (A) и теперь с комплектом оборонительных бункеров: {bunkers} комплекта бункеров ({bunker_places} мест; строите и размещаете сами), {kits} комплектов турелей. Состав: 2 призрака; морпехи: всего {marines_total} ({marines_stock} штатных и {marines} добавленных, из них {bunker_places} встают в бункеры); огнемётчики, медики; КСМ: всего {scvs_total} ({scvs_stock} штатных и {scvs_extra} добавленных); геллионы: штатные и {hellions} добавленных. Анализ детекторов работает постоянно. Пополнения армии нет.",
+      "details": [
+        "ТЕСТОВЫЙ КОМПЛЕКТ, не утверждённый баланс; в кампанию не пишет и результата не предлагает",
+        "Ревизии 1 и 2 сохранены: карточки «Эпидемия — Тест: бесплатный отряд» (ревизия 1) и (ревизия 2)"
+      ],
+      "overrides": {
+        "hanson": {
+          "bunker_kits": {
+            "enabled": true,
+            "limit": 8,
+            "recommended": 4,
+            "order": {
+              "bunker_kits": 4
+            }
+          },
+          "free_squad": {
+            "enabled": true,
+            "marines": 12,
+            "scvs": 6
+          },
+          "texts": {
+            "KitsReservedMsg": {
+              "ru": "Начато строительство турели. Свободных комплектов:",
+              "en": "A turret construction has started. Free kits:"
+            },
+            "KitsFreedMsg": {
+              "ru": "Строительство турели отменено. Свободных комплектов:",
+              "en": "The turret construction was cancelled. Free kits:"
+            }
+          }
+        },
+        "detector_analysis": {
+          "enabled": true,
+          "always": true,
+          "texts": {
+            "Name": {
+              "ru": "Анализ детекторов",
+              "en": "Detector analysis"
+            },
+            "Tip": {
+              "ru": "Пока призрак жив, показывает зоны обнаружения видимых вражеских детекторов поблизости; внутри этих зон маскировка не скрывает призрака. Детекторы в тумане войны не показываются.",
+              "en": "While the Ghost lives it shows the detection zones of the visible enemy detectors nearby; inside them the cloak does not hide the Ghost. Detectors in the fog of war are not shown."
+            }
+          }
+        }
+      }
+    },
     "epidemic_free_ce0_dev": {
       "label": "Эпидемия, проба CE-0 (отладка)",
       "message": "Ghost Ops - Epidemic, CE-0 probe (dev)",
       "message_en": "Ghost Ops - Epidemic, CE-0 probe (dev)",
       "hidden": true,
-      "extends": "epidemic_free_r2",
+      "extends": "epidemic_free_r3",
       "card": "Technical probe",
       "details": [
         "Development only"
@@ -613,13 +668,13 @@
           "operation_id": "CE0-TH02",
           "census_types": [
             "Ghost",
-            "Firebat",
             "Marine",
+            "SCV",
             "Hellion",
             "TankerTruck",
             "Medivac",
             "MissileTurret",
-            "GhostOpsFuelContainer"
+            "Bunker"
           ]
         }
       }

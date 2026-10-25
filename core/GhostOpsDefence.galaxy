@@ -853,6 +853,10 @@ void GhostOps_DEF_RevealTargets () {
         lv_i += 1;
     }
 
+    if (go_zhMarksPersist) {
+        GhostOps_ZH_MarksDraw();
+    }
+
     GhostOps_DEF_Log("targets revealed for " + FixedToString(go_defRevealSec, 1) + " s, radius " + FixedToString(go_defRevealRadius, 1));
 }
 
@@ -931,6 +935,10 @@ bool GhostOps_DEF_Loaded (bool lp_testConds, bool lp_runActions) {
     }
 
     GhostOps_DEF_SalvoApply();
+    if (go_zhMarksPersist && go_zhMarksShown) {
+        GhostOps_ZH_MarksDraw();
+    }
+
     if (go_defSalvoScene && !go_defSalvoOn && (go_defSwannAt < 0.0)) {
         go_defSwannAt = GameGetMissionTime() + 1.0;
     }

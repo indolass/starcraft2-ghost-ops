@@ -80,11 +80,31 @@ int[24] go_hTrkState;
 fixed[24] go_hTrkLife;
 point[24] go_hTrkPos;
 fixed[24] go_hTrkHurtAt;
-int go_hKitShown;
-int go_hObjKits;
-bool go_hObjKitsMade;
+int[24] go_hTrkFam;
+// second family of kits (config hanson.bunker_kits): the ordered number of Bunkers, the same rule as the turrets
+bool go_hBkOn;
+int go_hBkOrdered;
+int go_hBkSpent;
+int go_hBkConsumed;
+int[2] go_hKitShownF;
+int[2] go_hObjK;
+bool[2] go_hObjKMade;
 trigger go_hKitTrig;
 int GhostOps_Hanson_KitsLeft ();
+int GhostOps_Hanson_KitsLeftF (int lp_fam);
+// extra SCVs of the preorder / the free test (config hanson.turret_kits.order.scvs): created once when the base is handed over
+int go_hExtraScvs;
+bool go_hScvsMade;
+// the new rifle shot (config ghost_tuning.snipe.rifle_shot): a click always gives a shot (a hit or a miss), see GhostOps_Hanson_ShotExec
+bool go_hShotOn;
+fixed go_hShotRange;
+fixed go_hShotAssist;
+int go_hShotCount;
+int go_hHudL3;
+int go_hHudLines;
+fixed go_hLastShotAt;
+bool go_hStoryEvent;           // the story starts by the event "base handed over" (the original scene is over) instead of a fixed time
+fixed go_hStoryAfter;          // seconds between the end of the original scene and the first line
 int go_hHudX;
 int go_hHudY;
 int go_hHudW;
@@ -94,11 +114,7 @@ int go_hHudL1;
 int go_hHudL2;
 // saved with the game: how many containers were really placed (the shared limit), the placed ones, the detonations
 int go_hContUsed;
-int go_hContN;
 int go_hContBlasts;
-unit[24] go_hCont;
-int[24] go_hContTag;
-bool[24] go_hContTagOn;
 trigger go_hContCreatedTrig;
 trigger go_hContDiedTrig;
 trigger go_hContTickTrig;
@@ -141,6 +157,31 @@ void GhostOps_Hanson_Log (string lp_text) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// The live containers are found by type (no array, no fixed number of places: the limit of a container is only the gas)
+//--------------------------------------------------------------------------------------------------
+text GhostOps_Hanson_ShotLine ();
+
+unitgroup GhostOps_Hanson_ContGroup () {
+    return UnitGroup("GhostOpsFuelContainer", c_playerAny, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+}
+
+int GhostOps_Hanson_ContAlive () {
+    return UnitGroupCount(GhostOps_Hanson_ContGroup(), c_unitCountAlive);
+}
+
+// the n-th (0-based) live container (the probes); null when there is none
+unit GhostOps_Hanson_ContNth (int lp_n) {
+    unitgroup lv_g;
+
+    lv_g = GhostOps_Hanson_ContGroup();
+    if ((lp_n < 0) || (lp_n >= UnitGroupCount(lv_g, c_unitCountAlive))) {
+        return null;
+    }
+
+    return UnitGroupUnit(lv_g, lp_n + 1);
+}
+
+//--------------------------------------------------------------------------------------------------
 // Gas, messages, the HUD lines (containers / fuel)
 //--------------------------------------------------------------------------------------------------
 int GhostOps_Hanson_Gas () {
@@ -160,7 +201,7 @@ void GhostOps_Hanson_UpdateHud () {
     text lv_l2;
     int lv_gas;
 
-    if ((go_hHudDlg == c_invalidDialogId) || (!go_hContOn && !go_hFuelOn)) {
+    if ((go_hHudDlg == c_invalidDialogId) || (!go_hContOn && !go_hFuelOn && !go_hShotOn)) {
         return;
     }
 
@@ -174,16 +215,27 @@ void GhostOps_Hanson_UpdateHud () {
     }
 
     lv_l2 = StringToText("");
-    if (go_hContOn) {
+    if (go_hContOn && (go_hContLimit > 0)) {
         lv_l2 = StringExternal("Param/Value/GhostOpsH_HudContainers") + StringToText(": ") + StringExternal("Param/Value/GhostOpsH_HudLeft") + StringToText(" ") + IntToText(go_hContLimit - go_hContUsed) + StringToText(" ") + StringExternal("Param/Value/GhostOpsH_HudOf") + StringToText(" ") + IntToText(go_hContLimit)
             + StringToText("  |  ") + StringExternal("Param/Value/GhostOpsH_HudPrice") + StringToText(": ") + IntToText(go_hContCost);
         if ((go_hContLimit - go_hContUsed) > 0 && lv_gas < go_hContCost) {
             lv_l2 = lv_l2 + StringToText(" (") + StringExternal("Param/Value/GhostOpsH_HudNoGasForBox") + StringToText(")");
         }
     }
+    else if (go_hContOn) {
+        // no shared stock: the only limit is the gas. The line shows the price and how many the gas of the moment allows.
+        lv_l2 = StringExternal("Param/Value/GhostOpsH_HudContainers") + StringToText(": ") + StringExternal("Param/Value/GhostOpsH_HudPrice") + StringToText(" ") + IntToText(go_hContCost)
+            + StringToText("  |  ") + StringExternal("Param/Value/GhostOpsH_HudCanPlace") + StringToText(": ") + IntToText(lv_gas / go_hContCost);
+        if (lv_gas < go_hContCost) {
+            lv_l2 = lv_l2 + StringToText(" (") + StringExternal("Param/Value/GhostOpsH_HudNoGasForBox") + StringToText(")");
+        }
+    }
 
     DialogControlSetPropertyAsText(go_hHudL1, c_triggerControlPropertyText, PlayerGroupAll(), lv_l1);
     DialogControlSetPropertyAsText(go_hHudL2, c_triggerControlPropertyText, PlayerGroupAll(), lv_l2);
+    if (go_hShotOn && (go_hHudL3 != c_invalidDialogId)) {
+        DialogControlSetPropertyAsText(go_hHudL3, c_triggerControlPropertyText, PlayerGroupAll(), GhostOps_Hanson_ShotLine());
+    }
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -275,6 +327,10 @@ bool GhostOps_Hanson_LockTick (bool lp_testConds, bool lp_runActions) {
     if (go_hKitOn) {
         // the second exception of the lock: the ordered turrets (the kit tick keeps this in step with the kits left)
         TechTreeUnitAllow(1, "MissileTurret", GhostOps_Hanson_KitsLeft() > 0);
+    }
+
+    if (go_hBkOn) {
+        TechTreeUnitAllow(1, "Bunker", GhostOps_Hanson_KitsLeftF(1) > 0);
     }
 
     if (go_hContOn) {
@@ -419,11 +475,16 @@ void GhostOps_Hanson_CreateUI () {
 
 // The two HUD lines (gas / trip price, containers left / price) in a dialog of their own below the button; created again after a load.
 void GhostOps_Hanson_CreateHud () {
-    if (!go_hContOn && !go_hFuelOn) {
+    if (!go_hContOn && !go_hFuelOn && !go_hShotOn) {
         return;
     }
 
-    DialogCreate(go_hHudW, go_hHudH, c_anchorTopLeft, go_hHudX, go_hHudY, false);
+    go_hHudLines = 2;
+    if (go_hShotOn) {
+        go_hHudLines = 3;
+    }
+
+    DialogCreate(go_hHudW, (go_hHudH / 2) * go_hHudLines, c_anchorTopLeft, go_hHudX, go_hHudY, false);
     go_hHudDlg = DialogLastCreated();
     DialogControlCreate(go_hHudDlg, c_triggerControlTypeLabel);
     go_hHudL1 = DialogControlLastCreated();
@@ -435,6 +496,15 @@ void GhostOps_Hanson_CreateHud () {
     DialogControlSetSize(go_hHudL2, PlayerGroupAll(), go_hHudW, go_hHudH / 2);
     DialogControlSetPosition(go_hHudL2, PlayerGroupAll(), c_anchorTopLeft, 0, go_hHudH / 2);
     DialogControlSetPropertyAsString(go_hHudL2, c_triggerControlPropertyStyle, PlayerGroupAll(), "AlertItem");
+    go_hHudL3 = c_invalidDialogId;
+    if (go_hShotOn) {
+        DialogControlCreate(go_hHudDlg, c_triggerControlTypeLabel);
+        go_hHudL3 = DialogControlLastCreated();
+        DialogControlSetSize(go_hHudL3, PlayerGroupAll(), go_hHudW, go_hHudH / 2);
+        DialogControlSetPosition(go_hHudL3, PlayerGroupAll(), c_anchorTopLeft, 0, go_hHudH);
+        DialogControlSetPropertyAsString(go_hHudL3, c_triggerControlPropertyStyle, PlayerGroupAll(), "AlertItem");
+    }
+
     DialogSetVisible(go_hHudDlg, PlayerGroupAll(), true);
     GhostOps_Hanson_UpdateHud();
 }
@@ -457,12 +527,14 @@ bool GhostOps_Hanson_OnLoad (bool lp_testConds, bool lp_runActions) {
     }
 
     go_hHudDlg = c_invalidDialogId;
-    lv_i = 0;
-    while (lv_i < 24) {
-        // the text tags were destroyed by the load: the tick draws one per live container again (never doubled)
-        go_hContTagOn[lv_i] = false;
-        lv_i += 1;
+    // the text tags were destroyed by the load: the mark of every live container is cleared, the tick draws one per container again (never doubled)
+    UnitGroupLoopBegin(GhostOps_Hanson_ContGroup());
+    while (UnitGroupLoopCurrent() != null) {
+        UnitSetCustomValue(UnitGroupLoopCurrent(), 0, 0.0);
+        UnitGroupLoopStep();
     }
+
+    UnitGroupLoopEnd();
 
     GhostOps_Hanson_CreateUI();
     GhostOps_Hanson_CreateHud();
@@ -570,7 +642,7 @@ bool GhostOps_Hanson_ContCreated (bool lp_testConds, bool lp_runActions) {
     lv_pos = EventUnitTargetPoint();
     GhostOps_Hanson_Log("container cast at (" + FixedToString(PointGetX(lv_pos), 1) + ", " + FixedToString(PointGetY(lv_pos), 1) + ")");
     lv_why = 0;
-    if ((go_hContUsed >= go_hContLimit) || (go_hContN >= 24)) {
+    if ((go_hContLimit > 0) && (go_hContUsed >= go_hContLimit)) {
         lv_why = 2;
     }
     else if (GhostOps_Hanson_Gas() < go_hContCost) {
@@ -613,11 +685,9 @@ bool GhostOps_Hanson_ContCreated (bool lp_testConds, bool lp_runActions) {
     PlayerModifyPropertyInt(1, c_playerPropVespene, c_playerPropOperSubtract, go_hContCost);
     UnitSetInfoText(lv_u, StringExternal("Param/Value/GhostOpsH_ContainerUnitName"), StringExternal("Param/Value/GhostOpsH_ContainerInfo"), StringExternal("Param/Value/GhostOpsH_ContainerInfo"));
     UnitSetState(lv_u, c_unitStateTooltipable, true);
-    go_hCont[go_hContN] = lv_u;
-    go_hContN += 1;
     go_hContUsed += 1;
     GhostOps_Hanson_UpdateHud();
-    GhostOps_Hanson_Log("container " + IntToString(go_hContUsed) + " of " + IntToString(go_hContLimit) + " placed at (" + FixedToString(PointGetX(lv_pos), 1) + ", " + FixedToString(PointGetY(lv_pos), 1) + "), gas left " + IntToString(GhostOps_Hanson_Gas()));
+    GhostOps_Hanson_Log("container " + IntToString(go_hContUsed) + " (live " + IntToString(GhostOps_Hanson_ContAlive()) + ", limit " + IntToString(go_hContLimit) + ") placed at (" + FixedToString(PointGetX(lv_pos), 1) + ", " + FixedToString(PointGetY(lv_pos), 1) + "), gas left " + IntToString(GhostOps_Hanson_Gas()));
     return true;
 }
 
@@ -635,6 +705,11 @@ bool GhostOps_Hanson_ContDied (bool lp_testConds, bool lp_runActions) {
     lv_u = EventUnit();
     if ((lv_u == null) || (UnitGetType(lv_u) != "GhostOpsFuelContainer")) {
         return true;
+    }
+
+    if (UnitGetCustomValue(lv_u, 0) > 0.5) {
+        TextTagDestroy(FixedToInt(UnitGetCustomValue(lv_u, 0)));
+        UnitSetCustomValue(lv_u, 0, 0.0);
     }
 
     lv_k = EventUnitDamageSourceUnit();
@@ -718,14 +793,13 @@ bool GhostOps_Hanson_ContTick (bool lp_testConds, bool lp_runActions) {
     unitgroup lv_g;
     unit lv_u;
     bool lv_ok;
-    int lv_i;
 
     if (!lp_runActions) {
         return true;
     }
 
     if (go_hContOn) {
-        lv_ok = (go_hContUsed < go_hContLimit) && (GhostOps_Hanson_Gas() >= go_hContCost);
+        lv_ok = ((go_hContLimit <= 0) || (go_hContUsed < go_hContLimit)) && (GhostOps_Hanson_Gas() >= go_hContCost);
         lv_g = UnitGroup("Firebat", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
         UnitGroupLoopBegin(lv_g);
         while (UnitGroupLoopCurrent() != null) {
@@ -734,10 +808,12 @@ bool GhostOps_Hanson_ContTick (bool lp_testConds, bool lp_runActions) {
         }
 
         UnitGroupLoopEnd();
-        lv_i = 0;
-        while (lv_i < go_hContN) {
-            lv_u = go_hCont[lv_i];
-            if ((lv_u != null) && UnitIsAlive(lv_u)) {
+        // every live container (found by type: no array, so there is no hidden number of places): the circle of a selected one, and the label "Explosive container"
+        // (a text tag is a screen object, destroyed with the container; its id is kept in custom value 0 of the unit and cleared by a load, the next tick draws it again)
+        UnitGroupLoopBegin(GhostOps_Hanson_ContGroup());
+        while (UnitGroupLoopCurrent() != null) {
+            lv_u = UnitGroupLoopCurrent();
+            if (UnitIsAlive(lv_u)) {
                 if (UnitIsSelected(lv_u, 1)) {
                     if (UnitBehaviorCount(lv_u, "GhostOpsContainerShow") == 0) {
                         UnitBehaviorAdd(lv_u, "GhostOpsContainerShow", lv_u, 1);
@@ -746,32 +822,18 @@ bool GhostOps_Hanson_ContTick (bool lp_testConds, bool lp_runActions) {
                 else if (UnitBehaviorCount(lv_u, "GhostOpsContainerShow") > 0) {
                     UnitBehaviorRemove(lv_u, "GhostOpsContainerShow", 1);
                 }
-            }
 
-            lv_i += 1;
-        }
-    }
-
-    // the label "Explosive container" follows each live container (a text tag is a screen object: destroyed with the container, drawn again after a load)
-    if (go_hContOn) {
-        lv_i = 0;
-        while (lv_i < go_hContN) {
-            lv_u = go_hCont[lv_i];
-            if ((lv_u != null) && UnitIsAlive(lv_u)) {
-                if (!go_hContTagOn[lv_i]) {
+                if (UnitGetCustomValue(lv_u, 0) < 0.5) {
                     TextTagCreate(StringExternal("Param/Value/GhostOpsH_ContainerTag"), 11, UnitGetPosition(lv_u), 0.0, true, false, PlayerGroupAll());
                     TextTagAttachToUnit(TextTagLastCreated(), lv_u, 1.3);
-                    go_hContTag[lv_i] = TextTagLastCreated();
-                    go_hContTagOn[lv_i] = true;
+                    UnitSetCustomValue(lv_u, 0, IntToFixed(TextTagLastCreated()));
                 }
             }
-            else if (go_hContTagOn[lv_i]) {
-                TextTagDestroy(go_hContTag[lv_i]);
-                go_hContTagOn[lv_i] = false;
-            }
 
-            lv_i += 1;
+            UnitGroupLoopStep();
         }
+
+        UnitGroupLoopEnd();
     }
 
     // the gas source: no Refinery alive and not enough gas for a trip = a dead end unless the player knows; say it once (and again if the source comes back and is lost again)
@@ -792,6 +854,142 @@ bool GhostOps_Hanson_ContTick (bool lp_testConds, bool lp_runActions) {
     GhostOps_Hanson_UpdateHud();
     GhostOps_Hanson_UpdateUI();
     return true;
+}
+
+//--------------------------------------------------------------------------------------------------
+// The rifle shot (revision 3 of THanson01): the stock ability Snipe is re-aimed by the catalog (any point or unit may be clicked, the ability range is long so the Ghost never walks,
+// the effect of the ability is a harmless marker that only starts the cooldown). THIS function does the shot when the cast executes:
+//   1. a valid enemy clicked directly (or a container, directly only) in the range of the rifle: a shot at him;
+//   2. otherwise the nearest valid VISIBLE enemy within the assistance radius of the click and within the range of the rifle (never a container): a shot at him;
+//   3. otherwise a shot at the point (clamped to the range of the rifle on the line from the Ghost): a visible hit on the ground, no damage.
+// Every executed shot, a miss too, has started the cooldown (the ability cost); one order of two selected Ghosts is one shot of one ready Ghost (the engine gives a targeted
+// spell to one caster). The damage is the catalog effect SnipeDamage (single target, no area), no random number.
+//--------------------------------------------------------------------------------------------------
+bool GhostOps_Hanson_ShotEnemy (unit lp_u) {
+    if ((lp_u == null) || !UnitIsAlive(lp_u)) {
+        return false;
+    }
+
+    return UnitFilterMatch(lp_u, 1, UnitFilterStr("Enemy,Visible;Missile,Dead,Hidden,Structure,Stasis,Invulnerable"));
+}
+
+bool GhostOps_Hanson_ShotExec (bool lp_testConds, bool lp_runActions) {
+    unit lv_g;
+    unit lv_t;
+    unit lv_c;
+    unit lv_u;
+    point lv_a;
+    point lv_aim;
+    point lv_gp;
+    fixed lv_d;
+    fixed lv_best;
+    fixed lv_x;
+    bool lv_far;
+    unitgroup lv_grp;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    lv_g = EventUnit();
+    lv_t = EventUnitTargetUnit();
+    if (lv_t != null) {
+        lv_a = UnitGetPosition(lv_t);
+    }
+    else {
+        lv_a = EventUnitTargetPoint();
+    }
+
+    if ((lv_g == null) || (lv_a == null)) {
+        return true;
+    }
+
+    go_hShotCount += 1;
+    lv_gp = UnitGetPosition(lv_g);
+    lv_d = DistanceBetweenPoints(lv_gp, lv_a);
+    lv_aim = lv_a;
+    lv_far = false;
+    if (lv_d > go_hShotRange) {
+        // the click is beyond the rifle: the Ghost does not walk, the shot flies the way of the click and ends at the range of the rifle
+        lv_far = true;
+        lv_aim = PointWithOffset(lv_gp, (PointGetX(lv_a) - PointGetX(lv_gp)) * go_hShotRange / lv_d, (PointGetY(lv_a) - PointGetY(lv_gp)) * go_hShotRange / lv_d);
+    }
+
+    lv_c = null;
+    if ((lv_t != null) && !lv_far) {
+        if (GhostOps_Hanson_ShotEnemy(lv_t) || ((UnitGetType(lv_t) == "GhostOpsFuelContainer") && UnitIsAlive(lv_t))) {
+            lv_c = lv_t;
+        }
+    }
+
+    if (lv_c == null) {
+        lv_best = 9999.0;
+        lv_grp = UnitGroupSearch(null, c_playerAny, lv_a, go_hShotAssist, UnitFilter(0, 0, (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32))), 0);
+        UnitGroupLoopBegin(lv_grp);
+        while (UnitGroupLoopCurrent() != null) {
+            lv_u = UnitGroupLoopCurrent();
+            if (GhostOps_Hanson_ShotEnemy(lv_u) && (DistanceBetweenPoints(lv_gp, UnitGetPosition(lv_u)) <= go_hShotRange)) {
+                lv_x = DistanceBetweenPoints(lv_a, UnitGetPosition(lv_u));
+                if (lv_x < lv_best) {
+                    lv_best = lv_x;
+                    lv_c = lv_u;
+                }
+            }
+
+            UnitGroupLoopStep();
+        }
+
+        UnitGroupLoopEnd();
+    }
+
+    go_hLastShotAt = GameGetMissionTime();
+    if (lv_c != null) {
+        UnitCreateEffectUnit(lv_g, "SnipeDamage", lv_c);
+        GhostOps_Hanson_Log("shot: hit " + UnitGetType(lv_c) + " (click " + FixedToString(lv_d, 1) + " from the Ghost, direct " + IntToString(GhostOps_Hanson_B(lv_c == lv_t)) + ")");
+    }
+    else {
+        UnitCreateEffectPoint(lv_g, "GhostOpsShotMiss", lv_aim);
+        GhostOps_Hanson_Log("shot: miss at (" + FixedToString(PointGetX(lv_aim), 1) + ", " + FixedToString(PointGetY(lv_aim), 1) + "), click " + FixedToString(lv_d, 1) + " from the Ghost, far " + IntToString(GhostOps_Hanson_B(lv_far)));
+    }
+
+    return true;
+}
+
+// The state line of the HUD: ready, or the seconds of the best cooldown among the living Ghosts.
+text GhostOps_Hanson_ShotLine () {
+    unitgroup lv_g;
+    unit lv_u;
+    fixed lv_best;
+    fixed lv_cd;
+    int lv_n;
+
+    lv_best = 9999.0;
+    lv_n = 0;
+    lv_g = UnitGroup("Ghost", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+    UnitGroupLoopBegin(lv_g);
+    while (UnitGroupLoopCurrent() != null) {
+        lv_u = UnitGroupLoopCurrent();
+        if (UnitIsAlive(lv_u)) {
+            lv_n += 1;
+            lv_cd = UnitAbilityGetCooldown(lv_u, "Snipe", "Abil/Snipe");
+            if (lv_cd < lv_best) {
+                lv_best = lv_cd;
+            }
+        }
+
+        UnitGroupLoopStep();
+    }
+
+    UnitGroupLoopEnd();
+    if (lv_n == 0) {
+        return StringToText("");
+    }
+
+    if (lv_best <= 0.05) {
+        return StringExternal("Param/Value/GhostOpsH_HudShot") + StringToText(": ") + StringExternal("Param/Value/GhostOpsH_HudShotReady");
+    }
+
+    return StringExternal("Param/Value/GhostOpsH_HudShot") + StringToText(": ") + StringExternal("Param/Value/GhostOpsH_HudShotCd") + StringToText(" ") + FixedToText(lv_best, 1);
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -825,6 +1023,11 @@ bool GhostOps_Hanson_StoryMsg (bool lp_testConds, bool lp_runActions) {
     }
 
     TriggerQueueEnter();
+    if (go_hStoryEvent) {
+        // the original scene of the handover is over (this runs behind it in the queue): a short pause, then our lines one after another
+        Wait(go_hStoryAfter, c_timeGame);
+    }
+
     lv_i = 0;
     while (lv_i < go_hLnCount) {
         // the warning about the own losses is only meant for the difficulties where own units really take damage
@@ -848,6 +1051,10 @@ bool GhostOps_Hanson_StoryTick (bool lp_testConds, bool lp_runActions) {
         return true;
     }
 
+    if (go_hStoryEvent) {
+        return true;
+    }
+
     if ((go_hStoryState == 0) && (GameGetMissionTime() >= go_hStoryFirst)) {
         go_hStoryState = 1;
         TriggerExecute(TriggerCreate("GhostOps_Hanson_StoryMsg"), true, false);
@@ -856,20 +1063,126 @@ bool GhostOps_Hanson_StoryTick (bool lp_testConds, bool lp_runActions) {
     return true;
 }
 
+// Hook at the end of the original scene of the base handover (gt_SwitchtoEscortPhaseQ, behind the original transmission): our explanations start now, never earlier.
+void GhostOps_Hanson_StoryStart () {
+    if (!go_hEnabled || !go_hStoryEvent || (go_hLnCount <= 0) || (go_hStoryState != 0)) {
+        return;
+    }
+
+    go_hStoryState = 1;
+    GhostOps_Hanson_Log("story: the original scene of the handover is over, our lines are queued");
+    TriggerExecute(TriggerCreate("GhostOps_Hanson_StoryMsg"), true, false);
+}
+
+// The extra SCVs of the order (or of the free test): created once, next to the Command Center, when the base is handed over; the original then sends every SCV to the minerals.
+void GhostOps_Hanson_BaseHanded () {
+    unit lv_cc;
+    int lv_i;
+
+    if (!go_hEnabled || go_hScvsMade) {
+        return;
+    }
+
+    go_hScvsMade = true;
+    if (go_hExtraScvs <= 0) {
+        return;
+    }
+
+    lv_cc = UnitGroupUnit(UnitGroup("CommandCenter", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), 1);
+    if (lv_cc == null) {
+        GhostOps_Hanson_Log("extra SCVs: no Command Center of the player");
+        return;
+    }
+
+    lv_i = 0;
+    while (lv_i < go_hExtraScvs) {
+        UnitCreate(1, "SCV", c_unitCreateIgnorePlacement, 1, PointWithOffset(UnitGetPosition(lv_cc), -4.0 + IntToFixed(lv_i % 8) * 1.0, -5.0 - IntToFixed(lv_i / 8) * 1.0), 270.0);
+        lv_i += 1;
+    }
+
+    GhostOps_Hanson_Log("extra SCVs created: " + IntToString(go_hExtraScvs));
+}
+
 //--------------------------------------------------------------------------------------------------
 // Start (from the adapter, once)
 //--------------------------------------------------------------------------------------------------
 //--------------------------------------------------------------------------------------------------
-// Turret kits
+// Kits (two families: 0 = Missile Turret, 1 = Bunker)
 //--------------------------------------------------------------------------------------------------
-int GhostOps_Hanson_KitsReserved () {
+string GhostOps_Hanson_FamType (int lp_fam) {
+    if (lp_fam == 1) {
+        return "Bunker";
+    }
+
+    return "MissileTurret";
+}
+
+string GhostOps_Hanson_FamPrefix (int lp_fam) {
+    if (lp_fam == 1) {
+        return "Bunker";
+    }
+
+    return "Kits";
+}
+
+bool GhostOps_Hanson_FamOn (int lp_fam) {
+    if (lp_fam == 1) {
+        return go_hBkOn;
+    }
+
+    return go_hKitOn;
+}
+
+int GhostOps_Hanson_FamOrdered (int lp_fam) {
+    if (lp_fam == 1) {
+        return go_hBkOrdered;
+    }
+
+    return go_hKitOrdered;
+}
+
+int GhostOps_Hanson_FamSpent (int lp_fam) {
+    if (lp_fam == 1) {
+        return go_hBkSpent;
+    }
+
+    return go_hKitSpent;
+}
+
+int GhostOps_Hanson_FamConsumed (int lp_fam) {
+    if (lp_fam == 1) {
+        return go_hBkConsumed;
+    }
+
+    return go_hKitConsumed;
+}
+
+void GhostOps_Hanson_FamAddSpent (int lp_fam) {
+    if (lp_fam == 1) {
+        go_hBkSpent += 1;
+    }
+    else {
+        go_hKitSpent += 1;
+    }
+}
+
+void GhostOps_Hanson_FamAddConsumed (int lp_fam) {
+    if (lp_fam == 1) {
+        go_hBkConsumed += 1;
+    }
+    else {
+        go_hKitConsumed += 1;
+    }
+}
+
+int GhostOps_Hanson_KitsReservedF (int lp_fam) {
     int lv_k;
     int lv_c;
 
     lv_c = 0;
     lv_k = 0;
     while (lv_k < go_hTrkN) {
-        if (go_hTrkState[lv_k] == 1) {
+        if ((go_hTrkState[lv_k] == 1) && (go_hTrkFam[lv_k] == lp_fam)) {
             lv_c += 1;
         }
 
@@ -879,8 +1192,16 @@ int GhostOps_Hanson_KitsReserved () {
     return lv_c;
 }
 
+int GhostOps_Hanson_KitsReserved () {
+    return GhostOps_Hanson_KitsReservedF(0);
+}
+
+int GhostOps_Hanson_KitsLeftF (int lp_fam) {
+    return GhostOps_Hanson_FamOrdered(lp_fam) - GhostOps_Hanson_FamSpent(lp_fam) - GhostOps_Hanson_FamConsumed(lp_fam) - GhostOps_Hanson_KitsReservedF(lp_fam);
+}
+
 int GhostOps_Hanson_KitsLeft () {
-    return go_hKitOrdered - go_hKitSpent - go_hKitConsumed - GhostOps_Hanson_KitsReserved();
+    return GhostOps_Hanson_KitsLeftF(0);
 }
 
 bool GhostOps_Hanson_EnemyNear (point lp_pos) {
@@ -898,32 +1219,35 @@ bool GhostOps_Hanson_EnemyNear (point lp_pos) {
     return false;
 }
 
-void GhostOps_Hanson_KitObjective () {
+// The objective line of a family ("Kits: free N / M, under construction K") and the plain messages when a construction starts or is cancelled.
+void GhostOps_Hanson_KitObjective (int lp_fam) {
     int lv_left;
+    int lv_res;
+    string lv_pfx;
 
-    lv_left = GhostOps_Hanson_KitsLeft();
-    if (!go_hObjKitsMade) {
-        go_hObjKitsMade = true;
-        ObjectiveCreate(StringExternal("Param/Value/GhostOpsH_KitsTitle"), StringExternal("Param/Value/GhostOpsH_KitsHint"), c_objectiveStateActive, false);
-        go_hObjKits = ObjectiveLastCreated();
-        go_hKitShown = -1;
+    lv_pfx = GhostOps_Hanson_FamPrefix(lp_fam);
+    lv_left = GhostOps_Hanson_KitsLeftF(lp_fam);
+    lv_res = GhostOps_Hanson_KitsReservedF(lp_fam);
+    if (!go_hObjKMade[lp_fam]) {
+        go_hObjKMade[lp_fam] = true;
+        ObjectiveCreate(StringExternal("Param/Value/GhostOpsH_" + lv_pfx + "Title"), StringExternal("Param/Value/GhostOpsH_" + lv_pfx + "Hint"), c_objectiveStateActive, false);
+        go_hObjK[lp_fam] = ObjectiveLastCreated();
+        go_hKitShownF[lp_fam] = -1;
     }
 
-    if (lv_left != go_hKitShown) {
-        if ((go_hKitShown > lv_left) && (lv_left > 0) && (GhostOps_Hanson_KitsReserved() > 0)) {
-            UIDisplayMessage(PlayerGroupAll(), c_messageAreaDirective, StringExternal("Param/Value/GhostOpsH_KitsReservedMsg") + StringToText(" ") + IntToText(lv_left));
+    if (lv_left != go_hKitShownF[lp_fam]) {
+        if ((go_hKitShownF[lp_fam] > lv_left) && (lv_res > 0)) {
+            UIDisplayMessage(PlayerGroupAll(), c_messageAreaDirective, StringExternal("Param/Value/GhostOpsH_" + lv_pfx + "ReservedMsg") + StringToText(" ") + IntToText(lv_left));
         }
-        else if ((go_hKitShown >= 0) && (go_hKitShown < lv_left)) {
-            UIDisplayMessage(PlayerGroupAll(), c_messageAreaDirective, StringExternal("Param/Value/GhostOpsH_KitsFreedMsg") + StringToText(" ") + IntToText(lv_left));
-        }
-
-        if ((lv_left == 0) && (go_hKitShown != 0)) {
-            UIDisplayMessage(PlayerGroupAll(), c_messageAreaDirective, StringExternal("Param/Value/GhostOpsH_KitsOut"));
+        else if ((go_hKitShownF[lp_fam] >= 0) && (go_hKitShownF[lp_fam] < lv_left)) {
+            UIDisplayMessage(PlayerGroupAll(), c_messageAreaDirective, StringExternal("Param/Value/GhostOpsH_" + lv_pfx + "FreedMsg") + StringToText(" ") + IntToText(lv_left));
         }
 
-        go_hKitShown = lv_left;
-        ObjectiveSetName(go_hObjKits, StringExternal("Param/Value/GhostOpsH_KitsTitle") + StringToText(": ") + IntToText(lv_left) + StringToText(" / ") + IntToText(go_hKitOrdered));
+        go_hKitShownF[lp_fam] = lv_left;
     }
+
+    ObjectiveSetName(go_hObjK[lp_fam], StringExternal("Param/Value/GhostOpsH_" + lv_pfx + "Title") + StringToText(": ") + IntToText(lv_left) + StringToText(" / ") + IntToText(GhostOps_Hanson_FamOrdered(lp_fam))
+        + StringToText(" (") + StringExternal("Param/Value/GhostOpsH_KitsBuilding") + StringToText(" ") + IntToText(lv_res) + StringToText(")"));
 }
 
 int GhostOps_Hanson_FindTrk (unit lp_u) {
@@ -941,7 +1265,9 @@ int GhostOps_Hanson_FindTrk (unit lp_u) {
     return -1;
 }
 
-void GhostOps_Hanson_KitScan () {
+// A structure of the family that the tracker does not know yet (custom value 1 of the unit is 0) is a construction that has just started: it reserves a kit. Every structure is marked
+// once, so a FINISHED one never needs a place of the tracker (the tracker holds only the constructions in progress) and the number of structures is not limited by an array.
+void GhostOps_Hanson_KitScan (int lp_fam) {
     unitgroup lv_g;
     int lv_n;
     int lv_i;
@@ -949,23 +1275,23 @@ void GhostOps_Hanson_KitScan () {
     int lv_slot;
     unit lv_u;
 
-    lv_g = UnitGroup("MissileTurret", 1, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32)) | (1 << (c_targetFilterHidden - 32))), 0);
+    lv_g = UnitGroup(GhostOps_Hanson_FamType(lp_fam), 1, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32)) | (1 << (c_targetFilterHidden - 32))), 0);
     lv_n = UnitGroupCount(lv_g, c_unitCountAll);
     lv_i = 1;
     while (lv_i <= lv_n) {
         lv_u = UnitGroupUnit(lv_g, lv_i);
-        if (GhostOps_Hanson_FindTrk(lv_u) < 0) {
-            // a turret the tracker does not know yet: a construction that has just started
-            if (GhostOps_Hanson_KitsLeft() <= 0) {
+        if (UnitGetCustomValue(lv_u, 1) < 0.5) {
+            UnitSetCustomValue(lv_u, 1, 1.0);
+            if (GhostOps_Hanson_KitsLeftF(lp_fam) <= 0) {
                 // over the kits (cost 0, so there is nothing to refund): the construction is cancelled on the spot
                 if (UnitTestState(lv_u, c_unitStateUnderConstruction)) {
                     UnitIssueOrder(lv_u, Order(AbilityCommand("CancelBuilding", 0)), c_orderQueueReplace);
                 }
 
-                GhostOps_Hanson_Log("over the kits: a turret construction was cancelled");
-                UIDisplayMessage(PlayerGroupAll(), c_messageAreaDirective, StringExternal("Param/Value/GhostOpsH_KitsOut"));
+                GhostOps_Hanson_Log("over the kits: a construction of " + GhostOps_Hanson_FamType(lp_fam) + " was cancelled");
+                UIDisplayMessage(PlayerGroupAll(), c_messageAreaDirective, StringExternal("Param/Value/GhostOpsH_" + GhostOps_Hanson_FamPrefix(lp_fam) + "Out"));
             }
-            else {
+            else if (UnitTestState(lv_u, c_unitStateUnderConstruction)) {
                 lv_slot = -1;
                 lv_k = 0;
                 while ((lv_k < go_hTrkN) && (lv_slot < 0)) {
@@ -983,16 +1309,12 @@ void GhostOps_Hanson_KitScan () {
 
                 if (lv_slot >= 0) {
                     go_hTrk[lv_slot] = lv_u;
+                    go_hTrkFam[lv_slot] = lp_fam;
                     go_hTrkLife[lv_slot] = UnitGetPropertyFixed(lv_u, c_unitPropLife, c_unitPropCurrent);
                     go_hTrkPos[lv_slot] = UnitGetPosition(lv_u);
                     go_hTrkHurtAt[lv_slot] = -100.0;
-                    if (UnitTestState(lv_u, c_unitStateUnderConstruction)) {
-                        go_hTrkState[lv_slot] = 1;
-                        GhostOps_Hanson_Log("kit reserved");
-                    }
-                    else {
-                        go_hTrkState[lv_slot] = 2;
-                    }
+                    go_hTrkState[lv_slot] = 1;
+                    GhostOps_Hanson_Log("kit reserved (" + GhostOps_Hanson_FamType(lp_fam) + ")");
                 }
             }
         }
@@ -1003,6 +1325,7 @@ void GhostOps_Hanson_KitScan () {
 
 bool GhostOps_Hanson_KitTick (bool lp_testConds, bool lp_runActions) {
     int lv_k;
+    int lv_f;
     unit lv_u;
     bool lv_valid;
 
@@ -1010,42 +1333,43 @@ bool GhostOps_Hanson_KitTick (bool lp_testConds, bool lp_runActions) {
         return true;
     }
 
-    GhostOps_Hanson_KitScan();
+    lv_f = 0;
+    while (lv_f < 2) {
+        if (GhostOps_Hanson_FamOn(lv_f)) {
+            GhostOps_Hanson_KitScan(lv_f);
+        }
+
+        lv_f += 1;
+    }
+
     lv_k = 0;
     while (lv_k < go_hTrkN) {
         if (go_hTrkState[lv_k] != 0) {
             lv_u = go_hTrk[lv_k];
             lv_valid = UnitIsValid(lv_u) && (UnitGetType(lv_u) != "");
             if (lv_valid && UnitIsAlive(lv_u)) {
-                if (go_hTrkState[lv_k] == 1) {
-                    // a drop of life between two ticks means damage: that tells a destroyed construction from a cancelled one
-                    if (UnitGetPropertyFixed(lv_u, c_unitPropLife, c_unitPropCurrent) < (go_hTrkLife[lv_k] - 0.01)) {
-                        go_hTrkHurtAt[lv_k] = GameGetMissionTime();
-                    }
-
-                    go_hTrkLife[lv_k] = UnitGetPropertyFixed(lv_u, c_unitPropLife, c_unitPropCurrent);
-                    go_hTrkPos[lv_k] = UnitGetPosition(lv_u);
+                // a drop of life between two ticks means damage: that tells a destroyed construction from a cancelled one
+                if (UnitGetPropertyFixed(lv_u, c_unitPropLife, c_unitPropCurrent) < (go_hTrkLife[lv_k] - 0.01)) {
+                    go_hTrkHurtAt[lv_k] = GameGetMissionTime();
                 }
 
-                if ((go_hTrkState[lv_k] == 1) && !UnitTestState(lv_u, c_unitStateUnderConstruction)) {
-                    go_hTrkState[lv_k] = 2;
-                    go_hKitSpent += 1;
-                    GhostOps_Hanson_Log("kit spent (construction finished)");
+                go_hTrkLife[lv_k] = UnitGetPropertyFixed(lv_u, c_unitPropLife, c_unitPropCurrent);
+                go_hTrkPos[lv_k] = UnitGetPosition(lv_u);
+                if (!UnitTestState(lv_u, c_unitStateUnderConstruction)) {
+                    // finished: the kit is spent and the place of the tracker is free again (the unit stays marked in its custom value)
+                    GhostOps_Hanson_FamAddSpent(go_hTrkFam[lv_k]);
+                    go_hTrkState[lv_k] = 0;
+                    GhostOps_Hanson_Log("kit spent (construction finished, " + GhostOps_Hanson_FamType(go_hTrkFam[lv_k]) + ")");
                 }
             }
             else {
-                if (go_hTrkState[lv_k] == 1) {
-                    if ((GameGetMissionTime() - go_hTrkHurtAt[lv_k] < 4.0) || GhostOps_Hanson_EnemyNear(go_hTrkPos[lv_k])) {
-                        // damaged or an enemy next to it: it was destroyed, the kit is gone; a cancelled construction is neither
-                        go_hKitConsumed += 1;
-                        GhostOps_Hanson_Log("unfinished turret destroyed: kit consumed");
-                    }
-                    else {
-                        GhostOps_Hanson_Log("construction cancelled: kit freed");
-                    }
+                if ((GameGetMissionTime() - go_hTrkHurtAt[lv_k] < 4.0) || GhostOps_Hanson_EnemyNear(go_hTrkPos[lv_k])) {
+                    // damaged or an enemy next to it: it was destroyed, the kit is gone; a cancelled construction is neither
+                    GhostOps_Hanson_FamAddConsumed(go_hTrkFam[lv_k]);
+                    GhostOps_Hanson_Log("unfinished structure destroyed: kit consumed (" + GhostOps_Hanson_FamType(go_hTrkFam[lv_k]) + ")");
                 }
                 else {
-                    GhostOps_Hanson_Log("finished turret lost: no kit returned");
+                    GhostOps_Hanson_Log("construction cancelled: kit freed (" + GhostOps_Hanson_FamType(go_hTrkFam[lv_k]) + ")");
                 }
 
                 go_hTrkState[lv_k] = 0;
@@ -1055,9 +1379,17 @@ bool GhostOps_Hanson_KitTick (bool lp_testConds, bool lp_runActions) {
         lv_k += 1;
     }
 
-    // the build button follows the kits left
-    TechTreeUnitAllow(1, "MissileTurret", GhostOps_Hanson_KitsLeft() > 0);
-    GhostOps_Hanson_KitObjective();
+    // the build buttons follow the kits left
+    if (go_hKitOn) {
+        TechTreeUnitAllow(1, "MissileTurret", GhostOps_Hanson_KitsLeft() > 0);
+        GhostOps_Hanson_KitObjective(0);
+    }
+
+    if (go_hBkOn) {
+        TechTreeUnitAllow(1, "Bunker", GhostOps_Hanson_KitsLeftF(1) > 0);
+        GhostOps_Hanson_KitObjective(1);
+    }
+
     return true;
 }
 
@@ -1080,8 +1412,8 @@ void GhostOps_Hanson_Start () {
     go_hHudDlg = c_invalidDialogId;
     GhostOps_Hanson_MakeTurrets();
     GhostOps_Hanson_MakeFreeMarines();
-    if (go_hKitOn) {
-        GhostOps_Hanson_Log("turret kits ordered: " + IntToString(go_hKitOrdered));
+    if (go_hKitOn || go_hBkOn) {
+        GhostOps_Hanson_Log("turret kits ordered: " + IntToString(go_hKitOrdered) + ", bunker kits ordered: " + IntToString(go_hBkOrdered));
         go_hKitTrig = TriggerCreate("GhostOps_Hanson_KitTick");
         TriggerAddEventTimePeriodic(go_hKitTrig, 0.25, c_timeGame);
         TriggerExecute(go_hKitTrig, true, true);
@@ -1097,7 +1429,7 @@ void GhostOps_Hanson_Start () {
         GhostOps_Hanson_CreateUI();
     }
 
-    if (go_hCommand || go_hContOn || go_hFuelOn) {
+    if (go_hCommand || go_hContOn || go_hFuelOn || go_hShotOn) {
         // the dialogs are built again after a load (the convoy button of THanson01, the gas / container line of both missions)
         go_hLoadTrig = TriggerCreate("GhostOps_Hanson_OnLoad");
         TriggerAddEventLoadGameDone(go_hLoadTrig);
@@ -1114,9 +1446,13 @@ void GhostOps_Hanson_Start () {
         TriggerAddEventUnitDied(go_hContDiedTrig, null);
     }
 
-    if (go_hContOn || go_hFuelOn) {
+    if (go_hShotOn) {
+        TriggerAddEventUnitAbility(TriggerCreate("GhostOps_Hanson_ShotExec"), null, AbilityCommand("Snipe", 0), c_unitAbilStageExecute, false);
+    }
+
+    if (go_hContOn || go_hFuelOn || go_hShotOn) {
         go_hContTickTrig = TriggerCreate("GhostOps_Hanson_ContTick");
-        TriggerAddEventTimePeriodic(go_hContTickTrig, 0.5, c_timeGame);
+        TriggerAddEventTimePeriodic(go_hContTickTrig, 0.25, c_timeGame);
     }
 
     if (go_hLnCount > 0) {

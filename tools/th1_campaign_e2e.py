@@ -31,8 +31,8 @@ import ce0_session  # noqa: E402
 import ce0_steps  # noqa: E402
 import test_launch  # noqa: E402
 
-PLAYABLE = 'sniper_next_r2'
-DEV = 'sniper_next_r2_campaign_dev'
+PLAYABLE = 'sniper_next_r3'
+DEV = 'sniper_next_r3_campaign_dev'
 OUT = os.environ.get('GHOSTOPS_E2E_RESULT') or os.path.join(ROOT, 'tmp', 'th1_campaign_e2e_result.json')
 RESULT = []
 
@@ -113,11 +113,11 @@ def main():
     s = flow.state()
     s['stock'] = {'minerals': 3000, 'gas': 700}  # a made-up test budget; it is the test file's own
     campaign.commit(path, s)
-    order = {'turret_kits': 4}
+    order = {'turret_kits': 4, 'scvs': 2}
     q = flow.quote('thanson01', PLAYABLE, order)
-    check('the order is quoted: 4 kits x 75 + preparation 1000 / 500', q['ok'] and q['cost'] == {'minerals': 4 * 75 + 1000, 'gas': 500}, q)
+    check('the order is quoted: 4 kits x 75 + 2 SCVs x 50 + preparation 1000 / 500', q['ok'] and q['cost'] == {'minerals': 4 * 75 + 2 * 50 + 1000, 'gas': 500}, q)
     ok, msg, op = flow.start_new('thanson01', PLAYABLE, order)
-    check('paid once and started', ok and flow.stock() == {'minerals': 3000 - 1300, 'gas': 200}, (msg, flow.stock()))
+    check('paid once and started', ok and flow.stock() == {'minerals': 3000 - 1400, 'gas': 200}, (msg, flow.stock()))
     if not ok:
         return 3
     sc = ce0_steps.Scenario({'name': 'th1_campaign_e2e', 'mission': 'thanson01', 'preset': DEV}, os.path.join(os.path.dirname(path), 'scenario.json'))
@@ -127,7 +127,10 @@ def main():
     sc.op_until({'cmd': 'nstat', 'grep': 'NSTAT ghosts 2 firebats 2', 'every': 5, 'timeout': 150})
     sc.chat('nstat', 1.5)
     kits = [t for _, t in sc.rows() if 'NSTAT kits' in t]
-    check('the map got the PAID order (4 kits), not the default 15', any('ordered 4 ' in t for t in kits), kits[-1:] )
+    check('the map got the PAID order (4 kits), not the default 15', any('ordered 4 ' in t for t in kits), kits[-1:])
+    sc.chat('nscv', 1.5)
+    scv_rows = [t for _, t in sc.rows() if 'NSCV' in t]
+    check('the map got the PAID extra SCVs (2), not the default 8', any('extra ordered 2 ' in t for t in scv_rows), scv_rows[-1:])
     sc.chat('nwin', 1.5)
     deadline = time.time() + 180
     got = None

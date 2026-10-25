@@ -68,7 +68,7 @@ class Config(unittest.TestCase):
 
     def test_card_shows_the_mode_and_the_composition(self):
         names = [p['name'] for p in launcher_core.profiles_of('thanson02')]
-        self.assertEqual(names, ['epidemic_free', 'epidemic_free_r2'])
+        self.assertEqual(names, ['epidemic_free', 'epidemic_free_r2', 'epidemic_free_r3'])
         card = next(p for p in launcher_core.profiles_of('thanson02') if p['name'] == 'epidemic_free_r2')
         self.assertIn('Свободный тест', card['card'])
         nm, st = self.cfg['hanson']['free_squad']['marines'], self.cfg['epidemic']['stock_marines']

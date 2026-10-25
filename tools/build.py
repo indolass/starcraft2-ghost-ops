@@ -62,9 +62,18 @@ TAC_DEFAULT_TEXTS = {
     'VictoryTitle': {'ru': 'Победа', 'en': 'Victory'},
     'VictoryText': {'ru': 'Уничтожьте вражеское производство.', 'en': 'Destroy the enemy production.'},
     'VictoryLeft': {'ru': 'Осталось: ', 'en': 'Left: '},
+    'NukeAmmo': {'ru': 'Ядерные ракеты', 'en': 'Nuclear missiles'},
+    'NukeStPrep': {'ru': 'подготовка', 'en': 'arming'},
+    'NukeStReady': {'ru': 'готова', 'en': 'ready'},
+    'NukeStAim': {'ru': 'наведение', 'en': 'aiming'},
+    'NukeStFlight': {'ru': 'ракета в полёте', 'en': 'missile in flight'},
+    'NukeStLost': {'ru': 'академия потеряна', 'en': 'academy lost'},
+    'NukeStSpent': {'ru': 'израсходованы', 'en': 'spent'},
+    'GrenLabel': {'ru': 'Гранатомёты', 'en': 'Grenade launchers'},
 }
 TAC_EXTRA_TEXT_KEYS = ('RaynorClip', 'GrenadeName', 'GrenadeTip', 'RebelHint1', 'RebelHint2', 'RebelClip', 'FindObjectiveTitle', 'FindObjectiveText',
-                       'VictoryTitle', 'VictoryText', 'VictoryLeft', 'RebelTag', 'RebelMedicTag', 'RebelInfo', 'GrenadeEmpty')
+                       'VictoryTitle', 'VictoryText', 'VictoryLeft', 'RebelTag', 'RebelMedicTag', 'RebelInfo', 'GrenadeEmpty',
+                       'NukeAmmo', 'NukeStPrep', 'NukeStReady', 'NukeStAim', 'NukeStFlight', 'NukeStLost', 'NukeStSpent', 'GrenLabel')
 # Explanations are shown in a larger style (about +30% over the subtitle area font): <s val="AlertDisplay"> (measured in the game)
 EXPLAIN_STYLE = ('<s val=' + chr(34) + 'AlertDisplay' + chr(34) + '>', '</s>')
 TAC_EXPLAIN_KEYS = ('AlertText', 'RaynorText', 'SwannExplain', 'GhostExplain', 'RebelHint1', 'RebelHint2')
@@ -88,8 +97,19 @@ HANSON_TEXT_KEYS = ('BtnPreparing', 'BtnReady', 'BtnActive', 'ReadyMsg', 'SentMs
 HANSON_ROLES = ('base', 'houses', 'air')
 # optional texts of the prepared-detonation variant (containers, gas, HUD, messages); a profile may define any of them, the module reads only what its options need
 HANSON_EXTRA_TEXT_KEYS = ('PlaceFarMsg', 'GasSourceLost', 'ContainerTag', 'GasUnit', 'NeedGas', 'FuelPaidMsg', 'FuelShortMsg', 'HudGas', 'HudContainers', 'HudLeft', 'HudOf', 'HudPrice', 'HudFuelPrice', 'HudNoGasForBox', 'HudShort',
-                          'KitsTitle', 'KitsOut', 'KitsHint', 'KitsReservedMsg', 'KitsFreedMsg', 'ContainerName', 'ContainerTip', 'ContainerUnitName', 'ContainerInfo', 'PlaceFailGas', 'PlaceFailLimit', 'PlaceFailSpot', 'RaynorName', 'SwannName')
+                          'KitsTitle', 'KitsOut', 'KitsHint', 'KitsReservedMsg', 'KitsFreedMsg', 'KitsBuilding', 'BunkerTitle', 'BunkerHint', 'BunkerOut', 'BunkerReservedMsg', 'BunkerFreedMsg',
+                          'HudCanPlace', 'HudShot', 'HudShotReady', 'HudShotCd', 'ContainerName', 'ContainerTip', 'ContainerUnitName', 'ContainerInfo', 'PlaceFailGas', 'PlaceFailLimit', 'PlaceFailSpot', 'RaynorName', 'SwannName')
 HANSON_TEXT_DEFAULTS = {
+    'HudCanPlace': {'ru': 'можно поставить', 'en': 'can place'},
+    'HudShot': {'ru': 'Выстрел', 'en': 'Rifle shot'},
+    'HudShotReady': {'ru': 'готов', 'en': 'ready'},
+    'HudShotCd': {'ru': 'перезарядка, с:', 'en': 'cooldown, s:'},
+    'KitsBuilding': {'ru': 'строится', 'en': 'under construction'},
+    'BunkerTitle': {'ru': 'Комплекты бункеров', 'en': 'Bunker kits'},
+    'BunkerHint': {'ru': 'Бункеры строите вы, место выбираете сами; строго по числу комплектов.', 'en': 'You build the bunkers and choose the places; exactly as many as the kits.'},
+    'BunkerOut': {'ru': 'Комплекты бункеров закончились.', 'en': 'No bunker kits left.'},
+    'BunkerReservedMsg': {'ru': 'Начато строительство бункера. Свободных комплектов:', 'en': 'A bunker construction has started. Free kits:'},
+    'BunkerFreedMsg': {'ru': 'Строительство бункера отменено. Свободных комплектов:', 'en': 'The bunker construction was cancelled. Free kits:'},
     'GasUnit': {'ru': '\u0433\u0430\u0437\u0430', 'en': 'gas'},
     'NeedGas': {'ru': '\u041a\u043e\u043b\u043e\u043d\u043d\u0430 \u0433\u043e\u0442\u043e\u0432\u0430. \u041d\u0435 \u0445\u0432\u0430\u0442\u0430\u0435\u0442 \u0433\u0430\u0437\u0430:', 'en': 'The convoy is ready. Gas missing:'},
 }
@@ -209,7 +229,7 @@ def validate_zerohour(cfg):
     errs = []
     if not isinstance(z, dict):
         return ['zerohour must be an object']
-    known = {'order', 'limits', 'prices', 'recommended', 'test_budget', 'arrival_minutes', 'targets', 'ping_every', 'ghost_spawn', 'post_arrival', 'scene', 'texts', 'debug_log', 'lock_production', 'voice', 'min'}
+    known = {'order', 'limits', 'prices', 'recommended', 'test_budget', 'arrival_minutes', 'targets', 'ping_every', 'persistent_marks', 'ghost_spawn', 'post_arrival', 'scene', 'texts', 'debug_log', 'lock_production', 'voice', 'min'}
     for k in z:
         if k not in known:
             errs.append('zerohour.%s is not supported' % k)
@@ -245,6 +265,8 @@ def validate_zerohour(cfg):
     t = z.get('targets')
     if not isinstance(t, list) or not 1 <= len(t) <= 12 or any(not isint(x) or not 0 < x < 100000 for x in t) or len(set(t)) != len(t):
         errs.append('zerohour.targets must be 1..12 distinct object ids of the map')
+    if 'persistent_marks' in z and not isinstance(z['persistent_marks'], bool):
+        errs.append('zerohour.persistent_marks must be boolean (one persistent mark per living target instead of a ping every ping_every seconds)')
     if not _num(z.get('ping_every')) or not 10 <= z['ping_every'] <= 600:
         errs.append('zerohour.ping_every must be 10..600 (game seconds)')
     gs = z.get('ghost_spawn')
@@ -350,13 +372,15 @@ def validate_detector_analysis(cfg):
     if not isinstance(d, dict):
         return ['detector_analysis must be an object']
     for k in d:
-        if k not in ('enabled', 'texts', 'column', 'row', 'debug_ring'):
+        if k not in ('enabled', 'texts', 'column', 'row', 'debug_ring', 'always'):
             errs.append('detector_analysis.%s is not supported' % k)
     if not isinstance(d.get('enabled'), bool):
         errs.append('detector_analysis.enabled must be true or false')
     for k, hi in (('row', 2), ('column', 4)):
         if k in d and not (isinstance(d[k], int) and not isinstance(d[k], bool) and 0 <= d[k] <= hi):
             errs.append('detector_analysis.%s must be an integer 0..%d (the place of the passive icon on the Ghost card)' % (k, hi))
+    if 'always' in d and not isinstance(d['always'], bool):
+        errs.append('detector_analysis.always must be true or false (true: the radar stays on every living Ghost, not only on the selected ones)')
     texts = d.get('texts', {})
     if set(texts) != {'Name', 'Tip'}:
         errs.append('detector_analysis.texts must have exactly Name and Tip')
@@ -702,8 +726,15 @@ def validate_hanson(cfg):
                     if not isinstance(tk.get(k), int) or isinstance(tk.get(k), bool) or not 0 <= tk[k] <= lim:
                         errs.append('hanson.turret_kits.%s must be an integer 0..limit' % k)
                 o = tk.get('order')
-                if not isinstance(o, dict) or set(o) != {'turret_kits'} or not isinstance(o['turret_kits'], int) or isinstance(o['turret_kits'], bool) or not 0 <= o['turret_kits'] <= lim:
-                    errs.append('hanson.turret_kits.order must be {"turret_kits": 0..limit}')
+                if not isinstance(o, dict) or not set(o) <= {'turret_kits', 'scvs'} or 'turret_kits' not in o or not isinstance(o['turret_kits'], int) or isinstance(o['turret_kits'], bool) or not 0 <= o['turret_kits'] <= lim:
+                    errs.append('hanson.turret_kits.order must be {"turret_kits": 0..limit} and may carry "scvs" (the extra SCVs of the order)')
+                if 'scvs' in (o if isinstance(o, dict) else {}):
+                    sv = tk.get('scv')
+                    if not (isinstance(sv, dict) and set(sv) == {'stock', 'recommended_total', 'limit_extra', 'price'} and all(isinstance(sv[k], int) and not isinstance(sv[k], bool) and 0 <= sv[k] <= 60 for k in ('stock', 'recommended_total', 'limit_extra'))
+                            and isinstance(sv['price'], dict) and set(sv['price']) == {'minerals', 'gas'}):
+                        errs.append('hanson.turret_kits.scv needs stock, recommended_total, limit_extra (integers) and price {minerals, gas}')
+                    elif not (isinstance(o['scvs'], int) and not isinstance(o['scvs'], bool) and 0 <= o['scvs'] <= sv['limit_extra']):
+                        errs.append('hanson.turret_kits.order.scvs must be an integer 0..scv.limit_extra')
             for k in ('price', 'preparation'):
                 v = tk.get(k)
                 if not (isinstance(v, dict) and set(v) == {'minerals', 'gas'} and all(isinstance(x, int) and not isinstance(x, bool) and 0 <= x <= 5000 for x in v.values())):
@@ -716,6 +747,32 @@ def validate_hanson(cfg):
     fs = h.get('free_squad')
     if fs is not None and (not isinstance(fs, dict) or not isinstance(fs.get('enabled'), bool) or not isinstance(fs.get('marines'), int) or isinstance(fs.get('marines'), bool) or not 0 <= fs['marines'] <= 60):
         errs.append('hanson.free_squad needs enabled (boolean) and marines (integer 0..60)')
+    if isinstance(fs, dict) and 'scvs' in fs and not (isinstance(fs['scvs'], int) and not isinstance(fs['scvs'], bool) and 0 <= fs['scvs'] <= 40):
+        errs.append('hanson.free_squad.scvs must be an integer 0..40 (the extra SCVs of a free test)')
+    bk = h.get('bunker_kits')
+    if bk is not None:
+        if not isinstance(bk, dict) or not isinstance(bk.get('enabled'), bool):
+            errs.append('hanson.bunker_kits needs enabled (boolean)')
+        elif bk['enabled']:
+            lim = bk.get('limit')
+            if not isinstance(lim, int) or isinstance(lim, bool) or not 1 <= lim <= 30:
+                errs.append('hanson.bunker_kits.limit must be an integer 1..30')
+            else:
+                o = bk.get('order')
+                if not isinstance(o, dict) or set(o) != {'bunker_kits'} or not isinstance(o['bunker_kits'], int) or isinstance(o['bunker_kits'], bool) or not 0 <= o['bunker_kits'] <= lim:
+                    errs.append('hanson.bunker_kits.order must be {"bunker_kits": 0..limit}')
+                if not isinstance(bk.get('recommended'), int) or not 0 <= bk['recommended'] <= lim:
+                    errs.append('hanson.bunker_kits.recommended must be an integer 0..limit')
+            if not (cfg.get('hanson') or {}).get('lock_development'):
+                errs.append('hanson.bunker_kits needs lock_development (the kit is the exception of the lock)')
+    hs = h.get('salvo')
+    if hs is not None:
+        errs += validate_salvo(hs, 'hanson.salvo') if isinstance(hs, dict) else ['hanson.salvo must be an object']
+        tx = hs.get('texts') if isinstance(hs, dict) else None
+        if not (isinstance(tx, dict) and set(tx) == {'Name', 'Tip'} and all(isinstance(v, dict) and all(isinstance(v.get(l), str) and v[l] for l in ('ru', 'en')) for v in tx.values())):
+            errs.append('hanson.salvo.texts must be {Name, Tip} with ru and en texts')
+        if not (h.get('turret_kits') or {}).get('enabled'):
+            errs.append('hanson.salvo needs hanson.turret_kits (the salvo belongs to turrets the player builds)')
     sq = cfg['operatives']['squad']
     if sq not in (['Ghost'], ['Ghost', 'Ghost']):
         errs.append('hanson variant: the squad is one Ghost or two Ghosts')
@@ -724,9 +781,11 @@ def validate_hanson(cfg):
         if not isinstance(ct, dict) or not isinstance(ct.get('enabled'), bool):
             errs.append('hanson.containers needs enabled (boolean)')
         else:
-            for k, (lo, hi) in {'limit': (1, 24), 'gas_cost': (0, 500), 'damage': (1, 2000), 'radius': (0.5, 8), 'life': (1, 500), 'place_range': (0.5, 6), 'min_free': (0, 4)}.items():
+            for k, (lo, hi) in {'limit': (0, 1000), 'gas_cost': (0, 500), 'damage': (1, 2000), 'radius': (0.5, 8), 'life': (1, 500), 'place_range': (0.5, 6), 'min_free': (0, 4)}.items():
                 if not _num(ct.get(k)) or not lo <= ct[k] <= hi:
                     errs.append('hanson.containers.%s must be a number %s..%s' % (k, lo, hi))
+            if _num(ct.get('limit')) and ct['limit'] == 0 and not (_num(ct.get('gas_cost')) and ct['gas_cost'] >= 1):
+                errs.append('hanson.containers.limit 0 (no shared stock: the gas is the only limit) needs gas_cost >= 1')
             if 'structure_bonus' in ct and not (_num(ct['structure_bonus']) and 0 <= ct['structure_bonus'] <= 6):
                 errs.append('hanson.containers.structure_bonus must be a number 0..6 (extra blast damage on enemy structures, x damage)')
             if ct.get('owner') not in (0, 15):
@@ -761,6 +820,10 @@ def validate_hanson(cfg):
         st = h.get('story') or {}
         if not (_num(st.get('first_delay')) and _num(st.get('gap')) and 0 <= st['first_delay'] <= 600 and 0 <= st['gap'] <= 60):
             errs.append('hanson.story needs first_delay 0..600 and gap 0..60')
+        if 'event' in st:
+            if st['event'] != 'base_handed' or not (_num(st.get('after_delay')) and 0 <= st['after_delay'] <= 120 and _num(st.get('chars_per_second')) and 4 <= st['chars_per_second'] <= 40
+                                                    and _num(st.get('min_seconds')) and 1 <= st['min_seconds'] <= 30):
+                errs.append('hanson.story.event must be "base_handed" with after_delay 0..120, chars_per_second 4..40 and min_seconds 1..30 (the reading time of a line)')
     return errs
 
 
@@ -927,6 +990,13 @@ def validate_tactical(cfg):
                 errs.append('tactical.grenade.flight_speed must be a number 1..60 (cells per second of the projectile)')
             if 'hotkey' in gr and not (isinstance(gr['hotkey'], str) and len(gr['hotkey']) == 1 and gr['hotkey'].isalpha() and gr['hotkey'].isupper()):
                 errs.append('tactical.grenade.hotkey must be one capital letter')
+            for ck, cm in (('card_row', 2), ('card_col', 4)):
+                if ck in gr and not (isinstance(gr[ck], int) and 0 <= gr[ck] <= cm):
+                    errs.append('tactical.grenade.%s must be an integer 0..%d (a slot of the command card)' % (ck, cm))
+            if 'carriers' in gr and gr['carriers'] not in ('operative', 'both'):
+                errs.append('tactical.grenade.carriers must be "operative" or "both" (both Ghosts, a stock of its own each)')
+            if 'bio_structures' in gr and not isinstance(gr['bio_structures'], bool):
+                errs.append('tactical.grenade.bio_structures must be boolean (the blast also reaches enemy BIOLOGICAL structures, e.g. the buildings of the Zerg)')
             if 'pointer' in gr and not isinstance(gr['pointer'], bool):
                 errs.append('tactical.grenade.pointer must be boolean (range circle and area circle under the cursor)')
             if 'effects' in gr and not isinstance(gr['effects'], bool):
@@ -940,6 +1010,8 @@ def validate_tactical(cfg):
     if vc is not None:
         if not isinstance(vc, dict) or not isinstance(vc.get('enabled'), bool) or not (isinstance(vc.get('types'), list) and 1 <= len(vc['types']) <= 16 and all(isinstance(x, str) and re.fullmatch(r'[A-Za-z0-9]+', x) for x in vc['types'])):
             errs.append('tactical.victory needs enabled (boolean) and types: 1..16 unit type ids of the enemy production buildings')
+    if 'status_lines' in t and not isinstance(t['status_lines'], bool):
+        errs.append('tactical.status_lines must be boolean')
     rl = t.get('rebel_labels')
     if rl is not None and (not isinstance(rl, dict) or not isinstance(rl.get('enabled'), bool)):
         errs.append('tactical.rebel_labels.enabled must be boolean')
@@ -1035,6 +1107,17 @@ def validate_ghost_tuning(gt):
         errs.append('ghost_tuning.snipe.cooldown must be a number in 0..60')
     if 'exclude_friendly' in sn and not isinstance(sn['exclude_friendly'], bool):
         errs.append('ghost_tuning.snipe.exclude_friendly must be boolean')
+    rs = sn.get('rifle_shot')
+    if rs is not None:
+        if not (isinstance(rs, dict) and set(rs) == {'range', 'assist_radius', 'ability_range', 'texts'} and _num(rs.get('range')) and 3 <= rs['range'] <= 20 and _num(rs.get('assist_radius')) and 0 <= rs['assist_radius'] <= 5
+                and _num(rs.get('ability_range')) and rs['ability_range'] >= rs.get('range', 0) and rs['ability_range'] <= 100):
+            errs.append('ghost_tuning.snipe.rifle_shot needs range 3..20, assist_radius 0..5, ability_range (range..100, long: the Ghost never walks) and texts')
+        else:
+            tx = rs['texts']
+            if not (isinstance(tx, dict) and set(tx) == {'Name', 'Tip'} and all(isinstance(v, dict) and all(isinstance(v.get(l), str) and v[l] for l in ('ru', 'en')) for v in tx.values())):
+                errs.append('ghost_tuning.snipe.rifle_shot.texts must be {Name, Tip} with ru and en texts')
+        if not sn.get('container_target'):
+            errs.append('ghost_tuning.snipe.rifle_shot needs container_target (the container is hit directly by the shot)')
     if 'container_target' in sn and (not isinstance(sn['container_target'], bool) or not sn.get('exclude_friendly')):
         errs.append('ghost_tuning.snipe.container_target must be boolean and needs exclude_friendly (the neutral class is opened for the special containers only, own units stay excluded)')
     for k, (lo, hi) in {'cost': (0, 200), 'damage': (1, 1000), 'cast_time': (0, 5)}.items():
@@ -1061,7 +1144,7 @@ def ghost_tuning_fragments(gt):
     drain = gt['cloak_net_per_second'] - gt['regen_per_second']
     sn = gt['snipe']
     nl = chr(10)
-    return {
+    frags = {
         'UnitData.xml': nl.join([
             '    <CUnit id="Ghost">',
             '        <EnergyStart value="%s"/>' % g(gt['energy_start']),
@@ -1083,7 +1166,10 @@ def ghost_tuning_fragments(gt):
             '    </CAbilBehavior>',
             '    <CAbilEffectTarget id="Snipe">',
             '        <CastIntroTime value="%s"/>' % g(sn['cast_time']),
-        ] + (['        <TargetFilters index="0" value="Biological,Visible;Self,Player,Ally,%sStructure,Destructible,Stasis,Dead,Hidden,Invulnerable"/>' % ('' if sn.get('container_target') else 'Neutral,')] if sn.get('exclude_friendly') else []) + [
+        ] + (['        <TargetFilters index="0" value="Biological,Visible;Self,Player,Ally,%sStructure,Destructible,Stasis,Dead,Hidden,Invulnerable"/>' % ('' if sn.get('container_target') else 'Neutral,')] if (sn.get('exclude_friendly') and not sn.get('rifle_shot')) else []) + (
+            # the rifle shot: any point or unit may be clicked, the long range keeps the Ghost where he stands, the ability's own effect is a harmless marker that only starts the cooldown
+            # (the module aims and fires: GhostOps_Hanson_ShotExec)
+            ['        <TargetFilters value=""/>', '        <Range value="%s"/>' % g(sn['rifle_shot']['ability_range']), '        <Effect index="0" value="GhostOpsShotCast"/>'] if sn.get('rifle_shot') else []) + [
             '        <Cost index="0">',
             '            <Vital index="Energy" value="%s"/>' % g(sn['cost']),
         ] + (['            <Cooldown TimeUse="%s"/>' % g(sn['cooldown'])] if sn.get('cooldown', 0) > 0 else []) + [
@@ -1094,6 +1180,22 @@ def ghost_tuning_fragments(gt):
             '        <Amount value="%s"/>' % g(sn['damage']),
             '    </CEffectDamage>', '']),
     }
+    rs = sn.get('rifle_shot')
+    if rs:
+        frags['EffectData.xml'] += nl.join([
+            # the ability's own effect: a search at the clicked point that finds nothing to hit (a point target is valid, like the placement of a container; it only starts the cooldown)
+            '    <CEffectEnumArea id="GhostOpsShotCast">', '        <EditorCategories value="Race:Terran"/>', '        <AreaArray Radius="0.1"/>', '        <SearchFilters value="Ground;Missile,Dead,Hidden"/>', '    </CEffectEnumArea>',
+            # a shot that finds no target: the same attack picture as the hit (beam, launch sound) at the point, no damage
+            '    <CEffectDamage id="GhostOpsShotMiss">', '        <Amount value="0"/>', '        <ImpactLocation Value="TargetPoint"/>', '    </CEffectDamage>', ''])
+        frags['ActorData.xml'] = nl.join([
+            '    <CActorAction id="GhostOpsShotMissAttack" parent="GenericAttack" effectAttack="GhostOpsShotMiss">', '        <LaunchSiteOps Ops="SOpAttachHarnessStationary"/>',
+            '        <LaunchAssets Sound="Ghost_SnipeLaunch"/>', '        <ImpactMap index="None" Sound="Ghost_SnipeImpact"/>', '    </CActorAction>',
+            '    <CActorBeamSimple id="GhostOpsShotMissAttackBeam" parent="GenericAttackBeam"/>',
+            '    <CActorModel id="GhostOpsShotMissImpact" parent="ModelAnimationStyleOneShot">', '        <Model value="RaynorAttackImpact"/>', '        <HostSiteOps Ops="SOpTargetPoint"/>',
+            '        <On Terms="Effect.GhostOpsShotMiss.Stop" Send="Create"/>', '    </CActorModel>',
+            # the range ring of the shot is the range of the rifle, not the long range of the ability
+            '    <CActorRange id="GhostSnipeRange" parent="RangeAbil" abil="Snipe">', '        <Range value="%s"/>' % g(rs['range']), '    </CActorRange>', ''])
+    return frags
 
 
 def hanson_fragments(h, cfg):
@@ -1104,10 +1206,21 @@ def hanson_fragments(h, cfg):
     nl = chr(10)
     ct = h.get('containers') or {}
     kit = {}
+    units, infos = [], []
     if (h.get('turret_kits') or {}).get('enabled'):
         # the turret kits: the Missile Turret costs nothing to build (the kit was ordered, no second payment) and needs only the Command Center (the stock requirement is an Engineering Bay)
-        kit = {'UnitData.xml': nl.join(['    <CUnit id="MissileTurret">', '        <CostResource index="Minerals" value="0"/>', '    </CUnit>', '']),
-               'AbilData.xml': nl.join(['    <CAbilBuild id="TerranBuild">', '        <InfoArray index="Build6">', '            <Button Requirements="HaveCommandCenter"/>', '        </InfoArray>', '    </CAbilBuild>', ''])}
+        units += ['    <CUnit id="MissileTurret">', '        <CostResource index="Minerals" value="0"/>', '    </CUnit>']
+        infos += ['        <InfoArray index="Build6">', '            <Button Requirements="HaveCommandCenter"/>', '        </InfoArray>']
+    if (h.get('bunker_kits') or {}).get('enabled'):
+        # the bunker kits: the same rule for the Bunker (stock requirement: a Barracks); index Build7 of the Terran build ability
+        units += ['    <CUnit id="Bunker">', '        <CostResource index="Minerals" value="0"/>', '    </CUnit>']
+        infos += ['        <InfoArray index="Build7">', '            <Button Requirements="HaveCommandCenter"/>', '        </InfoArray>']
+    if units:
+        kit = {'UnitData.xml': nl.join(units + ['']), 'AbilData.xml': nl.join(['    <CAbilBuild id="TerranBuild">'] + infos + ['    </CAbilBuild>', ''])}
+    if h.get('salvo'):
+        # the manual ground salvo of the turrets the player builds (shared module of the catalog data, see salvo_fragments)
+        for fname, frag in salvo_fragments(h['salvo'], with_cost=False).items():
+            kit[fname] = kit.get(fname, '') + nl + frag if fname in kit else frag
     if not ct.get('enabled'):
         return kit
     bs = chr(92)
@@ -1162,7 +1275,7 @@ def hanson_fragments(h, cfg):
     model = ['    <CModel id="GhostOpsFuelContainer" parent="GasCanister">', '        <Model value="Assets\\Buildings\\Resources\\GasCanister\\GasCanister.m3"/>', '    </CModel>', '']
     out = {'ModelData.xml': nl.join(model), 'UnitData.xml': nl.join(unit), 'AbilData.xml': nl.join(abil), 'BehaviorData.xml': nl.join(beh), 'EffectData.xml': nl.join(eff), 'ActorData.xml': nl.join(act), 'ButtonData.xml': nl.join(btn)}
     for fname, frag in kit.items():
-        out[fname] = out[fname] + nl + frag
+        out[fname] = (out[fname] + nl + frag) if fname in out else frag
     return out
 
 
@@ -1202,7 +1315,7 @@ def tactical_fragments(t, gt=None):
                       '    </CAbilEffectTarget>']
         button = ['    <CButton id="GhostOpsArmorPiercing">', '        <Icon value="Assets' + chr(92) + 'Textures' + chr(92) + 'btn-ability-terran-punishergrenade-color.dds"/>',
                   '        <AlertIcon value="Assets' + chr(92) + 'Textures' + chr(92) + 'btn-ability-terran-punishergrenade-color.dds"/>', '        <EditorCategories value="Race:Terran"/>', '    </CButton>']
-        effects = ['    <CEffectLaunchMissile id="GhostOpsAPLaunch">', '        <EditorCategories value="Race:Terran"/>', '        <ImpactEffect value="GhostOpsAPSearch"/>',
+        effects = ['    <CEffectLaunchMissile id="GhostOpsAPLaunch">', '        <EditorCategories value="Race:Terran"/>', '        <ImpactEffect value="%s"/>' % ('GhostOpsAPImpactSet' if gr.get('bio_structures') else 'GhostOpsAPSearch'),
                    '        <ImpactLocation Value="TargetPoint"/>', '        <AmmoUnit value="%s"/>' % ('GhostOpsAPMissile' if gr.get('dev_flight_speed') else 'PunisherGrenadesLMWeapon'), '    </CEffectLaunchMissile>',
                    '    <CEffectEnumArea id="GhostOpsAPSearch">', '        <EditorCategories value="Race:Terran"/>', '        <LaunchLocation Value="TargetPoint"/>', '        <ImpactLocation Value="TargetPoint"/>',
                    '        <AreaArray Radius="%s" Effect="GhostOpsAPDamage"/>' % g(gr['radius']),
@@ -1210,6 +1323,13 @@ def tactical_fragments(t, gt=None):
                    '        <SearchFilters value="Ground,Mechanical,Visible;Player,Ally,Neutral,Biological,Air,Missile,Stasis,Dead,Hidden,Invulnerable"/>', '    </CEffectEnumArea>',
                    '    <CEffectDamage id="GhostOpsAPDamage">', '        <EditorCategories value="Race:Terran"/>', '        <Kind value="Splash"/>', '        <Amount value="%s"/>' % g(gr['damage']), '        <Flags index="Notification" value="1"/>',
                    '        <ResponseFlags index="Acquire" value="1"/>', '    </CEffectDamage>']
+        if gr.get('bio_structures'):
+            # revision 2 of TRaynor03: the enemy bases are buildings of the Zerg, which are BIOLOGICAL structures: a second search (biological STRUCTURES only: no ordinary biological fighters, no air,
+            # no own / allied / neutral units) joins the first one, which keeps taking the machines and the non-biological structures; the two sets never overlap, so nothing is hit twice
+            effects += ['    <CEffectSet id="GhostOpsAPImpactSet">', '        <EditorCategories value="Race:Terran"/>', '        <EffectArray value="GhostOpsAPSearch"/>', '        <EffectArray value="GhostOpsAPSearchBio"/>', '    </CEffectSet>',
+                        '    <CEffectEnumArea id="GhostOpsAPSearchBio">', '        <EditorCategories value="Race:Terran"/>', '        <LaunchLocation Value="TargetPoint"/>', '        <ImpactLocation Value="TargetPoint"/>',
+                        '        <AreaArray Radius="%s" Effect="GhostOpsAPDamage"/>' % g(gr['radius']),
+                        '        <SearchFilters value="Ground,Structure,Biological,Visible;Player,Ally,Neutral,Air,Missile,Stasis,Dead,Hidden,Invulnerable"/>', '    </CEffectEnumArea>']
     nuke_damage = []
     if n.get('damage'):
         # the damage profile of THIS mission only (map local override of the stock NukeDamage: 300 + 200 vs structures, radii 4 / 6 / 8 with 100 / 50 / 25 %): experimental, from the config
@@ -1232,7 +1352,7 @@ def tactical_fragments(t, gt=None):
     if gr.get('enabled') and speed:
         mover = ['    <CMoverMissile id="GhostOpsAPMover" parent="PunisherGrenadesWeapon">', '        <MotionPhases index="0" Acceleration="%s" MaxSpeed="%s"/>' % (g(max(40, speed * 2)), g(speed)), '    </CMoverMissile>']
     ghost_unit = (['    <CUnit id="Ghost">', '        <AbilArray Link="GhostOpsArmorPiercing"/>', '        <CardLayouts index="0">',
-                   '            <LayoutButtons Face="GhostOpsArmorPiercing" Type="AbilCmd" AbilCmd="GhostOpsArmorPiercing,Execute" Row="1" Column="1"/>', '        </CardLayouts>', '    </CUnit>']
+                   '            <LayoutButtons Face="GhostOpsArmorPiercing" Type="AbilCmd" AbilCmd="GhostOpsArmorPiercing,Execute" Row="%d" Column="%d"/>' % (gr.get('card_row', 1), gr.get('card_col', 1)), '        </CardLayouts>', '    </CUnit>']
                   if gr.get('enabled') else [])
     return {
         'UnitData.xml': nl.join(
@@ -1329,6 +1449,10 @@ def catalog_fragments(cfg):
     if 'UnitData.xml' in frags:
         frags['UnitData.xml'] = merge_same_id(frags['UnitData.xml'], 'CUnit', 'Ghost')
         frags['UnitData.xml'] = merge_same_id(frags['UnitData.xml'], 'CUnit', 'MissileTurret')
+    if 'AbilData.xml' in frags:
+        frags['AbilData.xml'] = merge_same_id(frags['AbilData.xml'], 'CAbilBuild', 'TerranBuild')
+    if 'ActorData.xml' in frags:
+        frags['ActorData.xml'] = merge_same_id(frags['ActorData.xml'], 'CActorRange', 'GhostSnipeRange')
     facial = {c['id']: c['facial'] for c in (cfg.get('audio') or {}).get('clips', []) if c.get('facial')}
     sounds = ['    <CSound id="%s" parent="SM_Old">%s        <Mode value="2D"/>%s        <AssetArray File="%s"%s/>%s    </CSound>' % (
         cid, chr(10), chr(10), member, (' FacialAnim="%s"' % facial[cid]) if cid in facial else '', chr(10)) for cid, _, member in audio_clips(cfg)]
@@ -1399,7 +1523,8 @@ def gen_panel(cfg):
                          '    go_pnNet = %.3f;' % (gt['cloak_net_per_second'] if gt else -0.9),
                          '    go_pnRegen = %.3f;' % (gt['regen_per_second'] if gt else 0.5625),
                          '    go_pnPermanent = %s;' % b(cfg['operatives']['ghost_permanent_cloak']),
-                         '    go_pnGrenades = -1;', '    go_pnGrenadeSlot = 1;', '    go_pnHoldSlot = 0;', '}', '']) + chr(10)
+                         '    go_pnGrenades = -1;', '    go_pnGrenadeSlot = 1;', '    go_pnHoldSlot = 0;',
+                         '    go_pnExtra = %d;' % (2 if (cfg.get('tactical') or {}).get('status_lines') else 0), '}', '']) + chr(10)
 
 
 def gen_tactical(cfg):
@@ -1436,6 +1561,8 @@ def gen_tactical(cfg):
         '    go_tacAimHold = %s;' % b(t['nuke'].get('aim_cloak_hold')),
         '    go_tacGrenade = %s;' % b((t.get('grenade') or {}).get('enabled')),
         '    go_tacGrenadeMax = %d;' % (t.get('grenade') or {}).get('charges', 0),
+        '    go_tacGrenBoth = %s;' % b((t.get('grenade') or {}).get('carriers') == 'both'),
+        '    go_tacStatus = %s;' % b(t.get('status_lines')),
         '    go_tacRebelLabels = %s;' % b((t.get('rebel_labels') or {}).get('enabled')),
         '    go_tacMsgEmpty = %s;' % b('GrenadeEmpty' in t.get('texts', {})),
         '    go_tacVictory = %s;' % b((t.get('victory') or {}).get('enabled')),
@@ -1531,18 +1658,34 @@ def gen_hanson(cfg):
     tkc = h.get('turret_kits') or {}
     if tkc.get('enabled'):
         lines += ['    go_hKitOn = true;', '    go_hKitOrdered = %d;' % tkc['order']['turret_kits']]
+    bkc = h.get('bunker_kits') or {}
+    if bkc.get('enabled'):
+        lines += ['    go_hBkOn = true;', '    go_hBkOrdered = %d;' % bkc['order']['bunker_kits']]
     fsq = h.get('free_squad') or {}
     if fsq.get('enabled'):
         lines.append('    go_hFreeMarines = %d;' % fsq['marines'])
+    # the extra SCVs: the SCVs of the order (campaign) and / or of the free test, created once when the base is handed over
+    scvs = (tkc.get('order') or {}).get('scvs', 0) + (fsq.get('scvs', 0) if fsq.get('enabled') else 0)
+    lines.append('    go_hExtraScvs = %d;' % scvs)
+    rs = (cfg.get('ghost_tuning') or {}).get('snipe', {}).get('rifle_shot')
+    if rs:
+        lines += ['    go_hShotOn = true;', '    go_hShotRange = %.2f;' % rs['range'], '    go_hShotAssist = %.2f;' % rs['assist_radius']]
     hud = h.get('hud') or {}
     if hud:
         lines += ['    go_hHudX = %d;' % hud['offset_x'], '    go_hHudY = %d;' % hud['offset_y'], '    go_hHudW = %d;' % hud['width'], '    go_hHudH = %d;' % hud['height']]
     lns = h.get('lines') or []
     lines.append('    go_hLnCount = %d;' % len(lns))
     for i, ln in enumerate(lns):
-        lines += ['    go_hLnId[%d] = "%s";' % (i, ln['id']), '    go_hLnSpk[%d] = "%s";' % (i, ln['speaker']), '    go_hLnSec[%d] = %.2f;' % (i, ln['seconds'])]
+        sec = ln['seconds']
+        st = h.get('story') or {}
+        if st.get('event'):
+            # the reading time of the longer language of the line (the player may play in either): chars / chars_per_second, never below min_seconds, never below the configured seconds
+            sec = max(sec, st['min_seconds'], max(len(ln['text']['ru']), len(ln['text']['en'])) / float(st['chars_per_second']))
+        lines += ['    go_hLnId[%d] = "%s";' % (i, ln['id']), '    go_hLnSpk[%d] = "%s";' % (i, ln['speaker']), '    go_hLnSec[%d] = %.2f;' % (i, sec)]
     if lns:
         lines += ['    go_hStoryFirst = %.1f;' % h['story']['first_delay'], '    go_hStoryGap = %.1f;' % h['story']['gap']]
+        if h['story'].get('event'):
+            lines += ['    go_hStoryEvent = true;', '    go_hStoryAfter = %.1f;' % h['story']['after_delay']]
     if h.get('autotest'):
         lines.append('    GhostOps_ApplyHansonTestConfig();')
     lines += ['}', '']
@@ -1576,6 +1719,8 @@ def validate_epidemic(cfg):
     for k in ('base', 'fuel', 'truck', 'hellions', 'night_cloak', 'protected', 'transport', 'hud'):
         if not isinstance(e.get(k), dict):
             errs.append('epidemic.%s must be an object' % k)
+    if 'stock_scvs' in e and not (isinstance(e['stock_scvs'], int) and not isinstance(e['stock_scvs'], bool) and 0 <= e['stock_scvs'] <= 100):
+        errs.append('epidemic.stock_scvs must be an integer 0..100 (information for the card: the SCVs the original mission gives)')
     if 'stock_marines' in e and not (isinstance(e['stock_marines'], int) and not isinstance(e['stock_marines'], bool) and 0 <= e['stock_marines'] <= 100):
         errs.append('epidemic.stock_marines must be an integer 0..100 (information for the card: the Marines the original mission gives)')
     if 'salvo' in e:
@@ -1700,7 +1845,7 @@ def gen_zerohour(cfg):
              '    go_zhDebug = %s;' % b(z.get('debug_log')), '    go_zhLockProduction = %s;' % b(z['lock_production']),
              '    go_zhOrdMarines = %d;' % o['marines'], '    go_zhOrdBunkers = %d;' % o['bunkers'], '    go_zhOrdTurrets = %d;' % o['turrets'], '    go_zhOrdScvs = %d;' % o['scvs'],
              '    go_zhTargetCount = %d;' % len(z['targets']),
-             '    go_zhPingEvery = %.1f;' % z['ping_every'], '    go_zhGhostX = %.4f;' % z['ghost_spawn'][0], '    go_zhGhostY = %.4f;' % z['ghost_spawn'][1],
+             '    go_zhPingEvery = %.1f;' % z['ping_every'], '    go_zhMarksPersist = %s;' % b(z.get('persistent_marks')), '    go_zhGhostX = %.4f;' % z['ghost_spawn'][0], '    go_zhGhostY = %.4f;' % z['ghost_spawn'][1],
              '    go_zhPostInterval = %.1f;' % pa['interval'], '    go_zhPostMaxActive = %d;' % pa['max_active_units'], '    go_zhPostZerglings = %d;' % pa['zerglings'],
              '    go_zhPostHydras = %d;' % pa['hydralisks'], '    go_zhPostRoaches = %d;' % pa['roaches'],
              '    go_zhIntroDelay = %.1f;' % sc['intro_delay'], '    go_zhHornerDelay = %.1f;' % sc['horner_delay'], '    go_zhRaynorLen = %.1f;' % sc['raynor_seconds'],
@@ -1936,6 +2081,16 @@ def text_entries(cfg):
                 out.setdefault(loc, []).append(('Button/Tooltip/GhostOpsPlaceContainer', fill(ht['ContainerTip'][lang])))
                 out.setdefault(loc, []).append(('Button/Hotkey/GhostOpsPlaceContainer', hs['containers']['hotkey']))
                 out.setdefault(loc, []).append(('Unit/Name/GhostOpsFuelContainer', ht['ContainerUnitName'][lang]))
+            if hs.get('salvo'):
+                out.setdefault(loc, []).append(('Button/Name/GhostOpsTurretSalvo', salvo_text(hs['salvo']['texts']['Name'][lang], hs['salvo'])))
+                out.setdefault(loc, []).append(('Button/Tooltip/GhostOpsTurretSalvo', salvo_text(hs['salvo']['texts']['Tip'][lang], hs['salvo'])))
+                out.setdefault(loc, []).append(('Button/Hotkey/GhostOpsTurretSalvo', hs['salvo'].get('hotkey', 'G')))
+            rsn = ((cfg.get('ghost_tuning') or {}).get('snipe') or {})
+            if rsn.get('rifle_shot'):
+                rtx = rsn['rifle_shot']['texts']
+                fillr = lambda v: (v.replace('{range}', '%g' % rsn['rifle_shot']['range']).replace('{assist}', '%g' % rsn['rifle_shot']['assist_radius']).replace('{damage}', '%g' % rsn['damage']).replace('{cooldown}', '%g' % rsn.get('cooldown', 0)))  # noqa: E731
+                out.setdefault(loc, []).append(('Button/Name/Snipe', rtx['Name'][lang]))
+                out.setdefault(loc, []).append(('Button/Tooltip/Snipe', fillr(rtx['Tip'][lang])))
     ep = cfg.get('epidemic')
     if ep:
         for loc, lang in (('ruRU', 'ru'), ('enUS', 'en')):
@@ -1983,7 +2138,7 @@ def build_block(adapter, cfg):
     if cfg.get('scene'):
         extra += gen_scene(cfg) + '\n'
     if adapter.get('detector_analysis'):
-        extra += chr(10).join(['// Generated detector-analysis configuration', 'void GhostOps_ApplyDetectorAnalysisConfig () {', '    go_daEnabled = true;', '}', '']) + chr(10)
+        extra += chr(10).join(['// Generated detector-analysis configuration', 'void GhostOps_ApplyDetectorAnalysisConfig () {', '    go_daEnabled = true;', '    go_daAlways = %s;' % ('true' if (cfg.get('detector_analysis') or {}).get('always') else 'false'), '}', '']) + chr(10)
     if cfg.get('ce0'):
         extra += gen_ce0(cfg) + '\n'
     if cfg.get('campaign'):

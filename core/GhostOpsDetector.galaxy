@@ -8,6 +8,7 @@
 // selected the behavior is removed and the circles disappear within half a second. The state lives in behaviors and actors of the engine: a loaded game continues as it was.
 //--------------------------------------------------------------------------------------------------
 bool go_daEnabled;
+bool go_daAlways;                // revision 2 mode: every living Ghost carries the radar all the time (the circles do not depend on the selection)
 trigger go_daTrig;
 
 bool GhostOps_DA_Tick (bool lp_testConds, bool lp_runActions) {
@@ -22,7 +23,7 @@ bool GhostOps_DA_Tick (bool lp_testConds, bool lp_runActions) {
     UnitGroupLoopBegin(lv_g);
     while (UnitGroupLoopCurrent() != null) {
         lv_u = UnitGroupLoopCurrent();
-        if (UnitIsSelected(lv_u, 1)) {
+        if (go_daAlways || UnitIsSelected(lv_u, 1)) {
             if (UnitBehaviorCount(lv_u, "HeroDetectorRadar") == 0) {
                 UnitBehaviorAdd(lv_u, "HeroDetectorRadar", lv_u, 1);
             }

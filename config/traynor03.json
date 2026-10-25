@@ -860,6 +860,232 @@
           "trace": true
         }
       }
+    },
+    "defence_r3": {
+      "label": "Оборона и диверсии, версия 3",
+      "message": "Ghost Ops: Час икс - оборона и диверсии, версия 3",
+      "message_en": "Ghost Ops - Zero Hour: defence and sabotage, version 3",
+      "experimental": true,
+      "badge": "Новое",
+      "extends": "defence_next",
+      "card": "Версия 3 (экспериментальная, версии 1 и 2 сохранены): гарнизон с обычным уроном морпехов (×1 вместо ×8), оружие гарнизона вне базы по-прежнему отключено; залп турелей (A) без изменений. Призракам: бронебойный удар (G, по 4 заряда у каждого, бьёт и биологические здания зергов), дальность ядерного удара 48 и увеличенная область поражения, постоянные метки целей (раскрытие один раз), метки «Повстанец» и «Медик повстанцев», панель призраков с запасом ядерных ракет «N/2» и гранатомётов, постоянный анализ детекторов. Запуск с этой карточки — тест рекомендуемого состава ({marines_t} морпехов, {bunkers_t} бункера, {turrets_t} турели, КСМ +{scvs_t}): оплата и кампания не используются.",
+      "details": [
+        "Ядерный запас: две ракеты на операцию, общий для обоих призраков; одна вооружена одновременно; вторая готовится автоматически после первого состоявшегося запуска; третьей нет. Индикация в панели: «Ядерные ракеты: 2/2 → 1/2 → 0/2» и состояние (подготовка / готова / наведение)",
+        "Бронебойный удар (G): 500 урона в радиусе 3, дальность 9, по 4 заряда у каждого призрака; цели: вражеские наземные здания (в том числе биологические здания зергов) и наземная техника; пехоту, воздух и своих не задевает",
+        "Ядерный удар: дальность наведения 48; урон 600 + 900 по зданиям в радиусе 8, половина до 12, четверть до 16 (экспериментальные числа)",
+        "Цели: одно объявление и одно короткое раскрытие участков, затем постоянные отметки живых целей и счётчик; отметка уничтоженной цели исчезает",
+        "Числа этой версии экспериментальные, не утверждены Owner"
+      ],
+      "overrides": {
+        "tactical": {
+          "garrison": {
+            "damage_multiplier": 1
+          },
+          "status_lines": true,
+          "rebel_labels": {
+            "enabled": true
+          },
+          "grenade": {
+            "enabled": true,
+            "charges": 4,
+            "damage": 500,
+            "radius": 3.0,
+            "range": 9.0,
+            "prep_time": 0.4,
+            "flight_speed": 20,
+            "hotkey": "G",
+            "effects": true,
+            "pointer": true,
+            "carriers": "both",
+            "bio_structures": true,
+            "card_row": 2,
+            "card_col": 1
+          },
+          "nuke": {
+            "range": 48,
+            "damage": {
+              "amount": 600,
+              "structure_bonus": 900,
+              "areas": [
+                [
+                  8,
+                  1.0
+                ],
+                [
+                  12,
+                  0.5
+                ],
+                [
+                  16,
+                  0.25
+                ]
+              ]
+            }
+          },
+          "texts": {
+            "GrenadeName": {
+              "ru": "Бронебойный удар",
+              "en": "Armor-piercing strike"
+            },
+            "GrenadeTip": {
+              "ru": "Бронебойный удар [G] по области: выберите точку, круг показывает реальную область поражения. Разрушает вражеские наземные здания, в том числе биологические здания зергов, и наземную технику; обычных бойцов, воздух, своих и союзников не задевает. По 4 заряда у каждого призрака, без пополнения; отмена приказа заряд не тратит. Остаток зарядов каждого призрака виден в панели.",
+              "en": "Armor-piercing area strike [G]: pick a point, the circle shows the real damage area. Destroys enemy ground structures, including the biological structures of the Zerg, and ground vehicles; ordinary fighters, air units, own and allied units are not hurt. 4 charges for each Ghost, no refill; cancelling the order costs nothing. The charges of each Ghost are shown in the panel."
+            },
+            "GrenadeEmpty": {
+              "ru": "У этого призрака заряды закончились.",
+              "en": "This Ghost has no charges left."
+            },
+            "RebelTag": {
+              "ru": "Повстанец",
+              "en": "Rebel"
+            },
+            "RebelMedicTag": {
+              "ru": "Медик повстанцев",
+              "en": "Rebel medic"
+            },
+            "RebelInfo": {
+              "ru": "Повстанец — оружие работает вне базы",
+              "en": "Rebel - the weapon works outside the base"
+            },
+            "ArrivalText": {
+              "ru": "Прибыло подкрепление: спецотряд призраков избежал заражения. Используйте ядерный удар для штурма базы противника. Запас — две ракеты на операцию.",
+              "en": "Reinforcements have arrived: the Ghost special unit escaped the infection. Use the nuclear strike to storm the enemy base. The stock is two missiles for the operation."
+            },
+            "ObjectiveText": {
+              "ru": "Ядерный удар может навести любой из призраков; запас на операцию — две ракеты, общий для обоих. Ракета готовится одна за раз. После запуска у вас {flight_time} секунд: отойдите из зоны взрыва. Запуск сам по себе миссию не завершает. Спасённые повстанцы сохраняют обычные характеристики.",
+              "en": "Either Ghost may aim the nuclear strike; the stock of the operation is two missiles shared by both. One missile is armed at a time. After the launch you have {flight_time} seconds: leave the blast zone. A launch does not end the mission by itself. Rescued rebels keep their normal stats."
+            },
+            "Tip2Text": {
+              "ru": "Ядерный удар наводит любой из призраков; запас — две ракеты на операцию. Призраки не восполняются.",
+              "en": "Either Ghost may aim the nuclear strike; the stock is two missiles for the operation. The Ghosts cannot be replaced."
+            },
+            "Tip3Text": {
+              "ru": "Наведение {aim_time} секунд: призрак стоит на месте, отмена возвращает ракету. После запуска до взрыва {flight_time} секунд — отходите.",
+              "en": "Aiming takes {aim_time} seconds: the Ghost stands still, cancelling returns the missile. After the launch the blast comes in {flight_time} seconds: get out."
+            },
+            "SwannExplain": {
+              "ru": "Эти двое к заражённой сети не подключались. Снаряжение исправно. Я подготовил две ядерные ракеты на операцию: наводить может любой из них.",
+              "en": "These two were never connected to the infected network. Their gear is fine. I prepared two nuclear missiles for the operation: either of them may aim."
+            }
+          }
+        },
+        "panel": {
+          "enabled": true,
+          "texts": {
+            "Name0": {
+              "ru": "Призрак 1",
+              "en": "Ghost 1"
+            },
+            "Name1": {
+              "ru": "Призрак 2",
+              "en": "Ghost 2"
+            },
+            "Dead": {
+              "ru": "погиб",
+              "en": "dead"
+            },
+            "Infinite": {
+              "ru": "Маскировка: ∞",
+              "en": "Cloak: infinite"
+            },
+            "Cloak": {
+              "ru": "маскировка",
+              "en": "cloak"
+            },
+            "Seconds": {
+              "ru": "с",
+              "en": "s"
+            },
+            "Regen": {
+              "ru": "Восстановление",
+              "en": "Recovery"
+            },
+            "Hold": {
+              "ru": "Наведение: расход на паузе",
+              "en": "Aiming - cloak drain paused"
+            },
+            "Ready": {
+              "ru": "готов",
+              "en": "ready"
+            },
+            "Grenades": {
+              "ru": "Бронебойные заряды",
+              "en": "Armor-piercing charges"
+            },
+            "Footer": {
+              "ru": "Постоянная маскировка; время — игровые секунды",
+              "en": "Permanent cloak; time in game seconds"
+            }
+          }
+        },
+        "zerohour": {
+          "persistent_marks": true
+        },
+        "detector_analysis": {
+          "enabled": true,
+          "always": true,
+          "texts": {
+            "Name": {
+              "ru": "Анализ детекторов",
+              "en": "Detector analysis"
+            },
+            "Tip": {
+              "ru": "Пока призрак жив, показывает зоны обнаружения видимых вражеских детекторов поблизости; внутри этих зон маскировка не скрывает призрака. Детекторы в тумане войны не показываются.",
+              "en": "While the Ghost lives it shows the detection zones of the visible enemy detectors nearby; inside them the cloak does not hide the Ghost. Detectors in the fog of war are not shown."
+            }
+          }
+        }
+      }
+    },
+    "defence_r3_free": {
+      "label": "Оборона и диверсии, версия 3 (бесплатный тест)",
+      "message": "Ghost Ops: Час икс - версия 3, бесплатный тест",
+      "message_en": "Ghost Ops - Zero Hour: version 3, free test",
+      "experimental": true,
+      "badge": "свободный тест",
+      "extends": "defence_r3",
+      "card": "Режим «Свободный тест»: запуск прямо с карточки без закупок и без прохождения предыдущих миссий, кампания не используется (ничего не списывается и не зачисляется). Рекомендуемый состав: {marines_t} морпехов, {bunkers_t} бункера, {turrets_t} турели ПВО (строите сами), +{scvs_t} КСМ; два призрака с гранатомётами (по 4 заряда) и двумя ядерными ракетами. Остальное как в версии 3.",
+      "details": [
+        "ТЕСТОВЫЙ КОМПЛЕКТ, не утверждённый баланс: состав берётся из рекомендации заказа (одно значение для окна кампании и теста)",
+        "Ядерный запас: две ракеты на операцию, общий для обоих призраков; одна вооружена одновременно; вторая готовится автоматически после первого состоявшегося запуска; третьей нет. Индикация в панели: «Ядерные ракеты: 2/2 → 1/2 → 0/2» и состояние (подготовка / готова / наведение)",
+        "Бронебойный удар (G): 500 урона в радиусе 3, дальность 9, по 4 заряда у каждого призрака; цели: вражеские наземные здания (в том числе биологические здания зергов) и наземная техника; пехоту, воздух и своих не задевает",
+        "Ядерный удар: дальность наведения 48; урон 600 + 900 по зданиям в радиусе 8, половина до 12, четверть до 16 (экспериментальные числа)",
+        "Цели: одно объявление и одно короткое раскрытие участков, затем постоянные отметки живых целей и счётчик; отметка уничтоженной цели исчезает",
+        "Числа этой версии экспериментальные, не утверждены Owner"
+      ],
+      "overrides": {
+        "campaign": null
+      }
+    },
+    "defence_r3_dev": {
+      "label": "Оборона и диверсии, версия 3 (проба)",
+      "message": "Ghost Ops - defence r3 (dev)",
+      "message_en": "Ghost Ops - defence r3 (dev)",
+      "hidden": true,
+      "extends": "defence_r3_free",
+      "card": "Служебный запуск с пробой",
+      "overrides": {
+        "tactical": {
+          "debug_log": true
+        },
+        "zerohour": {
+          "debug_log": true
+        },
+        "defence": {
+          "debug_log": true
+        },
+        "ce0": {
+          "operation_id": "CE0-TR03R3",
+          "census_types": [
+            "Ghost",
+            "Marine",
+            "Medic",
+            "SCV",
+            "Bunker",
+            "MissileTurret"
+          ]
+        }
+      }
     }
   },
   "audio": {

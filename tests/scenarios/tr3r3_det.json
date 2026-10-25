@@ -1,0 +1,218 @@
+{
+ "name": "tr3r3_det",
+ "mission": "traynor03",
+ "preset": "defence_r3_dev",
+ "why": "detector analysis: always on (selection of Marines / one Ghost / both), circle buff on a visible detector, save / load, real detection at the border of the radius",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "dst",
+   "grep": "DST2 landing \\d+ marines 16 ghosts 2",
+   "every": 6,
+   "timeout": 260
+  },
+  {
+   "op": "cmd",
+   "text": "cleane",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "ghold",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "pausem",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "nofoe",
+   "wait": 1.4
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "cmd",
+   "text": "selonly Marine",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "dtov 9 0",
+   "wait": 1.4
+  },
+  {
+   "op": "sleep",
+   "s": 2.5
+  },
+  {
+   "op": "cmd",
+   "text": "ddet",
+   "wait": 1.4
+  },
+  {
+   "op": "shot",
+   "file": "d1_marine_selected.png"
+  },
+  {
+   "op": "cmd",
+   "text": "selghosts",
+   "wait": 1.4
+  },
+  {
+   "op": "sleep",
+   "s": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "ddet",
+   "wait": 1.4
+  },
+  {
+   "op": "shot",
+   "file": "d2_both_selected.png"
+  },
+  {
+   "op": "cmd",
+   "text": "selonly Ghost",
+   "wait": 1.4
+  },
+  {
+   "op": "sleep",
+   "s": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "ddet",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "selonly Marine",
+   "wait": 1.4
+  },
+  {
+   "op": "sleep",
+   "s": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "ddet",
+   "wait": 1.4
+  },
+  {
+   "op": "save",
+   "name": "CE0_TR3_D"
+  },
+  {
+   "op": "load",
+   "name": "CE0_TR3_D"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "ddet",
+   "wait": 1.4
+  },
+  {
+   "op": "shot",
+   "file": "d3_after_load.png"
+  },
+  {
+   "op": "cmd",
+   "text": "dtkill 0",
+   "wait": 1.4
+  },
+  {
+   "op": "sleep",
+   "s": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "ddet",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "dtz 2 0",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "dtov 12.5 0",
+   "wait": 1.4
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "cmd",
+   "text": "ddet",
+   "wait": 1.4
+  },
+  {
+   "op": "sleep",
+   "s": 6
+  },
+  {
+   "op": "cmd",
+   "text": "ddet",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "dtmv 1 10.0",
+   "wait": 1.4
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "cmd",
+   "text": "ddet",
+   "wait": 1.4
+  },
+  {
+   "op": "sleep",
+   "s": 6
+  },
+  {
+   "op": "cmd",
+   "text": "ddet",
+   "wait": 1.4
+  },
+  {
+   "op": "expect",
+   "regex": "DDET",
+   "note": "detector analysis states and the real detection at the border"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

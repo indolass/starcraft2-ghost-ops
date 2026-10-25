@@ -1,0 +1,266 @@
+{
+ "name": "tr3r3_gren",
+ "mission": "traynor03",
+ "preset": "defence_r3_dev",
+ "why": "the armor-piercing launcher of both Ghosts by the real keys (G, click, Esc): a Zerg hatchery is hit, the ordinary fighters / air / own units are not, charges are individual, save / load keeps them",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "dst",
+   "grep": "DST2 landing \\d+ marines 16 ghosts 2",
+   "every": 6,
+   "timeout": 260
+  },
+  {
+   "op": "cmd",
+   "text": "cleane",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "tpause",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "gdum 88",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "gsel1 35.5 29.5",
+   "wait": 1.4
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "cmd",
+   "text": "tlife 88",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "tstat",
+   "wait": 1.4
+  },
+  {
+   "op": "shot",
+   "file": "g0_panel.png"
+  },
+  {
+   "op": "cmd",
+   "text": "gallow",
+   "wait": 1.4
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "shot",
+   "file": "g0b_allowed.png"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "G"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.6
+  },
+  {
+   "op": "shot",
+   "file": "g1_aim.png"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "cmd",
+   "text": "tstat",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "gorder -7 0",
+   "wait": 3.5
+  },
+  {
+   "op": "cmd",
+   "text": "tstat",
+   "wait": 1.4
+  },
+  {
+   "op": "key",
+   "keys": [
+    "G"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.6
+  },
+  {
+   "op": "click",
+   "x": 176,
+   "y": 384
+  },
+  {
+   "op": "burst",
+   "file": "g2_fly_",
+   "n": 4
+  },
+  {
+   "op": "sleep",
+   "s": 2.5
+  },
+  {
+   "op": "cmd",
+   "text": "tlife 88",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "gdumr",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "tstat",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "gsel2 35.5 29.5",
+   "wait": 1.4
+  },
+  {
+   "op": "sleep",
+   "s": 1.5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "G"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.6
+  },
+  {
+   "op": "click",
+   "x": 176,
+   "y": 384
+  },
+  {
+   "op": "sleep",
+   "s": 3.5
+  },
+  {
+   "op": "cmd",
+   "text": "tlife 88",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "tstat",
+   "wait": 1.4
+  },
+  {
+   "op": "save",
+   "name": "CE0_TR3_G"
+  },
+  {
+   "op": "load",
+   "name": "CE0_TR3_G"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "tstat",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "gsel1 35.5 29.5",
+   "wait": 1.4
+  },
+  {
+   "op": "sleep",
+   "s": 1.5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "G"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.6
+  },
+  {
+   "op": "click",
+   "x": 176,
+   "y": 384
+  },
+  {
+   "op": "sleep",
+   "s": 3.5
+  },
+  {
+   "op": "cmd",
+   "text": "tlife 88",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "gdumr",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "tstat",
+   "wait": 1.4
+  },
+  {
+   "op": "expect",
+   "regex": "TLIFE|R3 lost|TSTAT|TPAUSE|GORDER",
+   "note": "grenade of both Ghosts: building, excluded targets, charges, cancel, load"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

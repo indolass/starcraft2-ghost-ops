@@ -106,6 +106,10 @@ int go_pnDialog;
 int[6] go_pnLabel;
 int[6] go_pnBar;
 int go_pnFoot;
+int go_pnExtra;                  // extra status lines under the footer (revision 2 of TRaynor03: the nuclear missiles, the grenade launchers); 0 = none
+text go_pnX1;
+text go_pnX2;
+int[2] go_pnXL;
 bool go_pnBuilt;
 trigger go_pnTrig;
 
@@ -133,7 +137,7 @@ void GhostOps_Panel_Build () {
     }
 
     go_pnBuilt = true;
-    lv_h = (46 * go_pnCount) + 30;
+    lv_h = (46 * go_pnCount) + 30 + (22 * go_pnExtra);
     DialogCreate(500, lv_h, c_anchorTopRight, 14, 118, false);
     go_pnDialog = DialogLastCreated();
     DialogSetImage(go_pnDialog, "Assets\\Textures\\ui_ingame_blackmask.dds");
@@ -162,6 +166,15 @@ void GhostOps_Panel_Build () {
     DialogControlSetPosition(go_pnFoot, PlayerGroupAll(), c_anchorTopLeft, 8, 6 + (46 * go_pnCount));
     DialogControlSetPropertyAsString(go_pnFoot, c_triggerControlPropertyStyle, PlayerGroupAll(), "AlertItem");
     DialogControlSetPropertyAsText(go_pnFoot, c_triggerControlPropertyText, PlayerGroupAll(), GhostOps_Panel_Color("9aa6b8", StringExternal("Param/Value/GhostOpsPanel_Footer")));
+    lv_i = 0;
+    while (lv_i < go_pnExtra) {
+        DialogControlCreate(go_pnDialog, c_triggerControlTypeLabel);
+        go_pnXL[lv_i] = DialogControlLastCreated();
+        DialogControlSetSize(go_pnXL[lv_i], PlayerGroupAll(), 484, 22);
+        DialogControlSetPosition(go_pnXL[lv_i], PlayerGroupAll(), c_anchorTopLeft, 8, 6 + (46 * go_pnCount) + (22 * (lv_i + 1)));
+        DialogControlSetPropertyAsString(go_pnXL[lv_i], c_triggerControlPropertyStyle, PlayerGroupAll(), "AlertItem");
+        lv_i += 1;
+    }
 }
 
 // A loaded game destroys the dialogs of the script: the panel is built again by the next tick.
@@ -207,6 +220,14 @@ bool GhostOps_Panel_Tick (bool lp_testConds, bool lp_runActions) {
     }
 
     GhostOps_Panel_Build();
+    if (go_pnExtra >= 1) {
+        DialogControlSetPropertyAsText(go_pnXL[0], c_triggerControlPropertyText, PlayerGroupAll(), go_pnX1);
+    }
+
+    if (go_pnExtra >= 2) {
+        DialogControlSetPropertyAsText(go_pnXL[1], c_triggerControlPropertyText, PlayerGroupAll(), go_pnX2);
+    }
+
     lv_i = 0;
     while (lv_i < go_pnCount) {
         lv_u = GhostOps_SquadUnit(lv_i);

@@ -80,6 +80,10 @@ fixed go_tacHintPing;
 fixed go_tacHintGap;
 trigger go_tacHoldTrig;
 trigger go_tacGrenadeTrig;
+bool go_tacGrenBoth;           // both Ghosts carry a grenade launcher with a stock of their own (TRaynor03 revision 2); the charge is spent at the Execute stage of the cast of THAT Ghost
+int[2] go_tacGrenAmmo;         // charges left: 0 = Spotter, 1 = Operative (saved with the game)
+bool go_tacStatus;             // the panel lines "nuclear missiles N/M - state" and "grenade launchers" (TRaynor03 revision 2)
+trigger go_tacStatusTrig;
 
 // Labels above the rescued fighters (TRaynor02 v2): a text tag follows the unit (hidden in the fog, destroyed with the unit, drawn again after a loaded game)
 bool go_tacRebelLabels;
@@ -541,7 +545,16 @@ bool GhostOps_Tac_LoadedTick (bool lp_testConds, bool lp_runActions) {
         GhostOps_Tac_DrawRoles();
     }
 
-    if (go_tacGrenade && GhostOps_Tac_Alive(go_tacSpotter) && GhostOps_Tac_Alive(go_tacOperative)) {
+    if (go_tacGrenade && go_tacGrenBoth) {
+        if (GhostOps_Tac_Alive(go_tacSpotter)) {
+            UnitAbilityEnable(go_tacSpotter, "GhostOpsArmorPiercing", go_tacGrenAmmo[0] > 0);
+        }
+
+        if (GhostOps_Tac_Alive(go_tacOperative)) {
+            UnitAbilityEnable(go_tacOperative, "GhostOpsArmorPiercing", go_tacGrenAmmo[1] > 0);
+        }
+    }
+    else if (go_tacGrenade && GhostOps_Tac_Alive(go_tacSpotter) && GhostOps_Tac_Alive(go_tacOperative)) {
         UnitAbilityEnable(go_tacSpotter, "GhostOpsArmorPiercing", false);
         UnitAbilityEnable(go_tacOperative, "GhostOpsArmorPiercing", go_tacGrenadeAmmo > 0);
         go_pnGrenades = go_tacGrenadeAmmo;
@@ -794,6 +807,112 @@ bool GhostOps_Tac_GrenadeTick (bool lp_testConds, bool lp_runActions) {
     return true;
 }
 
+// Revision 2 (both Ghosts carry a launcher): the charge of the casting Ghost is spent once, when the cast executes (a cancelled aiming never reaches the Execute stage).
+bool GhostOps_Tac_GrenadeExec (bool lp_testConds, bool lp_runActions) {
+    unit lv_u;
+    int lv_s;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    lv_u = EventUnit();
+    lv_s = -1;
+    if (lv_u == go_tacSpotter) {
+        lv_s = 0;
+    }
+    else if (lv_u == go_tacOperative) {
+        lv_s = 1;
+    }
+
+    if (lv_s < 0) {
+        return true;
+    }
+
+    if (go_tacGrenAmmo[lv_s] > 0) {
+        go_tacGrenAmmo[lv_s] -= 1;
+    }
+
+    GhostOps_Tac_Log("grenade shot of Ghost " + IntToString(lv_s) + ", charges left " + IntToString(go_tacGrenAmmo[lv_s]));
+    if (go_tacGrenAmmo[lv_s] <= 0) {
+        UnitAbilityEnable(lv_u, "GhostOpsArmorPiercing", false);
+        if (go_tacMsgEmpty) {
+            GhostOps_Tac_Say("Param/Value/GhostOpsTac_GrenadeEmpty");
+        }
+    }
+
+    return true;
+}
+
+// The two status lines of the panel: the nuclear missiles of the operation (left / of all, the state of the one that is armed) and the grenade stock of every Ghost.
+// The number is the real counter of irreversible launches, never the number of clicks: a cancelled aiming changes nothing.
+bool GhostOps_Tac_StatusTick (bool lp_testConds, bool lp_runActions) {
+    int lv_rem;
+    string lv_st;
+    string lv_rgb;
+    text lv_t;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    lv_rem = go_tacNukeCount - go_tacLaunches;
+    if (lv_rem < 0) {
+        lv_rem = 0;
+    }
+
+    lv_st = "NukeStPrep";
+    lv_rgb = "ffa030";
+    if (go_tacState == 2) {
+        lv_st = "NukeStReady";
+        lv_rgb = "7fe070";
+    }
+    else if (go_tacState == 3) {
+        lv_st = "NukeStAim";
+        lv_rgb = "6fd0ff";
+    }
+    else if (go_tacState == 6) {
+        lv_st = "NukeStLost";
+        lv_rgb = "ff4040";
+    }
+    else if (go_tacState == 4) {
+        lv_st = "NukeStFlight";
+        lv_rgb = "ff7070";
+    }
+    else if ((go_tacState == 5) || (lv_rem <= 0)) {
+        lv_st = "NukeStSpent";
+        lv_rgb = "808080";
+    }
+
+    go_pnX1 = GhostOps_Panel_Color(lv_rgb, StringExternal("Param/Value/GhostOpsTac_NukeAmmo") + StringToText(": ") + IntToText(lv_rem) + StringToText("/") + IntToText(go_tacNukeCount) + StringToText(" - ") + StringExternal("Param/Value/GhostOpsTac_" + lv_st));
+    if (go_tacGrenade && go_tacGrenBoth) {
+        lv_t = StringExternal("Param/Value/GhostOpsTac_GrenLabel") + StringToText(": ") + StringExternal("Param/Value/GhostOpsPanel_Name0") + StringToText(" ");
+        if (GhostOps_Tac_Alive(go_tacSpotter)) {
+            lv_t = lv_t + IntToText(go_tacGrenAmmo[0]) + StringToText("/") + IntToText(go_tacGrenadeMax);
+        }
+        else {
+            lv_t = lv_t + StringExternal("Param/Value/GhostOpsPanel_Dead");
+        }
+
+        lv_t = lv_t + StringToText(",  ") + StringExternal("Param/Value/GhostOpsPanel_Name1") + StringToText(" ");
+        if (GhostOps_Tac_Alive(go_tacOperative)) {
+            lv_t = lv_t + IntToText(go_tacGrenAmmo[1]) + StringToText("/") + IntToText(go_tacGrenadeMax);
+        }
+        else {
+            lv_t = lv_t + StringExternal("Param/Value/GhostOpsPanel_Dead");
+        }
+
+        lv_rgb = "9aa6b8";
+        if ((go_tacGrenAmmo[0] <= 0) && (go_tacGrenAmmo[1] <= 0)) {
+            lv_rgb = "ff7070";
+        }
+
+        go_pnX2 = GhostOps_Panel_Color(lv_rgb, lv_t);
+    }
+
+    return true;
+}
+
 // Death of the spotter before the irreversible launch is the one defeat added by this variant.
 bool GhostOps_Tac_SpotterDiedTick (bool lp_testConds, bool lp_runActions) {
     if (!lp_runActions) {
@@ -851,7 +970,14 @@ void GhostOps_Tac_OnGhostsDelivered (unit lp_spotter, unit lp_operative) {
         go_pnHoldSlot = 0;
     }
 
-    if (go_tacGrenade) {
+    if (go_tacGrenade && go_tacGrenBoth) {
+        go_tacGrenAmmo[0] = go_tacGrenadeMax;
+        go_tacGrenAmmo[1] = go_tacGrenadeMax;
+        go_pnGrenades = -1;
+        go_tacGrenadeTrig = TriggerCreate("GhostOps_Tac_GrenadeExec");
+        TriggerAddEventUnitAbility(go_tacGrenadeTrig, null, AbilityCommand("GhostOpsArmorPiercing", 0), c_unitAbilStageExecute, false);
+    }
+    else if (go_tacGrenade) {
         go_tacGrenadeAmmo = go_tacGrenadeMax;
         go_pnGrenades = go_tacGrenadeAmmo;
         go_pnGrenadeMax = go_tacGrenadeMax;
@@ -859,6 +985,11 @@ void GhostOps_Tac_OnGhostsDelivered (unit lp_spotter, unit lp_operative) {
         UnitAbilityEnable(go_tacSpotter, "GhostOpsArmorPiercing", false);
         go_tacGrenadeTrig = TriggerCreate("GhostOps_Tac_GrenadeTick");
         TriggerAddEventPlayerEffectUsed(go_tacGrenadeTrig, 1, "GhostOpsAPLaunch");
+    }
+
+    if (go_tacStatus) {
+        go_tacStatusTrig = TriggerCreate("GhostOps_Tac_StatusTick");
+        TriggerAddEventTimePeriodic(go_tacStatusTrig, 0.25, c_timeGame);
     }
 
     if (go_tacSpotterDefeat) {
@@ -902,6 +1033,11 @@ void GhostOps_Tac_Start () {
     TechTreeAbilityAllow(1, AbilityCommand("ArmSiloWithNuke", 0), true);
     TechTreeAbilityAllow(1, AbilityCommand("TacNukeStrike", 0), true);
     TechTreeAbilityAllow(1, AbilityCommand("TacNukeStrike", 1), true);
+    if (go_tacGrenade && go_tacGrenBoth) {
+        // revision 2 of TRaynor03: the campaign tech restrictions of that mission do not know the grenade launcher either (the ability stayed grey): it is allowed explicitly
+        TechTreeAbilityAllow(1, AbilityCommand("GhostOpsArmorPiercing", 0), true);
+    }
+
     UnitCreate(1, "GhostAcademy", 0, 1, Point(go_tacAcademyX, go_tacAcademyY), 270.0);
     go_tacAcademy = UnitLastCreated();
     TechTreeUnitAllow(1, "Ghost", false);

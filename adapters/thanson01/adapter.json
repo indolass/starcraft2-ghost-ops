@@ -35,6 +35,16 @@
       "function": "gt_DoomsdayZergAI_Func",
       "before": "UnitGroupLoopBegin(gv_doomsdayZergUnitGroup);",
       "call": "GhostOps_Hanson_Probe(gv_missionPhase, gv_escortIndex, gv_convoyTrucksSent, gv_colonistsSaved, gv_colonistsKilled, gv_doomsdayWavesSent);"
+    },
+    {
+      "function": "gt_SwitchtoEscortPhase_Func",
+      "before": "UnitSetPropertyFixed(UnitFromId(236), c_unitPropEnergy, 50.0);",
+      "call": "GhostOps_Hanson_BaseHanded();"
+    },
+    {
+      "function": "gt_SwitchtoEscortPhaseQ_Func",
+      "after": "gv_missionPhase = 1;",
+      "call": "GhostOps_Hanson_StoryStart();"
     }
   ],
   "order_section": "hanson",

@@ -1,4 +1,4 @@
-"""Evacuation (THanson01, revision 2) in the campaign: the pre-order of turret kits (recommended number, hint, price + preparation), paid once, and the order reaching the map build."""
+"""Evacuation (THanson01, revision 3) in the campaign: the pre-order of turret kits and extra SCVs (recommended numbers, hint, price + preparation), paid once, and the order reaching the map build."""
 import json
 import os
 os.environ['GHOSTOPS_LINES_DIR'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'no_shared_lines_here')
@@ -48,42 +48,56 @@ class Kits(unittest.TestCase):
 
     def test_the_step_shows_the_recommended_number_and_where_to_cover(self):
         info = self.flow.order_info('thanson01', PRESET)
-        self.assertEqual(info['items'], ['turret_kits'])
-        self.assertEqual(info['recommended'], {'turret_kits': 15})
+        self.assertEqual(info['items'], ['turret_kits', 'scvs'])
+        self.assertEqual(info['recommended'], {'turret_kits': 15, 'scvs': 8})  # the extra SCVs: the recommended TOTAL of 12 minus the 4 stock SCVs
+        self.assertEqual(info['scv']['recommended_total'] - info['scv']['stock'], 8)
         self.assertIn('Рекомендуется 15', info['hint'])
         for needle in ('база', 'дома', 'воздушные'):
             self.assertIn(needle, info['hint'])
-        self.assertEqual(info['recommended_cost'], {'minerals': 15 * 75 + 1000, 'gas': 500})
+        self.assertEqual(info['recommended_cost'], {'minerals': 15 * 75 + 8 * 50 + 1000, 'gas': 500})
+        old = self.flow.order_info('thanson01', 'sniper_next_r2')  # the earlier revision keeps its own order (kits only)
+        self.assertEqual(old['items'], ['turret_kits'])
 
     def test_quote_limits_and_shortage_are_shown(self):
-        q = self.flow.quote('thanson01', PRESET, {'turret_kits': 15})
+        q = self.flow.quote('thanson01', PRESET, {'turret_kits': 15, 'scvs': 8})
         self.assertFalse(q['ok'])
-        self.assertEqual(q['short'], {'minerals': 2125, 'gas': 500})
-        self.assertTrue(self.flow.quote('thanson01', PRESET, {'turret_kits': 99})['errors'])
-        self.assertTrue(self.flow.quote('thanson01', PRESET, {'turret_kits': 3, 'bunkers': 1})['errors'])
+        self.assertEqual(q['short'], {'minerals': 2525, 'gas': 500})
+        self.assertTrue(self.flow.quote('thanson01', PRESET, {'turret_kits': 99, 'scvs': 0})['errors'])
+        self.assertTrue(self.flow.quote('thanson01', PRESET, {'turret_kits': 3, 'scvs': 17})['errors'])
+        self.assertTrue(self.flow.quote('thanson01', PRESET, {'turret_kits': 3})['errors'])
+        self.assertTrue(self.flow.quote('thanson01', PRESET, {'turret_kits': 3, 'scvs': 0, 'bunkers': 1})['errors'])
 
     def test_paid_once_and_the_order_reaches_the_map(self):
         s = self.flow.state()
         s['stock'] = {'minerals': 3000, 'gas': 600}
         campaign.commit(self.flow.path, s)
-        ok, msg, op = self.flow.start_new('thanson01', PRESET, {'turret_kits': 6})
+        ok, msg, op = self.flow.start_new('thanson01', PRESET, {'turret_kits': 6, 'scvs': 2})
         self.assertTrue(ok, msg)
-        self.assertEqual(self.flow.stock(), {'minerals': 3000 - (6 * 75 + 1000), 'gas': 100})
+        paid = 6 * 75 + 2 * 50 + 1000
+        self.assertEqual(self.flow.stock(), {'minerals': 3000 - paid, 'gas': 100})
         again = self.flow.restart_operation(op)  # a restart of the paid operation: no second payment
         self.assertTrue(again[0])
-        self.assertEqual(self.flow.stock(), {'minerals': 3000 - (6 * 75 + 1000), 'gas': 100})
+        self.assertEqual(self.flow.stock(), {'minerals': 3000 - paid, 'gas': 100})
+        cont = self.flow.continue_operation(op)  # a continued attempt is not charged either
+        self.assertTrue(cont[0])
+        self.assertEqual(self.flow.stock(), {'minerals': 3000 - paid, 'gas': 100})
         plan = json.load(open(self.fake.plans[0], encoding='utf-8'))
-        self.assertEqual(plan['order'], {'turret_kits': 6})
+        self.assertEqual(plan['order'], {'turret_kits': 6, 'scvs': 2})
         args = cf._args('thanson01', PRESET, self.fake.plans[0])
         adapter, cfg, _ = build.context(args)
-        self.assertEqual(cfg['hanson']['turret_kits']['order'], {'turret_kits': 6})  # the plan overrides the default order
+        self.assertEqual(cfg['hanson']['turret_kits']['order'], {'turret_kits': 6, 'scvs': 2})  # the plan overrides the default order
         self.assertIn('go_hKitOrdered = 6;', build.gen_hanson(cfg))
+        self.assertIn('go_hExtraScvs = 2;', build.gen_hanson(cfg))
         self.assertEqual(cfg['campaign']['operation_id'], op)
 
     def test_the_card_launch_uses_the_recommended_order_as_a_test_budget(self):
         cfg, _ = build.resolve_config(build.load_adapter('thanson01'), PRESET)
-        self.assertEqual(cfg['hanson']['turret_kits']['order'], {'turret_kits': 15})
+        self.assertEqual(cfg['hanson']['turret_kits']['order'], {'turret_kits': 15, 'scvs': 8})
+        self.assertIn('go_hExtraScvs = 8;', build.gen_hanson(cfg))
         self.assertEqual(self.flow.stock(), {'minerals': 0, 'gas': 0})  # nothing is charged by a card launch
+        free, _ = build.resolve_config(build.load_adapter('thanson01'), 'sniper_next_free_r3')
+        self.assertEqual(free['hanson']['turret_kits']['order'], cfg['hanson']['turret_kits']['order'])  # the free test and the recommendation: one source
+        self.assertIsNone(free.get('campaign'))
 
 
 if __name__ == '__main__':
@@ -112,7 +126,7 @@ class Journal(unittest.TestCase):
         s = self.flow.state()
         s['stock'] = {'minerals': 3000, 'gas': 700}
         campaign.commit(self.flow.path, s)
-        ok, msg, op = self.flow.start_new('thanson01', PRESET, {'turret_kits': 2})
+        ok, msg, op = self.flow.start_new('thanson01', PRESET, {'turret_kits': 2, 'scvs': 0})
         self.assertTrue(ok, msg)
         stock = self.flow.stock()
         self.bank(['1|1.00|A9|START op=%s mission=thanson01 hash=HK startMin=200 startGas=50' % op,

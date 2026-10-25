@@ -1,0 +1,754 @@
+{
+ "name": "th2r3_night",
+ "mission": "thanson02",
+ "preset": "epidemic_free_ce0_dev",
+ "why": "the first defensive episode with the proposed free set: four bunkers from kits by the real keys, Marines inside, the first night to the dawn; no invulnerability, no healing, nobody removed",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "cmd",
+   "text": "snap",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "escvat 72.6 87.5",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "B"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "U"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "click",
+   "x": 720,
+   "y": 310
+  },
+  {
+   "op": "sleep",
+   "s": 1.0
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.3
+  },
+  {
+   "op": "cmd",
+   "text": "ebunk",
+   "wait": 1.0
+  },
+  {
+   "op": "cmd",
+   "text": "escvat 66 92",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "B"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "U"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "click",
+   "x": 720,
+   "y": 310
+  },
+  {
+   "op": "sleep",
+   "s": 1.0
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.3
+  },
+  {
+   "op": "cmd",
+   "text": "ebunk",
+   "wait": 1.0
+  },
+  {
+   "op": "cmd",
+   "text": "escvat 66 98",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "B"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "U"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "click",
+   "x": 720,
+   "y": 310
+  },
+  {
+   "op": "sleep",
+   "s": 1.0
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.3
+  },
+  {
+   "op": "cmd",
+   "text": "ebunk",
+   "wait": 1.0
+  },
+  {
+   "op": "cmd",
+   "text": "escvat 72 99",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "B"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "U"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "click",
+   "x": 720,
+   "y": 310
+  },
+  {
+   "op": "sleep",
+   "s": 1.0
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.3
+  },
+  {
+   "op": "cmd",
+   "text": "ebunk",
+   "wait": 1.0
+  },
+  {
+   "op": "cmd",
+   "text": "escvat 80 95",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "B"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "U"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "click",
+   "x": 720,
+   "y": 310
+  },
+  {
+   "op": "sleep",
+   "s": 1.0
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.3
+  },
+  {
+   "op": "cmd",
+   "text": "ebunk",
+   "wait": 1.0
+  },
+  {
+   "op": "cmd",
+   "text": "escvat 60 90",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "B"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "U"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "click",
+   "x": 720,
+   "y": 310
+  },
+  {
+   "op": "sleep",
+   "s": 1.0
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.3
+  },
+  {
+   "op": "cmd",
+   "text": "ebunk",
+   "wait": 1.0
+  },
+  {
+   "op": "cmd",
+   "text": "escvat 73 81",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "B"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "U"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "click",
+   "x": 720,
+   "y": 310
+  },
+  {
+   "op": "sleep",
+   "s": 1.0
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.3
+  },
+  {
+   "op": "cmd",
+   "text": "ebunk",
+   "wait": 1.0
+  },
+  {
+   "op": "cmd",
+   "text": "escvat 80 84",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "B"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "U"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "click",
+   "x": 720,
+   "y": 310
+  },
+  {
+   "op": "sleep",
+   "s": 1.0
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.3
+  },
+  {
+   "op": "cmd",
+   "text": "ebunk",
+   "wait": 1.0
+  },
+  {
+   "op": "cmd",
+   "text": "escvat 68 84",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "B"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "U"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "click",
+   "x": 720,
+   "y": 310
+  },
+  {
+   "op": "sleep",
+   "s": 1.0
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.3
+  },
+  {
+   "op": "cmd",
+   "text": "ebunk",
+   "wait": 1.0
+  },
+  {
+   "op": "cmd",
+   "text": "escvat 78 99",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "B"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "U"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "click",
+   "x": 720,
+   "y": 310
+  },
+  {
+   "op": "sleep",
+   "s": 1.0
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.3
+  },
+  {
+   "op": "cmd",
+   "text": "ebunk",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 45
+  },
+  {
+   "op": "cmd",
+   "text": "ebunk",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "eloadb",
+   "wait": 1.4
+  },
+  {
+   "op": "sleep",
+   "s": 20
+  },
+  {
+   "op": "cmd",
+   "text": "ebunk",
+   "wait": 1.4
+  },
+  {
+   "op": "shot",
+   "file": "n0_bunkers.png"
+  },
+  {
+   "op": "sleep",
+   "s": 15
+  },
+  {
+   "op": "cmd",
+   "text": "snap",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "eenemy",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 15
+  },
+  {
+   "op": "cmd",
+   "text": "snap",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "eenemy",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 15
+  },
+  {
+   "op": "cmd",
+   "text": "snap",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "eenemy",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 15
+  },
+  {
+   "op": "cmd",
+   "text": "snap",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "eenemy",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 15
+  },
+  {
+   "op": "cmd",
+   "text": "snap",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "eenemy",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 15
+  },
+  {
+   "op": "cmd",
+   "text": "snap",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "eenemy",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 15
+  },
+  {
+   "op": "cmd",
+   "text": "snap",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "eenemy",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 15
+  },
+  {
+   "op": "cmd",
+   "text": "snap",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "eenemy",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 15
+  },
+  {
+   "op": "cmd",
+   "text": "snap",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "eenemy",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 15
+  },
+  {
+   "op": "cmd",
+   "text": "snap",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "eenemy",
+   "wait": 1.0
+  },
+  {
+   "op": "cmd",
+   "text": "ebunk",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "estat",
+   "wait": 1.4
+  },
+  {
+   "op": "shot",
+   "file": "n1_dawn.png"
+  },
+  {
+   "op": "expect",
+   "regex": "SNAP|EBUNK|EENEMY",
+   "note": "the first night with the proposed set"
+  },
+  {
+   "op": "expect_def",
+   "bank": "GhostOpsDevHanson",
+   "regex": "kit|bunker",
+   "note": "Hanson log"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

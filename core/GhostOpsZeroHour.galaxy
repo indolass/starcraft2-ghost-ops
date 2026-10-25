@@ -37,6 +37,9 @@ string[8] go_zhVoiceId;           // clip ids of the scene lines (0 Raynor, 1 Ho
 fixed[8] go_zhVoiceLen;
 int go_zhGroupHeard;
 fixed go_zhPingEvery;
+bool go_zhMarksPersist;        // revision 2: one persistent ping per living target instead of a minimap ping every go_zhPingEvery seconds
+bool go_zhMarksShown;          // the persistent marks were drawn (saved with the game); a load draws them again, never doubled
+int[12] go_zhPingId;
 fixed go_zhLastPing;
 bool go_zhRebelCallSaid;
 bool go_zhRescueSaid;
@@ -404,6 +407,30 @@ bool GhostOps_ZH_LockTick (bool lp_testConds, bool lp_runActions) {
 //--------------------------------------------------------------------------------------------------
 // Targets
 //--------------------------------------------------------------------------------------------------
+// The persistent marks: a ping of the stock objective kind on every living target (the original maps do the same: PingCreate with no duration, PingDestroy when the objective is gone).
+// A load first destroys the ids it knows and draws the marks again, so a mark is never doubled and never lost.
+void GhostOps_ZH_MarksDraw () {
+    int lv_i;
+
+    lv_i = 0;
+    while (lv_i < go_zhTargetCount) {
+        if (go_zhPingId[lv_i] != 0) {
+            PingDestroy(go_zhPingId[lv_i]);
+            go_zhPingId[lv_i] = 0;
+        }
+
+        if (!go_zhTargetDead[lv_i] && (UnitFromId(go_zhTargetId[lv_i]) != null)) {
+            PingCreate(PlayerGroupSingle(1), "PingObjective", UnitGetPosition(UnitFromId(go_zhTargetId[lv_i])), ColorWithAlpha(100.00, 45.00, 0.00, 0.00), 0.0);
+            go_zhPingId[lv_i] = PingLastCreated();
+            PingSetScale(go_zhPingId[lv_i], 0.85);
+        }
+
+        lv_i += 1;
+    }
+
+    go_zhMarksShown = true;
+}
+
 bool GhostOps_ZH_AllTargetsDead () {
     return go_zhDead >= go_zhTargetCount;
 }
@@ -470,6 +497,11 @@ bool GhostOps_ZH_Tick (bool lp_testConds, bool lp_runActions) {
             if ((lv_u == null) || !UnitIsAlive(lv_u)) {
                 go_zhTargetDead[lv_i] = true;
                 go_zhDead += 1;
+                if (go_zhPingId[lv_i] != 0) {
+                    PingDestroy(go_zhPingId[lv_i]);
+                    go_zhPingId[lv_i] = 0;
+                }
+
                 lv_changed = true;
                 GhostOps_ZH_Log("target " + IntToString(go_zhTargetId[lv_i]) + " destroyed: " + IntToString(go_zhDead) + "/" + IntToString(go_zhTargetCount));
             }
@@ -495,7 +527,7 @@ bool GhostOps_ZH_Tick (bool lp_testConds, bool lp_runActions) {
     }
 
     // marks: a short minimap ping on every living target, without showing anything else of the map
-    if (((GameGetMissionTime() - go_zhLastPing) >= go_zhPingEvery) && !GhostOps_ZH_AllTargetsDead()) {
+    if (!go_zhMarksPersist && ((GameGetMissionTime() - go_zhLastPing) >= go_zhPingEvery) && !GhostOps_ZH_AllTargetsDead()) {
         go_zhLastPing = GameGetMissionTime();
         lv_i = 0;
         while (lv_i < go_zhTargetCount) {

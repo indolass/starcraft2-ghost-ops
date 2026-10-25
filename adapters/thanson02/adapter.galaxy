@@ -16,6 +16,7 @@ void GhostOps_OnMissionStart () {
     GhostOps_SpawnOperatives(1, Point(go_hGhostX, go_hGhostY));
     GhostOps_Start();
     GhostOps_Hanson_Start();
+    GhostOps_Hanson_BaseHanded();  // the extra SCVs of the free test stand at the base from the first second (the base is the player's from the start)
     GhostOps_Epi_Start();
     GhostOps_ReportProfile();
     GhostOps_ReportDifficulty(1);

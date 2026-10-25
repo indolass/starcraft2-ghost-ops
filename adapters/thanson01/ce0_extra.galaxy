@@ -5,6 +5,13 @@
 // turret returns nothing" can be implemented? All counters are saved globals (they travel with a save, like any gameplay state).
 // the dev scenario of the finale: while set, the original check "colonists saved >= quota" sees the quota (a hook in gt_VictoryPlayerSavesEnoughColonists_Func); the standard victory chain does the rest
 bool go_ce0Win;
+unit[24] go_s1Dum;
+fixed[24] go_s1DumLife;
+int go_s1DumN;
+point go_s1Aim;
+unit[12] go_rDum;
+fixed[12] go_rDumLife;
+int go_rDumN;
 int go_kOrdered;
 int go_kReserved;
 int go_kSpent;
@@ -334,6 +341,11 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
     int lv_i;
     string lv_t;
     unitgroup lv_g;
+    unit lv_u;
+    unit lv_k;
+    int lv_j;
+    int lv_n;
+    int lv_c;
 
     if (lp_cmd == "nship") {
         // the convoy reaches the colony ship: every unit of the colonists' player is put 4 cells from the ship region and ordered to move into it (the original then loads, counts and removes them)
@@ -356,7 +368,7 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
     }
 
     if (lp_cmd == "nblast") {
-        lv_p = UnitGetPosition(go_hCont[StringToInt(lp_a)]);
+        lv_p = UnitGetPosition(GhostOps_Hanson_ContNth(StringToInt(lp_a)));
         // the Ghosts stand 8 cells away (outside their own rifle range): the cluster can only be changed by the explosion
         UnitSetPosition(GhostOps_SquadUnit(0), PointWithOffset(lv_p, -8.0, 0.0), false);
         UnitSetPosition(GhostOps_SquadUnit(1), PointWithOffset(lv_p, -8.0, 1.5), false);
@@ -525,7 +537,7 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
 
     if (lp_cmd == "nstat") {
         // prepared detonations: the numbers that matter (gas, limit, placed, blasts, convoy state) and the ghosts / firebats
-        GhostOps_Ce0_Write("j", "NSTAT gas " + IntToString(GhostOps_Hanson_Gas()) + " used " + IntToString(go_hContUsed) + "/" + IntToString(go_hContLimit) + " placed " + IntToString(go_hContN) + " blasts " + IntToString(go_hContBlasts) + " cmd " + IntToString(go_hCmdState) + " story " + IntToString(go_hStoryState));
+        GhostOps_Ce0_Write("j", "NSTAT gas " + IntToString(GhostOps_Hanson_Gas()) + " used " + IntToString(go_hContUsed) + "/" + IntToString(go_hContLimit) + " placed " + IntToString(GhostOps_Hanson_ContAlive()) + " blasts " + IntToString(go_hContBlasts) + " cmd " + IntToString(go_hCmdState) + " story " + IntToString(go_hStoryState));
         GhostOps_Ce0_Write("j", "NSTAT convoy sent " + IntToString(go_hSent) + " escort " + IntToString(go_hEscort) + " phase " + IntToString(go_hPhase) + " saved " + IntToString(go_hSaved) + " killed " + IntToString(go_hKilled) + " gate " + IntToString(GhostOps_Hanson_B(go_hGateOpen)));
         if (go_hKitOn) {
             GhostOps_Ce0_Write("j", "NSTAT kits ordered " + IntToString(go_hKitOrdered) + " spent " + IntToString(go_hKitSpent) + " consumed " + IntToString(go_hKitConsumed) + " reserved " + IntToString(GhostOps_Hanson_KitsReserved()) + " left " + IntToString(GhostOps_Hanson_KitsLeft()));
@@ -555,6 +567,19 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
     if (lp_cmd == "nwin") {
         go_ce0Win = true;
         GhostOps_Ce0_Write("j", "NWIN the quota of saved colonists is forced for the standard victory check (dev scenario, not a playthrough)");
+        return true;
+    }
+
+    if (lp_cmd == "nscvat") {
+        // nscvat <dx> <dy>: the first SCV is put at the offset from the Command Center, stopped, selected, the camera on him (the real keys then build from a known place)
+        lv_scv = GhostOps_Ce0_First("SCV");
+        lv_cc = GhostOps_Ce0_First("CommandCenter");
+        UnitSetPosition(lv_scv, PointWithOffset(UnitGetPosition(lv_cc), StringToFixed(lp_a), StringToFixed(lp_b)), false);
+        UnitIssueOrder(lv_scv, Order(AbilityCommand("stop", 0)), c_orderQueueReplace);
+        UnitClearSelection(1);
+        UnitSelect(lv_scv, 1, true);
+        CameraPan(1, UnitGetPosition(lv_scv), 0.0, -1.0, 10.0, false);
+        GhostOps_Ce0_Write("j", "NSCVAT scv at " + FixedToString(PointGetX(UnitGetPosition(lv_scv)), 1) + "," + FixedToString(PointGetY(UnitGetPosition(lv_scv)), 1));
         return true;
     }
 
@@ -610,7 +635,7 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
 
     if (lp_cmd == "nrifle") {
         // nrifle <i> <ghost>: the ordinary attack order (the rifle, not Snipe) of a Ghost on the i-th container
-        UnitIssueOrder(GhostOps_SquadUnit(StringToInt(lp_b)), OrderTargetingUnit(AbilityCommand("attack", 0), go_hCont[StringToInt(lp_a)]), c_orderQueueReplace);
+        UnitIssueOrder(GhostOps_SquadUnit(StringToInt(lp_b)), OrderTargetingUnit(AbilityCommand("attack", 0), GhostOps_Hanson_ContNth(StringToInt(lp_a))), c_orderQueueReplace);
         GhostOps_Ce0_Write("j", "NRIFLE ghost " + lp_b + " ordered to attack container " + lp_a);
         return true;
     }
@@ -656,9 +681,9 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
     if (lp_cmd == "nconts") {
         lv_i = 0;
         lv_t = "";
-        while (lv_i < go_hContN) {
-            if (UnitIsAlive(go_hCont[lv_i])) {
-                lv_t = lv_t + "(" + FixedToString(PointGetX(UnitGetPosition(go_hCont[lv_i])), 1) + "," + FixedToString(PointGetY(UnitGetPosition(go_hCont[lv_i])), 1) + ") ";
+        while (lv_i < GhostOps_Hanson_ContAlive()) {
+            if (UnitIsAlive(GhostOps_Hanson_ContNth(lv_i))) {
+                lv_t = lv_t + "(" + FixedToString(PointGetX(UnitGetPosition(GhostOps_Hanson_ContNth(lv_i))), 1) + "," + FixedToString(PointGetY(UnitGetPosition(GhostOps_Hanson_ContNth(lv_i))), 1) + ") ";
             }
 
             lv_i += 1;
@@ -671,7 +696,7 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
 
     if (lp_cmd == "nselmarine") {
         // nselmarine <i>: an own Marine 3 cells from container i is created and SELECTED (the player then gives the attack command with the real keys / mouse); the camera is on the container
-        lv_p = UnitGetPosition(go_hCont[StringToInt(lp_a)]);
+        lv_p = UnitGetPosition(GhostOps_Hanson_ContNth(StringToInt(lp_a)));
         UnitCreate(1, "Marine", 0, 1, PointWithOffset(lv_p, -3.0, 0.0), 270.0);
         UnitClearSelection(1);
         UnitSelect(UnitLastCreated(), 1, true);
@@ -682,24 +707,242 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
 
     if (lp_cmd == "nmarine") {
         // nmarine <i>: an own Marine (not a Ghost) is created 3 cells from container i and ordered to attack it with the ordinary attack
-        lv_p = UnitGetPosition(go_hCont[StringToInt(lp_a)]);
+        lv_p = UnitGetPosition(GhostOps_Hanson_ContNth(StringToInt(lp_a)));
         UnitCreate(1, "Marine", 0, 1, PointWithOffset(lv_p, -3.0, 0.0), 270.0);
         lv_scv = UnitLastCreated();
-        UnitIssueOrder(lv_scv, OrderTargetingUnit(AbilityCommand("attack", 0), go_hCont[StringToInt(lp_a)]), c_orderQueueReplace);
-        GhostOps_Ce0_Write("j", "NMARINE marine ordered to attack container " + lp_a + " valid " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(lv_scv, OrderTargetingUnit(AbilityCommand("attack", 0), go_hCont[StringToInt(lp_a)])))));
+        UnitIssueOrder(lv_scv, OrderTargetingUnit(AbilityCommand("attack", 0), GhostOps_Hanson_ContNth(StringToInt(lp_a))), c_orderQueueReplace);
+        GhostOps_Ce0_Write("j", "NMARINE marine ordered to attack container " + lp_a + " valid " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(lv_scv, OrderTargetingUnit(AbilityCommand("attack", 0), GhostOps_Hanson_ContNth(StringToInt(lp_a)))))));
         return true;
     }
 
     if (lp_cmd == "ncam") {
-        CameraPan(1, UnitGetPosition(go_hCont[StringToInt(lp_a)]), 0.0, -1.0, 10.0, false);
+        CameraPan(1, UnitGetPosition(GhostOps_Hanson_ContNth(StringToInt(lp_a))), 0.0, -1.0, 10.0, false);
         GhostOps_Ce0_Write("j", "NCAM camera on container " + lp_a);
         return true;
     }
 
     if (lp_cmd == "nshoot") {
         // nshoot <i>: Ghost 0 shoots the i-th placed container (the real Snipe order)
-        UnitIssueOrder(GhostOps_SquadUnit(0), OrderTargetingUnit(AbilityCommand("Snipe", 0), go_hCont[StringToInt(lp_a)]), c_orderQueueReplace);
-        GhostOps_Ce0_Write("j", "NSHOOT ghost 0 ordered to snipe container " + lp_a + " valid " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(GhostOps_SquadUnit(0), OrderTargetingUnit(AbilityCommand("Snipe", 0), go_hCont[StringToInt(lp_a)])))));
+        UnitIssueOrder(GhostOps_SquadUnit(0), OrderTargetingUnit(AbilityCommand("Snipe", 0), GhostOps_Hanson_ContNth(StringToInt(lp_a))), c_orderQueueReplace);
+        GhostOps_Ce0_Write("j", "NSHOOT ghost 0 ordered to snipe container " + lp_a + " valid " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(GhostOps_SquadUnit(0), OrderTargetingUnit(AbilityCommand("Snipe", 0), GhostOps_Hanson_ContNth(StringToInt(lp_a)))))));
+        return true;
+    }
+
+    if (lp_cmd == "nfbgo") {
+        // nfbgo <dx> <dy>: the first Firebat is put at the offset from his place (a new open place for the next batch of containers)
+        lv_scv = GhostOps_Ce0_First("Firebat");
+        UnitSetPosition(lv_scv, PointWithOffset(UnitGetPosition(lv_scv), StringToFixed(lp_a), StringToFixed(lp_b)), false);
+        UnitIssueOrder(lv_scv, Order(AbilityCommand("stop", 0)), c_orderQueueReplace);
+        GhostOps_Ce0_Write("j", "NFBGO firebat at " + FixedToString(PointGetX(UnitGetPosition(lv_scv)), 1) + "," + FixedToString(PointGetY(UnitGetPosition(lv_scv)), 1));
+        return true;
+    }
+
+    if (lp_cmd == "nselt") {
+        lv_u = GhostOps_Ce0_First("MissileTurret");
+        UnitClearSelection(1);
+        UnitSelect(lv_u, 1, true);
+        CameraPan(1, UnitGetPosition(lv_u), 0.0, -1.0, 10.0, false);
+        GhostOps_Ce0_Write("j", "NSELT turret selected at " + FixedToString(PointGetX(UnitGetPosition(lv_u)), 1) + "," + FixedToString(PointGetY(UnitGetPosition(lv_u)), 1));
+        return true;
+    }
+
+    if (lp_cmd == "nsdum") {
+        // edum <dx> <dy>: a 3x3 grid of paused enemy Ultralisks around the point (turret + offset), the aim point of the salvo test
+        lv_u = GhostOps_Ce0_First("MissileTurret");
+        go_s1Aim = PointWithOffset(UnitGetPosition(lv_u), StringToFixed(lp_a), StringToFixed(lp_b));
+        go_s1DumN = 0;
+        lv_i = -1;
+        while (lv_i <= 1) {
+            lv_j = -1;
+            while (lv_j <= 1) {
+                UnitCreate(1, "Ultralisk", c_unitCreateIgnorePlacement, 3, PointWithOffset(go_s1Aim, 1.4 * IntToFixed(lv_i), 1.4 * IntToFixed(lv_j)), 270.0);
+                go_s1Dum[go_s1DumN] = UnitLastCreated();
+                go_s1DumLife[go_s1DumN] = UnitGetPropertyFixed(UnitLastCreated(), c_unitPropLife, c_unitPropCurrent);
+                go_s1DumN += 1;
+                lv_j += 1;
+            }
+
+            lv_i += 1;
+        }
+
+        lv_n = 0;
+        while (lv_n < go_s1DumN) {
+            libNtve_gf_PauseUnit(go_s1Dum[lv_n], true);
+            lv_n += 1;
+        }
+
+        // the own fighters are paused (they would shoot the dummies and spoil the damage figures of the salvo); the turret and the SCV stay free
+        lv_g = UnitGroup(null, 1, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterStructure) | (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32))), 0);
+        UnitGroupLoopBegin(lv_g);
+        while (!UnitGroupLoopDone()) {
+            if (UnitGetType(UnitGroupLoopCurrent()) != "SCV") {
+                libNtve_gf_PauseUnit(UnitGroupLoopCurrent(), true);
+            }
+
+            UnitGroupLoopStep();
+        }
+
+        UnitGroupLoopEnd();
+
+        GhostOps_Ce0_Write("j", "NSDUM " + IntToString(go_s1DumN) + " dummies at " + FixedToString(PointGetX(go_s1Aim), 1) + "," + FixedToString(PointGetY(go_s1Aim), 1));
+        return true;
+    }
+
+    if (lp_cmd == "nsdmg") {
+        lv_n = 0;
+        lv_c = 0;
+        lv_t = "";
+        while (lv_n < go_s1DumN) {
+            if (UnitIsAlive(go_s1Dum[lv_n])) {
+                lv_k = go_s1Dum[lv_n];
+                if (UnitGetPropertyFixed(lv_k, c_unitPropLife, c_unitPropCurrent) < go_s1DumLife[lv_n]) {
+                    lv_c += 1;
+                }
+
+                lv_t = lv_t + FixedToString(go_s1DumLife[lv_n] - UnitGetPropertyFixed(lv_k, c_unitPropLife, c_unitPropCurrent), 0) + " ";
+            } else {
+                lv_c += 1;
+                lv_t = lv_t + "dead ";
+            }
+
+            lv_n += 1;
+        }
+
+        GhostOps_Ce0_Write("j", "NSDMG damaged " + IntToString(lv_c) + " of " + IntToString(go_s1DumN) + " | " + lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "nseval") {
+        // the salvo order of the first turret at the aim point WITHOUT giving it: 1 = ready, 0 = cooling down
+        lv_u = GhostOps_Ce0_First("MissileTurret");
+        GhostOps_Ce0_Write("j", "NSEVAL ready " + IntToString(GhostOps_Ce0_B(UnitOrderIsValid(lv_u, OrderTargetingPoint(AbilityCommand("GhostOpsTurretSalvo", 0), go_s1Aim)))) + " ability " + IntToString(GhostOps_Ce0_B(UnitAbilityExists(lv_u, "GhostOpsTurretSalvo"))) + " game time " + FixedToString(GameGetMissionTime(), 1));
+        return true;
+    }
+
+    if (lp_cmd == "nscv") {
+        // the SCVs of the player and the story state (revision 3: the extra SCVs come at the handover)
+        lv_g = UnitGroup("SCV", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+        GhostOps_Ce0_Write("j", "NSCV scvs " + IntToString(UnitGroupCount(lv_g, c_unitCountAlive)) + " extra ordered " + IntToString(go_hExtraScvs) + " made " + IntToString(GhostOps_Hanson_B(go_hScvsMade)) + " story " + IntToString(go_hStoryState) + " time " + FixedToString(GameGetMissionTime(), 1) + " | radar ghost1 " + IntToString(UnitBehaviorCount(GhostOps_SquadUnit(0), "HeroDetectorRadar")) + " ghost2 " + IntToString(UnitBehaviorCount(GhostOps_SquadUnit(1), "HeroDetectorRadar")) + " selected1 " + IntToString(GhostOps_Hanson_B(UnitIsSelected(GhostOps_SquadUnit(0), 1))));
+        return true;
+    }
+
+    if (lp_cmd == "rdum") {
+        // rdum <n> <dist>: n paused enemy Ultralisks (life 500) in a row at <dist> cells east of Ghost 0, 1.5 cells apart (south to north), the target dummies of the shot test; the own fighters are paused
+        go_rDumN = StringToInt(lp_a);
+        if (go_rDumN > 12) {
+            go_rDumN = 12;
+        }
+
+        lv_i = 0;
+        while (lv_i < go_rDumN) {
+            UnitCreate(1, "Ultralisk", c_unitCreateIgnorePlacement, 2, PointWithOffset(UnitGetPosition(GhostOps_SquadUnit(0)), StringToFixed(lp_b), 3.0 * IntToFixed(lv_i)), 270.0);
+            go_rDum[lv_i] = UnitLastCreated();
+            go_rDumLife[lv_i] = UnitGetPropertyFixed(UnitLastCreated(), c_unitPropLife, c_unitPropCurrent);
+            libNtve_gf_PauseUnit(UnitLastCreated(), true);
+            lv_i += 1;
+        }
+
+        lv_g = UnitGroup(null, 1, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterStructure) | (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32))), 0);
+        UnitGroupLoopBegin(lv_g);
+        while (!UnitGroupLoopDone()) {
+            if ((UnitGetType(UnitGroupLoopCurrent()) != "SCV") && (UnitGetType(UnitGroupLoopCurrent()) != "Ghost")) {
+                libNtve_gf_PauseUnit(UnitGroupLoopCurrent(), true);
+            }
+
+            UnitGroupLoopStep();
+        }
+
+        UnitGroupLoopEnd();
+        GhostOps_Ce0_Write("j", "RDUM " + IntToString(go_rDumN) + " dummies at +" + lp_b + " east of Ghost 0 (" + FixedToString(PointGetX(UnitGetPosition(GhostOps_SquadUnit(0))), 1) + "," + FixedToString(PointGetY(UnitGetPosition(GhostOps_SquadUnit(0))), 1) + ")");
+        return true;
+    }
+
+    if (lp_cmd == "rfree") {
+        // rfree: every unit of the player is released from the pause of rdum
+        lv_g = UnitGroup(null, 1, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32))), 0);
+        UnitGroupLoopBegin(lv_g);
+        while (!UnitGroupLoopDone()) {
+            libNtve_gf_PauseUnit(UnitGroupLoopCurrent(), false);
+            UnitGroupLoopStep();
+        }
+
+        UnitGroupLoopEnd();
+        GhostOps_Ce0_Write("j", "RFREE own units released");
+        return true;
+    }
+
+    if (lp_cmd == "rcont") {
+        // rcont <dx> <dy>: a neutral explosive container at the offset from Ghost 0 (the target of the direct-hit check of the new rifle shot)
+        UnitCreate(1, "GhostOpsFuelContainer", c_unitCreateIgnorePlacement, go_hContOwner, PointWithOffset(UnitGetPosition(GhostOps_SquadUnit(0)), StringToFixed(lp_a), StringToFixed(lp_b)), 270.0);
+        go_hContUsed += 1;
+        GhostOps_Ce0_Write("j", "RCONT container created, alive " + IntToString(GhostOps_Hanson_ContAlive()));
+        return true;
+    }
+
+    if (lp_cmd == "rcontshot") {
+        // rcontshot: Ghost 0 shoots the first living container by an order on the UNIT (the filter of the shot must accept it)
+        if (GhostOps_Hanson_ContAlive() > 0) {
+            UnitIssueOrder(GhostOps_SquadUnit(0), OrderTargetingUnit(AbilityCommand("Snipe", 0), GhostOps_Hanson_ContNth(0)), c_orderQueueReplace);
+        }
+
+        GhostOps_Ce0_Write("j", "RCONTSHOT ordered, containers alive " + IntToString(GhostOps_Hanson_ContAlive()));
+        return true;
+    }
+
+    if (lp_cmd == "rdmg") {
+        lv_t = "";
+        lv_i = 0;
+        while (lv_i < go_rDumN) {
+            if (UnitIsAlive(go_rDum[lv_i])) {
+                lv_t = lv_t + FixedToString(go_rDumLife[lv_i] - UnitGetPropertyFixed(go_rDum[lv_i], c_unitPropLife, c_unitPropCurrent), 0) + " ";
+            }
+            else {
+                lv_t = lv_t + "dead ";
+            }
+
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", "RDMG lost life of the dummies: " + lv_t + "| shots " + IntToString(go_hShotCount));
+        return true;
+    }
+
+    if (lp_cmd == "rshot") {
+        // rshot <ghost 0|1> <dx> <dy>: the REAL ability order to a click point at the offset from the Ghost (a scripted order; the real mouse path is the scenario's click)
+        lv_p = PointWithOffset(UnitGetPosition(GhostOps_SquadUnit(StringToInt(lp_a))), StringToFixed(lp_b), 0.0);
+        UnitIssueOrder(GhostOps_SquadUnit(StringToInt(lp_a)), OrderTargetingPoint(AbilityCommand("Snipe", 0), lv_p), c_orderQueueReplace);
+        GhostOps_Ce0_Write("j", "RSHOT order to the point " + FixedToString(PointGetX(lv_p), 1) + "," + FixedToString(PointGetY(lv_p), 1));
+        return true;
+    }
+
+    if (lp_cmd == "rcd") {
+        lv_t = "";
+        lv_i = 0;
+        while (lv_i < 2) {
+            if (GhostOps_SquadUnit(lv_i) != null) {
+                lv_t = lv_t + "ghost" + IntToString(lv_i) + " cd " + FixedToString(UnitAbilityGetCooldown(GhostOps_SquadUnit(lv_i), "Snipe", "Abil/Snipe"), 2) + " at " + FixedToString(PointGetX(UnitGetPosition(GhostOps_SquadUnit(lv_i))), 1) + "," + FixedToString(PointGetY(UnitGetPosition(GhostOps_SquadUnit(lv_i))), 1) + " alive " + IntToString(GhostOps_Hanson_B(UnitIsAlive(GhostOps_SquadUnit(lv_i)))) + " | ";
+            }
+
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", "RCD " + lv_t + "shots " + IntToString(go_hShotCount) + " gas " + IntToString(GhostOps_Hanson_Gas()));
+        return true;
+    }
+
+    if (lp_cmd == "rselg") {
+        // rselg <0|1|2>: selects Ghost 0, Ghost 1 or both (the camera on the first)
+        UnitClearSelection(1);
+        if ((lp_a == "0") || (lp_a == "2")) {
+            UnitSelect(GhostOps_SquadUnit(0), 1, true);
+        }
+
+        if ((lp_a == "1") || (lp_a == "2")) {
+            UnitSelect(GhostOps_SquadUnit(1), 1, true);
+        }
+
+        CameraPan(1, UnitGetPosition(GhostOps_SquadUnit(0)), 0.0, -1.0, 10.0, false);
+        GhostOps_Ce0_Write("j", "RSELG selected " + lp_a);
         return true;
     }
 

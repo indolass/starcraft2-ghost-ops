@@ -224,8 +224,8 @@ def make_window_class(ctk, pal):
                         state='normal' if q['ok'] and not self.busy else 'disabled').grid(row=0, column=1, padx=4)
 
         def _draw_step3(self, row):
-            """3. Evacuation (THanson01, revision 2): the pre-order of turret kits. There are no ready turrets on the map: the player builds the ordered number himself."""
-            f = self.card(row, '3. «Эвакуация» (ревизия 2) — заказ комплектов турелей')
+            """3. Evacuation (THanson01, revision 3): the pre-order of turret kits and extra SCVs. There are no ready turrets on the map: the player builds the ordered number himself."""
+            f = self.card(row, '3. «Эвакуация» (ревизия 3) — комплекты турелей и дополнительные КСМ')
             info = self.flow.order_info('thanson01', self.e_preset)
             opn = self.flow.open_operation('thanson01')
             if opn:
@@ -240,14 +240,19 @@ def make_window_class(ctk, pal):
             grid = ctk.CTkFrame(f, fg_color='transparent')
             grid.grid(row=2, column=0, sticky='ew', padx=16)
             grid.grid_columnconfigure(0, weight=1)
-            k = 'turret_kits'
-            pr = info['prices'][k]
-            price = '%d мин.' % pr['minerals'] + (' + %d газа' % pr['gas'] if pr['gas'] else '')
-            ctk.CTkLabel(grid, text='%s (по %s, не более %d; рекомендуется %d)' % (cf.ORDER_LABELS[k], price, info['limits'][k], info['recommended'][k]), font=(FONT, 13),
-                         text_color=TEXT, anchor='w').grid(row=0, column=0, sticky='ew', pady=3)
-            self.button(grid, '−', lambda: self.change3(-1), width=36).grid(row=0, column=1, padx=4)
-            ctk.CTkLabel(grid, text=str(self.order3[k]), font=(FONT, 15, 'bold'), text_color=TEXT, width=36).grid(row=0, column=2)
-            self.button(grid, '+', lambda: self.change3(1), width=36).grid(row=0, column=3, padx=4)
+            for r, k in enumerate(info['items']):
+                pr = info['prices'][k]
+                price = '%d мин.' % pr['minerals'] + (' + %d газа' % pr['gas'] if pr['gas'] else '')
+                if k == 'scvs':
+                    sv = info['scv']
+                    label = 'Дополнительные КСМ (по %s, не более %d; штатных %d; рекомендуется всего %d, то есть %d дополнительных). Всего будет: %d' % (
+                        price, info['limits'][k], sv['stock'], sv['recommended_total'], info['recommended'][k], sv['stock'] + self.order3.get(k, 0))
+                else:
+                    label = '%s (по %s, не более %d; рекомендуется %d)' % (cf.ORDER_LABELS[k], price, info['limits'][k], info['recommended'][k])
+                ctk.CTkLabel(grid, text=label, font=(FONT, 13), text_color=TEXT, anchor='w', wraplength=520, justify='left').grid(row=r, column=0, sticky='ew', pady=3)
+                self.button(grid, '−', lambda kk=k: self.change3(-1, kk), width=36).grid(row=r, column=1, padx=4)
+                ctk.CTkLabel(grid, text=str(self.order3.get(k, 0)), font=(FONT, 15, 'bold'), text_color=TEXT, width=36).grid(row=r, column=2)
+                self.button(grid, '+', lambda kk=k: self.change3(1, kk), width=36).grid(row=r, column=3, padx=4)
             ctk.CTkLabel(f, text=info['hint'], font=(FONT, 12, 'bold'), text_color=AMBER, anchor='w', justify='left', wraplength=740).grid(row=3, column=0, sticky='ew', padx=16, pady=(6, 2))
             q = self.flow.quote('thanson01', self.e_preset, self.order3)
             cost, short = q['cost'], q['short']
@@ -257,7 +262,7 @@ def make_window_class(ctk, pal):
                 line += '  НЕ ХВАТАЕТ: ' + ', '.join('%d %s' % (v, RES_NAMES[kk]) for kk, v in short.items()) + '. Доплат, кредита и автоматической выдачи нет.'
             ctk.CTkLabel(f, text=line, font=(FONT, 13, 'bold'), text_color=RED if short else GREEN, anchor='w', justify='left', wraplength=740).grid(row=4, column=0, sticky='ew', padx=16, pady=(4, 2))
             ctk.CTkLabel(f, text='Цена комплекта и число комплектов экспериментальные, не утверждены Owner (config/thanson01.json, hanson.turret_kits); подготовка 1000 / 500 — ранее согласованная сумма. '
-                                 'Результат этой миссии в кампанию пока не записывается: победа здесь запас не меняет.',
+                                 'При победе предлагается зачислить остаток минералов и газа на карте (один раз); неиспользованные комплекты и КСМ деньгами не возвращаются.',
                          font=(FONT, 11), text_color=MUTED, anchor='w', justify='left', wraplength=740).grid(row=5, column=0, sticky='ew', padx=16)
             bar = ctk.CTkFrame(f, fg_color='transparent')
             bar.grid(row=6, column=0, sticky='w', padx=12, pady=(6, 12))
@@ -266,9 +271,9 @@ def make_window_class(ctk, pal):
                         state='normal' if q['ok'] and not self.busy else 'disabled').grid(row=0, column=1, padx=4)
 
         # ---------------------------------------------------------------- actions
-        def change3(self, delta):
+        def change3(self, delta, key='turret_kits'):
             info = self.flow.order_info('thanson01', self.e_preset)
-            self.order3['turret_kits'] = max(0, min(info['limits']['turret_kits'], self.order3['turret_kits'] + delta))
+            self.order3[key] = max(0, min(info['limits'][key], self.order3.get(key, 0) + delta))
             self.refresh()
 
         def use_recommended3(self):

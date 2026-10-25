@@ -1,0 +1,102 @@
+{
+ "name": "tr3r3_marks",
+ "mission": "traynor03",
+ "preset": "defence_r3_dev",
+ "why": "targets: one announcement, one short reveal, persistent marks that follow the targets, nothing repeated by the timer or by a load",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "tstat",
+   "grep": "marks persist 1 shown 1",
+   "every": 8,
+   "timeout": 330
+  },
+  {
+   "op": "cmd",
+   "text": "tstat",
+   "wait": 1.4
+  },
+  {
+   "op": "shot",
+   "file": "m1_after_matt.png"
+  },
+  {
+   "op": "cmd",
+   "text": "killtargets 1",
+   "wait": 1.4
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "tstat",
+   "wait": 1.4
+  },
+  {
+   "op": "save",
+   "name": "CE0_TR3_M"
+  },
+  {
+   "op": "load",
+   "name": "CE0_TR3_M"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "tstat",
+   "wait": 1.4
+  },
+  {
+   "op": "sleep",
+   "s": 100
+  },
+  {
+   "op": "cmd",
+   "text": "tstat",
+   "wait": 1.4
+  },
+  {
+   "op": "expect",
+   "regex": "TSTAT",
+   "note": "the persistent marks: drawn once, a destroyed target loses its mark, a load draws the rest again"
+  },
+  {
+   "op": "expect_def",
+   "bank": "GhostOpsDevDef",
+   "regex": "scene: Matt",
+   "count": 1,
+   "note": "the announcement of the targets was made once"
+  },
+  {
+   "op": "expect_def",
+   "bank": "GhostOpsDevDef",
+   "regex": "targets revealed",
+   "count": 1,
+   "note": "the short reveal was made once"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}
