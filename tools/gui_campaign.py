@@ -12,10 +12,13 @@ import campaign_flow as cf
 
 RES_NAMES = {'minerals': 'минералов', 'gas': 'газа'}
 VARIANT_TEXT = {
-    'defence_next': '«Оборона и диверсии», версия 2 — ТЕКУЩАЯ, экспериментальная (бункеры и турели строите сами, морпехи прилетают в капсулах, залп турелей по области)',
+    'defence_r4': '«Оборона и диверсии», версия 4 — ТЕКУЩАЯ, экспериментальная (гарнизон с обычным уроном, гранатомёты, ядерный удар с расстояния 48 без подхода к цели, постоянные метки целей)',
+    'defence_r3': '«Оборона и диверсии», версия 3 — прежняя (ядерное наведение подводило призрака к цели; для новой операции не рекомендуется)',
+    'defence_next': '«Оборона и диверсии», версия 2 — прежняя (усиленный гарнизон ×8, залп турелей по области; для новой операции не рекомендуется)',
     'defence': '«Оборона и диверсии», версия 1 — прежняя (карта, которую вы проходили раньше; без залпа по области)',
     'standard': 'прежний «Час икс» (заказ готов к старту)'}
-PROFILE_TEXT = {'tactical_next': 'Вне закона, версия 2', 'tactical': 'Вне закона, версия 1'}
+PROFILE_TEXT = {'tactical_next': 'Вне закона, версия 2', 'tactical': 'Вне закона, версия 1', 'defence_r4': 'Оборона и диверсии, версия 4', 'defence_r3': 'Оборона и диверсии, версия 3 (прежняя)', 'defence_next': 'Оборона и диверсии, версия 2 (прежняя)',
+                'defence': 'Оборона и диверсии, версия 1 (прежняя)', 'standard': 'Час икс (прежний)', 'sniper_next_r4': 'Эвакуация, ревизия 4', 'sniper_next_r3': 'Эвакуация, ревизия 3 (прежняя)', 'sniper_next_r2': 'Эвакуация, ревизия 2 (прежняя)'}
 
 
 def stock_text(stock):
@@ -44,7 +47,7 @@ def make_window_class(ctk, pal):
             self.busy = False
             self.watching = False
             self.pending = []
-            self.t3 = cf.step_of('traynor03')['preset']  # the variant of the second step: 'defence_next' (current), 'defence' (version 1, the Owner's earlier map) or 'standard' (the previous Zero Hour)
+            self.t3 = cf.step_of('traynor03')['preset']  # the variant of the second step: 'defence_r4' (current), 'defence_r3' and 'defence_next' (earlier), 'defence' (version 1, the Owner's earlier map) or 'standard' (the previous Zero Hour)
             self.show_details = False
             self.order = dict(self.flow.order_info('traynor03', self.t3)['recommended'])
             self.e_preset = cf.step_of('thanson01')['preset']  # the third step: Evacuation, revision 2 (turret kits)
@@ -187,15 +190,17 @@ def make_window_class(ctk, pal):
             opn = self.flow.open_operation('traynor03')
             ctk.CTkLabel(f, text=('Вариант: %s. ' % (VARIANT_TEXT[self.t3])) + 'Рейнор: «%s»' % cf.PREP_TEXT, font=(FONT, 12), text_color=MUTED, anchor='w', justify='left', wraplength=740).grid(row=1, column=0, sticky='ew', padx=16, pady=(0, 6))
             if opn:
-                ctk.CTkLabel(f, text='Операция %s: %s. Заказ зафиксирован и оплачен.' % (opn[0], op_status(opn[1])), font=(FONT, 13), text_color=TEXT, anchor='w',
-                             wraplength=740).grid(row=2, column=0, sticky='ew', padx=16, pady=(2, 4))
+                ctk.CTkLabel(f, text='Операция %s: %s. Заказ зафиксирован и оплачен. Карта операции: %s (она и продолжится; новая версия на неё не подменяется).' % (opn[0], op_status(opn[1]), PROFILE_TEXT.get(opn[1].get('profile'), opn[1].get('profile'))),
+                             font=(FONT, 13), text_color=TEXT, anchor='w', wraplength=740).grid(row=2, column=0, sticky='ew', padx=16, pady=(2, 4))
                 self._op_buttons(f, 3, 'traynor03', self.t3)
                 return
             vb = ctk.CTkFrame(f, fg_color='transparent')
             vb.grid(row=6, column=0, sticky='w', padx=12, pady=(0, 10))
-            self.button(vb, 'Оборона и диверсии, версия 2 (текущая)', lambda: self.set_variant('defence_next'), primary=(self.t3 == 'defence_next'), width=300).grid(row=0, column=0, padx=4)
-            self.button(vb, 'Оборона и диверсии, версия 1', lambda: self.set_variant('defence'), primary=(self.t3 == 'defence'), width=230).grid(row=0, column=1, padx=4)
-            self.button(vb, 'Прежний «Час икс»', lambda: self.set_variant('standard'), primary=(self.t3 == 'standard'), width=170).grid(row=0, column=2, padx=4)
+            self.button(vb, 'Версия 4 (текущая)', lambda: self.set_variant('defence_r4'), primary=(self.t3 == 'defence_r4'), width=170).grid(row=0, column=0, padx=4)
+            self.button(vb, 'Версия 3 (прежняя)', lambda: self.set_variant('defence_r3'), primary=(self.t3 == 'defence_r3'), width=160).grid(row=0, column=1, padx=4)
+            self.button(vb, 'Версия 2 (прежняя)', lambda: self.set_variant('defence_next'), primary=(self.t3 == 'defence_next'), width=160).grid(row=0, column=2, padx=4)
+            self.button(vb, 'Версия 1 (прежняя)', lambda: self.set_variant('defence'), primary=(self.t3 == 'defence'), width=160).grid(row=0, column=3, padx=4)
+            self.button(vb, 'Прежний «Час икс»', lambda: self.set_variant('standard'), primary=(self.t3 == 'standard'), width=150).grid(row=0, column=4, padx=4)
             grid = ctk.CTkFrame(f, fg_color='transparent')
             grid.grid(row=2, column=0, sticky='ew', padx=16)
             grid.grid_columnconfigure(0, weight=1)
@@ -225,12 +230,12 @@ def make_window_class(ctk, pal):
 
         def _draw_step3(self, row):
             """3. Evacuation (THanson01, revision 3): the pre-order of turret kits and extra SCVs. There are no ready turrets on the map: the player builds the ordered number himself."""
-            f = self.card(row, '3. «Эвакуация» (ревизия 3) — комплекты турелей и дополнительные КСМ')
+            f = self.card(row, '3. «Эвакуация» (ревизия 4) — комплекты турелей и дополнительные КСМ')
             info = self.flow.order_info('thanson01', self.e_preset)
             opn = self.flow.open_operation('thanson01')
             if opn:
-                ctk.CTkLabel(f, text='Операция %s: %s. Заказ зафиксирован и оплачен.' % (opn[0], op_status(opn[1])), font=(FONT, 13), text_color=TEXT, anchor='w',
-                             wraplength=740).grid(row=2, column=0, sticky='ew', padx=16, pady=(2, 4))
+                ctk.CTkLabel(f, text='Операция %s: %s. Заказ зафиксирован и оплачен. Карта операции: %s (она и продолжится).' % (opn[0], op_status(opn[1]), PROFILE_TEXT.get(opn[1].get('profile'), opn[1].get('profile'))),
+                             font=(FONT, 13), text_color=TEXT, anchor='w', wraplength=740).grid(row=2, column=0, sticky='ew', padx=16, pady=(2, 4))
                 self._op_buttons(f, 3, 'thanson01', self.e_preset)
                 return
             ctk.CTkLabel(f, text='Готовых турелей на карте нет. Закажите комплекты ракетных турелей: на карте СКВ строят ровно столько турелей бесплатно, место выбираете вы. '

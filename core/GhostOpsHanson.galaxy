@@ -873,6 +873,43 @@ bool GhostOps_Hanson_ShotEnemy (unit lp_u) {
     return UnitFilterMatch(lp_u, 1, UnitFilterStr("Enemy,Visible;Missile,Dead,Hidden,Structure,Stasis,Invulnerable"));
 }
 
+// The order of a click beyond the rifle range would make the stock ability walk the Ghost to the click until the range is met. At the START of the order (Execute stage) it is replaced
+// by the same shot at the point of the click's direction inside the range (the Ghost stays). The shot itself is made when the cast COMPLETES (GhostOps_Hanson_ShotExec, Complete
+// stage): a cancelled cast gives neither a shot nor a cooldown, and the cooldown of the ability starts with the real shot.
+bool GhostOps_Hanson_ShotRedirect (bool lp_testConds, bool lp_runActions) {
+    unit lv_g;
+    point lv_a;
+    point lv_gp;
+    point lv_aim;
+    fixed lv_d;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    lv_g = EventUnit();
+    if (EventUnitTargetUnit() != null) {
+        lv_a = UnitGetPosition(EventUnitTargetUnit());
+    }
+    else {
+        lv_a = EventUnitTargetPoint();
+    }
+
+    if ((lv_g == null) || (lv_a == null)) {
+        return true;
+    }
+
+    lv_gp = UnitGetPosition(lv_g);
+    lv_d = DistanceBetweenPoints(lv_gp, lv_a);
+    if ((lv_d > go_hShotRange) && (UnitOrderCount(lv_g) <= 1)) {
+        lv_aim = PointWithOffset(lv_gp, (PointGetX(lv_a) - PointGetX(lv_gp)) * (go_hShotRange - 0.3) / lv_d, (PointGetY(lv_a) - PointGetY(lv_gp)) * (go_hShotRange - 0.3) / lv_d);
+        UnitIssueOrder(lv_g, OrderTargetingPoint(AbilityCommand("Snipe", 0), lv_aim), c_orderQueueReplace);
+        GhostOps_Hanson_Log("shot: far click " + FixedToString(lv_d, 1) + " from the Ghost redirected to a shot inside the range");
+    }
+
+    return true;
+}
+
 bool GhostOps_Hanson_ShotExec (bool lp_testConds, bool lp_runActions) {
     unit lv_g;
     unit lv_t;
@@ -904,9 +941,9 @@ bool GhostOps_Hanson_ShotExec (bool lp_testConds, bool lp_runActions) {
         return true;
     }
 
-    go_hShotCount += 1;
     lv_gp = UnitGetPosition(lv_g);
     lv_d = DistanceBetweenPoints(lv_gp, lv_a);
+    go_hShotCount += 1;
     lv_aim = lv_a;
     lv_far = false;
     if (lv_d > go_hShotRange) {
@@ -945,11 +982,11 @@ bool GhostOps_Hanson_ShotExec (bool lp_testConds, bool lp_runActions) {
     go_hLastShotAt = GameGetMissionTime();
     if (lv_c != null) {
         UnitCreateEffectUnit(lv_g, "SnipeDamage", lv_c);
-        GhostOps_Hanson_Log("shot: hit " + UnitGetType(lv_c) + " (click " + FixedToString(lv_d, 1) + " from the Ghost, direct " + IntToString(GhostOps_Hanson_B(lv_c == lv_t)) + ")");
+        GhostOps_Hanson_Log("shot: hit " + UnitGetType(lv_c) + " (click " + FixedToString(lv_d, 1) + " from the Ghost at " + FixedToString(PointGetX(lv_gp), 1) + "," + FixedToString(PointGetY(lv_gp), 1) + ", direct " + IntToString(GhostOps_Hanson_B(lv_c == lv_t)) + ")");
     }
     else {
         UnitCreateEffectPoint(lv_g, "GhostOpsShotMiss", lv_aim);
-        GhostOps_Hanson_Log("shot: miss at (" + FixedToString(PointGetX(lv_aim), 1) + ", " + FixedToString(PointGetY(lv_aim), 1) + "), click " + FixedToString(lv_d, 1) + " from the Ghost, far " + IntToString(GhostOps_Hanson_B(lv_far)));
+        GhostOps_Hanson_Log("shot: miss at (" + FixedToString(PointGetX(lv_aim), 1) + ", " + FixedToString(PointGetY(lv_aim), 1) + "), click " + FixedToString(lv_d, 1) + " from the Ghost at " + FixedToString(PointGetX(lv_gp), 1) + "," + FixedToString(PointGetY(lv_gp), 1) + ", far " + IntToString(GhostOps_Hanson_B(lv_far)));
     }
 
     return true;
@@ -1447,7 +1484,8 @@ void GhostOps_Hanson_Start () {
     }
 
     if (go_hShotOn) {
-        TriggerAddEventUnitAbility(TriggerCreate("GhostOps_Hanson_ShotExec"), null, AbilityCommand("Snipe", 0), c_unitAbilStageExecute, false);
+        TriggerAddEventUnitAbility(TriggerCreate("GhostOps_Hanson_ShotRedirect"), null, AbilityCommand("Snipe", 0), c_unitAbilStageExecute, false);
+        TriggerAddEventUnitAbility(TriggerCreate("GhostOps_Hanson_ShotExec"), null, AbilityCommand("Snipe", 0), c_unitAbilStageComplete, false);
     }
 
     if (go_hContOn || go_hFuelOn || go_hShotOn) {

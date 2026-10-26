@@ -79,8 +79,8 @@ class HansonConfig(unittest.TestCase):
     def test_dev_preset_is_hidden(self):
         raw = build.load_json(ADAPTER['config'])
         self.assertTrue(raw['presets']['sniper_dev']['hidden'])
-        self.assertEqual([p['name'] for p in launcher_core.profiles_of('thanson01')], ['sniper', 'sniper_next', 'sniper_next_r2', 'sniper_next_free_r2', 'sniper_next_r3', 'sniper_next_free_r3'])
-        self.assertEqual(launcher_core.default_profile('thanson01'), 'sniper_next_r3')
+        self.assertEqual([p['name'] for p in launcher_core.profiles_of('thanson01')], ['sniper', 'sniper_next', 'sniper_next_r2', 'sniper_next_free_r2', 'sniper_next_r3', 'sniper_next_free_r3', 'sniper_next_r4', 'sniper_next_free_r4'])
+        self.assertEqual(launcher_core.default_profile('thanson01'), 'sniper_next_r4')
         self.assertEqual(launcher_core.mission_info('thanson01')['status'], 'Эксперимент')
         dev, _ = build.resolve_config(ADAPTER, 'sniper_dev')
         self.assertTrue(dev['hanson']['debug_log'])

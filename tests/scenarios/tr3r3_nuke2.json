@@ -1,0 +1,252 @@
+{
+ "name": "tr3r3_nuke2",
+ "mission": "traynor03",
+ "preset": "defence_r4_dev",
+ "why": "the damage of the strike by zone after the detonation (equal targets, with their sizes), the second launch, and a REAL third attempt through the interface",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "dst",
+   "grep": "DST2 landing \\d+ marines 16 ghosts 2",
+   "every": 6,
+   "timeout": 260
+  },
+  {
+   "op": "cmd",
+   "text": "cleane",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "tpause",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "gwatch",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "nofoe",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "ndum 29.9 34.9",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "gsel1 70.0 34.9",
+   "wait": 1.4
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "cmd",
+   "text": "tstat",
+   "wait": 1.4
+  },
+  {
+   "op": "key",
+   "keys": [
+    "N"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.6
+  },
+  {
+   "op": "click",
+   "x": 42,
+   "y": 713
+  },
+  {
+   "op": "sleep",
+   "s": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "tord 1",
+   "wait": 1.4
+  },
+  {
+   "op": "shot",
+   "file": "n1_aim.png"
+  },
+  {
+   "op": "until",
+   "cmd": "tstat",
+   "grep": "launches 1/2",
+   "every": 4,
+   "timeout": 90
+  },
+  {
+   "op": "cmd",
+   "text": "tstat",
+   "wait": 1.4
+  },
+  {
+   "op": "shot",
+   "file": "n2_launched.png"
+  },
+  {
+   "op": "burst",
+   "file": "n3_flight_",
+   "n": 3
+  },
+  {
+   "op": "sleep",
+   "s": 22
+  },
+  {
+   "op": "burst",
+   "file": "n4_blast_",
+   "n": 3
+  },
+  {
+   "op": "cmd",
+   "text": "ndumr",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "tstat",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "tlife 88",
+   "wait": 0.9
+  },
+  {
+   "op": "cmd",
+   "text": "tlife 122",
+   "wait": 0.9
+  },
+  {
+   "op": "cmd",
+   "text": "tlife 259",
+   "wait": 0.9
+  },
+  {
+   "op": "cmd",
+   "text": "gsel2 50.0 99.5",
+   "wait": 1.4
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "cmd",
+   "text": "tnuke2 94.5 99.5",
+   "wait": 1.4
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "until",
+   "cmd": "tstat",
+   "grep": "launches 2/2",
+   "every": 4,
+   "timeout": 120
+  },
+  {
+   "op": "sleep",
+   "s": 24
+  },
+  {
+   "op": "cmd",
+   "text": "tstat",
+   "wait": 1.4
+  },
+  {
+   "op": "shot",
+   "file": "n5_after_second.png"
+  },
+  {
+   "op": "cmd",
+   "text": "gsel1 70.0 34.9",
+   "wait": 1.4
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "key",
+   "keys": [
+    "N"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.6
+  },
+  {
+   "op": "click",
+   "x": 42,
+   "y": 713
+  },
+  {
+   "op": "sleep",
+   "s": 2.5
+  },
+  {
+   "op": "cmd",
+   "text": "tord 1",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "tstat",
+   "wait": 1.4
+  },
+  {
+   "op": "shot",
+   "file": "n6_third_attempt.png"
+  },
+  {
+   "op": "expect",
+   "regex": "R3 lost life",
+   "note": "the damage of the strike on equal targets in the zones (life lost; 4000 life Ultralisks at d 0, 2.5 ... 17.5; Hatcheries at d 4, 10, 16, 22)"
+  },
+  {
+   "op": "expect",
+   "regex": "TSTAT|TORD|GDIE",
+   "note": "launch counters; the third attempt"
+  },
+  {
+   "op": "expect_def",
+   "bank": "GhostOpsDevTac",
+   "regex": "launch|aim|ready|cancel|refus|none",
+   "note": "tactical log"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

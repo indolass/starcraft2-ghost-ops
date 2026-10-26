@@ -1,0 +1,511 @@
+{
+ "name": "th1r4_snipe",
+ "mission": "thanson01",
+ "preset": "sniper_next_r4_ce0_dev",
+ "why": "the rifle shot: inside / beyond the weapon / far in the fog (minimap): no walking, one shot per order and per rapid repeats, cooldown from the real shot, cancel before / after, the next order is not erased, save / load in the cooldown, two Ghosts one shot",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 6
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "nstat",
+   "grep": "NSTAT ghosts 2 firebats 2",
+   "every": 5,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "rselg 0",
+   "wait": 1.3
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "cmd",
+   "text": "rcd",
+   "wait": 0.8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "R"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "click",
+   "x": 752,
+   "y": 384
+  },
+  {
+   "op": "sleep",
+   "s": 0.6
+  },
+  {
+   "op": "cmd",
+   "text": "rcd",
+   "wait": 0.8
+  },
+  {
+   "op": "shot",
+   "file": "f1_inside.png"
+  },
+  {
+   "op": "sleep",
+   "s": 2.2
+  },
+  {
+   "op": "key",
+   "keys": [
+    "R"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "click",
+   "x": 1000,
+   "y": 110
+  },
+  {
+   "op": "sleep",
+   "s": 0.6
+  },
+  {
+   "op": "cmd",
+   "text": "rcd",
+   "wait": 0.8
+  },
+  {
+   "op": "shot",
+   "file": "f2_beyond_weapon.png"
+  },
+  {
+   "op": "sleep",
+   "s": 2.2
+  },
+  {
+   "op": "key",
+   "keys": [
+    "R"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "click",
+   "x": 72,
+   "y": 768
+  },
+  {
+   "op": "sleep",
+   "s": 0.6
+  },
+  {
+   "op": "cmd",
+   "text": "rcd",
+   "wait": 0.8
+  },
+  {
+   "op": "shot",
+   "file": "f3_minimap_far_west.png"
+  },
+  {
+   "op": "sleep",
+   "s": 2.6
+  },
+  {
+   "op": "key",
+   "keys": [
+    "R"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "click",
+   "x": 214,
+   "y": 700
+  },
+  {
+   "op": "sleep",
+   "s": 0.6
+  },
+  {
+   "op": "cmd",
+   "text": "rcd",
+   "wait": 0.8
+  },
+  {
+   "op": "shot",
+   "file": "f4_minimap_far2.png"
+  },
+  {
+   "op": "sleep",
+   "s": 2.6
+  },
+  {
+   "op": "cmd",
+   "text": "rcd",
+   "wait": 0.8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "R"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.6
+  },
+  {
+   "op": "cmd",
+   "text": "rcd",
+   "wait": 0.8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "R"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "rclick",
+   "x": 700,
+   "y": 300
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "rcd",
+   "wait": 0.8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "R"
+   ]
+  },
+  {
+   "op": "click",
+   "x": 752,
+   "y": 384
+  },
+  {
+   "op": "key",
+   "keys": [
+    "R"
+   ]
+  },
+  {
+   "op": "click",
+   "x": 760,
+   "y": 384
+  },
+  {
+   "op": "key",
+   "keys": [
+    "R"
+   ]
+  },
+  {
+   "op": "click",
+   "x": 770,
+   "y": 384
+  },
+  {
+   "op": "sleep",
+   "s": 0.6
+  },
+  {
+   "op": "cmd",
+   "text": "rcd",
+   "wait": 0.8
+  },
+  {
+   "op": "sleep",
+   "s": 2.2
+  },
+  {
+   "op": "key",
+   "keys": [
+    "R"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.4
+  },
+  {
+   "op": "click",
+   "x": 1000,
+   "y": 110
+  },
+  {
+   "op": "sleep",
+   "s": 0.25
+  },
+  {
+   "op": "rclick",
+   "x": 300,
+   "y": 500
+  },
+  {
+   "op": "sleep",
+   "s": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "rcd",
+   "wait": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "rord",
+   "wait": 0.8
+  },
+  {
+   "op": "sleep",
+   "s": 2.0
+  },
+  {
+   "op": "cmd",
+   "text": "rcd",
+   "wait": 0.8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "R"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.4
+  },
+  {
+   "op": "click",
+   "x": 752,
+   "y": 384
+  },
+  {
+   "op": "sleep",
+   "s": 0.2
+  },
+  {
+   "op": "key",
+   "keys": [
+    "S"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.3
+  },
+  {
+   "op": "sleep",
+   "s": 2.4
+  },
+  {
+   "op": "key",
+   "keys": [
+    "R"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.4
+  },
+  {
+   "op": "click",
+   "x": 752,
+   "y": 384
+  },
+  {
+   "op": "sleep",
+   "s": 0.7
+  },
+  {
+   "op": "key",
+   "keys": [
+    "S"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.2
+  },
+  {
+   "op": "cmd",
+   "text": "rcd",
+   "wait": 0.6
+  },
+  {
+   "op": "cmd",
+   "text": "rcd",
+   "wait": 0.8
+  },
+  {
+   "op": "sleep",
+   "s": 2.2
+  },
+  {
+   "op": "key",
+   "keys": [
+    "R"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.4
+  },
+  {
+   "op": "click",
+   "x": 752,
+   "y": 384
+  },
+  {
+   "op": "sleep",
+   "s": 0.3
+  },
+  {
+   "op": "cmd",
+   "text": "rcd",
+   "wait": 0.8
+  },
+  {
+   "op": "save",
+   "name": "CE0_TH1_SN"
+  },
+  {
+   "op": "load",
+   "name": "CE0_TH1_SN"
+  },
+  {
+   "op": "sleep",
+   "s": 0.6
+  },
+  {
+   "op": "cmd",
+   "text": "rcd",
+   "wait": 0.8
+  },
+  {
+   "op": "sleep",
+   "s": 1.8
+  },
+  {
+   "op": "cmd",
+   "text": "rcd",
+   "wait": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "rselg 2",
+   "wait": 1.3
+  },
+  {
+   "op": "sleep",
+   "s": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "rcd",
+   "wait": 0.8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "R"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "click",
+   "x": 752,
+   "y": 384
+  },
+  {
+   "op": "sleep",
+   "s": 0.6
+  },
+  {
+   "op": "cmd",
+   "text": "rcd",
+   "wait": 0.8
+  },
+  {
+   "op": "shot",
+   "file": "f5_two_ghosts.png"
+  },
+  {
+   "op": "sleep",
+   "s": 2.2
+  },
+  {
+   "op": "cmd",
+   "text": "rcd",
+   "wait": 0.8
+  },
+  {
+   "op": "expect",
+   "regex": "RCD |RORD",
+   "note": "position, cooldown, energy and shots after every action"
+  },
+  {
+   "op": "expect_def",
+   "bank": "GhostOpsDevHanson",
+   "regex": "shot:",
+   "note": "Hanson log of the shots"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

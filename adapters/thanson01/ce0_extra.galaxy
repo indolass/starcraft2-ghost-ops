@@ -889,6 +889,94 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
         return true;
     }
 
+    if (lp_cmd == "cpause") {
+        // cpause: every own unit except the Ghosts and the SCVs is paused (a Firebat must not flame the dummies and blast the container by itself)
+        lv_g = UnitGroup(null, 1, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterStructure) | (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32))), 0);
+        UnitGroupLoopBegin(lv_g);
+        while (!UnitGroupLoopDone()) {
+            if ((UnitGetType(UnitGroupLoopCurrent()) != "SCV") && (UnitGetType(UnitGroupLoopCurrent()) != "Ghost")) {
+                libNtve_gf_PauseUnit(UnitGroupLoopCurrent(), true);
+            }
+
+            UnitGroupLoopStep();
+        }
+
+        UnitGroupLoopEnd();
+        GhostOps_Ce0_Write("j", "CPAUSE own units paused");
+        return true;
+    }
+
+    if (lp_cmd == "rord") {
+        // rord: the orders of Ghost 0 (count, ability of each, the target point) and its position
+        lv_t = "RORD ghost0 at " + FixedToString(PointGetX(UnitGetPosition(GhostOps_SquadUnit(0))), 1) + "," + FixedToString(PointGetY(UnitGetPosition(GhostOps_SquadUnit(0))), 1) + " orders " + IntToString(UnitOrderCount(GhostOps_SquadUnit(0)));
+        lv_i = 0;
+        while (lv_i < UnitOrderCount(GhostOps_SquadUnit(0))) {
+            lv_t = lv_t + " | " + AbilityCommandGetAbility(OrderGetAbilityCommand(UnitOrder(GhostOps_SquadUnit(0), lv_i)));
+            if (OrderGetTargetPosition(UnitOrder(GhostOps_SquadUnit(0), lv_i)) != null) {
+                lv_t = lv_t + " to " + FixedToString(PointGetX(OrderGetTargetPosition(UnitOrder(GhostOps_SquadUnit(0), lv_i))), 1) + "," + FixedToString(PointGetY(OrderGetTargetPosition(UnitOrder(GhostOps_SquadUnit(0), lv_i))), 1);
+            }
+
+            lv_i += 1;
+        }
+
+        lv_t = lv_t + " | catalog Snipe Range " + CatalogFieldValueGet(c_gameCatalogAbil, "Snipe", "Range", 1) + " TargetFilters " + CatalogFieldValueGet(c_gameCatalogAbil, "Snipe", "TargetFilters", 1) + " CastIntro " + CatalogFieldValueGet(c_gameCatalogAbil, "Snipe", "CastIntroTime", 1);
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "cdumx") {
+        // cdumx: the dummies of cdum are removed (nothing is left for the Firebat to flame)
+        lv_i = 0;
+        while (lv_i < go_rDumN) {
+            if (go_rDum[lv_i] != null) {
+                UnitRemove(go_rDum[lv_i]);
+            }
+
+            lv_i += 1;
+        }
+
+        go_rDumN = 0;
+        GhostOps_Ce0_Write("j", "CDUMX dummies removed");
+        return true;
+    }
+
+    if (lp_cmd == "cdum") {
+        // cdum <i>: two paused enemy Ultralisks (life 500): one 1.5 cells and one 7 cells east of container i (inside / outside the blast radius 3)
+        lv_p = UnitGetPosition(GhostOps_Hanson_ContNth(StringToInt(lp_a)));
+        go_rDumN = 2;
+        UnitCreate(1, "Ultralisk", c_unitCreateIgnorePlacement, 2, PointWithOffset(lv_p, 1.5, 0.0), 270.0);
+        go_rDum[0] = UnitLastCreated();
+        UnitCreate(1, "Ultralisk", c_unitCreateIgnorePlacement, 2, PointWithOffset(lv_p, 7.0, 0.0), 270.0);
+        go_rDum[1] = UnitLastCreated();
+        lv_i = 0;
+        while (lv_i < 2) {
+            go_rDumLife[lv_i] = UnitGetPropertyFixed(go_rDum[lv_i], c_unitPropLife, c_unitPropCurrent);
+            libNtve_gf_PauseUnit(go_rDum[lv_i], true);
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", "CDUM near/far dummies at container " + lp_a);
+        return true;
+    }
+
+    if (lp_cmd == "ngcl") {
+        // ngcl <i>: Ghost 0 stands 6 cells west of container i and is the only selected unit, the camera is on the container (the player aims with the real keys)
+        lv_p = UnitGetPosition(GhostOps_Hanson_ContNth(StringToInt(lp_a)));
+        if (lp_b != "") {
+            UnitSetPosition(GhostOps_SquadUnit(0), PointWithOffset(lv_p, -StringToFixed(lp_b), 0.0), false);
+        }
+        else {
+            UnitSetPosition(GhostOps_SquadUnit(0), PointWithOffset(lv_p, -6.0, 0.0), false);
+        }
+
+        UnitIssueOrder(GhostOps_SquadUnit(0), Order(AbilityCommand("stop", 0)), c_orderQueueReplace);
+        UnitClearSelection(1);
+        UnitSelect(GhostOps_SquadUnit(0), 1, true);
+        CameraPan(1, lv_p, 0.0, -1.0, 10.0, false);
+        GhostOps_Ce0_Write("j", "NGCL ghost 0 at " + FixedToString(PointGetX(UnitGetPosition(GhostOps_SquadUnit(0))), 1) + "," + FixedToString(PointGetY(UnitGetPosition(GhostOps_SquadUnit(0))), 1) + " energy " + FixedToString(UnitGetPropertyFixed(GhostOps_SquadUnit(0), c_unitPropEnergy, c_unitPropCurrent), 0) + " camera on container " + lp_a + " at " + FixedToString(PointGetX(lv_p), 1) + "," + FixedToString(PointGetY(lv_p), 1));
+        return true;
+    }
+
     if (lp_cmd == "rdmg") {
         lv_t = "";
         lv_i = 0;
@@ -926,7 +1014,7 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
             lv_i += 1;
         }
 
-        GhostOps_Ce0_Write("j", "RCD " + lv_t + "shots " + IntToString(go_hShotCount) + " gas " + IntToString(GhostOps_Hanson_Gas()));
+        GhostOps_Ce0_Write("j", "RCD " + lv_t + "energy g0 " + FixedToString(UnitGetPropertyFixed(GhostOps_SquadUnit(0), c_unitPropEnergy, c_unitPropCurrent), 0) + " | shots " + IntToString(go_hShotCount) + " gas " + IntToString(GhostOps_Hanson_Gas()));
         return true;
     }
 

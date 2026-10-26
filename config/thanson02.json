@@ -538,7 +538,7 @@
   "default_preset": "epidemic_free_r3",
   "presets": {
     "epidemic_free": {
-      "label": "Эпидемия — Тест: бесплатный отряд (ревизия 1)",
+      "label": "Эпидемия — Тест: бесплатный отряд (ревизия 1, прежняя)",
       "message": "Ghost Ops — Эпидемия, тест: бесплатный отряд",
       "message_en": "Ghost Ops - Epidemic, test: free squad",
       "experimental": true,
@@ -550,7 +550,7 @@
       "overrides": {}
     },
     "epidemic_free_r2": {
-      "label": "Эпидемия — Тест: бесплатный отряд (ревизия 2)",
+      "label": "Эпидемия — Тест: бесплатный отряд (ревизия 2, прежняя)",
       "message": "Ghost Ops — Эпидемия, тест: бесплатный отряд, ревизия 2",
       "message_en": "Ghost Ops - Epidemic, test: free squad, revision 2",
       "experimental": true,

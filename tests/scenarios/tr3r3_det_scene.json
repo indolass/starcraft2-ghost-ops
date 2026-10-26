@@ -1,0 +1,518 @@
+{
+ "name": "tr3r3_det_scene",
+ "mission": "traynor03",
+ "preset": "defence_r4_dev",
+ "why": "a real attacker (Hydralisk) shoots the visible control Bunker and the cloaked Ghost only when it is detected: border of the shown circle vs real detection, static and moving Overseer, selection, load",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "dst",
+   "grep": "DST2 landing \\d+ marines 16 ghosts 2",
+   "every": 6,
+   "timeout": 260
+  },
+  {
+   "op": "cmd",
+   "text": "cleane",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "ghold",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "pausem",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "nofoe",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "selonly Marine",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "dsc 30",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "dsmv 30",
+   "wait": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "dsgo",
+   "wait": 0.3
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "dspause",
+   "wait": 0.3
+  },
+  {
+   "op": "sleep",
+   "s": 0.9
+  },
+  {
+   "op": "cmd",
+   "text": "dsm",
+   "wait": 0.3
+  },
+  {
+   "op": "cmd",
+   "text": "dsheal",
+   "wait": 0.6
+  },
+  {
+   "op": "cmd",
+   "text": "dsmv 12.5",
+   "wait": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "dsgo",
+   "wait": 0.3
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "dspause",
+   "wait": 0.3
+  },
+  {
+   "op": "sleep",
+   "s": 0.9
+  },
+  {
+   "op": "cmd",
+   "text": "dsm",
+   "wait": 0.3
+  },
+  {
+   "op": "cmd",
+   "text": "dsheal",
+   "wait": 0.6
+  },
+  {
+   "op": "cmd",
+   "text": "dsmv 11.3",
+   "wait": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "dsgo",
+   "wait": 0.3
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "dspause",
+   "wait": 0.3
+  },
+  {
+   "op": "sleep",
+   "s": 0.9
+  },
+  {
+   "op": "cmd",
+   "text": "dsm",
+   "wait": 0.3
+  },
+  {
+   "op": "cmd",
+   "text": "dsheal",
+   "wait": 0.6
+  },
+  {
+   "op": "cmd",
+   "text": "dsmv 11.1",
+   "wait": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "dsgo",
+   "wait": 0.3
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "dspause",
+   "wait": 0.3
+  },
+  {
+   "op": "sleep",
+   "s": 0.9
+  },
+  {
+   "op": "cmd",
+   "text": "dsm",
+   "wait": 0.3
+  },
+  {
+   "op": "cmd",
+   "text": "dsheal",
+   "wait": 0.6
+  },
+  {
+   "op": "cmd",
+   "text": "dsmv 10.9",
+   "wait": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "dsgo",
+   "wait": 0.3
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "dspause",
+   "wait": 0.3
+  },
+  {
+   "op": "sleep",
+   "s": 0.9
+  },
+  {
+   "op": "cmd",
+   "text": "dsm",
+   "wait": 0.3
+  },
+  {
+   "op": "cmd",
+   "text": "dsheal",
+   "wait": 0.6
+  },
+  {
+   "op": "cmd",
+   "text": "dsmv 10.5",
+   "wait": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "dsgo",
+   "wait": 0.3
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "dspause",
+   "wait": 0.3
+  },
+  {
+   "op": "sleep",
+   "s": 0.9
+  },
+  {
+   "op": "cmd",
+   "text": "dsm",
+   "wait": 0.3
+  },
+  {
+   "op": "cmd",
+   "text": "dsheal",
+   "wait": 0.6
+  },
+  {
+   "op": "cmd",
+   "text": "dsmv 9.0",
+   "wait": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "dsgo",
+   "wait": 0.3
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "dspause",
+   "wait": 0.3
+  },
+  {
+   "op": "sleep",
+   "s": 0.9
+  },
+  {
+   "op": "cmd",
+   "text": "dsm",
+   "wait": 0.3
+  },
+  {
+   "op": "cmd",
+   "text": "dsheal",
+   "wait": 0.6
+  },
+  {
+   "op": "shot",
+   "file": "ds_inside.png"
+  },
+  {
+   "op": "cmd",
+   "text": "selghosts",
+   "wait": 1.2
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "shot",
+   "file": "ds_circle.png"
+  },
+  {
+   "op": "cmd",
+   "text": "dsmv 9.0",
+   "wait": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "dsgo",
+   "wait": 0.3
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "dspause",
+   "wait": 0.3
+  },
+  {
+   "op": "sleep",
+   "s": 0.9
+  },
+  {
+   "op": "cmd",
+   "text": "dsm",
+   "wait": 0.3
+  },
+  {
+   "op": "cmd",
+   "text": "dsheal",
+   "wait": 0.6
+  },
+  {
+   "op": "cmd",
+   "text": "selonly Marine",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "dsmv 9.0",
+   "wait": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "dsgo",
+   "wait": 0.3
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "dspause",
+   "wait": 0.3
+  },
+  {
+   "op": "sleep",
+   "s": 0.9
+  },
+  {
+   "op": "cmd",
+   "text": "dsm",
+   "wait": 0.3
+  },
+  {
+   "op": "cmd",
+   "text": "dsheal",
+   "wait": 0.6
+  },
+  {
+   "op": "cmd",
+   "text": "dsmv 12.5",
+   "wait": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "dsgo",
+   "wait": 0.3
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "dspause",
+   "wait": 0.3
+  },
+  {
+   "op": "sleep",
+   "s": 0.9
+  },
+  {
+   "op": "cmd",
+   "text": "dsm",
+   "wait": 0.3
+  },
+  {
+   "op": "cmd",
+   "text": "dsheal",
+   "wait": 0.6
+  },
+  {
+   "op": "save",
+   "name": "CE0_TR3_DS"
+  },
+  {
+   "op": "load",
+   "name": "CE0_TR3_DS"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "dsmv 9.0",
+   "wait": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "dsgo",
+   "wait": 0.3
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "dspause",
+   "wait": 0.3
+  },
+  {
+   "op": "sleep",
+   "s": 0.9
+  },
+  {
+   "op": "cmd",
+   "text": "dsm",
+   "wait": 0.3
+  },
+  {
+   "op": "cmd",
+   "text": "dsheal",
+   "wait": 0.6
+  },
+  {
+   "op": "cmd",
+   "text": "dsmv 12.5",
+   "wait": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "dsgo",
+   "wait": 0.3
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "dspause",
+   "wait": 0.3
+  },
+  {
+   "op": "sleep",
+   "s": 0.9
+  },
+  {
+   "op": "cmd",
+   "text": "dsm",
+   "wait": 0.3
+  },
+  {
+   "op": "cmd",
+   "text": "dsheal",
+   "wait": 0.6
+  },
+  {
+   "op": "cmd",
+   "text": "dsgo",
+   "wait": 0.4
+  },
+  {
+   "op": "cmd",
+   "text": "dsmove 16",
+   "wait": 0.4
+  },
+  {
+   "op": "sleep",
+   "s": 14
+  },
+  {
+   "op": "expect",
+   "regex": "DSC scene|DSM d=|DSMV overseer",
+   "note": "controlled detector scene"
+  },
+  {
+   "op": "expect",
+   "regex": "DSMV t=",
+   "note": "moving detector"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

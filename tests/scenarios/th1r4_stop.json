@@ -1,0 +1,225 @@
+{
+ "name": "th1r4_stop",
+ "mission": "thanson01",
+ "preset": "sniper_next_r4_ce0_dev",
+ "why": "stop pressed at several moments after the shot click: shots and cooldown",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 6
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "nstat",
+   "grep": "NSTAT ghosts 2 firebats 2",
+   "every": 5,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "rselg 0",
+   "wait": 1.3
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "cmd",
+   "text": "rcd",
+   "wait": 0.6
+  },
+  {
+   "op": "key",
+   "keys": [
+    "R"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.4
+  },
+  {
+   "op": "click",
+   "x": 752,
+   "y": 384
+  },
+  {
+   "op": "sleep",
+   "s": 0.12
+  },
+  {
+   "op": "key",
+   "keys": [
+    "S"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.3
+  },
+  {
+   "op": "cmd",
+   "text": "rcd",
+   "wait": 0.6
+  },
+  {
+   "op": "sleep",
+   "s": 2.6
+  },
+  {
+   "op": "cmd",
+   "text": "rcd",
+   "wait": 0.4
+  },
+  {
+   "op": "key",
+   "keys": [
+    "R"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.4
+  },
+  {
+   "op": "click",
+   "x": 752,
+   "y": 384
+  },
+  {
+   "op": "sleep",
+   "s": 0.25
+  },
+  {
+   "op": "key",
+   "keys": [
+    "S"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.3
+  },
+  {
+   "op": "cmd",
+   "text": "rcd",
+   "wait": 0.6
+  },
+  {
+   "op": "sleep",
+   "s": 2.6
+  },
+  {
+   "op": "cmd",
+   "text": "rcd",
+   "wait": 0.4
+  },
+  {
+   "op": "key",
+   "keys": [
+    "R"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.4
+  },
+  {
+   "op": "click",
+   "x": 752,
+   "y": 384
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "S"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.3
+  },
+  {
+   "op": "cmd",
+   "text": "rcd",
+   "wait": 0.6
+  },
+  {
+   "op": "sleep",
+   "s": 2.6
+  },
+  {
+   "op": "cmd",
+   "text": "rcd",
+   "wait": 0.4
+  },
+  {
+   "op": "key",
+   "keys": [
+    "R"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.4
+  },
+  {
+   "op": "click",
+   "x": 752,
+   "y": 384
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "S"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.3
+  },
+  {
+   "op": "cmd",
+   "text": "rcd",
+   "wait": 0.6
+  },
+  {
+   "op": "sleep",
+   "s": 2.6
+  },
+  {
+   "op": "cmd",
+   "text": "rcd",
+   "wait": 0.4
+  },
+  {
+   "op": "expect",
+   "regex": "RCD ",
+   "note": "after a shot and a stop at 0.12 / 0.25 / 0.5 / 0.8 s: shots and cooldown"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

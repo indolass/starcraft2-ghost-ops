@@ -1,7 +1,7 @@
 {
  "name": "tr3r3_rebels",
  "mission": "traynor03",
- "preset": "defence_r3_dev",
+ "preset": "defence_r4_dev",
  "why": "the original rescue of a rebel group calls the hook: labels Rebel / Rebel medic over the fighters only, once, after a load again but not doubled",
  "steps": [
   {

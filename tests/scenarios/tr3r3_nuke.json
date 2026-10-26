@@ -1,7 +1,7 @@
 {
  "name": "tr3r3_nuke",
  "mission": "traynor03",
- "preset": "defence_r3_dev",
+ "preset": "defence_r4_dev",
  "why": "the nuclear strike of revision 3: range 48 from a safe distance, the real key N and a minimap click, cancel does not spend, two real launches, no third, a load does not duplicate, the area against the real Hatcheries and meter units",
  "steps": [
   {

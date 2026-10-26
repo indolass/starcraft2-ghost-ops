@@ -1110,8 +1110,8 @@ def validate_ghost_tuning(gt):
     rs = sn.get('rifle_shot')
     if rs is not None:
         if not (isinstance(rs, dict) and set(rs) == {'range', 'assist_radius', 'ability_range', 'texts'} and _num(rs.get('range')) and 3 <= rs['range'] <= 20 and _num(rs.get('assist_radius')) and 0 <= rs['assist_radius'] <= 5
-                and _num(rs.get('ability_range')) and rs['ability_range'] >= rs.get('range', 0) and rs['ability_range'] <= 100):
-            errs.append('ghost_tuning.snipe.rifle_shot needs range 3..20, assist_radius 0..5, ability_range (range..100, long: the Ghost never walks) and texts')
+                and _num(rs.get('ability_range')) and rs['ability_range'] >= rs.get('range', 0) and rs['ability_range'] <= 1000):
+            errs.append('ghost_tuning.snipe.rifle_shot needs range 3..20, assist_radius 0..5, ability_range (range..1000: far beyond any map, like the 500 of MULE / Scanner Sweep, so that the engine never walks the Ghost to the click) and texts')
         else:
             tx = rs['texts']
             if not (isinstance(tx, dict) and set(tx) == {'Name', 'Tip'} and all(isinstance(v, dict) and all(isinstance(v.get(l), str) and v[l] for l in ('ru', 'en')) for v in tx.values())):
@@ -1380,7 +1380,7 @@ def tactical_fragments(t, gt=None):
             '    <CAbilEffectTarget id="TacNukeStrike">',
             '        <Range index="0" value="%s"/>' % g(n['range']),
             '        <FinishTime value="0"/>',
-        ] + (['        <Flags index="RequireTargetVision" value="1"/>'] if n.get('require_vision') else []) + [
+        ] + (['        <Flags index="RequireTargetVision" value="%d"/>' % (1 if n['require_vision'] else 0)] if 'require_vision' in n else []) + [
             '    </CAbilEffectTarget>'] + abil_extra + ['']),
         'EffectData.xml': nl.join([
             '    <CEffectCreatePersistent id="NukePersistent">',

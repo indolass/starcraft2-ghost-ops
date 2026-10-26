@@ -1210,8 +1210,18 @@ int go_r3N;
 void GhostOps_Ce0_R3Add (string lp_type, int lp_owner, point lp_pos, string lp_tag) {
     UnitCreate(1, lp_type, c_unitCreateIgnorePlacement, lp_owner, lp_pos, 270.0);
     go_r3Dum[go_r3N] = UnitLastCreated();
+    if (lp_type == "Ultralisk") {
+        // a big life: a hit that would kill an ordinary Ultralisk is still MEASURED (the life lost tells the damage of the zone)
+        UnitSetPropertyFixed(UnitLastCreated(), c_unitPropLifeMax, 4000.0);
+        UnitSetPropertyFixed(UnitLastCreated(), c_unitPropLife, 4000.0);
+    }
+
     go_r3Life[go_r3N] = UnitGetPropertyFixed(UnitLastCreated(), c_unitPropLife, c_unitPropCurrent);
     go_r3Tag[go_r3N] = lp_tag;
+    if (go_dumG != null) {
+        UnitGroupAdd(go_dumG, UnitLastCreated());
+    }
+
     libNtve_gf_PauseUnit(UnitLastCreated(), true);
     go_r3N += 1;
 }
@@ -1234,7 +1244,7 @@ bool GhostOps_Ce0_R3Cmd (string lp_cmd, string lp_a, string lp_b) {
             lv_i += 1;
         }
 
-        lv_t = lv_t + " | labels " + IntToString(go_tacRebCount) + " rescued " + IntToString(UnitGroupCount(go_tacRescued, c_unitCountAlive)) + " | nuke ability range " + CatalogFieldValueGet(c_gameCatalogAbil, "TacNukeStrike", "Range[0]", 1);
+        lv_t = lv_t + " | ghosts alive " + IntToString(GhostOps_Ce0_B(UnitIsAlive(GhostOps_SquadUnit(0)))) + IntToString(GhostOps_Ce0_B(UnitIsAlive(GhostOps_SquadUnit(1)))) + " | labels " + IntToString(go_tacRebCount) + " rescued " + IntToString(UnitGroupCount(go_tacRescued, c_unitCountAlive)) + " | nuke ability range " + CatalogFieldValueGet(c_gameCatalogAbil, "TacNukeStrike", "Range[0]", 1);
         lv_t = lv_t + " | gren abil exists " + IntToString(GhostOps_Ce0_B(UnitAbilityExists(go_tacSpotter, "GhostOpsArmorPiercing"))) + IntToString(GhostOps_Ce0_B(UnitAbilityExists(go_tacOperative, "GhostOpsArmorPiercing"))) + " enabled " + IntToString(GhostOps_Ce0_B(UnitAbilityCheck(go_tacSpotter, "GhostOpsArmorPiercing", true))) + IntToString(GhostOps_Ce0_B(UnitAbilityCheck(go_tacOperative, "GhostOpsArmorPiercing", true))) + " grenade flags " + IntToString(GhostOps_Ce0_B(go_tacGrenade)) + IntToString(GhostOps_Ce0_B(go_tacGrenBoth));
         GhostOps_Ce0_Write("j", lv_t);
         return true;
@@ -1335,6 +1345,13 @@ bool GhostOps_Ce0_R3Cmd (string lp_cmd, string lp_a, string lp_b) {
         UnitAbilityEnable(GhostOps_SquadUnit(0), "GhostOpsArmorPiercing", true);
         UnitAbilityEnable(GhostOps_SquadUnit(1), "GhostOpsArmorPiercing", true);
         GhostOps_Ce0_Write("j", "GALLOW applied");
+        return true;
+    }
+
+    if (lp_cmd == "slow") {
+        // slow <scale>: the whole game runs at that time scale (dev only: the frames of a projectile / a blast are caught by the screenshots)
+        GameSetGlobalTimeScale(StringToFixed(lp_a));
+        GhostOps_Ce0_Write("j", "SLOW time scale " + lp_a);
         return true;
     }
 
@@ -1535,6 +1552,160 @@ bool GhostOps_Ce0_R3Cmd (string lp_cmd, string lp_a, string lp_b) {
     return false;
 }
 
+// the controlled detector scene (dev only): an enemy Hydralisk (invulnerable, ranged) next to the Ghost, an own Marine as the VISIBLE control target, an enemy Overseer at a chosen distance.
+// The Hydralisk shoots the Marine whenever it can; it shoots the Ghost only when the Ghost is DETECTED: the life lost by the Ghost in a window is the measure of the real detection.
+unit go_dsG;
+unit go_dsH;
+unit go_dsM;
+unit go_dsO;
+fixed go_dsGl;
+fixed go_dsMl;
+int go_dsTick;
+trigger go_dsTrig;
+
+bool GhostOps_Ce0_DsTick (bool lp_test, bool lp_run) {
+    if (!lp_run) {
+        return true;
+    }
+
+    go_dsTick += 1;
+    GhostOps_Ce0_Write("j", "DSMV t=" + FixedToString(GameGetMissionTime(), 1) + " d=" + FixedToString(DistanceBetweenPoints(UnitGetPosition(go_dsO), UnitGetPosition(go_dsG)), 2) + " ghost lost " + FixedToString(go_dsGl - UnitGetPropertyFixed(go_dsG, c_unitPropLife, c_unitPropCurrent), 0) + " bunker lost " + FixedToString(go_dsMl - UnitGetPropertyFixed(go_dsM, c_unitPropLife, c_unitPropCurrent), 0));
+    UnitSetPropertyFixed(go_dsG, c_unitPropLife, UnitGetPropertyFixed(go_dsG, c_unitPropLifeMax, c_unitPropCurrent));
+    UnitSetPropertyFixed(go_dsM, c_unitPropLife, UnitGetPropertyFixed(go_dsM, c_unitPropLifeMax, c_unitPropCurrent));
+    go_dsGl = UnitGetPropertyFixed(go_dsG, c_unitPropLife, c_unitPropCurrent);
+    go_dsMl = UnitGetPropertyFixed(go_dsM, c_unitPropLife, c_unitPropCurrent);
+    if (go_dsTick >= 48) {
+        TriggerDestroy(go_dsTrig);
+    }
+
+    return true;
+}
+
+int GhostOps_Ce0_DsAround () {
+    int lv_i;
+    int lv_n;
+
+    lv_n = 0;
+    lv_i = 2;
+    while (lv_i <= 5) {
+        lv_n += UnitGroupCount(UnitGroup(null, lv_i, RegionCircle(UnitGetPosition(go_dsG), 14.0), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive);
+        lv_i += 1;
+    }
+
+    return lv_n;
+}
+
+bool GhostOps_Ce0_DsCmd (string lp_cmd, string lp_a, string lp_b) {
+    point lv_p;
+
+    if (lp_cmd == "dsc") {
+        // dsc <dx>: the scene; the Ghost 0 is the subject (its life 3000), the Hydralisk is paused until dsgo
+        go_dsG = GhostOps_SquadUnit(0);
+        lv_p = UnitGetPosition(go_dsG);
+        UnitCreate(1, "Hydralisk", c_unitCreateIgnorePlacement, 2, PointWithOffset(lv_p, 0.0, -3.0), 270.0);
+        go_dsH = UnitLastCreated();
+        UnitSetState(go_dsH, c_unitStateInvulnerable, true);
+        libNtve_gf_PauseUnit(go_dsH, true);
+        UnitCreate(1, "Marine", c_unitCreateIgnorePlacement, 1, PointWithOffset(lv_p, 0.0, -9.0), 270.0);
+        go_dsM = UnitLastCreated();
+        libNtve_gf_PauseUnit(go_dsM, true);
+        UnitCreate(1, "Overseer", c_unitCreateIgnorePlacement, 2, PointWithOffset(lv_p, StringToFixed(lp_a), 0.0), 270.0);
+        go_dsO = UnitLastCreated();
+        UnitIssueOrder(go_dsO, Order(AbilityCommand("stop", 0)), c_orderQueueReplace);
+        if (go_dumG != null) {
+            UnitGroupAdd(go_dumG, go_dsH);
+            UnitGroupAdd(go_dumG, go_dsO);
+        }
+
+        go_dsGl = UnitGetPropertyFixed(go_dsG, c_unitPropLife, c_unitPropCurrent);
+        go_dsMl = UnitGetPropertyFixed(go_dsM, c_unitPropLife, c_unitPropCurrent);
+        GhostOps_Ce0_Write("j", "DSC scene: ghost " + FixedToString(PointGetX(lv_p), 1) + "," + FixedToString(PointGetY(lv_p), 1) + " hydra 3 N, marine 9 N, overseer " + lp_a + " E, radar " + IntToString(UnitBehaviorCount(go_dsG, "HeroDetectorRadar")));
+        return true;
+    }
+
+    if (lp_cmd == "dsgo") {
+        libNtve_gf_PauseUnit(go_dsH, false);
+        UnitIssueOrder(go_dsH, OrderTargetingPoint(AbilityCommand("attack", 0), UnitGetPosition(go_dsG)), c_orderQueueReplace);
+        GhostOps_Ce0_Write("j", "DSGO hydralisk released");
+        return true;
+    }
+
+    if (lp_cmd == "dspause") {
+        libNtve_gf_PauseUnit(go_dsH, true);
+        GhostOps_Ce0_Write("j", "DSPAUSE hydralisk paused");
+        return true;
+    }
+
+    if (lp_cmd == "dsheal") {
+        // the Ghost and the bunker are restored to full life and the baselines are reset (a window must never kill the subject)
+        UnitSetPropertyFixed(go_dsG, c_unitPropLife, UnitGetPropertyFixed(go_dsG, c_unitPropLifeMax, c_unitPropCurrent));
+        UnitSetPropertyFixed(go_dsM, c_unitPropLife, UnitGetPropertyFixed(go_dsM, c_unitPropLifeMax, c_unitPropCurrent));
+        go_dsGl = UnitGetPropertyFixed(go_dsG, c_unitPropLife, c_unitPropCurrent);
+        go_dsMl = UnitGetPropertyFixed(go_dsM, c_unitPropLife, c_unitPropCurrent);
+        GhostOps_Ce0_Write("j", "DSHEAL restored: ghost " + FixedToString(go_dsGl, 0) + " bunker " + FixedToString(go_dsMl, 0));
+        return true;
+    }
+
+    if (lp_cmd == "dsmv") {
+        // dsmv <dx>: the Overseer is put at dx cells east of the Ghost (paused), the baselines are reset
+        UnitSetPosition(go_dsO, PointWithOffset(UnitGetPosition(go_dsG), StringToFixed(lp_a), 0.0), false);
+        UnitIssueOrder(go_dsO, Order(AbilityCommand("stop", 0)), c_orderQueueReplace);
+        go_dsGl = UnitGetPropertyFixed(go_dsG, c_unitPropLife, c_unitPropCurrent);
+        go_dsMl = UnitGetPropertyFixed(go_dsM, c_unitPropLife, c_unitPropCurrent);
+        GhostOps_Ce0_Write("j", "DSMV overseer at d=" + FixedToString(DistanceBetweenPoints(UnitGetPosition(go_dsO), UnitGetPosition(go_dsG)), 2));
+        return true;
+    }
+
+    if (lp_cmd == "dsm") {
+        // dsm: the life lost since the last reset by the Ghost and by the control Marine; the distance of the Overseer; the radar
+        GhostOps_Ce0_Write("j", "DSM d=" + FixedToString(DistanceBetweenPoints(UnitGetPosition(go_dsO), UnitGetPosition(go_dsG)), 2) + " ghost lost " + FixedToString(go_dsGl - UnitGetPropertyFixed(go_dsG, c_unitPropLife, c_unitPropCurrent), 0) + " bunker lost " + FixedToString(go_dsMl - UnitGetPropertyFixed(go_dsM, c_unitPropLife, c_unitPropCurrent), 0) + " radar " + IntToString(UnitBehaviorCount(go_dsG, "HeroDetectorRadar")) + " circle " + IntToString(UnitBehaviorCount(go_dsO, "HeroDetectorRadarDetected")) + " | ghost alive " + IntToString(GhostOps_Ce0_B(UnitIsAlive(go_dsG))) + " bunker alive " + IntToString(GhostOps_Ce0_B(UnitIsAlive(go_dsM))) + " hydra orders " + IntToString(UnitOrderCount(go_dsH)) + " enemy units within 14: " + IntToString(GhostOps_Ce0_DsAround()));
+        go_dsGl = UnitGetPropertyFixed(go_dsG, c_unitPropLife, c_unitPropCurrent);
+        go_dsMl = UnitGetPropertyFixed(go_dsM, c_unitPropLife, c_unitPropCurrent);
+        return true;
+    }
+
+    if (lp_cmd == "dsmove") {
+        // dsmove <dx>: the Overseer starts dx cells east, FLIES to the Ghost; every 0.25 s the distance and the lives are logged (12 s)
+        UnitSetPosition(go_dsO, PointWithOffset(UnitGetPosition(go_dsG), StringToFixed(lp_a), 0.0), false);
+        go_dsGl = 3000.0;
+        go_dsMl = 3000.0;
+        go_dsGl = UnitGetPropertyFixed(go_dsG, c_unitPropLife, c_unitPropCurrent);
+        go_dsMl = UnitGetPropertyFixed(go_dsM, c_unitPropLife, c_unitPropCurrent);
+        UnitIssueOrder(go_dsO, OrderTargetingPoint(AbilityCommand("move", 0), PointWithOffset(UnitGetPosition(go_dsG), -2.0, 0.0)), c_orderQueueReplace);
+        go_dsTick = 0;
+        go_dsTrig = TriggerCreate("GhostOps_Ce0_DsTick");
+        TriggerAddEventTimePeriodic(go_dsTrig, 0.25, c_timeGame);
+        GhostOps_Ce0_Write("j", "DSMOVE overseer flying from " + lp_a);
+        return true;
+    }
+
+    return false;
+}
+
+bool GhostOps_Ce0_GDie (bool lp_test, bool lp_run) {
+    unit lv_u;
+    unit lv_k;
+    string lv_ks;
+
+    if (!lp_run) {
+        return true;
+    }
+
+    lv_u = EventUnit();
+    if ((lv_u == null) || (UnitGetType(lv_u) != "Ghost")) {
+        return true;
+    }
+
+    lv_k = EventUnitDamageSourceUnit();
+    lv_ks = "none";
+    if (lv_k != null) {
+        lv_ks = UnitGetType(lv_k) + " owner " + IntToString(UnitGetOwner(lv_k));
+    }
+
+    GhostOps_Ce0_Write("j", "GDIE a Ghost died at " + FixedToString(PointGetX(UnitGetPosition(lv_u)), 1) + "," + FixedToString(PointGetY(UnitGetPosition(lv_u)), 1) + " t=" + FixedToString(GameGetMissionTime(), 1) + " killer: " + lv_ks + " state " + IntToString(go_tacState) + " launches " + IntToString(go_tacLaunches));
+    return true;
+}
+
 bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
     int lv_i;
     unit lv_g1;
@@ -1547,6 +1718,16 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
     }
 
     if (GhostOps_Ce0_R3Cmd(lp_cmd, lp_a, lp_b)) {
+        return true;
+    }
+
+    if (GhostOps_Ce0_DsCmd(lp_cmd, lp_a, lp_b)) {
+        return true;
+    }
+
+    if (lp_cmd == "gwatch") {
+        TriggerAddEventUnitDied(TriggerCreate("GhostOps_Ce0_GDie"), null);
+        GhostOps_Ce0_Write("j", "GWATCH watching the deaths of Ghosts");
         return true;
     }
 

@@ -1,7 +1,7 @@
 {
  "name": "tr3r3_core",
  "mission": "traynor03",
- "preset": "defence_r3_dev",
+ "preset": "defence_r4_dev",
  "why": "r3 starts; panel lines, garrison damage x1 inside the zone and no weapon outside, labels of rescued units (not buildings)",
  "steps": [
   {

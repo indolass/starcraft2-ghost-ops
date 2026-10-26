@@ -1,7 +1,7 @@
 {
  "name": "tr3r3_marks",
  "mission": "traynor03",
- "preset": "defence_r3_dev",
+ "preset": "defence_r4_dev",
  "why": "targets: one announcement, one short reveal, persistent marks that follow the targets, nothing repeated by the timer or by a load",
  "steps": [
   {

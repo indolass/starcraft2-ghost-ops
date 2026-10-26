@@ -1,0 +1,124 @@
+{
+ "name": "tr3r3_grenvis",
+ "mission": "traynor03",
+ "preset": "defence_r4_dev",
+ "why": "frames of the grenade projectile and its blast at a slowed game (the real key G + click)",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "dst",
+   "grep": "DST2 landing \\d+ marines 16 ghosts 2",
+   "every": 6,
+   "timeout": 260
+  },
+  {
+   "op": "cmd",
+   "text": "cleane",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "tpause",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "gsel1 33.0 29.5",
+   "wait": 1.4
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "sleep",
+   "s": 16
+  },
+  {
+   "op": "cmd",
+   "text": "gsel1 33.0 29.5",
+   "wait": 1.4
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "cmd",
+   "text": "tlife 88",
+   "wait": 1.4
+  },
+  {
+   "op": "shot",
+   "file": "v0_ready.png"
+  },
+  {
+   "op": "cmd",
+   "text": "slow 0.06",
+   "wait": 0.5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "G"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.3
+  },
+  {
+   "op": "click",
+   "x": 296,
+   "y": 384
+  },
+  {
+   "op": "burst",
+   "file": "v1_throw_",
+   "n": 40
+  },
+  {
+   "op": "cmd",
+   "text": "slow 1.0",
+   "wait": 0.5
+  },
+  {
+   "op": "sleep",
+   "s": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "tlife 88",
+   "wait": 1.4
+  },
+  {
+   "op": "burst",
+   "file": "v2_after_",
+   "n": 2
+  },
+  {
+   "op": "expect",
+   "regex": "TLIFE 88",
+   "note": "the hatchery life before and after"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

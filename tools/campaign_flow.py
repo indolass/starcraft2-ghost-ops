@@ -16,8 +16,8 @@ import campaign
 # missions that take part in the campaign sequence, in the order of the first economy experiment
 SEQUENCE = [
     {'mission': 'traynor02', 'preset': 'tactical_next', 'title': 'Вне закона', 'order': False},  # the current version (the earlier operations keep their own profile 'tactical')
-    {'mission': 'traynor03', 'preset': 'defence_next', 'title': 'Час икс', 'order': True},  # the current version; the earlier variants stay selectable in the window
-    {'mission': 'thanson01', 'preset': 'sniper_next_r3', 'title': 'Эвакуация', 'order': True},  # revision 3: turret kits + extra SCVs (earlier operations keep their own profile)  # the current version; the earlier variants stay selectable in the window
+    {'mission': 'traynor03', 'preset': 'defence_r4', 'title': 'Час икс', 'order': True},  # revision 4 = the recommended version of a NEW operation; paid operations keep their own profile (op['profile']); the earlier variants stay selectable in the window
+    {'mission': 'thanson01', 'preset': 'sniper_next_r4', 'title': 'Эвакуация', 'order': True},  # revision 4 (rifle shot never walks; revision 3 stays for paid operations): turret kits + extra SCVs (earlier operations keep their own profile)  # the current version; the earlier variants stay selectable in the window
 ]
 ORDER_LABELS = {'marines': 'Морпехи гарнизона', 'bunkers': 'Бункеры', 'turrets': 'Ракетные турели', 'scvs': 'КСМ для ремонта', 'scvs_extra': 'Дополнительные КСМ', 'turret_kits': 'Комплекты ракетных турелей'}
 PREP_TEXT = 'Закупайтесь сейчас. После высадки новых бойцов нам взять негде. Оставьте достаточно людей для обороны — призракам предстоит работа за периметром.'
