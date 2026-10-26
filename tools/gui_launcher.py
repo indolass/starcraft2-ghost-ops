@@ -295,7 +295,7 @@ def build_app():
                 sel = p['name'] == self.preset
                 f = ctk.CTkFrame(self.cards, fg_color=CARD_HOVER if sel else CARD, corner_radius=10, border_width=2,
                                  border_color=ACCENT if sel else LINE)
-                f.grid(row=0, column=i, sticky='nsew', padx=4, pady=4)
+                f.grid(row=i // 3, column=i % 3, sticky='nsew', padx=4, pady=4)  # three in a row, the rest wrap to the next rows (no card is left out of sight)
                 f.grid_columnconfigure(0, weight=1)
                 name = ctk.CTkLabel(f, text=p['label'], font=(FONT, 16, 'bold'), text_color=TEXT, anchor='w')
                 name.grid(row=0, column=0, sticky='ew', padx=12, pady=(10, 0))
@@ -331,7 +331,7 @@ def build_app():
             self.details.grid(row=3, column=0, sticky='ew', padx=12, pady=(8, 4))
 
         def _relayout_cards(self):
-            """Three cards in a row; stacked when the window is narrow."""
+            """Three cards in a row, further cards wrap to the next row; stacked when the window is narrow."""
             if not self.card_frames:
                 return
             narrow = self.scroll.winfo_width() / (self._get_window_scaling() or 1.0) < 500
@@ -340,7 +340,7 @@ def build_app():
                     f.grid_configure(row=i, column=0)
                     self.cards.grid_columnconfigure(0, weight=1)
                 else:
-                    f.grid_configure(row=0, column=i)
+                    f.grid_configure(row=i // 3, column=i % 3)
 
         def _schedule_resize(self, event=None):
             """Window edges move first, the inner frames follow a moment later: measure after the layout settled."""
