@@ -202,12 +202,17 @@ class Isolation(unittest.TestCase):
             isolation.check_change(m, 'overwritten')
 
     def test_ownership_needs_pid_and_creation_time(self):
-        self.cmds = [(55, '2026-10-21T10:00:00', 'x')]
-        isolation.record_owned(55, 'test')
-        self.assertTrue(isolation.is_owned(55))
-        self.cmds = [(55, '2026-10-21T11:30:00', 'x')]  # the pid was reused by another process
-        self.assertFalse(isolation.is_owned(55))
-        self.assertFalse(isolation.close_owned(55))
+        table = {55: '2026-10-21T10:00:00Z'}
+        old = isolation.process_created
+        isolation.process_created = lambda pid: table.get(pid)
+        try:
+            isolation.record_owned(55, 'test')
+            self.assertTrue(isolation.is_owned(55))
+            table[55] = '2026-10-21T11:30:00Z'  # the pid was reused by another process
+            self.assertFalse(isolation.is_owned(55))
+            self.assertFalse(isolation.close_owned(55))
+        finally:
+            isolation.process_created = old
 
     def test_build_guard_refuses_uninstall_of_a_protected_install(self):
         import build

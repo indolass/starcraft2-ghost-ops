@@ -28,8 +28,8 @@ SWP_NOZORDER, SWP_NOACTIVATE = 0x0004, 0x0010
 
 
 def sc2_pids():
-    out = subprocess.run(['tasklist', '/FI', 'IMAGENAME eq SC2_x64.exe', '/FO', 'CSV', '/NH'], capture_output=True, text=True, creationflags=0x08000000).stdout
-    return [int(l.split(',')[1].strip('"')) for l in out.splitlines() if 'SC2_x64.exe' in l]
+    import procs  # a ToolHelp snapshot: milliseconds (tasklist took up to 25 s while the game ran)
+    return procs.pids_of('SC2_x64.exe')
 
 
 def windows_of(pid):
@@ -108,7 +108,7 @@ def launch_test_game(command, width=1024, height=768, mute_seconds=900):
     LAST.update({'pid': pid, 'monitor': repr(mon), 'second_monitor': second, 'window': win and win['rect'], 'facts': facts, 'command': windowed_command(command, x, y, w, h)})
     print('test game pid %d on %s (%s); window %s; facts %s' % (pid, mon.device, 'second monitor' if second else 'primary: no second monitor', win and win['rect'], facts))
     if not facts.get('ok'):
-        subprocess.run(['taskkill', '/PID', str(pid), '/F'], capture_output=True, creationflags=0x08000000)
+        isolation.close_owned(pid)  # only a verified own test game (pid + creation time)
         print('the test window does not comply with the test rules: closed our own test game, pid', pid)
         return None
     return pid
@@ -223,8 +223,8 @@ def run(mission, preset, seconds, keep=False, width=1024, height=768, shot=None,
             ours = [ln for ln in text.splitlines() if re.search(r'compile|GhostOps|Script load failed', ln)]
             print('ScriptError:', os.path.basename(f), 'lines about our code/compile:', ours[:5])
     if not keep:
-        subprocess.run(['taskkill', '/PID', str(pid), '/T', '/F'], capture_output=True, creationflags=0x08000000)
-        print('closed our own test game, pid', pid)
+        import isolation
+        print('closed our own test game, pid' if isolation.close_owned(pid) else 'NOT closed (not verifiably our own test game), pid', pid)
         if str(preset or '').endswith('_dev') or no_voice:  # a developer map (or the test copy without voice) never stays in the Owner's map list
             time.sleep(2)
             build.uninstall_key(build.key_for(adapter, name), 'dev map')

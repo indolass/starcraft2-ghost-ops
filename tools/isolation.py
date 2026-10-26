@@ -127,11 +127,28 @@ OWNED = os.path.join(ROOT, 'tmp', 'testqueue', 'owned.json')
 
 
 def process_created(pid):
-    """Creation time (ISO text) of a running SC2_x64.exe process, or None when no such process exists."""
-    for p, created, _ in running_commands():
-        if p == pid:
-            return created
-    return None
+    """Creation time (ISO text, UTC) of a running SC2_x64.exe process, or None when no such process exists / is not SC2.
+    Read with GetProcessTimes (milliseconds); the old PowerShell query timed out while the game ran and recorded None, which made the safe cleanup refuse."""
+    import ctypes
+    from ctypes import wintypes
+    import datetime
+    sys.path.insert(0, HERE) if HERE not in sys.path else None
+    import procs
+    if pid not in procs.pids_of('SC2_x64.exe'):
+        return None
+    k = ctypes.windll.kernel32
+    k.OpenProcess.restype = wintypes.HANDLE
+    h = k.OpenProcess(0x1000, False, int(pid))  # PROCESS_QUERY_LIMITED_INFORMATION
+    if not h:
+        return None
+    try:
+        c, e, ke, u = (wintypes.FILETIME() for _ in range(4))
+        if not k.GetProcessTimes(h, ctypes.byref(c), ctypes.byref(e), ctypes.byref(ke), ctypes.byref(u)):
+            return None
+        ticks = (c.dwHighDateTime << 32) | c.dwLowDateTime
+        return (datetime.datetime(1601, 1, 1) + datetime.timedelta(microseconds=ticks // 10)).isoformat() + 'Z'
+    finally:
+        k.CloseHandle(h)
 
 
 def _owned_all():
@@ -144,7 +161,14 @@ def _owned_all():
 
 def record_owned(pid, tag=''):
     """Called by the test-launch guard right after it started a test game: remembers pid + creation time (+ the queue job that asked for it)."""
-    created = process_created(pid)
+    created = None
+    for _ in range(10):  # a record without the creation time can never be closed again: retry instead of recording None
+        created = process_created(pid)
+        if created:
+            break
+        time.sleep(0.5)
+    if not created:
+        return None  # not recorded: nothing will ever close this pid by mistake, and nothing of ours pretends to own it
     rows = [r for r in _owned_all() if r.get('created') != created]
     rows.append({'pid': pid, 'created': created, 'job': os.environ.get('GHOSTOPS_QUEUE_JOB', ''), 'tag': tag, 'recorded': time.strftime('%Y-%m-%d %H:%M:%S')})
     os.makedirs(os.path.dirname(OWNED), exist_ok=True)
