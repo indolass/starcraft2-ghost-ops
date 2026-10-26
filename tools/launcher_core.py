@@ -362,6 +362,12 @@ class BuildBackend:
     def prepare(self, mission, preset, progress):
         return build.prepare(self.args(mission, preset), progress)
 
+    def status(self, mission, preset, game_dir=None):
+        """'ready' (the installed map is the current build: starting needs no build and no copy) or 'needs_build'; fast, reads only hashes."""
+        if game_dir:
+            build.SC2_DIR = game_dir
+        return build.build_status(self.args(mission, preset))
+
     def start(self, mission, preset):
         a = self.args(mission, preset)
         adapter, cfg, name = build.context(a)
@@ -370,6 +376,18 @@ class BuildBackend:
             print('expected installed map is missing: %s' % dest)
             return 8
         return build.start_detached(command, owner=True)
+
+
+STATUS_TEXT = {'ready': 'Готова к запуску', 'needs_build': 'Нужна сборка (карта будет собрана при запуске)', 'building': 'Сборка…', 'unknown': ''}
+
+
+def map_status_text(backend, mission, preset, game_dir=None):
+    """Status line of a card for the launcher; never raises (an unreadable state is simply not shown)."""
+    try:
+        fn = getattr(backend, 'status', None)
+        return STATUS_TEXT.get(fn(mission, preset, game_dir) if fn else 'unknown', '')
+    except Exception:  # noqa: BLE001
+        return ''
 
 
 class Result:
@@ -414,6 +432,7 @@ class Launcher:
                 return self._finish(Result(False, 'У этой миссии нет вариантов сложности.', 'error'))
             self.settings.remember(mission_id, preset)
             self.log('start requested: %s / %s' % (mission_id, preset))
+            t_begin = time.time()
             if self.backend.sc2_running():
                 return self._finish(Result(False, 'StarCraft II уже запущена. Закройте игру самостоятельно и повторите: '
                                            'запускатель никогда не завершает её принудительно.', 'busy-game'))
@@ -427,8 +446,11 @@ class Launcher:
                 if rc != 0:
                     why = [ln.strip() for ln in buf.getvalue().splitlines() if re.search(r'INVALID|FAIL|error|refus|MUST', ln, re.I) or ln.startswith('  tactical')]
                     return self._finish(Result(False, 'Не удалось подготовить карту (код %s).%s' % (rc, (' ' + ' | '.join(why[:2])) if why else ''), 'error', buf.getvalue()))
+                self.log('prepare (build + check + install, or nothing when up to date) took %.1f s' % (time.time() - t_begin))
                 note('start')
+                t_start = time.time()
                 rc = self.backend.start(mission_id, preset)
+                self.log('game process start took %.1f s' % (time.time() - t_start))
             if rc != 0:
                 return self._finish(Result(False, 'Не удалось запустить игру (код %s).' % rc, 'error', buf.getvalue()))
             return self._finish(Result(True, 'Игра запускается. Окно запускателя можно закрыть.', 'ok', buf.getvalue()))

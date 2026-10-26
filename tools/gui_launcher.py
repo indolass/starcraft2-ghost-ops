@@ -6,6 +6,7 @@ import io
 import os
 import queue
 import subprocess
+import threading
 import sys
 import time
 import traceback
@@ -141,10 +142,13 @@ def build_app():
             self.settings_button = ctk.CTkButton(left, text='Настройки', height=34, width=120, corner_radius=8, font=(FONT, 13),
                                                  fg_color='transparent', border_width=1, border_color=LINE, text_color=MUTED,
                                                  hover_color=CARD, command=self.open_settings)
-            self.settings_button.grid(row=5, column=0, sticky='w', padx=14, pady=(0, 14))
+            self.settings_button.grid(row=6, column=0, sticky='w', padx=14, pady=(0, 14))
             self.campaign_button = ctk.CTkButton(left, text='Кампания: Вне закона → Час икс', height=44, corner_radius=10, font=(FONT, 13, 'bold'),
                                                  fg_color=ACCENT_DARK, hover_color=ACCENT, text_color=TEXT, command=self.open_campaign)
-            self.campaign_button.grid(row=4, column=0, sticky='ew', padx=14, pady=(8, 8))
+            self.campaign_button.grid(row=4, column=0, sticky='ew', padx=14, pady=(8, 4))
+            self.workshop_button = ctk.CTkButton(left, text='Мастерская миссий', height=40, corner_radius=10, font=(FONT, 13, 'bold'), fg_color='transparent', border_width=1, border_color=ACCENT,
+                                                 hover_color=CARD, text_color=TEXT, command=self.open_workshop)
+            self.workshop_button.grid(row=5, column=0, sticky='ew', padx=14, pady=(4, 8))
 
             right = ctk.CTkFrame(self, fg_color=PANEL, corner_radius=14)
             right.grid(row=0, column=1, sticky='nsew', padx=(7, 14), pady=(14, 7))
@@ -257,7 +261,9 @@ def build_app():
             self.status_badge.configure(text=m['status'], fg_color=ACCENT_DARK if m['status'] == 'Играбельно' else '#5a4a1f',
                                         text_color=TEXT if m['status'] == 'Играбельно' else AMBER)
             path, there = core.installed_map_info(self.mission, self.preset, self.settings.game_dir, self.settings.no_voice)
-            self.description_label.configure(text=m['description'] + '\n\nКарта: %s%s' % (path, '' if there else '  (будет собрана и установлена при запуске)'))
+            import workshop
+            own = len(workshop.list_variants(self.mission)) if self.mission in workshop.MISSIONS else 0
+            self.description_label.configure(text=m['description'] + '\n\nКарта: %s%s' % (path, '' if there else '  (будет собрана и установлена при запуске)') + (('\nСвои варианты (Мастерская): %d' % own) if own else ''))
             if mission_key(self.mission) not in self.images:
                 from PIL import Image  # noqa: F401
                 img = mission_image(self.mission)
@@ -268,6 +274,7 @@ def build_app():
             self._render_details()
             self.status.configure(text='Игра: %s' % self.settings.game_dir)
             self._apply_busy()
+            self._request_map_status()
             self._last_sw = None
             self.after(30, self._on_resize)
 
@@ -395,6 +402,16 @@ def build_app():
             self._refresh()
             self._on_resize()
 
+        def _request_map_status(self):
+            """Card status (ready / needs a build) is computed off the interface thread: hashing the inputs must never freeze the window."""
+            mission, preset, gdir = self.mission, self.preset, self.settings.game_dir
+            if self.busy or not preset:
+                return
+
+            def work():
+                self.queue.put(('mapstatus', (mission, preset, core.map_status_text(self.launcher.backend, mission, preset, gdir))))
+            threading.Thread(target=work, daemon=True).start()
+
         def start(self):
             if self.busy:
                 return
@@ -418,6 +435,10 @@ def build_app():
                         self._show_stages()
                     elif kind == 'done':
                         self._finish(value)
+                    elif kind == 'mapstatus':
+                        m, p, text = value
+                        if not self.busy and m == self.mission and p == self.preset and text:
+                            self.stage_label.configure(text=text, text_color=GREEN if text.startswith('Готова') else AMBER)
             except queue.Empty:
                 pass
             self.after(100, self._poll)
@@ -475,6 +496,21 @@ def build_app():
 
             self.campaign_window = cls(self, flow=campaign_flow.CampaignFlow(LiveBackend()))
             return self.campaign_window
+
+        def open_workshop(self):
+            import gui_workshop
+            import workshop
+            if self.mission not in workshop.MISSIONS:
+                self.status.configure(text='Для этой миссии Мастерской пока нет: выберите «Час икс», «Эвакуацию» или «Эпидемию».')
+                return None
+            win = getattr(self, 'workshop_window', None)
+            if win is not None and win.winfo_exists():
+                win.lift()
+                return win
+            cls = gui_workshop.make_window_class(ctk, dict(BG=BG, PANEL=PANEL, CARD=CARD, LINE=LINE, ACCENT=ACCENT, ACCENT_HOVER=ACCENT_HOVER, TEXT=TEXT, MUTED=MUTED, AMBER=AMBER, RED=RED,
+                                                           GREEN=GREEN, FONT=FONT))
+            self.workshop_window = cls(self, self.mission)
+            return self.workshop_window
 
         def open_log(self):
             core.log('log opened by the user')
