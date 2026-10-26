@@ -234,3 +234,8 @@ at 16/4/4/8 (1640), garrison x8 until the Owner's review (no more automatic tuni
 
 
 2026-10-25: **документная фиксация прохождения Owner** («Эвакуация» и «Эпидемия» не пройдены из-за гибели отряда; «Час икс» пока неиграбелен; «Вне закона» принят). Закреплены согласованные изменения (общие способности без потери между миссиями, стабильный анализ детекторов, вступление и КСМ «Эвакуации», газовое ограничение контейнеров, новая схема снайперского выстрела, бункеры в тесте «Эпидемии», ослабленный гарнизон, метки повстанцев, гранатомёты, дальность и область ядерного удара, индикация «2/2» в «Часе икс»), числа остаются экспериментальными. Реализация не начата. Подробности: `docs/MISSION_ROADMAP.md` (последний раздел), `docs/MISSION_SETTINGS_AND_CAMPAIGN_ECONOMY.md`.
+
+
+## Owner playthrough 2026-10-26 and the Mission Workshop concept (documents only)
+
+Recorded in `docs/MISSION_ROADMAP.md` (playthrough results, agreed directions, experimental candidates, open decisions) with the economy rules in `docs/MISSION_SETTINGS_AND_CAMPAIGN_ECONOMY.md` and the architecture of the future Workshop and prepared builds in `docs/ARCHITECTURE.md`. Nothing of it is implemented. Plan (not a permission to start): mission fixes from the reviews -> prepared builds and a clear start -> first Mission Workshop (settings of the existing missions inside the launcher) -> separate future mechanics (folding fortifications, ultra-realism mode).
