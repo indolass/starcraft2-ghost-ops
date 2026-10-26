@@ -263,6 +263,7 @@ def build_app():
                 img = mission_image(self.mission)
                 self.images[mission_key(self.mission)] = ctk.CTkImage(light_image=img, dark_image=img, size=(300, 170))
             self.image_label.configure(image=self.images[mission_key(self.mission)])
+            profiles = sorted(profiles, key=lambda p: 'Прежняя' in p.get('badge', ''))  # the current versions first, the earlier ones (badge «Прежняя версия») after them; stable
             self._build_cards(profiles)
             self._render_details()
             self.status.configure(text='Игра: %s' % self.settings.game_dir)
