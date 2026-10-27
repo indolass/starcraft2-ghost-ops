@@ -255,3 +255,9 @@ Map `<SC2>\Maps\GhostOps\GhostOps_THanson02_epidemic_free.SC2Map`, launcher card
 
 
 Revision 2 (`epidemic_free_r2`, card "Эпидемия — Тест: бесплатный отряд (ревизия 2)", the recommended one) adds the manual **ground salvo** of the turrets the player builds from the kits: select a turret, press **A**, point at the area (the circle shows the whole area), click; Esc or the right button cancel without a shot or cooldown; 5 missiles of 30 damage, range 11, cooldown 8 s per turret (experimental numbers, taken from `defence_next`). The turrets fire at air by themselves. The squad: 2 Ghosts, 14 Marines (6 stock + 8 added), 2 added Hellions, 8 turret kits. Revision 1 (`epidemic_free`) is kept as it was.
+
+## Prepared builds and the Mission Workshop (2026-10-27)
+
+- `python tools/prebuild.py [--status-only]` builds, checks and installs the CURRENT maps of the three playable missions in advance and prints the time of every stage; a map that is up to date is skipped. The launcher shows "Готова к запуску" / "Нужна сборка" on the mission card.
+- "Мастерская миссий" (button in the launcher): variants of Hour X, Evacuation and Epidemic with a full snapshot of the settings; free tests only, the real campaign is never touched. Checks: `python tools/workshop_window_check.py OUTDIR` (real window), `python tools/workshop_run_check.py MISSION` (real build and start; run it through `tools/test_queue.py` like every game start).
+- Revisions: Hour X `defence_r5`, Evacuation `sniper_next_r5`, Epidemic `epidemic_free_r4` (free tests `*_free*`); all numbers are experimental, see `docs/MISSION_ROADMAP.md`.
