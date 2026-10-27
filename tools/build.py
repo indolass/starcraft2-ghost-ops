@@ -1924,7 +1924,7 @@ def epidemic_fragments(e):
 TY_TEXT_PREFIX = 'Param/Value/GhostOpsTy_'
 TY_TEXT_KEYS = ('KitsTitle', 'KitsText', 'KitsBunkers', 'KitsTurrets', 'KitsOut', 'DecoyGone', 'DecoyNoPath', 'ExtractTag', 'ExtractStart', 'ExtractHeld', 'ExtractBusy', 'ExtractLost',
                 'ExtractCancelled', 'CarrierTag', 'Captured', 'CarrierDied', 'OffWave', 'ShipCalled', 'ShipLanded', 'Leaving', 'Evacuated', 'EvacNoCarrier', 'DefeatShip', 'DefeatTimeout',
-                'DefeatNoScv', 'DefeatZerg', 'ZergTaking', 'TrainMark', 'ObjGrabTitle', 'ObjGrabText', 'ObjEscapeTitle', 'ObjEscapeText', 'N_swann', 'N_horner', 'N_tychus',
+                'DefeatNoScv', 'DefeatZerg', 'ZergTaking', 'TrainMark', 'PheroTag', 'BarOn', 'BarOff', 'ObjGrabTitle', 'ObjGrabText', 'ObjEscapeTitle', 'ObjEscapeText', 'N_swann', 'N_horner', 'N_tychus',
                 'L_TrainWarn', 'L_TrainDecoy', 'L_Guards', 'L_Site', 'L_Captured', 'L_Escape', 'L_Landed')
 TY_BUTTON_KEYS = ('PheroName', 'PheroTip', 'PheroUnit', 'ExtractName', 'ExtractTip', 'EvacName', 'EvacTip', 'CarrierName', 'CarrierDesc')
 TY_LINE_KEYS = tuple(k for k in TY_TEXT_KEYS if k.startswith('L_'))
@@ -2071,10 +2071,10 @@ def tychus_fragments(t):
         'UnitData.xml': nl.join([
             '    <CUnit id="MissileTurret">', '        <CostResource index="Minerals" value="0"/>', '    </CUnit>',
             '    <CUnit id="Bunker">', '        <CostResource index="Minerals" value="0"/>', '    </CUnit>',
-            '    <CUnit id="GhostOpsPheromone" parent="ExplodingBarrelLarge">', '        <LifeStart value="%s"/>' % g(d['health']), '        <LifeMax value="%s"/>' % g(d['health']), '        <LifeArmor value="0"/>',
-            '        <FlagArray index="Destructible" value="0"/>', '        <BehaviorArray index="0" removed="1"/>',
-            '        <Collide index="Ground" value="0"/>', '        <Collide index="Structure" value="0"/>', '        <Collide index="Burrow" value="0"/>', '        <Footprint value=""/>',
-            '        <Radius value="0.5"/>', '        <InnerRadius value="0.4"/>', '    </CUnit>',
+            '    <CUnit id="GhostOpsPheromone">', '        <Race value="Zerg"/>', '        <LifeStart value="%s"/>' % g(d['health']), '        <LifeMax value="%s"/>' % g(d['health']), '        <LifeArmor value="0"/>',
+            '        <LifeRegenRate value="0"/>', '        <Name value="Unit/Name/GhostOpsPheromone"/>', '        <FlagArray index="UseLineOfSight" value="1"/>', '        <FlagArray index="NoScore" value="1"/>',
+            '        <PlaneArray index="Ground" value="1"/>', '        <Sight value="4"/>', '        <AttackTargetPriority value="20"/>', '        <Radius value="0.5"/>', '        <InnerRadius value="0.4"/>',
+            '        <EditorCategories value="ObjectType:Unit,ObjectFamily:Campaign"/>', '    </CUnit>',
             '    <CUnit id="Marauder">', '        <AbilArray Link="GhostOpsPheromone"/>', '        <CardLayouts index="0">',
             '            <LayoutButtons Face="GhostOpsPheromone" Type="AbilCmd" AbilCmd="GhostOpsPheromone,Execute" Row="%d" Column="%d"/>' % (d['row'], d['column']), '        </CardLayouts>', '    </CUnit>',
             '    <CUnit id="SCV">', '        <AbilArray Link="GhostOpsExtract"/>', '        <CardLayouts index="0">',
@@ -2089,15 +2089,14 @@ def tychus_fragments(t):
             '        <CursorEffect value="GhostOpsPheroAim"/>',
             # the charges of the stock abilities: a Charge with the counts and a Cooldown with the SAME link (its TimeUse is the time that restores one charge), both per unit
             '        <Cost index="0">', '            <Charge>', '                <CountMax value="%d"/>' % d['charges'], '                <CountStart value="%d"/>' % d['charges'], '                <CountUse value="1"/>',
-            '                <Link value="Abil/GhostOpsPheromone"/>', '                <Location value="Unit"/>', '            </Charge>', '            <Cooldown>', '                <Link value="Abil/GhostOpsPheromone"/>',
-            '                <Location value="Unit"/>', '                <TimeUse value="%s"/>' % g(d['recharge']), '            </Cooldown>', '        </Cost>',
+            '                <Link value="Abil/GhostOpsPheromone"/>', '                <Location value="Unit"/>', '                <TimeUse value="%s"/>' % g(d['recharge']), '            </Charge>', '        </Cost>',
             '        <CmdButtonArray index="Execute" DefaultButtonFace="GhostOpsPheromone"/>', '    </CAbilEffectTarget>',
             '    <CAbilEffectTarget id="GhostOpsExtract">', '        <EditorCategories value="Race:Terran,AbilityorEffectType:Units"/>', '        <Effect index="0" value="GhostOpsExtractMark"/>', '        <Range value="%s"/>' % g(a['range']),
             '        <CastIntroTime value="0"/>', '        <TargetFilters value="Neutral;Self,Player,Ally,Enemy,Missile,Dead,Hidden"/>', '        <CmdButtonArray index="Execute" DefaultButtonFace="GhostOpsExtract"/>', '    </CAbilEffectTarget>',
             '    <CAbilEffectInstant id="GhostOpsEvacuate">', '        <EditorCategories value="Race:Terran,AbilityorEffectType:Units"/>', '        <Flags index="Transient" value="1"/>',
             '        <CmdButtonArray index="Execute" DefaultButtonFace="GhostOpsEvacuate"/>', '    </CAbilEffectInstant>', '']),
         'ButtonData.xml': nl.join([
-            '    <CButton id="GhostOpsPheromone">', '        <Icon value="Assets' + bs + 'Textures' + bs + 'btn-ability-terran-punishergrenade-color.dds"/>', '        <EditorCategories value="Race:Terran"/>', '    </CButton>',
+            '    <CButton id="GhostOpsPheromone">', '        <Icon value="Assets' + bs + 'Textures' + bs + 'btn-ability-zerg-sporecloud.dds"/>', '        <EditorCategories value="Race:Terran"/>', '    </CButton>',
             '    <CButton id="GhostOpsExtract">', '        <Icon value="Assets' + bs + 'Textures' + bs + 'btn-ability-terran-salvage.dds"/>', '        <EditorCategories value="Race:Terran"/>', '    </CButton>',
             '    <CButton id="GhostOpsEvacuate">', '        <Icon value="Assets' + bs + 'Textures' + bs + 'btn-ability-terran-calldownextrasupplies-color.dds"/>', '        <EditorCategories value="Race:Terran"/>', '    </CButton>', '']),
         'EffectData.xml': nl.join([
@@ -2112,9 +2111,15 @@ def tychus_fragments(t):
         'BehaviorData.xml': nl.join([
             '    <CBehaviorBuff id="GhostOpsPheroShow">', '        <InfoFlags index="Hidden" value="1"/>', '    </CBehaviorBuff>',
             '    <CBehaviorBuff id="GhostOpsCarrier">', '        <InfoIcon value="Assets' + bs + 'Textures' + bs + 'btn-ability-terran-salvage.dds"/>', '    </CBehaviorBuff>', '']),
-        'ModelData.xml': nl.join(['    <CModel id="GhostOpsPheromone" parent="GasCanister">', '        <Model value="Assets' + bs + 'Buildings' + bs + 'Resources' + bs + 'GasCanister' + bs + 'GasCanister.m3"/>', '    </CModel>', '']),
         'ActorData.xml': nl.join([
-            '    <CActorUnit id="GhostOpsPheromone" parent="GenericUnitStandardNoAutoSoundLinks" unitName="GhostOpsPheromone">', '        <On Terms="ActorCreation" Send="Create GasCanisterGlow"/>', '    </CActorUnit>',
+            '    <CActorUnit id="GhostOpsPheromone" parent="Egg" unitName="Egg">', '        <On Terms="ActorCreation" Send="Create GhostOpsPheroGlow"/>', '        <On Terms="ActorCreation" Send="Create GhostOpsPheroCloud"/>',
+            '        <On Terms="ActorCreation" Send="Create GhostOpsPheroSplat"/>', '    </CActorUnit>',
+            '    <CActorModel id="GhostOpsPheroGlow" parent="ModelAddition">', '        <On Terms="ActorCreation" Send="SetTintColor 110,255,70"/>', '    </CActorModel>',
+            '    <CActorModel id="GhostOpsPheroCloud" parent="ModelAddition">', '        <Model value="FungalGrowth"/>', '        <HostSiteOps Ops="SOpAttachCenter"/>', '        <On Terms="ActorCreation" Send="SetScale 2.4 0.5"/>',
+            '        <On Terms="ActorCreation" Send="SetTintColor 90,255,60"/>', '        <On Terms="UnitDeath" Send="Destroy"/>', '    </CActorModel>',
+            # the circle of the attraction radius on the ground (the stock Obelisk draws its range circle the same way: a cursor splat with a scale = the radius)
+            '    <CActorSplat id="GhostOpsPheroSplat" parent="ProtossCursorSplat">', '        <On Terms="ActorOrphan" Send="Destroy"/>', '        <On Terms="ActorCreation" Send="SetScale %s"/>' % g(d['radius']),
+            '        <On Terms="ActorCreation" Send="SetTintColor 80,255,60"/>', '    </CActorSplat>',
             '    <CActorRange id="GhostOpsPheroRadius">', '        <Range value="%s"/>' % g(d['radius']), '        <On Terms="Behavior.GhostOpsPheroShow.On" Send="Create"/>',
             '        <On Terms="Behavior.GhostOpsPheroShow.Off" Send="Destroy"/>', '    </CActorRange>',
             '    <CActorModel id="GhostOpsPheroCursorModel" parent="TerranCursorModel" abil="GhostOpsPheromone"/>', '    <CActorSplat id="GhostOpsPheroCursorSplat" parent="TerranCursorSplat" abil="GhostOpsPheromone"/>',

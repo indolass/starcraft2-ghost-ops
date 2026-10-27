@@ -1,0 +1,71 @@
+{
+ "name": "ty_d1",
+ "mission": "ttychus01",
+ "preset": "grab_free_dev",
+ "why": "episode D: the natural arrival of the Marauders (original dropship, trimmed to the totals) and the training scene after the original talks",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 10
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TSTAT",
+   "cmd": "tstat",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TKILLSTALK",
+   "cmd": "tkillstalk",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "sleep",
+   "s": 70
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TSTAT",
+   "cmd": "tstat",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "expect",
+   "regex": "Marauder 3 ",
+   "note": "the dropship brings exactly three Marauders (the totals), no more"
+  },
+  {
+   "op": "expect",
+   "regex": "mar 1",
+   "note": "the module was told: the training scene started"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

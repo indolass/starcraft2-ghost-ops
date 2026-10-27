@@ -82,7 +82,7 @@ class ProfilesTests(unittest.TestCase):
         self.assertEqual(names, ['easy', 'hard', 'extreme'])
         self.assertEqual([p['name'] for p in lc.profiles_of('traynor02')], ['tactical', 'tactical_next'])  # the old prototype preset is hidden (CLI only); version 2 is its own card
         self.assertTrue(lc.profiles_of('traynor02')[0]['experimental'])
-        self.assertEqual(lc.profiles_of('ttychus01'), [])
+        self.assertEqual([p['name'] for p in lc.profiles_of('ttychus01')], ['prototype', 'grab_free'])  # the old prototype keeps its own card next to the free test "Grab and run"
 
     def test_only_extreme_is_experimental(self):
         flags = {p['name']: p['experimental'] for p in lc.profiles_of('traynor01')}
@@ -168,8 +168,8 @@ class LauncherTests(unittest.TestCase):
     def test_prototype_starts_without_profile(self):
         with tempfile.TemporaryDirectory() as t:
             l, s, b = make(t)
-            self.assertTrue(l.run('ttychus01', None).ok)
-            self.assertEqual(b.started, [('ttychus01', None)])
+            self.assertTrue(l.run('ttychus01', 'prototype').ok)
+            self.assertEqual(b.started, [('ttychus01', 'prototype')])
 
 
 if __name__ == '__main__':

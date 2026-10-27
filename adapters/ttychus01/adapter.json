@@ -7,15 +7,84 @@
   "script_member": "MapScript.galaxy",
   "adapter_source": "adapters/ttychus01/adapter.galaxy",
   "config": "config/ttychus01.json",
-  "start_hook": {
-    "function": "gt_IntroSequence_Func",
-    "after": "TriggerExecute(gt_StartGame, true, false);",
-    "call": "GhostOps_OnMissionStart();"
-  },
   "required_markers": [
     "gt_StartGame",
     "gt_IntroSequence_Func",
     "CameraInfoFromId(26)",
-    "void InitLibs"
+    "void InitLibs",
+    "gt_MarauderQ_Func",
+    "gt_ArtifactGuardianDestroyed_Func",
+    "gt_DefeatBaseDead_Func",
+    "gt_ArtifactGuardiansNorthAttacks_Func"
+  ],
+  "ce0_extra": "adapters/ttychus01/ce0_extra.galaxy",
+  "ce0_hooks": [
+    {
+      "function": "gt_IntroSequence_Func",
+      "after": "TriggerExecute(gt_StartGame, true, false);",
+      "call": "GhostOps_Ce0_Start();"
+    },
+    {
+      "function": "gt_Victory_Func",
+      "before": "VictoryPanelAddAchievement(\"TTychus01_1\");",
+      "call": "GhostOps_Ce0_OnVictory();"
+    }
+  ],
+  "modules": [
+    "core/GhostOpsFold.galaxy",
+    "core/GhostOpsTychus.galaxy"
+  ],
+  "generators": [
+    "tychus"
+  ],
+  "detector_analysis": true,
+  "start_hooks": [
+    {
+      "function": "gt_IntroSequence_Func",
+      "after": "TriggerExecute(gt_StartGame, true, false);",
+      "call": "GhostOps_Ty_Bind(gv_artifact, gv_zergArtifactAttackers, gv_zergSpeedBumpUnits, gv_artifactGuardiansNorth, gv_artifactGuardiansSouth); GhostOps_OnMissionStart();"
+    }
+  ],
+  "extra_hooks": [
+    {
+      "function": "gt_MarauderQ_Func",
+      "after": "UnitCargoCreate(lv_swannDropship, \"Marauder\", libNtve_gf_DifficultyValueInt(4, 4, 4, 3));",
+      "call": "GhostOps_Ty_TrimMarauders(lv_swannDropship);"
+    },
+    {
+      "function": "gt_MarauderQ_Func",
+      "after": "libCamp_gf_EnableCampaignTechUnit(true, 8, gv_p1_USER);",
+      "call": "GhostOps_Ty_OnMarauders();"
+    },
+    {
+      "function": "gt_ArtifactGuardiansNorthAttacks_Func",
+      "before": "if ((UnitGroupCount(gv_artifactGuardiansNorth, c_unitCountAlive) > 0)) {",
+      "call": "if (GhostOps_Ty_GuardPrefer(gv_artifactGuardiansNorth, 63)) { return true; }"
+    },
+    {
+      "function": "gt_ArtifactGuardiansSouthAttacks_Func",
+      "before": "if ((UnitGroupCount(gv_artifactGuardiansSouth, c_unitCountAlive) > 0)) {",
+      "call": "if (GhostOps_Ty_GuardPrefer(gv_artifactGuardiansSouth, 64)) { return true; }"
+    },
+    {
+      "function": "gt_ArtifactGuardianDestroyed_Func",
+      "before": "SoundPlayAtPoint(SoundLink(\"Thor_Movement\", -1), PlayerGroupAll(), UnitGetPosition(EventUnit()), 0.0, 100.0, 0.0);",
+      "call": "if (go_tyOn) { GhostOps_Ty_OnGuardianDied(EventUnit()); return true; }"
+    },
+    {
+      "function": "gt_ObjectiveDestroytheStatuesDiscover_Func",
+      "before": "TriggerEnable(TriggerGetCurrent(), false);",
+      "call": "if (go_tyOn) { return true; }"
+    },
+    {
+      "function": "gt_DefeatBaseDead_Func",
+      "before": "// Conditions",
+      "call": "int lv_tyr; lv_tyr = GhostOps_Ty_PollResult(); if (runActions && (lv_tyr == 1)) { gv_gameOver = true; TriggerExecute(gt_VictoryArtifactGained, true, false); } if (runActions && (lv_tyr == 2)) { gv_gameOver = true; TriggerExecute(gt_DefeatArtifactLost, true, false); }"
+    },
+    {
+      "function": "gt_DefeatBaseDead_Func",
+      "before": "TriggerEnable(TriggerGetCurrent(), false);",
+      "call": "if (GhostOps_Ty_BaseLossOk()) { return true; }"
+    }
   ]
 }

@@ -93,10 +93,10 @@ class Profiles(unittest.TestCase):
         self.assertEqual(build.resolve_config(build.load_adapter('traynor02'), None)[1], 'tactical')
         for m in ('ttychus01',):
             ad = build.load_adapter(m)
-            cfg, name = build.resolve_config(ad, None)
-            self.assertIsNone(name)
-            self.assertNotIn('profile', cfg)
+            cfg, name = build.resolve_config(ad, 'prototype')  # the old prototype is the preset "prototype" of the mission since the free test "Grab and run" exists
+            self.assertEqual(name, 'prototype')
             self.assertNotIn('ghost_tuning', cfg)
+            self.assertNotIn('tychus', cfg)
             with self.assertRaises(build.ConfigError):
                 build.resolve_config(ad, 'easy')  # a profile makes no sense there
 
@@ -128,19 +128,17 @@ class Profiles(unittest.TestCase):
     def test_script_stays_ascii_and_profile_text_goes_to_the_string_table(self):
         # regression: a Cyrillic literal in MapScript.galaxy was a compile error (hard build showed a black screen)
         for mission, preset in (('traynor01', 'easy'), ('traynor01', 'hard'), ('traynor02', 'tactical'), ('traynor02', 'prototype'),
-                                ('traynor02', 'tactical_dev'), ('ttychus01', None)):
+                                ('traynor02', 'tactical_dev'), ('ttychus01', 'prototype'), ('ttychus01', 'grab_free')):
             ad = build.load_adapter(mission)
             cfg, _ = build.resolve_config(ad, preset)
             self.assertTrue(build.build_block(ad, cfg).isascii(), (mission, preset))
         g = build.gen_config(self.hard)
         self.assertIn('go_cfgHasProfile = true;', g)
         self.assertIn('go_cfgPresetText = StringExternal("Param/Value/GhostOpsProfile");', g)
-        other = build.gen_config(build.resolve_config(build.load_adapter('ttychus01'), None)[0])
-        self.assertIn('go_cfgHasProfile = false;', other)
-        self.assertNotIn('StringExternal', other)
+        other = build.gen_config(build.resolve_config(build.load_adapter('traynor02'), 'prototype')[0])
+        self.assertIn('go_cfgHasProfile = true;', other)
         self.assertEqual(build.profile_texts(self.easy), {'ruRU': 'Ghost Ops — Лёгкий', 'enUS': 'Ghost Ops - Easy'})
         self.assertEqual(build.profile_texts(self.hard), {'ruRU': 'Ghost Ops — Сложный', 'enUS': 'Ghost Ops - Hard'})
-        self.assertEqual(build.profile_texts(build.resolve_config(build.load_adapter('ttychus01'), None)[0]), {})
         self.assertFalse(self.easy['difficulty']['show_message'])  # the detailed catalog read-out is opt-in (--diag)
         diag, _ = build.resolve_config(ADAPTER, 'hard', diag=True)
         self.assertTrue(diag['difficulty']['show_message'])
@@ -206,7 +204,7 @@ class ExtremeProfile(unittest.TestCase):
         unit_xml = build.ghost_tuning_fragments(self.extreme['ghost_tuning'])['UnitData.xml']
         self.assertNotIn('Life', unit_xml)
         # other missions never get the rule
-        for m, preset in (('traynor02', 'prototype'), ('ttychus01', None)):
+        for m, preset in (('traynor02', 'prototype'), ('ttychus01', 'prototype'), ('ttychus01', 'grab_free')):
             cfg, _ = build.resolve_config(build.load_adapter(m), preset)
             self.assertEqual(build.effective_fragile_units(cfg), [])
 

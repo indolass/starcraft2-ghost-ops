@@ -1,0 +1,1776 @@
+//--------------------------------------------------------------------------------------------------
+// Smash and Grab (TTychus01), "Grab and run" free test: the module of the mission (config key "tychus").
+//
+// Part 1 (this block): the squad and the base of the test (12 SCVs, 8 Marines, 2 Medics, 2 Ghosts, 3 Marauders as TOTALS that include what the original map gives), the development
+// lock (nothing is bought; the Refinery stays possible), the kits of two Bunkers and two Missile Turrets (the shared counter: reserve on the start of a construction, release on cancel,
+// burn on destruction, spend on completion; the shared fold module gives a kit back), and the objective line of the kits.
+//
+// The original mission is kept: the intro, the Zerg and Protoss AIs, the Swann transmission with the Marauder dropship, the tips and the scenes; the module hooks into it (adapter.json).
+//--------------------------------------------------------------------------------------------------
+bool go_tyOn;
+int go_tyScvs;
+int go_tyMarines;
+int go_tyMedics;
+int go_tyMarauders;
+int go_tyKitT;            // ordered kits: 0 = Missile Turret, 1 = Bunker (the family numbers of the fold module)
+int go_tyKitB;
+int go_tySpentT;
+int go_tySpentB;
+int go_tyConsT;
+int go_tyConsB;
+bool go_tyAllowRefinery;
+bool go_tyStarted;
+bool go_tyMaraudersSeen;
+int go_tyObjKits;
+bool go_tyObjKitsMade;
+int go_tyShownT;
+int go_tyShownB;
+trigger go_tyKitTrig;
+trigger go_tyLockTrig;
+
+// kit trackers (the constructions in progress)
+unit[16] go_tyTrk;
+int[16] go_tyTrkFam;
+int[16] go_tyTrkState;     // 0 free, 1 under construction
+fixed[16] go_tyTrkLife;
+point[16] go_tyTrkPos;
+fixed[16] go_tyTrkHurtAt;
+int go_tyTrkN;
+
+void GhostOps_Ty_Log (string lp_text) {
+    // development log (the CE-0 probe module reads the globals; nothing is written in a playable build)
+}
+
+void GhostOps_Kit_Log (string lp_text) {
+    GhostOps_Ty_Log(lp_text);
+}
+
+string GhostOps_Ty_FamType (int lp_fam) {
+    if (lp_fam == 1) {
+        return "Bunker";
+    }
+
+    return "MissileTurret";
+}
+
+int GhostOps_Ty_Reserved (int lp_fam) {
+    int lv_k;
+    int lv_c;
+
+    lv_c = 0;
+    lv_k = 0;
+    while (lv_k < go_tyTrkN) {
+        if ((go_tyTrkState[lv_k] == 1) && (go_tyTrkFam[lv_k] == lp_fam)) {
+            lv_c += 1;
+        }
+
+        lv_k += 1;
+    }
+
+    return lv_c;
+}
+
+int GhostOps_Ty_KitsLeft (int lp_fam) {
+    if (lp_fam == 1) {
+        return go_tyKitB - go_tySpentB - go_tyConsB - GhostOps_Ty_Reserved(1);
+    }
+
+    return go_tyKitT - go_tySpentT - go_tyConsT - GhostOps_Ty_Reserved(0);
+}
+
+// the shared fold module gives a kit back: the structure that was folded no longer counts as spent
+void GhostOps_Kit_Returned (int lp_fam) {
+    if (lp_fam == 1) {
+        if (go_tySpentB > 0) {
+            go_tySpentB -= 1;
+        }
+        else {
+            go_tyKitB += 1;
+        }
+    }
+    else {
+        if (go_tySpentT > 0) {
+            go_tySpentT -= 1;
+        }
+        else {
+            go_tyKitT += 1;
+        }
+    }
+}
+
+bool GhostOps_Ty_EnemyNear (point lp_pos) {
+    int lv_p;
+
+    lv_p = 2;
+    while (lv_p <= 6) {
+        if (UnitGroupCount(UnitGroup(null, lv_p, RegionCircle(lp_pos, 6.0), UnitFilter(0, 0, (1 << c_targetFilterStructure), (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive) > 0) {
+            return true;
+        }
+
+        lv_p += 1;
+    }
+
+    return false;
+}
+
+void GhostOps_Ty_KitObjective () {
+    int lv_t;
+    int lv_b;
+
+    lv_t = GhostOps_Ty_KitsLeft(0);
+    lv_b = GhostOps_Ty_KitsLeft(1);
+    if (!go_tyObjKitsMade) {
+        go_tyObjKitsMade = true;
+        ObjectiveCreate(StringExternal("Param/Value/GhostOpsTy_KitsTitle"), StringExternal("Param/Value/GhostOpsTy_KitsText"), c_objectiveStateActive, false);
+        go_tyObjKits = ObjectiveLastCreated();
+        go_tyShownT = -1;
+    }
+
+    if ((lv_t != go_tyShownT) || (lv_b != go_tyShownB)) {
+        go_tyShownT = lv_t;
+        go_tyShownB = lv_b;
+        ObjectiveSetName(go_tyObjKits, StringExternal("Param/Value/GhostOpsTy_KitsTitle") + StringToText(": ") + StringExternal("Param/Value/GhostOpsTy_KitsBunkers") + StringToText(" ") + IntToText(lv_b)
+            + StringToText(", ") + StringExternal("Param/Value/GhostOpsTy_KitsTurrets") + StringToText(" ") + IntToText(lv_t));
+    }
+}
+
+int GhostOps_Ty_FindTrk (unit lp_u) {
+    int lv_k;
+
+    lv_k = 0;
+    while (lv_k < go_tyTrkN) {
+        if ((go_tyTrkState[lv_k] != 0) && (go_tyTrk[lv_k] == lp_u)) {
+            return lv_k;
+        }
+
+        lv_k += 1;
+    }
+
+    return -1;
+}
+
+// A structure of the family that the tracker does not know yet (custom value 1 of the unit is 0) is a construction that has just started: it reserves a kit. Every structure is marked
+// once, so the number of finished structures is not limited by an array.
+void GhostOps_Ty_KitScan (int lp_fam) {
+    unitgroup lv_g;
+    int lv_n;
+    int lv_i;
+    int lv_k;
+    int lv_slot;
+    unit lv_u;
+
+    lv_g = UnitGroup(GhostOps_Ty_FamType(lp_fam), 1, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32)) | (1 << (c_targetFilterHidden - 32))), 0);
+    lv_n = UnitGroupCount(lv_g, c_unitCountAll);
+    lv_i = 1;
+    while (lv_i <= lv_n) {
+        lv_u = UnitGroupUnit(lv_g, lv_i);
+        if (UnitGetCustomValue(lv_u, 1) < 0.5) {
+            UnitSetCustomValue(lv_u, 1, 1.0);
+            if (GhostOps_Ty_KitsLeft(lp_fam) <= 0) {
+                // over the kits (cost 0, nothing to refund): the construction is cancelled on the spot
+                if (UnitTestState(lv_u, c_unitStateUnderConstruction)) {
+                    UnitIssueOrder(lv_u, Order(AbilityCommand("CancelBuilding", 0)), c_orderQueueReplace);
+                }
+
+                UIDisplayMessage(PlayerGroupAll(), c_messageAreaDirective, StringExternal("Param/Value/GhostOpsTy_KitsOut"));
+            }
+            else if (UnitTestState(lv_u, c_unitStateUnderConstruction)) {
+                lv_slot = -1;
+                lv_k = 0;
+                while ((lv_k < go_tyTrkN) && (lv_slot < 0)) {
+                    if (go_tyTrkState[lv_k] == 0) {
+                        lv_slot = lv_k;
+                    }
+
+                    lv_k += 1;
+                }
+
+                if ((lv_slot < 0) && (go_tyTrkN < 16)) {
+                    lv_slot = go_tyTrkN;
+                    go_tyTrkN += 1;
+                }
+
+                if (lv_slot >= 0) {
+                    go_tyTrk[lv_slot] = lv_u;
+                    go_tyTrkFam[lv_slot] = lp_fam;
+                    go_tyTrkLife[lv_slot] = UnitGetPropertyFixed(lv_u, c_unitPropLife, c_unitPropCurrent);
+                    go_tyTrkPos[lv_slot] = UnitGetPosition(lv_u);
+                    go_tyTrkHurtAt[lv_slot] = -100.0;
+                    go_tyTrkState[lv_slot] = 1;
+                    GhostOps_Fold_OnReserve(lv_u, lp_fam);
+                }
+            }
+        }
+
+        lv_i += 1;
+    }
+}
+
+bool GhostOps_Ty_KitTick (bool lp_testConds, bool lp_runActions) {
+    int lv_k;
+    unit lv_u;
+    bool lv_valid;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    GhostOps_Ty_KitScan(0);
+    GhostOps_Ty_KitScan(1);
+    lv_k = 0;
+    while (lv_k < go_tyTrkN) {
+        if (go_tyTrkState[lv_k] != 0) {
+            lv_u = go_tyTrk[lv_k];
+            lv_valid = UnitIsValid(lv_u) && (UnitGetType(lv_u) != "");
+            if (lv_valid && UnitIsAlive(lv_u)) {
+                // a drop of life between two ticks means damage: that tells a destroyed construction from a cancelled one
+                if (UnitGetPropertyFixed(lv_u, c_unitPropLife, c_unitPropCurrent) < (go_tyTrkLife[lv_k] - 0.01)) {
+                    go_tyTrkHurtAt[lv_k] = GameGetMissionTime();
+                }
+
+                go_tyTrkLife[lv_k] = UnitGetPropertyFixed(lv_u, c_unitPropLife, c_unitPropCurrent);
+                go_tyTrkPos[lv_k] = UnitGetPosition(lv_u);
+                if (!UnitTestState(lv_u, c_unitStateUnderConstruction)) {
+                    if (go_tyTrkFam[lv_k] == 1) {
+                        go_tySpentB += 1;
+                    }
+                    else {
+                        go_tySpentT += 1;
+                    }
+
+                    GhostOps_Fold_OnFinish(lv_u);
+                    go_tyTrkState[lv_k] = 0;
+                }
+            }
+            else {
+                if ((GameGetMissionTime() - go_tyTrkHurtAt[lv_k] < 4.0) || GhostOps_Ty_EnemyNear(go_tyTrkPos[lv_k])) {
+                    // damaged or an enemy next to it: it was destroyed, the kit is gone; a cancelled construction is neither
+                    if (go_tyTrkFam[lv_k] == 1) {
+                        go_tyConsB += 1;
+                    }
+                    else {
+                        go_tyConsT += 1;
+                    }
+
+                    GhostOps_Fold_OnBurn(lv_u);
+                }
+                else {
+                    GhostOps_Fold_OnCancel(lv_u);
+                }
+
+                go_tyTrkState[lv_k] = 0;
+            }
+        }
+
+        lv_k += 1;
+    }
+
+    // the build buttons follow the kits left; the number is in the name of the button
+    TechTreeUnitAllow(1, "MissileTurret", GhostOps_Ty_KitsLeft(0) > 0);
+    TechTreeUnitAllow(1, "Bunker", GhostOps_Ty_KitsLeft(1) > 0);
+    GhostOps_KitLabel(0, "MissileTurret", "GhostOpsKitBtnTurret", GhostOps_Ty_KitsLeft(0));
+    GhostOps_KitLabel(1, "Bunker", "GhostOpsKitBtnBunker", GhostOps_Ty_KitsLeft(1));
+    GhostOps_Ty_KitObjective();
+    return true;
+}
+
+// ---- the development lock: nothing is bought, the kits and the Refinery are the exceptions ----------------------------------------
+void GhostOps_Ty_LockFixed () {
+    string[28] lv_types;
+    int lv_i;
+
+    lv_types[0] = "CommandCenter";
+    lv_types[1] = "OrbitalCommand";
+    lv_types[2] = "PlanetaryFortress";
+    lv_types[3] = "SupplyDepot";
+    lv_types[4] = "Refinery";
+    lv_types[5] = "Barracks";
+    lv_types[6] = "EngineeringBay";
+    lv_types[7] = "MissileTurret";
+    lv_types[8] = "Bunker";
+    lv_types[9] = "SensorTower";
+    lv_types[10] = "GhostAcademy";
+    lv_types[11] = "Factory";
+    lv_types[12] = "Starport";
+    lv_types[13] = "MercCompound";
+    lv_types[14] = "Armory";
+    lv_types[15] = "FusionCore";
+    lv_types[16] = "SCV";
+    lv_types[17] = "Marine";
+    lv_types[18] = "Marauder";
+    lv_types[19] = "Reaper";
+    lv_types[20] = "Firebat";
+    lv_types[21] = "Medic";
+    lv_types[22] = "Ghost";
+    lv_types[23] = "BarracksTechLab";
+    lv_types[24] = "BarracksReactor";
+    lv_types[25] = "AutomatedRefinery";
+    lv_types[26] = "PerditionTurret";
+    lv_types[27] = "HiveMindEmulator";
+    lv_i = 0;
+    while (lv_i < 28) {
+        TechTreeUnitAllow(1, lv_types[lv_i], false);
+        lv_i += 1;
+    }
+}
+
+bool GhostOps_Ty_LockTick (bool lp_testConds, bool lp_runActions) {
+    if (!lp_runActions) {
+        return true;
+    }
+
+    GhostOps_Ty_LockFixed();
+    if (go_tyAllowRefinery) {
+        TechTreeUnitAllow(1, "Refinery", true);
+    }
+
+    TechTreeUnitAllow(1, "MissileTurret", GhostOps_Ty_KitsLeft(0) > 0);
+    TechTreeUnitAllow(1, "Bunker", GhostOps_Ty_KitsLeft(1) > 0);
+    return true;
+}
+
+// ---- the squad and the base ----------------------------------------------------------------------------------------------------
+int GhostOps_Ty_Count (string lp_type) {
+    return UnitGroupCount(UnitGroup(lp_type, 1, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32)) | (1 << (c_targetFilterHidden - 32))), 0), c_unitCountAlive);
+}
+
+unit GhostOps_Ty_Mineral (point lp_near) {
+    unitgroup lv_g;
+    int lv_n;
+    int lv_i;
+    unit lv_u;
+    unit lv_best;
+    fixed lv_bd;
+    fixed lv_d;
+
+    lv_best = null;
+    lv_bd = 100000.0;
+    lv_g = UnitGroup(null, 0, RegionCircle(lp_near, 14.0), UnitFilter(0, 0, (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32))), 0);
+    lv_n = UnitGroupCount(lv_g, c_unitCountAll);
+    lv_i = 1;
+    while (lv_i <= lv_n) {
+        lv_u = UnitGroupUnit(lv_g, lv_i);
+        if (StringFind(UnitGetType(lv_u), "MineralField", c_stringCase) > 0) {
+            lv_d = DistanceBetweenPoints(lp_near, UnitGetPosition(lv_u));
+            if (lv_d < lv_bd) {
+                lv_bd = lv_d;
+                lv_best = lv_u;
+            }
+        }
+
+        lv_i += 1;
+    }
+
+    return lv_best;
+}
+
+// the totals of the test: the original map gives 5 SCVs, 3 Marines and 1 Medic (and the dropship the Marauders); the missing ones are created ONCE next to the Command Center
+void GhostOps_Ty_BaseHanded () {
+    unit lv_cc;
+    unit lv_min;
+    int lv_have;
+    int lv_i;
+    int lv_k;
+    point lv_o;
+
+    if (go_tyStarted) {
+        return;
+    }
+
+    go_tyStarted = true;
+    lv_cc = UnitGroupUnit(UnitGroup("CommandCenter", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), 1);
+    if (lv_cc == null) {
+        return;
+    }
+
+    lv_o = UnitGetPosition(lv_cc);
+    lv_min = GhostOps_Ty_Mineral(lv_o);
+    lv_have = GhostOps_Ty_Count("SCV");
+    lv_k = 0;
+    while ((lv_have + lv_k) < go_tyScvs) {
+        UnitCreate(1, "SCV", 0, 1, PointWithOffset(lv_o, -3.0 + IntToFixed(lv_k % 6) * 1.1, 4.5 + IntToFixed(lv_k / 6) * 1.1), 270.0);
+        if (lv_min != null) {
+            UnitIssueOrder(UnitLastCreated(), OrderTargetingUnit(AbilityCommand("SCVHarvest", 0), lv_min), c_orderQueueReplace);
+        }
+
+        lv_k += 1;
+    }
+
+    lv_have = GhostOps_Ty_Count("Marine");
+    lv_k = 0;
+    while ((lv_have + lv_k) < go_tyMarines) {
+        UnitCreate(1, "Marine", 0, 1, PointWithOffset(lv_o, -8.0 + IntToFixed(lv_k % 6) * 1.1, 4.0 + IntToFixed(lv_k / 6) * 1.1), 270.0);
+        lv_k += 1;
+    }
+
+    lv_have = GhostOps_Ty_Count("Medic");
+    lv_k = 0;
+    while ((lv_have + lv_k) < go_tyMedics) {
+        UnitCreate(1, "Medic", 0, 1, PointWithOffset(lv_o, -9.0 + IntToFixed(lv_k) * 1.1, 2.5), 270.0);
+        lv_k += 1;
+    }
+
+    lv_i = 0;
+}
+
+// the dropship brings go_tyMarauders (the original count is 4 on the easy levels and 3 on the hardest): the extra one is removed from the cargo before it lands
+void GhostOps_Ty_TrimMarauders (unit lp_ship) {
+    int lv_n;
+
+    if (!go_tyOn || (lp_ship == null)) {
+        return;
+    }
+
+    lv_n = UnitCargoValue(lp_ship, c_unitCargoUnitCount);
+    while (lv_n > go_tyMarauders) {
+        UnitRemove(UnitCargo(lp_ship, lv_n - 1));
+        lv_n -= 1;
+    }
+}
+
+void GhostOps_ApplyTychusConfig ();
+void GhostOps_Ty_Part2Start ();
+
+void GhostOps_Ty_Start () {
+    GhostOps_ApplyTychusConfig();
+    if (!go_tyOn) {
+        return;
+    }
+
+    GhostOps_Ty_BaseHanded();
+    GhostOps_Ty_LockFixed();
+    go_tyKitTrig = TriggerCreate("GhostOps_Ty_KitTick");
+    TriggerAddEventTimePeriodic(go_tyKitTrig, 0.25, c_timeGame);
+    go_tyLockTrig = TriggerCreate("GhostOps_Ty_LockTick");
+    TriggerAddEventTimePeriodic(go_tyLockTrig, 2.0, c_timeGame);
+    GhostOps_Ty_Part2Start();
+}
+
+//--------------------------------------------------------------------------------------------------
+// Part 2: the pheromone decoy of the Marauders (ability GhostOpsPheromone; the data are generated by tools/build.py, tychus_fragments).
+//
+// The shell flies to the point and a capsule (unit GhostOpsPheromone: the model of the gas canister with its glow, a life bar, a circle of the attraction radius) appears there.
+// Every 0.25 s the module (1) registers new capsules, (2) removes a capsule that nobody attacked after go_tyDcLife seconds, (3) takes the Zerg fighters (ground, mobile, no workers)
+// within go_tyDcRadius of a living capsule under script control and orders them to attack it, (4) moves the units whose capsule is gone: to the NEAREST other living capsule within
+// go_tyDcNext, else for go_tyDcRage seconds to the nearest Protoss unit (an attack order on THAT unit, so they ignore the units of the player), (5) gives them back to the AI.
+// Only the attracted units are touched; the diplomacy of the players is never changed. A unit that the original script keeps in one of its own groups (the Zerg that go for the
+// artifact, the speed bump) is taken out of that group so that its periodic orders do not cancel the behaviour.
+// A capsule is refused (the order is stopped before the cast: no charge is spent) when the point is not passable or not connected by ground with the Zerg side of the map.
+//--------------------------------------------------------------------------------------------------
+fixed go_tyDcRadius;
+fixed go_tyDcRage;
+fixed go_tyDcLife;
+fixed go_tyDcHealth;
+fixed go_tyDcNext;
+fixed go_tyDcRageRange;
+fixed go_tyDcReachX;
+fixed go_tyDcReachY;
+unitgroup go_tyGroupArtifact;
+unitgroup go_tyGroupBump;
+unit go_tyArtifact;
+unitgroup go_tyGuardN;
+unitgroup go_tyGuardS;
+bool go_tyBound;
+unit[8] go_tyDc;
+fixed[8] go_tyDcBorn;
+unit[48] go_tyZ;
+int[48] go_tyZDc;
+int[48] go_tyZSt;
+fixed[48] go_tyZUntil;
+unit[48] go_tyZTgt;
+int[8] go_tyDcTag;
+bool[8] go_tyDcTagOn;
+int go_tyDcMade;
+int go_tyDcAttracted;
+trigger go_tyDcTrig;
+trigger go_tyDcCheckTrig;
+
+// the adapter binds the original groups (they are declared after this block): GhostOps_Ty_Bind(gv_artifact, gv_zergArtifactAttackers, gv_zergSpeedBumpUnits, gv_artifactGuardiansNorth, gv_artifactGuardiansSouth)
+void GhostOps_Ty_Bind (unit lp_artifact, unitgroup lp_gA, unitgroup lp_gB, unitgroup lp_gn, unitgroup lp_gs) {
+    go_tyArtifact = lp_artifact;
+    go_tyGroupArtifact = lp_gA;
+    go_tyGroupBump = lp_gB;
+    go_tyGuardN = lp_gn;
+    go_tyGuardS = lp_gs;
+    go_tyBound = true;
+}
+
+bool GhostOps_Ty_IsFighter (unit lp_u) {
+    string lv_t;
+
+    if ((lp_u == null) || !UnitIsValid(lp_u) || !UnitIsAlive(lp_u) || (UnitGetOwner(lp_u) != 2)) {
+        return false;
+    }
+
+    if (UnitTypeTestAttribute(UnitGetType(lp_u), c_unitAttributeStructure) || UnitTypeTestFlag(UnitGetType(lp_u), c_unitFlagMissile)) {
+        return false;
+    }
+
+    if (!UnitTestPlane(lp_u, c_planeGround)) {
+        return false;
+    }
+
+    lv_t = UnitGetType(lp_u);
+    if ((lv_t == "Drone") || (lv_t == "Larva") || (lv_t == "Egg") || (lv_t == "Broodling") || (lv_t == "Changeling") || (lv_t == "Overlord") || (lv_t == "Overseer") || (lv_t == "CreepTumor") || (lv_t == "Queen")) {
+        return false;
+    }
+
+    return true;
+}
+
+int GhostOps_Ty_ZSlot (unit lp_u) {
+    int lv_i;
+
+    lv_i = 0;
+    while (lv_i < 48) {
+        if ((go_tyZSt[lv_i] != 0) && (go_tyZ[lv_i] == lp_u)) {
+            return lv_i;
+        }
+
+        lv_i += 1;
+    }
+
+    return -1;
+}
+
+int GhostOps_Ty_ZFree () {
+    int lv_i;
+
+    lv_i = 0;
+    while (lv_i < 48) {
+        if (go_tyZSt[lv_i] == 0) {
+            return lv_i;
+        }
+
+        lv_i += 1;
+    }
+
+    return -1;
+}
+
+bool GhostOps_Ty_DcLive (int lp_i) {
+    return (lp_i >= 0) && (go_tyDc[lp_i] != null) && UnitIsValid(go_tyDc[lp_i]) && UnitIsAlive(go_tyDc[lp_i]);
+}
+
+void GhostOps_Ty_ZAttack (int lp_s, unit lp_target) {
+    UnitIssueOrder(go_tyZ[lp_s], OrderTargetingUnit(AbilityCommand("attack", 0), lp_target), c_orderQueueReplace);
+}
+
+void GhostOps_Ty_ZTake (unit lp_u, int lp_dc) {
+    int lv_s;
+
+    lv_s = GhostOps_Ty_ZSlot(lp_u);
+    if (lv_s < 0) {
+        lv_s = GhostOps_Ty_ZFree();
+        if (lv_s < 0) {
+            return;
+        }
+
+        go_tyZ[lv_s] = lp_u;
+        go_tyDcAttracted += 1;
+    }
+
+    go_tyZDc[lv_s] = lp_dc;
+    go_tyZSt[lv_s] = 1;
+    go_tyZTgt[lv_s] = null;
+    UnitSetState(lp_u, c_unitStateTargetable, true);
+    AISetUnitScriptControlled(lp_u, true);
+    if (go_tyGroupArtifact != null) {
+        UnitGroupRemove(go_tyGroupArtifact, lp_u);
+    }
+
+    if (go_tyGroupBump != null) {
+        UnitGroupRemove(go_tyGroupBump, lp_u);
+    }
+
+    GhostOps_Ty_ZAttack(lv_s, go_tyDc[lp_dc]);
+}
+
+void GhostOps_Ty_ZRelease (int lp_s) {
+    if ((go_tyZ[lp_s] != null) && UnitIsValid(go_tyZ[lp_s]) && UnitIsAlive(go_tyZ[lp_s])) {
+        AISetUnitScriptControlled(go_tyZ[lp_s], false);
+    }
+
+    go_tyZSt[lp_s] = 0;
+    go_tyZ[lp_s] = null;
+    go_tyZTgt[lp_s] = null;
+    go_tyZDc[lp_s] = -1;
+}
+
+// the nearest living capsule within go_tyDcNext of the point (-1: none)
+int GhostOps_Ty_NextDecoy (point lp_p) {
+    int lv_i;
+    int lv_best;
+    fixed lv_bd;
+    fixed lv_d;
+
+    lv_best = -1;
+    lv_bd = go_tyDcNext;
+    lv_i = 0;
+    while (lv_i < 8) {
+        if (GhostOps_Ty_DcLive(lv_i)) {
+            lv_d = DistanceBetweenPoints(lp_p, UnitGetPosition(go_tyDc[lv_i]));
+            if (lv_d <= lv_bd) {
+                lv_bd = lv_d;
+                lv_best = lv_i;
+            }
+        }
+
+        lv_i += 1;
+    }
+
+    return lv_best;
+}
+
+// the nearest unit of the Protoss players (3..6) within go_tyDcRageRange of the point; structures too (a Zerg with nothing else to bite attacks a Pylon)
+unit GhostOps_Ty_NearestProtoss (point lp_p) {
+    unitgroup lv_g;
+    unit lv_u;
+    unit lv_best;
+    fixed lv_bd;
+    fixed lv_d;
+    int lv_pl;
+
+    lv_best = null;
+    lv_bd = go_tyDcRageRange;
+    lv_pl = 3;
+    while (lv_pl <= 6) {
+        lv_g = UnitGroup(null, lv_pl, RegionCircle(lp_p, go_tyDcRageRange), UnitFilter(0, 0, (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32)) | (1 << (c_targetFilterHidden - 32))), 0);
+        lv_u = UnitGroupClosestToPoint(lv_g, lp_p);
+        if (lv_u != null) {
+            lv_d = DistanceBetweenPoints(lp_p, UnitGetPosition(lv_u));
+            if (lv_d < lv_bd) {
+                lv_bd = lv_d;
+                lv_best = lv_u;
+            }
+        }
+
+        lv_pl += 1;
+    }
+
+    return lv_best;
+}
+
+// one capsule: the Zerg fighters within the radius (ONE group loop in this function)
+void GhostOps_Ty_Attract (int lp_dc) {
+    unitgroup lv_g;
+    unit lv_u;
+
+    lv_g = UnitGroup(null, 2, RegionCircle(UnitGetPosition(go_tyDc[lp_dc]), go_tyDcRadius), UnitFilter(0, 0, (1 << c_targetFilterMissile) | (1 << c_targetFilterStructure) | (1 << c_targetFilterAir), (1 << (c_targetFilterDead - 32)) | (1 << (c_targetFilterHidden - 32))), 0);
+    UnitGroupLoopBegin(lv_g);
+    while (UnitGroupLoopCurrent() != null) {
+        lv_u = UnitGroupLoopCurrent();
+        if (GhostOps_Ty_IsFighter(lv_u) && (GhostOps_Ty_ZSlot(lv_u) < 0)) {
+            GhostOps_Ty_ZTake(lv_u, lp_dc);
+        }
+
+        UnitGroupLoopStep();
+    }
+
+    UnitGroupLoopEnd();
+}
+
+void GhostOps_Ty_RegisterDecoys () {
+    unitgroup lv_g;
+    unit lv_u;
+    int lv_i;
+    int lv_s;
+
+    lv_g = UnitGroup("GhostOpsPheromone", 1, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32))), 0);
+    UnitGroupLoopBegin(lv_g);
+    while (UnitGroupLoopCurrent() != null) {
+        lv_u = UnitGroupLoopCurrent();
+        if (UnitGetCustomValue(lv_u, 1) < 0.5) {
+            UnitSetCustomValue(lv_u, 1, 1.0);
+            lv_s = -1;
+            lv_i = 0;
+            while ((lv_i < 8) && (lv_s < 0)) {
+                if (!GhostOps_Ty_DcLive(lv_i)) {
+                    lv_s = lv_i;
+                }
+
+                lv_i += 1;
+            }
+
+            if (lv_s < 0) {
+                UnitRemove(lv_u);
+            }
+            else {
+                go_tyDc[lv_s] = lv_u;
+                go_tyDcBorn[lv_s] = GameGetMissionTime();
+                UnitSetPropertyFixed(lv_u, c_unitPropLifeMax, go_tyDcHealth);
+                UnitSetPropertyFixed(lv_u, c_unitPropLife, go_tyDcHealth);
+                // the capsule belongs to nobody: the Protoss (and the guardians) pick targets among ENEMIES only and never choose it, the Zerg attack it by the order of this module,
+                // the units of the player never attack it; no relation between the players is changed
+                UnitSetOwner(lv_u, 0, false);
+                UnitBehaviorAdd(lv_u, "GhostOpsPheroShow", lv_u, 1);
+                UnitSetState(lv_u, c_unitStateStatusBar, true);
+                TextTagCreate(StringExternal("Param/Value/GhostOpsTy_PheroTag"), 22, UnitGetPosition(lv_u), 2.6, true, false, PlayerGroupAll());
+                go_tyDcTag[lv_s] = TextTagLastCreated();
+                TextTagAttachToUnit(go_tyDcTag[lv_s], lv_u, 2.6);
+                go_tyDcTagOn[lv_s] = true;
+                go_tyDcMade += 1;
+            }
+        }
+
+        UnitGroupLoopStep();
+    }
+
+    UnitGroupLoopEnd();
+}
+
+void GhostOps_Ty_ZTick (int lp_i) {
+    unit lv_u;
+    int lv_dc;
+
+    lv_u = go_tyZ[lp_i];
+    if ((lv_u == null) || !UnitIsValid(lv_u) || !UnitIsAlive(lv_u)) {
+        GhostOps_Ty_ZRelease(lp_i);
+        return;
+    }
+
+    AISetUnitScriptControlled(lv_u, true);
+    if (go_tyZSt[lp_i] == 1) {
+        if (GhostOps_Ty_DcLive(go_tyZDc[lp_i])) {
+            // keep attacking THIS capsule (the AI may have ordered something else)
+            if ((UnitOrderCount(lv_u) == 0) || (OrderGetTargetUnit(UnitOrder(lv_u, 0)) != go_tyDc[go_tyZDc[lp_i]])) {
+                GhostOps_Ty_ZAttack(lp_i, go_tyDc[go_tyZDc[lp_i]]);
+            }
+
+            return;
+        }
+
+        // the capsule is gone: the next capsule, else the short rage against the Protoss
+        lv_dc = GhostOps_Ty_NextDecoy(UnitGetPosition(lv_u));
+        if (lv_dc >= 0) {
+            go_tyZDc[lp_i] = lv_dc;
+            GhostOps_Ty_ZAttack(lp_i, go_tyDc[lv_dc]);
+            return;
+        }
+
+        go_tyZTgt[lp_i] = GhostOps_Ty_NearestProtoss(UnitGetPosition(lv_u));
+        if (go_tyZTgt[lp_i] == null) {
+            GhostOps_Ty_ZRelease(lp_i);
+            return;
+        }
+
+        go_tyZSt[lp_i] = 2;
+        go_tyZUntil[lp_i] = GameGetMissionTime() + go_tyDcRage;
+        GhostOps_Ty_ZAttack(lp_i, go_tyZTgt[lp_i]);
+        return;
+    }
+
+    // the rage against the Protoss
+    if (GameGetMissionTime() >= go_tyZUntil[lp_i]) {
+        GhostOps_Ty_ZRelease(lp_i);
+        return;
+    }
+
+    if ((go_tyZTgt[lp_i] == null) || !UnitIsValid(go_tyZTgt[lp_i]) || !UnitIsAlive(go_tyZTgt[lp_i])) {
+        go_tyZTgt[lp_i] = GhostOps_Ty_NearestProtoss(UnitGetPosition(lv_u));
+        if (go_tyZTgt[lp_i] == null) {
+            GhostOps_Ty_ZRelease(lp_i);
+            return;
+        }
+
+        GhostOps_Ty_ZAttack(lp_i, go_tyZTgt[lp_i]);
+        return;
+    }
+
+    if ((UnitOrderCount(lv_u) == 0) || (OrderGetTargetUnit(UnitOrder(lv_u, 0)) != go_tyZTgt[lp_i])) {
+        GhostOps_Ty_ZAttack(lp_i, go_tyZTgt[lp_i]);
+    }
+}
+
+// the life of a capsule as a bar of ten blocks above it (the stock life bar of this stand-in unit is not shown by the engine)
+void GhostOps_Ty_DcTagUpdate (int lp_i) {
+    fixed lv_pct;
+    int lv_n;
+    int lv_k;
+    text lv_bar;
+
+    lv_pct = 100.0 * UnitGetPropertyFixed(go_tyDc[lp_i], c_unitPropLife, c_unitPropCurrent) / MaxF(1.0, UnitGetPropertyFixed(go_tyDc[lp_i], c_unitPropLifeMax, c_unitPropCurrent));
+    lv_n = FixedToInt(lv_pct / 10.0 + 0.5);
+    lv_bar = StringExternal("Param/Value/GhostOpsTy_PheroTag") + StringToText(" ");
+    lv_k = 0;
+    while (lv_k < 10) {
+        if (lv_k < lv_n) {
+            lv_bar = lv_bar + StringExternal("Param/Value/GhostOpsTy_BarOn");
+        }
+        else {
+            lv_bar = lv_bar + StringExternal("Param/Value/GhostOpsTy_BarOff");
+        }
+
+        lv_k += 1;
+    }
+
+    TextTagSetText(go_tyDcTag[lp_i], lv_bar + StringToText(" ") + IntToText(FixedToInt(UnitGetPropertyFixed(go_tyDc[lp_i], c_unitPropLife, c_unitPropCurrent))));
+}
+
+bool GhostOps_Ty_DecoyTick (bool lp_testConds, bool lp_runActions) {
+    int lv_i;
+    unit lv_u;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    GhostOps_Ty_RegisterDecoys();
+    lv_i = 0;
+    while (lv_i < 8) {
+        if (GhostOps_Ty_DcLive(lv_i)) {
+            lv_u = go_tyDc[lv_i];
+            // a capsule that nobody attacked disappears after go_tyDcLife seconds
+            if (((GameGetMissionTime() - go_tyDcBorn[lv_i]) > go_tyDcLife) && (UnitGetPropertyFixed(lv_u, c_unitPropLife, c_unitPropCurrent) >= (UnitGetPropertyFixed(lv_u, c_unitPropLifeMax, c_unitPropCurrent) - 0.01))) {
+                UnitRemove(lv_u);
+                UIDisplayMessage(PlayerGroupAll(), c_messageAreaDirective, StringExternal("Param/Value/GhostOpsTy_DecoyGone"));
+            }
+            else {
+                GhostOps_Ty_Attract(lv_i);
+                GhostOps_Ty_DcTagUpdate(lv_i);
+            }
+        }
+        else if (go_tyDcTagOn[lv_i]) {
+            TextTagDestroy(go_tyDcTag[lv_i]);
+            go_tyDcTagOn[lv_i] = false;
+        }
+
+        lv_i += 1;
+    }
+
+    lv_i = 0;
+    while (lv_i < 48) {
+        if (go_tyZSt[lv_i] != 0) {
+            GhostOps_Ty_ZTick(lv_i);
+        }
+
+        lv_i += 1;
+    }
+
+    return true;
+}
+
+// a mouse order is not reported at the queue stage, so ten times a second every Marauder whose CURRENT order is the capsule is looked at: a point that is not passable or
+// not connected by ground with the Zerg side is refused at once, nothing is spent
+void GhostOps_Ty_DecoyCheckOne (unit lp_u) {
+    order lv_o;
+    point lv_p;
+
+    if (UnitOrderCount(lp_u) <= 0) {
+        return;
+    }
+
+    lv_o = UnitOrder(lp_u, 0);
+    if (AbilityCommandGetAbility(OrderGetAbilityCommand(lv_o)) != "GhostOpsPheromone") {
+        return;
+    }
+
+    lv_p = OrderGetTargetPosition(lv_o);
+    if (!PointPathingPassable(lv_p) || !PointPathingIsConnected(Point(go_tyDcReachX, go_tyDcReachY), lv_p)) {
+        UnitIssueOrder(lp_u, Order(AbilityCommand("stop", 0)), c_orderQueueReplace);
+        UIDisplayMessage(PlayerGroupAll(), c_messageAreaDirective, StringExternal("Param/Value/GhostOpsTy_DecoyNoPath"));
+    }
+}
+
+bool GhostOps_Ty_DecoyCheck (bool lp_testConds, bool lp_runActions) {
+    unitgroup lv_g;
+    int lv_n;
+    int lv_i;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    // a new capsule changes hands at once (ten times a second), before the Protoss could look at it
+    GhostOps_Ty_RegisterDecoys();
+
+    lv_g = UnitGroup("Marauder", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+    lv_n = UnitGroupCount(lv_g, c_unitCountAll);
+    lv_i = 1;
+    while (lv_i <= lv_n) {
+        GhostOps_Ty_DecoyCheckOne(UnitGroupUnit(lv_g, lv_i));
+        lv_i += 1;
+    }
+
+    return true;
+}
+
+void GhostOps_Ty_DecoyStart () {
+    go_tyDcTrig = TriggerCreate("GhostOps_Ty_DecoyTick");
+    TriggerAddEventTimePeriodic(go_tyDcTrig, 0.25, c_timeGame);
+    go_tyDcCheckTrig = TriggerCreate("GhostOps_Ty_DecoyCheck");
+    TriggerAddEventTimePeriodic(go_tyDcCheckTrig, 0.1, c_timeGame);
+}
+
+void GhostOps_Ty_SceneRun (int lp_id);
+void GhostOps_Ty_Landing ();
+
+//--------------------------------------------------------------------------------------------------
+// Part 3: the guardians, the artifact (extraction by an SCV, carrier, drop, pick-up), the escape (offensive, transport, evacuation), the result.
+//
+// The guardians (StoneZealot statues of the original) take no damage from the player: a damage event of a player-1 source gives the life back at once (the statue is not absolutely
+// invulnerable: it still fights the workers and the squad, and the Zerg wound it). They prefer Zerg targets inside their area. The original "guardian destroyed" victory / defeat
+// is replaced (the hook of the adapter): the death of a guardian alone never ends the mission.
+// The artifact (stock ArtifactPiece2, neutral, invulnerable, standing inside a ring of pathing blockers) is only extracted by an SCV with the explicit command GhostOpsExtract: it
+// walks up (the order of the ability), stays near for go_tyExtractSec seconds (any other order, death or leaving the area cancels: the artifact stays), then it carries it
+// (buff, text mark; the artifact unit is hidden and follows the carrier). The carrier's death drops it where he died; another SCV picks it up with the same command.
+// The first capture starts the escape: the Zerg offensive (waves made by this module for the Zerg player and sent at the carrier), the transport (the stock landed Hercules
+// "Hercules" hovering over the site: a landing point, its move ability is off, it loads the squad) at the evacuation site and the window go_tyEvacWindow. With the carrier inside, the
+// command "Evacuate" (ability GhostOpsEvacuate) lets the transport fly to the exit; arrival at the exit = victory. Defeat: the transport lost, the window over without the carrier on board, no SCV left,
+// the Zerg took the artifact (all guardians dead and a Zerg at the artifact). The result is handed to the original victory / defeat triggers by a poll hook (adapter.json): one result only.
+//--------------------------------------------------------------------------------------------------
+bool go_tyGuardImmune;
+bool go_tyGuardPrefer;
+fixed go_tyExtractSec;
+fixed go_tyPickupSec;
+fixed go_tyExtractReach;
+fixed go_tyEvacWindow;
+fixed go_tyEvacArrive;
+fixed go_tyFlightMax;
+point go_tyEvacSite;
+point go_tyEvacFrom;
+point go_tyEvacExit;
+point go_tyOffSpawn;
+fixed go_tyOffGap;
+int go_tyOffWaves;
+string[4] go_tyOffType;
+int[4] go_tyOffCount;
+fixed go_tySceneR;
+fixed go_tyTakeSec;
+point go_tyLandSite;
+fixed go_tyLandHold;
+string[3] go_tyLandType;
+int[3] go_tyLandCount;
+bool go_tyDebug;
+
+int go_tyPhase;
+int go_tyArtState;
+unit go_tyExtractor;
+unit go_tyCarrier;
+fixed go_tyExtractStart;
+fixed go_tyExtractLen;
+int go_tyExtractTag;
+int go_tyCarrierTag;
+bool go_tyExtractTagOn;
+bool go_tyCarrierTagOn;
+point go_tyCarrierLast;
+point go_tyArtHome;
+fixed go_tyCapturedAt;
+fixed go_tyEvacDeadline;
+unit go_tyShip;
+bool go_tyShipMade;
+bool go_tyShipLanded;
+bool go_tyShipLeaving;
+fixed go_tyLeaveAt;
+fixed go_tyShipCalledAt;
+int go_tyResult;
+bool go_tyResultSent;
+string go_tyDefeatWhy;
+int go_tyOffDone;
+fixed go_tyOffNext;
+fixed go_tyOffOrderAt;
+unit[48] go_tyOff;
+int go_tyOffN;
+trigger go_tyMainTrig;
+trigger go_tyExtractTrig;
+trigger go_tyEvacTrig;
+trigger go_tyGuardHurtTrig;
+bool go_tyGuardsKnown;
+fixed go_tyTakeSince;
+bool[8] go_tyScene;
+int go_tyObj;
+int go_tyObjPrev;
+bool go_tyObjMade;
+fixed go_tyObjShown;
+bool go_tyLandOn;
+fixed go_tyLandAt;
+unit[12] go_tyLand;
+int go_tyLandUnits;
+bool go_tyMaraudersCame;
+fixed go_tyMaraudersAt;
+int go_tyExtractCount;
+int go_tyDropCount;
+
+void GhostOps_Ty_Say (string lp_id) {
+    UIDisplayMessage(PlayerGroupAll(), c_messageAreaDirective, StringExternal("Param/Value/GhostOpsTy_" + lp_id));
+}
+
+// a scene line: the subtitle with the name and the text, the portrait talks for lp_sec seconds (stable ids; portraits and text only, no voice)
+void GhostOps_Ty_Line (string lp_id, string lp_spk, fixed lp_sec) {
+    string lv_model;
+    int lv_grp;
+
+    if (lp_spk == "horner") {
+        lv_model = "HornerPortrait";
+        lv_grp = 2;
+    }
+    else if (lp_spk == "tychus") {
+        lv_model = "TychusPortrait";
+        lv_grp = 6;
+    }
+    else {
+        lv_model = "SwannPortrait";
+        lv_grp = 1;
+    }
+
+    UIDisplayMessage(PlayerGroupAll(), c_messageAreaSubtitle, StringExternal("Param/Value/GhostOpsTy_N_" + lp_spk) + StringToText(": ") + StringExternal("Param/Value/GhostOpsTy_L_" + lp_id));
+    GhostOps_Talk(lv_model, lv_grp, lp_sec);
+}
+
+void GhostOps_Ty_Objective (string lp_key) {
+    if (go_tyObjMade) {
+        ObjectiveSetState(go_tyObj, c_objectiveStateCompleted);
+    }
+
+    ObjectiveCreate(StringExternal("Param/Value/GhostOpsTy_Obj" + lp_key + "Title"), StringExternal("Param/Value/GhostOpsTy_Obj" + lp_key + "Text"), c_objectiveStateActive, false);
+    go_tyObj = ObjectiveLastCreated();
+    go_tyObjMade = true;
+}
+
+// ---- the guardians ---------------------------------------------------------------------------------------------------------------
+bool GhostOps_Ty_GuardHurt (bool lp_testConds, bool lp_runActions) {
+    unit lv_u;
+    fixed lv_max;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    if (!go_tyGuardImmune || (EventUnitDamageSourcePlayer() != 1)) {
+        return true;
+    }
+
+    lv_u = EventUnit();
+    if (!UnitIsAlive(lv_u)) {
+        return true;
+    }
+
+    lv_max = UnitGetPropertyFixed(lv_u, c_unitPropLifeMax, c_unitPropCurrent);
+    UnitSetPropertyFixed(lv_u, c_unitPropLife, MinF(lv_max, UnitGetPropertyFixed(lv_u, c_unitPropLife, c_unitPropCurrent) + EventUnitDamageAmount()));
+    return true;
+}
+
+void GhostOps_Ty_GuardsWatch () {
+    unitgroup lv_g;
+    unit lv_u;
+
+    go_tyGuardHurtTrig = TriggerCreate("GhostOps_Ty_GuardHurt");
+    lv_g = UnitGroup("StoneZealot", c_playerAny, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32))), 0);
+    UnitGroupLoopBegin(lv_g);
+    while (UnitGroupLoopCurrent() != null) {
+        lv_u = UnitGroupLoopCurrent();
+        TriggerAddEventUnitDamaged(go_tyGuardHurtTrig, UnitRefFromUnit(lv_u), c_unitDamageTypeAny, c_unitDamageEither, null);
+        UnitGroupLoopStep();
+    }
+
+    UnitGroupLoopEnd();
+}
+
+// the guardians of one area attack the nearest Zerg ground unit of the area first; false = no Zerg there, the original orders go on
+bool GhostOps_Ty_GuardPrefer (unitgroup lp_guards, int lp_region) {
+    unitgroup lv_z;
+    unit lv_g;
+    unit lv_t;
+    int lv_n;
+    int lv_i;
+
+    if (!go_tyOn || !go_tyGuardPrefer || (lp_guards == null)) {
+        return false;
+    }
+
+    lv_z = UnitGroup(null, 2, RegionFromId(lp_region), UnitFilter(0, 0, (1 << c_targetFilterAir) | (1 << c_targetFilterMissile) | (1 << c_targetFilterStructure), (1 << (c_targetFilterDead - 32)) | (1 << (c_targetFilterHidden - 32))), 0);
+    if (UnitGroupCount(lv_z, c_unitCountAlive) == 0) {
+        return false;
+    }
+
+    lv_n = UnitGroupCount(lp_guards, c_unitCountAll);
+    lv_i = 1;
+    while (lv_i <= lv_n) {
+        lv_g = UnitGroupUnit(lp_guards, lv_i);
+        if ((lv_g != null) && UnitIsAlive(lv_g)) {
+            lv_t = UnitGroupClosestToPoint(lv_z, UnitGetPosition(lv_g));
+            if (lv_t != null) {
+                UnitIssueOrder(lv_g, OrderTargetingUnit(AbilityCommand("attack", 0), lv_t), c_orderQueueReplace);
+            }
+        }
+
+        lv_i += 1;
+    }
+
+    return true;
+}
+
+// the death of a guardian: the original victory / defeat of the guardian race is not used in this variant
+void GhostOps_Ty_OnGuardianDied (unit lp_u) {
+    SoundPlayAtPoint(SoundLink("Thor_Movement", -1), PlayerGroupAll(), UnitGetPosition(lp_u), 0.0, 100.0, 0.0);
+}
+
+int GhostOps_Ty_GuardsAlive () {
+    return UnitGroupCount(go_tyGuardN, c_unitCountAlive) + UnitGroupCount(go_tyGuardS, c_unitCountAlive);
+}
+
+// ---- the artifact ------------------------------------------------------------------------------------------------------------
+void GhostOps_Ty_TagOff () {
+    if (go_tyExtractTagOn) {
+        TextTagDestroy(go_tyExtractTag);
+        go_tyExtractTagOn = false;
+    }
+}
+
+void GhostOps_Ty_ExtractCancel (string lp_why) {
+    GhostOps_Ty_TagOff();
+    if (go_tyArtState == 1) {
+        if (go_tyCarrier != null) {
+            go_tyArtState = 2;
+        }
+        else if (go_tyDropCount > 0) {
+            go_tyArtState = 3;
+        }
+        else {
+            go_tyArtState = 0;
+        }
+    }
+
+    go_tyExtractor = null;
+    GhostOps_Ty_Say(lp_why);
+}
+
+void GhostOps_Ty_ExtractBegin (unit lp_scv) {
+    if ((lp_scv == null) || !UnitIsAlive(lp_scv) || (go_tyPhase >= 3)) {
+        return;
+    }
+
+    if (go_tyArtState == 2) {
+        GhostOps_Ty_Say("ExtractHeld");
+        return;
+    }
+
+    if (go_tyArtState == 1) {
+        if (lp_scv != go_tyExtractor) {
+            GhostOps_Ty_Say("ExtractBusy");
+        }
+
+        return;
+    }
+
+    if (DistanceBetweenPoints(UnitGetPosition(lp_scv), UnitGetPosition(go_tyArtifact)) > go_tyExtractReach) {
+        return;
+    }
+
+    if (go_tyArtState == 3) {
+        go_tyExtractLen = go_tyPickupSec;
+    }
+    else {
+        go_tyExtractLen = go_tyExtractSec;
+    }
+
+    go_tyArtState = 1;
+    go_tyExtractor = lp_scv;
+    go_tyExtractStart = GameGetMissionTime();
+    go_tyExtractCount += 1;
+    TextTagCreate(StringExternal("Param/Value/GhostOpsTy_ExtractTag"), 24, UnitGetPosition(lp_scv), 2.2, true, false, PlayerGroupAll());
+    go_tyExtractTag = TextTagLastCreated();
+    TextTagAttachToUnit(go_tyExtractTag, lp_scv, 2.2);
+    go_tyExtractTagOn = true;
+    GhostOps_Ty_Say("ExtractStart");
+}
+
+bool GhostOps_Ty_OnExtractCmd (bool lp_testConds, bool lp_runActions) {
+    if (!lp_runActions) {
+        return true;
+    }
+
+    GhostOps_Ty_ExtractBegin(EventUnit());
+    return true;
+}
+
+void GhostOps_Ty_CarrierMark (unit lp_scv) {
+    UnitBehaviorAdd(lp_scv, "GhostOpsCarrier", lp_scv, 1);
+    if (go_tyCarrierTagOn) {
+        TextTagDestroy(go_tyCarrierTag);
+    }
+
+    TextTagCreate(StringExternal("Param/Value/GhostOpsTy_CarrierTag"), 24, UnitGetPosition(lp_scv), 2.8, true, false, PlayerGroupAll());
+    go_tyCarrierTag = TextTagLastCreated();
+    TextTagAttachToUnit(go_tyCarrierTag, lp_scv, 2.8);
+    go_tyCarrierTagOn = true;
+}
+
+void GhostOps_Ty_CarrierUnmark () {
+    if (go_tyCarrierTagOn) {
+        TextTagDestroy(go_tyCarrierTag);
+        go_tyCarrierTagOn = false;
+    }
+}
+
+void GhostOps_Ty_Captured (unit lp_scv) {
+    GhostOps_Ty_TagOff();
+    go_tyArtState = 2;
+    go_tyCarrier = lp_scv;
+    go_tyExtractor = null;
+    go_tyCarrierLast = UnitGetPosition(lp_scv);
+    UnitSetState(go_tyArtifact, c_unitStateHidden, true);
+    GhostOps_Ty_CarrierMark(lp_scv);
+    GhostOps_Ty_Say("Captured");
+    if (go_tyPhase < 2) {
+        go_tyPhase = 2;
+        go_tyCapturedAt = GameGetMissionTime();
+        go_tyEvacDeadline = go_tyCapturedAt + go_tyEvacWindow;
+        go_tyOffNext = go_tyCapturedAt + 2.0;
+        GhostOps_Ty_Objective("Escape");
+        GhostOps_Ty_SceneRun(3);
+    }
+}
+
+void GhostOps_Ty_Drop () {
+    UnitSetPosition(go_tyArtifact, go_tyCarrierLast, false);
+    UnitSetState(go_tyArtifact, c_unitStateHidden, false);
+    go_tyArtState = 3;
+    go_tyCarrier = null;
+    go_tyDropCount += 1;
+    GhostOps_Ty_CarrierUnmark();
+    MinimapPing(PlayerGroupAll(), go_tyCarrierLast, 6.0, Color(100.00, 80.00, 0.00));
+    GhostOps_Ty_Say("CarrierDied");
+}
+
+bool GhostOps_Ty_Boarded () {
+    return (go_tyCarrier != null) && go_tyShipMade && UnitIsValid(go_tyCarrier) && UnitIsAlive(go_tyCarrier) && (UnitTransport(go_tyCarrier) == go_tyShip) && (go_tyShip != null);
+}
+
+void GhostOps_Ty_ExtractTick () {
+    unit lv_s;
+    fixed lv_left;
+    bool lv_away;
+    string lv_ab;
+
+    if (go_tyArtState != 1) {
+        return;
+    }
+
+    lv_s = go_tyExtractor;
+    if ((lv_s == null) || !UnitIsValid(lv_s) || !UnitIsAlive(lv_s)) {
+        GhostOps_Ty_ExtractCancel("ExtractLost");
+        return;
+    }
+
+    lv_away = false;
+    if (UnitOrderCount(lv_s) > 0) {
+        lv_ab = AbilityCommandGetAbility(OrderGetAbilityCommand(UnitOrder(lv_s, 0)));
+        if (lv_ab == "Repair") {
+            UnitIssueOrder(lv_s, Order(AbilityCommand("stop", 0)), c_orderQueueReplace);
+        }
+        else if ((lv_ab != "stop") && (lv_ab != "GhostOpsExtract")) {
+            lv_away = true;
+        }
+    }
+
+    if (lv_away || (DistanceBetweenPoints(UnitGetPosition(lv_s), UnitGetPosition(go_tyArtifact)) > go_tyExtractReach)) {
+        GhostOps_Ty_ExtractCancel("ExtractCancelled");
+        return;
+    }
+
+    lv_left = go_tyExtractLen - (GameGetMissionTime() - go_tyExtractStart);
+    if (lv_left <= 0.0) {
+        GhostOps_Ty_Captured(lv_s);
+        return;
+    }
+
+    TextTagSetText(go_tyExtractTag, StringExternal("Param/Value/GhostOpsTy_ExtractTag") + StringToText(" ") + IntToText(FixedToInt(lv_left + 0.99)));
+}
+
+void GhostOps_Ty_CarrierTick () {
+    if (go_tyArtState != 2) {
+        return;
+    }
+
+    if ((go_tyCarrier == null) || !UnitIsValid(go_tyCarrier) || !UnitIsAlive(go_tyCarrier)) {
+        GhostOps_Ty_Drop();
+        return;
+    }
+
+    go_tyCarrierLast = UnitGetPosition(go_tyCarrier);
+    UnitSetPosition(go_tyArtifact, go_tyCarrierLast, false);
+}
+
+// ---- the offensive of the escape ----------------------------------------------------------------------------------------------
+void GhostOps_Ty_OffWave () {
+    int lv_k;
+    int lv_n;
+    int lv_slot;
+    unit lv_u;
+
+    lv_k = 0;
+    while (lv_k < 4) {
+        lv_n = 0;
+        while (lv_n < go_tyOffCount[lv_k]) {
+            lv_slot = -1;
+            if (go_tyOffN < 48) {
+                lv_slot = go_tyOffN;
+            }
+            else {
+                lv_slot = 0;
+                while ((lv_slot < 48) && UnitIsValid(go_tyOff[lv_slot]) && UnitIsAlive(go_tyOff[lv_slot])) {
+                    lv_slot += 1;
+                }
+
+                if (lv_slot >= 48) {
+                    lv_slot = -1;
+                }
+            }
+
+            UnitCreate(1, go_tyOffType[lv_k], 0, 2, PointWithOffset(go_tyOffSpawn, IntToFixed(lv_n % 6) * 1.2 - 3.0, IntToFixed(lv_n / 6) * 1.2 - 2.0), 270.0);
+            lv_u = UnitLastCreated();
+            if (lv_slot >= 0) {
+                go_tyOff[lv_slot] = lv_u;
+                if (lv_slot == go_tyOffN) {
+                    go_tyOffN += 1;
+                }
+            }
+
+            AISetUnitScriptControlled(lv_u, true);
+            lv_n += 1;
+        }
+
+        lv_k += 1;
+    }
+
+    go_tyOffDone += 1;
+    go_tyOffNext = GameGetMissionTime() + go_tyOffGap;
+    GhostOps_Ty_Say("OffWave");
+}
+
+void GhostOps_Ty_OffOrders () {
+    int lv_i;
+    point lv_to;
+    unit lv_u;
+
+    if (GameGetMissionTime() < go_tyOffOrderAt) {
+        return;
+    }
+
+    go_tyOffOrderAt = GameGetMissionTime() + 2.0;
+    if (go_tyCarrier != null) {
+        lv_to = go_tyCarrierLast;
+    }
+    else {
+        lv_to = go_tyEvacSite;
+    }
+
+    lv_i = 0;
+    while (lv_i < go_tyOffN) {
+        lv_u = go_tyOff[lv_i];
+        if ((lv_u != null) && UnitIsValid(lv_u) && UnitIsAlive(lv_u) && (GhostOps_Ty_ZSlot(lv_u) < 0)) {
+            UnitIssueOrder(lv_u, OrderTargetingPoint(AbilityCommand("attack", 0), lv_to), c_orderQueueReplace);
+        }
+
+        lv_i += 1;
+    }
+}
+
+// ---- the transport ------------------------------------------------------------------------------------------------------------
+void GhostOps_Ty_ShipCall () {
+    UnitCreate(1, "Hercules", 0, 1, go_tyEvacFrom, 270.0);
+    go_tyShip = UnitLastCreated();
+    go_tyShipMade = true;
+    go_tyShipCalledAt = GameGetMissionTime();
+    UnitAbilityEnable(go_tyShip, "GhostOpsEvacuate", false);
+    UnitIssueOrder(go_tyShip, OrderTargetingPoint(AbilityCommand("move", 0), go_tyEvacSite), c_orderQueueReplace);
+    MinimapPing(PlayerGroupAll(), go_tyEvacSite, 8.0, Color(0.00, 100.00, 40.00));
+    GhostOps_Ty_Say("ShipCalled");
+}
+
+// the transport has reached the site: it is a landing point, not a ship to fly (no move orders until the evacuation command)
+void GhostOps_Ty_ShipLanded () {
+    go_tyShipLanded = true;
+    UnitIssueOrder(go_tyShip, Order(AbilityCommand("stop", 0)), c_orderQueueReplace);
+    UnitAbilityEnable(go_tyShip, "move", false);
+    GhostOps_Ty_Say("ShipLanded");
+    GhostOps_Ty_SceneRun(4);
+}
+
+void GhostOps_Ty_Leave () {
+    go_tyShipLeaving = true;
+    go_tyPhase = 3;
+    go_tyLeaveAt = GameGetMissionTime();
+    UnitAbilityEnable(go_tyShip, "move", true);
+    UnitIssueOrder(go_tyShip, OrderTargetingPoint(AbilityCommand("move", 0), go_tyEvacExit), c_orderQueueReplace);
+    GhostOps_Ty_Say("Leaving");
+}
+
+bool GhostOps_Ty_OnEvacCmd (bool lp_testConds, bool lp_runActions) {
+    if (!lp_runActions) {
+        return true;
+    }
+
+    if (go_tyShipLeaving || (go_tyPhase != 2)) {
+        return true;
+    }
+
+    if (!GhostOps_Ty_Boarded()) {
+        GhostOps_Ty_Say("EvacNoCarrier");
+        return true;
+    }
+
+    GhostOps_Ty_Leave();
+    return true;
+}
+
+void GhostOps_Ty_Fail (string lp_why) {
+    if (go_tyResult != 0) {
+        return;
+    }
+
+    go_tyResult = 2;
+    go_tyDefeatWhy = lp_why;
+    go_tyPhase = 5;
+    GhostOps_Ty_Say(lp_why);
+}
+
+void GhostOps_Ty_Win () {
+    if (go_tyResult != 0) {
+        return;
+    }
+
+    go_tyResult = 1;
+    go_tyPhase = 4;
+    GhostOps_Ty_Say("Evacuated");
+}
+
+void GhostOps_Ty_ShipTick () {
+    fixed lv_left;
+
+    if (!go_tyShipMade || (go_tyResult != 0)) {
+        return;
+    }
+
+    if ((go_tyShip == null) || !UnitIsValid(go_tyShip) || !UnitIsAlive(go_tyShip)) {
+        GhostOps_Ty_Fail("DefeatShip");
+        return;
+    }
+
+    if (!go_tyShipLanded) {
+        if (DistanceBetweenPoints(UnitGetPosition(go_tyShip), go_tyEvacSite) < 2.5) {
+            GhostOps_Ty_ShipLanded();
+        }
+
+        return;
+    }
+
+    if (go_tyShipLeaving) {
+        if ((DistanceBetweenPoints(UnitGetPosition(go_tyShip), go_tyEvacExit) < 5.0) || ((GameGetMissionTime() - go_tyLeaveAt) > go_tyFlightMax)) {
+            GhostOps_Ty_Win();
+        }
+
+        return;
+    }
+
+    UnitAbilityEnable(go_tyShip, "GhostOpsEvacuate", GhostOps_Ty_Boarded());
+    if (GameGetMissionTime() >= go_tyEvacDeadline) {
+        if (GhostOps_Ty_Boarded()) {
+            GhostOps_Ty_Leave();
+        }
+        else {
+            GhostOps_Ty_Fail("DefeatTimeout");
+        }
+    }
+}
+
+// ---- the other results ---------------------------------------------------------------------------------------------------------
+void GhostOps_Ty_RuleTick () {
+    unitgroup lv_g;
+
+    if (go_tyResult != 0) {
+        return;
+    }
+
+    if (GhostOps_Ty_GuardsAlive() > 0) {
+        go_tyGuardsKnown = true;
+    }
+
+    if ((go_tyPhase == 2) && (UnitGroupCount(UnitGroup("SCV", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive) == 0)) {
+        GhostOps_Ty_Fail("DefeatNoScv");
+        return;
+    }
+
+    // the Zerg take the artifact: every guardian is dead and a Zerg ground unit stands at the artifact (it lies on the shrine or on the ground, not carried)
+    if (((go_tyArtState == 0) || (go_tyArtState == 3)) && go_tyGuardsKnown && (GhostOps_Ty_GuardsAlive() == 0)) {
+        lv_g = UnitGroup(null, 2, RegionCircle(UnitGetPosition(go_tyArtifact), 7.0), UnitFilter(0, 0, (1 << c_targetFilterAir) | (1 << c_targetFilterMissile) | (1 << c_targetFilterStructure), (1 << (c_targetFilterDead - 32)) | (1 << (c_targetFilterHidden - 32))), 0);
+        if (UnitGroupCount(lv_g, c_unitCountAlive) > 0) {
+            if (go_tyTakeSince < 0.0) {
+                go_tyTakeSince = GameGetMissionTime();
+                GhostOps_Ty_Say("ZergTaking");
+            }
+            else if ((GameGetMissionTime() - go_tyTakeSince) >= go_tyTakeSec) {
+                GhostOps_Ty_Fail("DefeatZerg");
+            }
+        }
+        else {
+            go_tyTakeSince = -1.0;
+        }
+    }
+    else {
+        go_tyTakeSince = -1.0;
+    }
+}
+
+// the result for the original victory / defeat triggers (the poll hook of the adapter): 1 victory, 2 defeat, 0 nothing; every result is handed over once
+int GhostOps_Ty_PollResult () {
+    if (!go_tyOn || (go_tyResult == 0) || go_tyResultSent) {
+        return 0;
+    }
+
+    go_tyResultSent = true;
+    return go_tyResult;
+}
+
+// the base lost after the capture is not a defeat (the escape goes on)
+bool GhostOps_Ty_BaseLossOk () {
+    return go_tyOn && (go_tyPhase >= 2);
+}
+
+// ---- scenes ---------------------------------------------------------------------------------------------------------------------
+bool GhostOps_Ty_SceneTrain (bool lp_testConds, bool lp_runActions) {
+    int lv_i;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    TriggerQueueEnter();
+    GhostOps_Ty_Line("TrainWarn", "swann", 8.0);
+    GhostOps_Ty_Landing();
+    Wait(1.0, c_timeGame);
+    GhostOps_Ty_Line("TrainDecoy", "swann", 11.0);
+    GhostOps_Ty_Say("TrainMark");
+    TriggerQueueExit();
+    return true;
+}
+
+bool GhostOps_Ty_SceneGuards (bool lp_testConds, bool lp_runActions) {
+    if (!lp_runActions) {
+        return true;
+    }
+
+    TriggerQueueEnter();
+    GhostOps_Ty_Line("Guards", "swann", 11.0);
+    Wait(1.0, c_timeGame);
+    GhostOps_Ty_Line("Site", "horner", 10.0);
+    MinimapPing(PlayerGroupAll(), go_tyEvacSite, 8.0, Color(0.00, 100.00, 40.00));
+    GhostOps_Ty_Objective("Grab");
+    TriggerQueueExit();
+    return true;
+}
+
+bool GhostOps_Ty_SceneCaptured (bool lp_testConds, bool lp_runActions) {
+    if (!lp_runActions) {
+        return true;
+    }
+
+    TriggerQueueEnter();
+    GhostOps_Ty_Line("Captured", "tychus", 7.0);
+    GhostOps_Ty_Line("Escape", "horner", 8.0);
+    TriggerQueueExit();
+    return true;
+}
+
+bool GhostOps_Ty_SceneShip (bool lp_testConds, bool lp_runActions) {
+    if (!lp_runActions) {
+        return true;
+    }
+
+    TriggerQueueEnter();
+    GhostOps_Ty_Line("Landed", "horner", 9.0);
+    TriggerQueueExit();
+    return true;
+}
+
+void GhostOps_Ty_SceneRun (int lp_id) {
+    if (go_tyScene[lp_id]) {
+        return;
+    }
+
+    go_tyScene[lp_id] = true;
+    if (lp_id == 1) {
+        TriggerExecute(TriggerCreate("GhostOps_Ty_SceneTrain"), true, false);
+    }
+    else if (lp_id == 2) {
+        TriggerExecute(TriggerCreate("GhostOps_Ty_SceneGuards"), true, false);
+    }
+    else if (lp_id == 3) {
+        TriggerExecute(TriggerCreate("GhostOps_Ty_SceneCaptured"), true, false);
+    }
+    else if (lp_id == 4) {
+        TriggerExecute(TriggerCreate("GhostOps_Ty_SceneShip"), true, false);
+    }
+}
+
+// the training landing: a small group of Zerg on a free inner area, held (script controlled) until a pheromone capsule takes them or go_tyLandHold seconds are over
+void GhostOps_Ty_Landing () {
+    int lv_k;
+    int lv_n;
+    unit lv_u;
+
+    lv_k = 0;
+    go_tyLandUnits = 0;
+    while (lv_k < 3) {
+        lv_n = 0;
+        while (lv_n < go_tyLandCount[lv_k]) {
+            if (go_tyLandUnits < 12) {
+                UnitCreate(1, go_tyLandType[lv_k], 0, 2, PointWithOffset(go_tyLandSite, IntToFixed(go_tyLandUnits % 4) * 1.3 - 2.0, IntToFixed(go_tyLandUnits / 4) * 1.3 - 1.0), 270.0);
+                lv_u = UnitLastCreated();
+                go_tyLand[go_tyLandUnits] = lv_u;
+                go_tyLandUnits += 1;
+                AISetUnitScriptControlled(lv_u, true);
+                UnitSetState(lv_u, c_unitStateTargetable, false);
+                if (go_tyGroupArtifact != null) {
+                    UnitGroupRemove(go_tyGroupArtifact, lv_u);
+                }
+            }
+
+            lv_n += 1;
+        }
+
+        lv_k += 1;
+    }
+
+    go_tyLandOn = true;
+    go_tyLandAt = GameGetMissionTime();
+    MinimapPing(PlayerGroupAll(), go_tyLandSite, 8.0, Color(100.00, 40.00, 0.00));
+}
+
+void GhostOps_Ty_LandTick () {
+    int lv_i;
+    int lv_alive;
+    unit lv_u;
+    bool lv_release;
+
+    if (!go_tyLandOn) {
+        return;
+    }
+
+    lv_alive = 0;
+    lv_i = 0;
+    while (lv_i < go_tyLandUnits) {
+        lv_u = go_tyLand[lv_i];
+        if ((lv_u != null) && UnitIsValid(lv_u) && UnitIsAlive(lv_u)) {
+            lv_alive += 1;
+        }
+
+        lv_i += 1;
+    }
+
+    if (lv_alive == 0) {
+        go_tyLandOn = false;
+        return;
+    }
+
+    lv_release = (GameGetMissionTime() - go_tyLandAt) > go_tyLandHold;
+    if (!lv_release) {
+        return;
+    }
+
+    // nobody dealt with the landing: the small group goes at the base (a Zerg that a capsule holds is left to the capsule module)
+    go_tyLandOn = false;
+    lv_i = 0;
+    while (lv_i < go_tyLandUnits) {
+        lv_u = go_tyLand[lv_i];
+        if ((lv_u != null) && UnitIsValid(lv_u) && UnitIsAlive(lv_u)) {
+            UnitSetState(lv_u, c_unitStateTargetable, true);
+        }
+
+        if ((lv_u != null) && UnitIsValid(lv_u) && UnitIsAlive(lv_u) && (GhostOps_Ty_ZSlot(lv_u) < 0)) {
+            AISetUnitScriptControlled(lv_u, false);
+            UnitIssueOrder(lv_u, OrderTargetingPoint(AbilityCommand("attack", 0), UnitGetPosition(UnitGroupUnit(UnitGroup("CommandCenter", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), 1))), c_orderQueueReplace);
+        }
+
+        lv_i += 1;
+    }
+}
+
+// the marauders came (the hook of the adapter after the dropship was emptied): the landing scene follows after the original talks
+void GhostOps_Ty_OnMarauders () {
+    if (!go_tyOn || go_tyMaraudersCame) {
+        return;
+    }
+
+    go_tyMaraudersCame = true;
+    go_tyMaraudersAt = GameGetMissionTime();
+    GhostOps_Ty_SceneRun(1);
+}
+
+// the first time a player unit comes near the artifact: the guardian scene (they take no damage from our weapons; the Zerg wound them) and the task
+void GhostOps_Ty_ApproachTick () {
+    unitgroup lv_g;
+
+    if (go_tyScene[2] || (go_tyArtifact == null)) {
+        return;
+    }
+
+    lv_g = UnitGroup(null, 1, RegionCircle(UnitGetPosition(go_tyArtifact), go_tySceneR), UnitFilter(0, 0, (1 << c_targetFilterMissile) | (1 << c_targetFilterStructure), (1 << (c_targetFilterDead - 32)) | (1 << (c_targetFilterHidden - 32))), 0);
+    if (UnitGroupCount(lv_g, c_unitCountAlive) > 0) {
+        GhostOps_Ty_SceneRun(2);
+    }
+}
+
+// the objective line of the escape shows the seconds left of the window
+void GhostOps_Ty_ObjTimer () {
+    fixed lv_left;
+
+    if (go_tyPhase != 2) {
+        return;
+    }
+
+    lv_left = go_tyEvacDeadline - GameGetMissionTime();
+    if (lv_left < 0.0) {
+        lv_left = 0.0;
+    }
+
+    if (FixedToInt(lv_left) != FixedToInt(go_tyObjShown)) {
+        go_tyObjShown = lv_left;
+        ObjectiveSetName(go_tyObj, StringExternal("Param/Value/GhostOpsTy_ObjEscapeTitle") + StringToText(" (") + IntToText(FixedToInt(lv_left)) + StringToText(")"));
+    }
+}
+
+bool GhostOps_Ty_MainTick (bool lp_testConds, bool lp_runActions) {
+    if (!lp_runActions) {
+        return true;
+    }
+
+    GhostOps_Ty_ApproachTick();
+    GhostOps_Ty_LandTick();
+    GhostOps_Ty_ExtractTick();
+    GhostOps_Ty_CarrierTick();
+    if (go_tyPhase == 2) {
+        if (!go_tyShipMade && ((GameGetMissionTime() - go_tyCapturedAt) >= go_tyEvacArrive)) {
+            GhostOps_Ty_ShipCall();
+        }
+
+        if ((go_tyOffDone < go_tyOffWaves) && (GameGetMissionTime() >= go_tyOffNext)) {
+            GhostOps_Ty_OffWave();
+        }
+
+        GhostOps_Ty_OffOrders();
+        GhostOps_Ty_ObjTimer();
+    }
+
+    GhostOps_Ty_ShipTick();
+    GhostOps_Ty_RuleTick();
+    return true;
+}
+
+void GhostOps_Ty_Part3Start () {
+    go_tyTakeSince = -1.0;
+    go_tyArtHome = UnitGetPosition(go_tyArtifact);
+    GhostOps_Ty_GuardsWatch();
+    go_tyExtractTrig = TriggerCreate("GhostOps_Ty_OnExtractCmd");
+    TriggerAddEventUnitAbility(go_tyExtractTrig, null, AbilityCommand("GhostOpsExtract", 0), c_unitAbilStageComplete, false);
+    go_tyEvacTrig = TriggerCreate("GhostOps_Ty_OnEvacCmd");
+    TriggerAddEventUnitAbility(go_tyEvacTrig, null, AbilityCommand("GhostOpsEvacuate", 0), c_unitAbilStageComplete, false);
+    go_tyMainTrig = TriggerCreate("GhostOps_Ty_MainTick");
+    TriggerAddEventTimePeriodic(go_tyMainTrig, 0.25, c_timeGame);
+}
+
+void GhostOps_Ty_Part2Start () {
+    GhostOps_Ty_DecoyStart();
+    GhostOps_Ty_Part3Start();
+}

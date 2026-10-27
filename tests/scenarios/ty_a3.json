@@ -1,0 +1,160 @@
+{
+ "name": "ty_a3",
+ "mission": "ttychus01",
+ "preset": "grab_free_dev",
+ "why": "episode A: capsule look, circle, bar, charge shown",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 10
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "cmd",
+   "text": "tmarcome",
+   "wait": 2
+  },
+  {
+   "op": "expect",
+   "regex": "TMARCOME",
+   "note": "the story arrival of the Marauders (brought forward), the training scene starts"
+  },
+  {
+   "op": "sleep",
+   "s": 28
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TSEL Marauder",
+   "cmd": "tsel Marauder",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "cmd",
+   "text": "tcam 70 30",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 1.5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "E"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 1.2
+  },
+  {
+   "op": "burst",
+   "file": "a1_aiming.png",
+   "n": 3,
+   "gap": 0.5
+  },
+  {
+   "op": "click",
+   "x": 512,
+   "y": 330
+  },
+  {
+   "op": "sleep",
+   "s": 1.5
+  },
+  {
+   "op": "burst",
+   "file": "a2_thrown.png",
+   "n": 3,
+   "gap": 0.5
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TDCS",
+   "cmd": "tdcs",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TMAR n=",
+   "cmd": "tmar",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TSELCAP selected",
+   "cmd": "tselcap",
+   "every": 3,
+   "timeout": 20
+  },
+  {
+   "op": "sleep",
+   "s": 1.5
+  },
+  {
+   "op": "burst",
+   "file": "a3_capsule_selected.png",
+   "n": 3,
+   "gap": 0.5
+  },
+  {
+   "op": "sleep",
+   "s": 8
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TDCS",
+   "cmd": "tdcs",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TSTAT",
+   "cmd": "tstat",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "expect",
+   "regex": "TSELCAP selected|TDCS \\[",
+   "note": "a capsule exists after the throw"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

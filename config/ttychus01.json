@@ -28,5 +28,568 @@
   "difficulty": {
     "expected": 3,
     "show_message": true
+  },
+  "default_preset": "grab_free",
+  "presets": {
+    "prototype": {
+      "label": "Smash and Grab — ранний прототип",
+      "message": "Ghost Ops: Smash and Grab, прототип",
+      "message_en": "Ghost Ops - Smash and Grab, prototype",
+      "experimental": false,
+      "badge": "прототип",
+      "card": "Ранний прототип без выбора сложности: скрытная операция среди протоссов и зергов.",
+      "details": [],
+      "overrides": {}
+    },
+    "probe_dev": {
+      "label": "Smash and Grab, проба (служебный)",
+      "message": "Ghost Ops - TTychus01 probe (dev)",
+      "message_en": "Ghost Ops - TTychus01 probe (dev)",
+      "hidden": true,
+      "extends": "prototype",
+      "card": "Technical probe",
+      "details": [
+        "Development only"
+      ],
+      "overrides": {
+        "ce0": {
+          "operation_id": "CE0-TY",
+          "census_types": [
+            "Ghost",
+            "Marine",
+            "SCV",
+            "Marauder",
+            "Medic"
+          ]
+        }
+      }
+    },
+    "grab_free": {
+      "label": "Хватай и беги — Тест: бесплатный отряд (ревизия 1)",
+      "message": "Ghost Ops: Хватай и беги, бесплатный тест",
+      "message_en": "Ghost Ops - Grab and run, free test",
+      "experimental": true,
+      "badge": "Для проверки · свободный тест",
+      "extends": "prototype",
+      "card": "Режим «Свободный тест»: ничего не списывается и ничего не зачисляется в настоящую кампанию (отдельного результата для кампании у этого запуска нет). Оригинальная миссия «Smash and Grab» с новой механикой: мародёры бросают феромонные приманки, которые уводят зергов к стражам; стражи не получают урона от ваших войск; артефакт извлекает КСМ, после чего зерги идут в прорыв и вызывается транспорт эвакуации. Состав (всего, вместе со штатным): {ty_scvs} КСМ, {ty_marines} морпехов, {ty_medics} медика, {ty_ghosts} призрака, {ty_marauders} мародёра (после сюжетного появления), {ty_bunkers} комплекта бункеров и {ty_turrets} комплекта турелей (сворачиваются и ставятся заново, клавиша [Z]). Добыча и газовая станция доступны. Призраки с постоянной маскировкой, ранним предупреждением о детекторах и переключателем автоогня; у турелей наземный залп [A].",
+      "details": [
+        "ТЕСТОВЫЙ КОМПЛЕКТ, не утверждённый баланс; в кампанию не пишет и результата не предлагает",
+        "Все числа приманки, извлечения и эвакуации экспериментальные, не утверждены Owner (config/ttychus01.json, раздел tychus)"
+      ],
+      "overrides": {
+        "operatives": {
+          "squad": [
+            "Ghost",
+            "Ghost"
+          ],
+          "start_hold_fire": false,
+          "ghost_permanent_cloak": true,
+          "ghost_start_cloaked": true,
+          "disabled_abilities": []
+        },
+        "base_support": {
+          "damage_multiplier": 1
+        },
+        "ghost_tuning": {
+          "energy_start": 100,
+          "energy_max": 100,
+          "regen_per_second": 1.25,
+          "cloak_activation_cost": 0,
+          "cloak_net_per_second": 0,
+          "snipe": {
+            "cost": 0,
+            "damage": 250,
+            "cast_time": 0.3,
+            "cooldown": 2.0,
+            "exclude_friendly": true
+          },
+          "remove_abilities": [
+            "TacNukeStrike",
+            "EMP"
+          ],
+          "fire_control": {
+            "enabled": true,
+            "row": 1,
+            "hold_column": 2,
+            "free_column": 3
+          }
+        },
+        "panel": {
+          "enabled": true,
+          "texts": {
+            "Name0": {
+              "ru": "Призрак 1",
+              "en": "Ghost 1"
+            },
+            "Name1": {
+              "ru": "Призрак 2",
+              "en": "Ghost 2"
+            },
+            "Dead": {
+              "ru": "погиб",
+              "en": "dead"
+            },
+            "Infinite": {
+              "ru": "Маскировка: без расхода (день)",
+              "en": "Cloak: free (day)"
+            },
+            "Cloak": {
+              "ru": "маскировка",
+              "en": "cloak"
+            },
+            "Seconds": {
+              "ru": "с",
+              "en": "s"
+            },
+            "Regen": {
+              "ru": "Восстановление",
+              "en": "Recovery"
+            },
+            "Hold": {
+              "ru": "наведение",
+              "en": "aiming"
+            },
+            "Ready": {
+              "ru": "готов",
+              "en": "ready"
+            },
+            "Grenades": {
+              "ru": "гранаты",
+              "en": "grenades"
+            },
+            "Footer": {
+              "ru": "Постоянная маскировка без расхода энергии",
+              "en": "Permanent cloak, no energy spent"
+            }
+          }
+        },
+        "detector_analysis": {
+          "enabled": true,
+          "texts": {
+            "Name": {
+              "ru": "Анализ детекторов",
+              "en": "Detector analysis"
+            },
+            "Tip": {
+              "ru": "Призрак заранее видит зоны обнаружения вражеских детекторов: круг появляется, когда призрак ещё не обнаружен (с запасом для обхода), и тогда, когда сам детектор в тумане; круг идёт за детектором. Внутри круга маскировка не скрывает призрака. Карта и армия противника не раскрываются.",
+              "en": "The Ghost sees the detection zones of the enemy detectors in advance: the circle appears while the Ghost is not yet detected (with a margin to walk around), also when the detector is in the fog; the circle follows the detector. Inside the circle the cloak does not hide the Ghost. The map and the enemy army are not revealed."
+            }
+          },
+          "always": true,
+          "early_warning": {
+            "enabled": true,
+            "margin": 12
+          }
+        },
+        "fold": {
+          "enabled": true,
+          "duration": 8,
+          "hotkey": "Z",
+          "bunker": true,
+          "turret": true,
+          "row": 1,
+          "column": 2
+        },
+        "tychus": {
+          "debug_log": false,
+          "totals": {
+            "scvs": 12,
+            "marines": 8,
+            "medics": 2,
+            "ghosts": 2,
+            "marauders": 3
+          },
+          "kits": {
+            "turret": 2,
+            "bunker": 2
+          },
+          "allow_refinery": true,
+          "decoy": {
+            "hotkey": "E",
+            "row": 2,
+            "column": 1,
+            "range": 15,
+            "radius": 7,
+            "charges": 2,
+            "recharge": 12,
+            "life": 25,
+            "rage": 4,
+            "health": 450,
+            "cast_intro": 0.35,
+            "next_range": 14,
+            "rage_range": 14,
+            "reach": [
+              56.4,
+              65.5
+            ]
+          },
+          "guardians": {
+            "immune_to_player": true,
+            "prefer_zerg": true
+          },
+          "artifact": {
+            "hotkey": "X",
+            "row": 1,
+            "column": 2,
+            "extract_seconds": 5,
+            "pickup_seconds": 3,
+            "reach": 9,
+            "range": 6,
+            "take_seconds": 6
+          },
+          "evac": {
+            "hotkey": "E",
+            "site": [
+              166.0,
+              45.5
+            ],
+            "from": [
+              195.0,
+              60.0
+            ],
+            "exit": [
+              195.0,
+              30.0
+            ],
+            "window": 90,
+            "arrive": 20,
+            "flight_max": 25
+          },
+          "offensive": {
+            "spawn": [
+              156.0,
+              36.0
+            ],
+            "waves": 3,
+            "gap": 25,
+            "units": [
+              {
+                "type": "Zergling",
+                "count": 16
+              },
+              {
+                "type": "Roach",
+                "count": 6
+              },
+              {
+                "type": "Hydralisk",
+                "count": 6
+              },
+              {
+                "type": "Baneling",
+                "count": 4
+              }
+            ]
+          },
+          "landing": {
+            "site": [
+              70.0,
+              30.0
+            ],
+            "hold": 45,
+            "units": [
+              {
+                "type": "Zergling",
+                "count": 4
+              },
+              {
+                "type": "Roach",
+                "count": 1
+              }
+            ]
+          },
+          "scene": {
+            "approach_radius": 45
+          },
+          "texts": {
+            "KitsTitle": {
+              "ru": "Комплекты",
+              "en": "Kits"
+            },
+            "KitsText": {
+              "ru": "Бункеры и ракетные турели у вас в виде комплектов: платить за них не нужно, число комплектов ограничено. Свёрнутое сооружение возвращает комплект.",
+              "en": "Bunkers and Missile Turrets come as kits: nothing to pay, the number of kits is limited. A folded structure gives its kit back."
+            },
+            "KitsBunkers": {
+              "ru": "бункеры",
+              "en": "bunkers"
+            },
+            "KitsTurrets": {
+              "ru": "турели",
+              "en": "turrets"
+            },
+            "KitsOut": {
+              "ru": "Комплекты кончились: постройка отменена",
+              "en": "No kits left: the construction is cancelled"
+            },
+            "DecoyGone": {
+              "ru": "Приманка рассеялась: её никто не тронул",
+              "en": "The decoy faded: nobody touched it"
+            },
+            "DecoyNoPath": {
+              "ru": "Туда зерги не дойдут: приманка не брошена, заряд не потрачен",
+              "en": "The Zerg cannot walk there: no decoy thrown, no charge spent"
+            },
+            "ExtractTag": {
+              "ru": "Извлечение",
+              "en": "Extracting"
+            },
+            "ExtractStart": {
+              "ru": "КСМ извлекает артефакт: не отдавайте ему других команд",
+              "en": "The SCV is extracting the artifact: give it no other orders"
+            },
+            "ExtractHeld": {
+              "ru": "Артефакт уже у носителя",
+              "en": "The artifact is already carried"
+            },
+            "ExtractBusy": {
+              "ru": "Артефакт уже извлекает другой КСМ",
+              "en": "Another SCV is already extracting the artifact"
+            },
+            "ExtractLost": {
+              "ru": "КСМ погиб: артефакт остался на месте",
+              "en": "The SCV died: the artifact stays where it was"
+            },
+            "ExtractCancelled": {
+              "ru": "Извлечение прервано: артефакт остался на месте",
+              "en": "Extraction interrupted: the artifact stays where it was"
+            },
+            "CarrierTag": {
+              "ru": "АРТЕФАКТ",
+              "en": "ARTIFACT"
+            },
+            "Captured": {
+              "ru": "Артефакт у КСМ! Зерги идут в прорыв, транспорт вызван",
+              "en": "The SCV has the artifact! The Zerg break through, the transport is called"
+            },
+            "CarrierDied": {
+              "ru": "Носитель погиб: артефакт лежит на земле, его поднимет другой КСМ",
+              "en": "The carrier died: the artifact lies on the ground, another SCV can pick it up"
+            },
+            "OffWave": {
+              "ru": "Новая волна зергов идёт на носителя",
+              "en": "A new Zerg wave is coming for the carrier"
+            },
+            "ShipCalled": {
+              "ru": "Транспорт идёт к площадке эвакуации",
+              "en": "The transport is on its way to the evacuation site"
+            },
+            "ShipLanded": {
+              "ru": "Транспорт сел на площадку: погрузите носителя и отряд, затем «Эвакуироваться»",
+              "en": "The transport has landed: load the carrier and the squad, then press Evacuate"
+            },
+            "Leaving": {
+              "ru": "Транспорт взлетает",
+              "en": "The transport is lifting off"
+            },
+            "Evacuated": {
+              "ru": "Эвакуация удалась",
+              "en": "Evacuation successful"
+            },
+            "EvacNoCarrier": {
+              "ru": "Носитель артефакта ещё не в транспорте",
+              "en": "The artifact carrier is not on board yet"
+            },
+            "DefeatShip": {
+              "ru": "Транспорт потерян: артефакт не вывезти",
+              "en": "The transport is lost: the artifact cannot be taken out"
+            },
+            "DefeatTimeout": {
+              "ru": "Время вышло: носитель не успел сесть в транспорт",
+              "en": "Time is up: the carrier did not board the transport"
+            },
+            "DefeatNoScv": {
+              "ru": "Не осталось КСМ: артефакт не вывезти",
+              "en": "No SCV left: the artifact cannot be taken out"
+            },
+            "DefeatZerg": {
+              "ru": "Зерги забрали артефакт",
+              "en": "The Zerg took the artifact"
+            },
+            "ZergTaking": {
+              "ru": "Стражей больше нет: зерги тянутся к артефакту!",
+              "en": "No guardians left: the Zerg reach for the artifact!"
+            },
+            "TrainMark": {
+              "ru": "Площадка десанта отмечена на карте: выделите мародёров и бросьте приманку [{hotkey_d}] в отмеченное место",
+              "en": "The landing is marked on the map: select the Marauders and throw a decoy [{hotkey_d}] at the marked place"
+            },
+            "ObjGrabTitle": {
+              "ru": "Отвлеките стражей и извлеките артефакт",
+              "en": "Distract the guardians and extract the artifact"
+            },
+            "ObjGrabText": {
+              "ru": "Стражи не получают урона от ваших войск, но ранят зергов и вас. Выманите зергов к стражам феромонными приманками мародёров; пока стражи заняты, КСМ подходит к артефакту и извлекает его (кнопка «Извлечь артефакт» [{hotkey_x}]).",
+              "en": "The guardians take no damage from your troops but wound the Zerg and you. Lure the Zerg to the guardians with the Marauders' pheromone decoys; while the guardians are busy an SCV walks up to the artifact and extracts it (button Extract the artifact [{hotkey_x}])."
+            },
+            "ObjEscapeTitle": {
+              "ru": "Эвакуация: доставьте артефакт на площадку",
+              "en": "Evacuation: bring the artifact to the site"
+            },
+            "ObjEscapeText": {
+              "ru": "Носитель артефакта (КСМ) должен сесть в транспорт на отмеченной площадке, затем нажмите «Эвакуироваться» [{hotkey_e}]. Если носитель погибнет, артефакт поднимет другой КСМ. Время ограничено: {window} с с момента извлечения.",
+              "en": "The carrier (an SCV) must board the transport at the marked site, then press Evacuate [{hotkey_e}]. If the carrier dies another SCV can pick the artifact up. Time is limited: {window} s from the extraction."
+            },
+            "N_swann": {
+              "ru": "Свонн",
+              "en": "Swann"
+            },
+            "N_horner": {
+              "ru": "Мэтт Хорнер",
+              "en": "Matt Horner"
+            },
+            "N_tychus": {
+              "ru": "Тайкус",
+              "en": "Tychus"
+            },
+            "L_TrainWarn": {
+              "ru": "Тайкус, сканеры видят небольшой десант зергов: они садятся на свободной площадке у вашей базы. Силы невелики.",
+              "en": "Tychus, the scanners see a small Zerg landing: they are touching down on a free area by your base. The force is small."
+            },
+            "L_TrainDecoy": {
+              "ru": "У мародёров новый боеприпас - феромонная приманка. Бросьте её в сторону: зерги займутся капсулой, а вы займитесь зергами.",
+              "en": "The Marauders have a new munition: a pheromone decoy. Throw it aside: the Zerg will deal with the capsule and you will deal with the Zerg."
+            },
+            "L_Guards": {
+              "ru": "Стражи у артефакта не получают урона от наших орудий, но зерги их ранят. Выманите зергов приманками к стражам и, пока те заняты, пошлите КСМ за артефактом.",
+              "en": "The guardians at the artifact take no damage from our guns, but the Zerg wound them. Lure the Zerg to the guardians with the decoys and send an SCV for the artifact while they are busy."
+            },
+            "L_Site": {
+              "ru": "Эвакуационная площадка отмечена на карте. Как только артефакт будет у КСМ, зерги пойдут в прорыв, а транспорт прибудет на площадку.",
+              "en": "The evacuation site is marked on the map. As soon as an SCV has the artifact the Zerg will break through and the transport will arrive at the site."
+            },
+            "L_Captured": {
+              "ru": "Хватай и беги! Все к площадке, быстро!",
+              "en": "Grab it and run! Everyone to the site, quickly!"
+            },
+            "L_Escape": {
+              "ru": "Транспорт вызван. Берегите носителя и добирайтесь до площадки, пока не вышло время. Приманки помогут отбиться.",
+              "en": "The transport is called. Protect the carrier and reach the site before time runs out. The decoys will help you fight them off."
+            },
+            "L_Landed": {
+              "ru": "Транспорт на площадке. Погрузите носителя и отряд, затем нажмите «Эвакуироваться».",
+              "en": "The transport is at the site. Load the carrier and the squad, then press Evacuate."
+            },
+            "PheroTag": {
+              "ru": "Приманка",
+              "en": "Decoy"
+            },
+            "BarOn": {
+              "ru": "■",
+              "en": "■"
+            },
+            "BarOff": {
+              "ru": "□",
+              "en": "□"
+            },
+            "PheroName": {
+              "ru": "Феромонная приманка",
+              "en": "Pheromone decoy"
+            },
+            "PheroTip": {
+              "ru": "Горячая клавиша [{hotkey_d}]. Мародёр бросает капсулу на расстояние до {range}. Ближайшие боевые наземные зерги в радиусе {radius} от капсулы бросаются её атаковать, пока не разрушат (здоровье капсулы {health}; если её никто не тронул, она исчезает через {life} с). Затем они идут к следующей капсуле поблизости или {rage} с бьют ближайших протоссов, не трогая ваших бойцов. Заряды: {charges} у каждого мародёра, один восстанавливается за {recharge} с. При наведении видны дальность броска и область притяжения. Если зерги не могут дойти до точки, приманка не бросается и заряд не тратится.",
+              "en": "Hotkey [{hotkey_d}]. The Marauder throws a capsule up to {range} away. The nearest Zerg ground fighters within {radius} of the capsule rush to attack it until it is destroyed (capsule health {health}; nobody touches it: it fades after {life} s). Then they go to the next capsule nearby or for {rage} s hit the nearest Protoss, ignoring your troops. Charges: {charges} per Marauder, one is restored every {recharge} s. The pointer shows the throw range and the attraction area. If the Zerg cannot walk to the point the decoy is not thrown and no charge is spent."
+            },
+            "PheroUnit": {
+              "ru": "Феромонная приманка",
+              "en": "Pheromone decoy"
+            },
+            "ExtractName": {
+              "ru": "Извлечь артефакт",
+              "en": "Extract the artifact"
+            },
+            "ExtractTip": {
+              "ru": "Горячая клавиша [{hotkey_x}]. КСМ подходит к артефакту и извлекает его {seconds} с, стоя на месте: любая другая команда, гибель или отход прерывают извлечение, артефакт остаётся. Носитель помечен; если он погибнет, артефакт упадёт на землю, и его поднимет другой КСМ.",
+              "en": "Hotkey [{hotkey_x}]. The SCV walks up to the artifact and extracts it in {seconds} s, standing still: any other order, death or leaving interrupts it and the artifact stays. The carrier is marked; if he dies the artifact falls to the ground and another SCV can pick it up."
+            },
+            "EvacName": {
+              "ru": "Эвакуироваться",
+              "en": "Evacuate"
+            },
+            "EvacTip": {
+              "ru": "Горячая клавиша [{hotkey_e}]. Транспорт взлетает и уходит с теми, кто на борту. Нужен носитель артефакта на борту. Если не нажать, транспорт сам уйдёт, когда выйдет время: с носителем на борту это победа, без него поражение.",
+              "en": "Hotkey [{hotkey_e}]. The transport lifts off with everyone on board. The artifact carrier must be on board. If you do not press it the transport leaves by itself when the time is up: with the carrier on board that is a victory, without him a defeat."
+            },
+            "CarrierName": {
+              "ru": "Носитель артефакта",
+              "en": "Artifact carrier"
+            },
+            "CarrierDesc": {
+              "ru": "Этот КСМ несёт артефакт. Если он погибнет, артефакт упадёт на землю: донесите его до транспорта.",
+              "en": "This SCV carries the artifact. If he dies the artifact drops: bring it to the transport."
+            }
+          },
+          "salvo": {
+            "range": 11,
+            "missiles": 5,
+            "interval": 0.4,
+            "radius": 1.5,
+            "damage": 30,
+            "cooldown": 8,
+            "spread": 1.0,
+            "hotkey": "A",
+            "texts": {
+              "Name": {
+                "ru": "Наземный залп",
+                "en": "Ground salvo"
+              },
+              "Tip": {
+                "ru": "Наземный залп [A]. Укажите область в пределах {range}: круг на земле показывает весь охват обстрела ({area}). {missiles} ракет падают по очереди в разные точки круга, по {damage} урона каждая (до {total} при всех попаданиях); поражаются только наземные враги, свои не задеваются, ресурсы не тратятся. Перезарядка {cooldown} с, у каждой турели своя. Esc или правая кнопка отменяют наведение без выстрела и без перезарядки. Против воздуха турель стреляет сама.",
+                "en": "Ground salvo [A]. Choose an area within {range}: the circle on the ground shows the whole area of the barrage ({area}). {missiles} missiles land one after another at different points of the circle, {damage} damage each (up to {total} if all hit); only ground enemies are hurt, your units never are, nothing is spent. Cooldown {cooldown} s, every turret has its own. Esc or right click cancel the aiming with no shot and no cooldown. Against air the turret fires by itself."
+              }
+            }
+          }
+        }
+      }
+    },
+    "grab_free_dev": {
+      "label": "Хватай и беги, проба CE-0 (служебный)",
+      "message": "Ghost Ops - Grab and run, CE-0 probe (dev)",
+      "message_en": "Ghost Ops - Grab and run, CE-0 probe (dev)",
+      "hidden": true,
+      "extends": "grab_free",
+      "card": "Technical probe",
+      "details": [
+        "Development only"
+      ],
+      "overrides": {
+        "tychus": {
+          "debug_log": true,
+          "offensive": {
+            "waves": 1,
+            "units": [
+              {
+                "type": "Zergling",
+                "count": 3
+              },
+              {
+                "type": "Roach",
+                "count": 0
+              },
+              {
+                "type": "Hydralisk",
+                "count": 0
+              },
+              {
+                "type": "Baneling",
+                "count": 0
+              }
+            ]
+          }
+        },
+        "ce0": {
+          "operation_id": "CE0-TY",
+          "census_types": [
+            "Ghost",
+            "Marine",
+            "SCV",
+            "Marauder",
+            "Medic",
+            "MissileTurret",
+            "Bunker"
+          ]
+        }
+      }
+    }
   }
 }

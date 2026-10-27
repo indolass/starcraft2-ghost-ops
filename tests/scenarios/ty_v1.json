@@ -1,0 +1,247 @@
+{
+ "name": "ty_v1",
+ "mission": "ttychus01",
+ "preset": "grab_free_dev",
+ "why": "the capsule, the Zerg and the Protoss at once: real cast, Zerg destroy it, Protoss ignore it and fight the Zerg, after save / load the same",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 10
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "cmd",
+   "text": "tsetupv",
+   "wait": 3.0
+  },
+  {
+   "op": "expect",
+   "regex": "TSETUPV",
+   "note": "Marauders at the camp of the first Protoss, a Zerg group dropped into it"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TSELM",
+   "cmd": "tselm 99 38",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "sleep",
+   "s": 1.5
+  },
+  {
+   "op": "burst",
+   "file": "v0_before.png",
+   "n": 2,
+   "gap": 0.5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "E"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 1.2
+  },
+  {
+   "op": "burst",
+   "file": "v1_aiming.png",
+   "n": 2,
+   "gap": 0.5
+  },
+  {
+   "op": "click",
+   "x": 512,
+   "y": 330
+  },
+  {
+   "op": "sleep",
+   "s": 1.5
+  },
+  {
+   "op": "burst",
+   "file": "v2_thrown.png",
+   "n": 3,
+   "gap": 0.5
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TPROT",
+   "cmd": "tprot",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "sleep",
+   "s": 2.5
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TPROT",
+   "cmd": "tprot",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "burst",
+   "file": "v3_fight.png",
+   "n": 3,
+   "gap": 0.5
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TPROT",
+   "cmd": "tprot",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "sleep",
+   "s": 4
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TPROT",
+   "cmd": "tprot",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "burst",
+   "file": "v4_after.png",
+   "n": 3,
+   "gap": 0.5
+  },
+  {
+   "op": "save",
+   "name": "CE0_TY_V1"
+  },
+  {
+   "op": "load",
+   "name": "CE0_TY_V1"
+  },
+  {
+   "op": "sleep",
+   "s": 4
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TSELM",
+   "cmd": "tselm 99 38",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "sleep",
+   "s": 1.0
+  },
+  {
+   "op": "key",
+   "keys": [
+    "E"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 1.2
+  },
+  {
+   "op": "click",
+   "x": 512,
+   "y": 330
+  },
+  {
+   "op": "sleep",
+   "s": 2.0
+  },
+  {
+   "op": "burst",
+   "file": "v5_after_load.png",
+   "n": 3,
+   "gap": 0.5
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TPROT",
+   "cmd": "tprot",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TPROT",
+   "cmd": "tprot",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "sleep",
+   "s": 4
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TPROT",
+   "cmd": "tprot",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "burst",
+   "file": "v6_after_load_fight.png",
+   "n": 3,
+   "gap": 0.5
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

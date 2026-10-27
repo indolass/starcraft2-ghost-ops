@@ -53,8 +53,9 @@ MISSIONS = [
      'description': 'Предварительно заказанный гарнизон базы, два призрака с постоянной маскировкой и две ядерные ракеты. Победа: прошло 20 минут до прибытия корабля '
                     'И уничтожены все отмеченные инкубаторы; если цели остались, корабль ждёт. Отдельный запуск использует рекомендуемый заказ и тестовый бюджет, '
                     'в кампанию ничего не пишет. Противники — Blizzard Hard.'},
-    {'id': 'ttychus01', 'title': 'Smash and Grab', 'subtitle': 'TTychus01', 'status': 'Прототип',
-     'description': 'Скрытная операция среди протоссов и зергов с настоящими детекторами. Ранний прототип без выбора сложности.'},
+    {'id': 'ttychus01', 'title': 'Хватай и беги', 'subtitle': 'Smash and Grab', 'status': 'Эксперимент',
+     'description': 'Малая база среди протоссов и зергов. Феромонные приманки мародёров уводят зергов к стражам артефакта (стражи не получают урона от ваших войск); КСМ извлекает артефакт, зерги идут в прорыв, '
+                    'транспорт ждёт на площадке эвакуации. Свободный тест: бесплатный отряд, в кампанию ничего не пишет и ничего не зачисляет. Прежний ранний прототип остаётся отдельной карточкой.'},
 ]
 DEFAULT_MISSION = 'traynor01'
 
@@ -94,6 +95,11 @@ def fill_card(card, rc):
            '{hellions}': str((ee.get('hellions') or {}).get('extra', 0)),
            '{scvs_total}': str(stock_scv + ex_scv), '{scvs_stock}': str(stock_scv), '{scvs_extra}': str(ex_scv),
            '{bunkers}': str((bk.get('order') or {}).get('bunker_kits', 0)), '{bunker_places}': str(4 * (bk.get('order') or {}).get('bunker_kits', 0))}
+    ty = rc.get('tychus') or {}
+    tt = ty.get('totals') or {}
+    tk2 = ty.get('kits') or {}
+    rep.update({'{ty_scvs}': str(tt.get('scvs', 0)), '{ty_marines}': str(tt.get('marines', 0)), '{ty_medics}': str(tt.get('medics', 0)), '{ty_ghosts}': str(tt.get('ghosts', 0)),
+                '{ty_marauders}': str(tt.get('marauders', 0)), '{ty_bunkers}': str(tk2.get('bunker', 0)), '{ty_turrets}': str(tk2.get('turret', 0))})
     zh = rc.get('zerohour') or {}
     zo = zh.get('order') or {}
     rep.update({'{marines_t}': str(zo.get('marines', 0)), '{bunkers_t}': str(zo.get('bunkers', 0)), '{turrets_t}': str(zo.get('turrets', 0)), '{scvs_t}': str(zo.get('scvs', 0))})
@@ -129,6 +135,8 @@ def detail_lines(mission_id, preset):
         return zerohour_lines(cfg)
     if cfg.get('tactical'):
         return tactical_lines(cfg)
+    if cfg.get('tychus'):
+        return tychus_lines(cfg)
     if cfg.get('epidemic'):
         return epidemic_lines(cfg)
     if cfg.get('hanson'):
@@ -186,6 +194,30 @@ def hanson_lines(cfg):
             len(h['turrets']['list']), roles['base'], roles['houses'], roles['air'])) if h['turrets']['list'] else 'Готовых ракетных турелей на карте нет (см. комплекты выше)',
         'Колонисты, союзная охрана и её пополнение, налёты и условия победы / поражения — штатные. Противники: Blizzard Hard',
         'Время — в игровых секундах',
+    ]
+
+
+def tychus_lines(cfg):
+    """Exact characteristics of the free test "Grab and run" (taken from the resolved configuration; every number is an experimental first value, not an approved one)."""
+    t, gt = cfg['tychus'], cfg['ghost_tuning']
+    d, a, e, o, tot = t['decoy'], t['artifact'], t['evac'], t['offensive'], t['totals']
+    num = lambda v: ('%g' % v).replace('.', ',')  # noqa: E731
+    sv = t.get('salvo') or {}
+    return [
+        'Режим «Свободный тест»: бесплатный отряд, без списаний; ничего не зачисляется в настоящую кампанию и результата для кампании не предлагается',
+        'Состав (всего, вместе со штатным): КСМ %d, морпехи %d, медики %d, призраки %d (%s), мародёры %d (появляются по сюжету миссии); комплекты: бункеры %d, турели %d; производства войск нет; добыча и газовая станция доступны' % (
+            tot['scvs'], tot['marines'], tot['medics'], tot['ghosts'], ('%s здоровья' % gt['ghost_life']) if gt.get('ghost_life') else 'штатное здоровье', tot['marauders'], t['kits']['bunker'], t['kits']['turret']),
+        'Свернуть/развернуть укрепления: клавиша %s, КСМ разбирает бункер или турель за %g игровых секунд, комплект возвращается с сохранённым здоровьем и перезарядкой залпа; деньги не возвращаются; бункер должен быть пуст' % (
+            cfg['fold']['hotkey'], cfg['fold']['duration']),
+        'Феромонная приманка мародёра [%s]: бросок до %g, область притяжения %g, зарядов %d (один восстанавливается за %g с), здоровье капсулы %g, без атак капсула исчезает через %g с; притянутые зерги атакуют капсулу, затем идут к следующей капсуле или %g с бьют протоссов, не трогая ваших бойцов' % (
+            d['hotkey'], d['range'], d['radius'], d['charges'], d['recharge'], d['health'], d['life'], d['rage']),
+        'Стражи артефакта не получают урона от ваших войск, но ранят зергов и ваших бойцов; предпочитают зергов. Гибель стража сама миссию не заканчивает; если погибли все стражи и зерг стоит у артефакта %g с, артефакт у зергов (поражение)' % a['take_seconds'],
+        'Артефакт извлекает только КСМ, командой [%s]: %g с на месте (подбор упавшего артефакта %g с); носитель помечен; гибель носителя роняет артефакт' % (a['hotkey'], a['extract_seconds'], a['pickup_seconds']),
+        'После извлечения: прорыв зергов (%d волн по %d бойцов с интервалом %g с), транспорт на площадке эвакуации через %g с, окно %g с; носитель в транспорте и команда «Эвакуироваться» [%s] = победа; потеря транспорта, выход времени без носителя на борту, гибель всех КСМ = поражение; потеря базы после извлечения поражением не является' % (
+            o['waves'], sum(u['count'] for u in o['units']), o['gap'], e['arrive'], e['window'], e['hotkey']),
+        ('Наземный залп турелей [%s]: %d ракет по %g урона, дальность %g, перезарядка %g с у каждой турели' % (sv.get('hotkey', 'A'), sv['missiles'], sv['damage'], sv['range'], sv['cooldown'])) if sv else 'Наземного залпа турелей нет',
+        'Призраки: постоянная маскировка без расхода энергии, раннее предупреждение о детекторах, переключатель автоогня; Snipe %g урона, перезаряд %s с (обычное управление)' % (gt['snipe']['damage'], num(gt['snipe']['cooldown'])),
+        'Оригинальные вступление, сюжет, обучение мародёров и противник Blizzard сохранены; победа и поражение заменены цепочкой «артефакт – прорыв – эвакуация». Время — в игровых секундах',
     ]
 
 

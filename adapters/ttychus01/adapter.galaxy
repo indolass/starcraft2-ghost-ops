@@ -3,7 +3,7 @@
 // Player 1 is the human player (the other players are the Zerg, the Protoss factions and the
 // relic owner; none of them is covered). The mission calls GhostOps_OnMissionStart() right after
 // it has started gt_StartGame, i.e. after the intro sequence (see adapter.json for the anchor).
-// The squad appears at the start camera target of the mission, next to the player's base.
+// With the free test settings (config key "tychus") the module core/GhostOpsTychus.galaxy takes over the rest (see its header). The squad appears at the start camera target of the mission, next to the player's base.
 //==================================================================================================
 void GhostOps_OnMissionStart () {
     unit lv_operative;
@@ -16,5 +16,7 @@ void GhostOps_OnMissionStart () {
     }
 
     GhostOps_Start();
+    GhostOps_ReportProfile();
     GhostOps_ReportDifficulty(1);
+    GhostOps_Ty_Start();  // the free test "Grab and run": the base, the kits, the decoys, the artifact; nothing in the prototype profile
 }

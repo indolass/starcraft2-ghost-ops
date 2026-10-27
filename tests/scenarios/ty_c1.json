@@ -1,0 +1,398 @@
+{
+ "name": "ty_c1",
+ "mission": "ttychus01",
+ "preset": "grab_free_dev",
+ "why": "episode C (scenario): an SCV extracts the artifact by the real keys, loses it, another picks it up, the escape and the evacuation command",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 10
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TCLEAR",
+   "cmd": "tclear 160 40",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TMARMAKE",
+   "cmd": "tmarmake",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TFREEZEG",
+   "cmd": "tfreezeg 1",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TMOVE tps",
+   "cmd": "tps 168 47",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TSEL SCV",
+   "cmd": "tsel SCV",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "cmd",
+   "text": "tcam 169.9 50.9",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 1.2
+  },
+  {
+   "op": "key",
+   "keys": [
+    "X"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 1.0
+  },
+  {
+   "op": "burst",
+   "file": "c1_aim.png",
+   "n": 3,
+   "gap": 0.5
+  },
+  {
+   "op": "click",
+   "x": 512,
+   "y": 330
+  },
+  {
+   "op": "sleep",
+   "s": 2.5
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TSTAT",
+   "cmd": "tstat",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "burst",
+   "file": "c2_extracting.png",
+   "n": 3,
+   "gap": 0.5
+  },
+  {
+   "op": "sleep",
+   "s": 4.5
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TSTAT",
+   "cmd": "tstat",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TSELCAR",
+   "cmd": "tselcar",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "sleep",
+   "s": 1.5
+  },
+  {
+   "op": "burst",
+   "file": "c3_carrier.png",
+   "n": 3,
+   "gap": 0.5
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TSHIP",
+   "cmd": "tship",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "expect",
+   "regex": "art 2",
+   "note": "the SCV carries the artifact after the extraction (state 2)"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TKILLCAR",
+   "cmd": "tkillcar",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "sleep",
+   "s": 2.5
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TSTAT",
+   "cmd": "tstat",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "expect",
+   "regex": "art 3",
+   "note": "the carrier died: the artifact lies on the ground (state 3)"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TMOVE tps",
+   "cmd": "tps 168 47",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TSEL SCV",
+   "cmd": "tsel SCV",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "cmd",
+   "text": "tcam 169.9 50.9",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 1.0
+  },
+  {
+   "op": "key",
+   "keys": [
+    "X"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "click",
+   "x": 512,
+   "y": 330
+  },
+  {
+   "op": "sleep",
+   "s": 5.5
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TSTAT",
+   "cmd": "tstat",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "expect",
+   "regex": "art 2",
+   "note": "another SCV picked the artifact up (state 2 again)"
+  },
+  {
+   "op": "sleep",
+   "s": 14
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TSHIP",
+   "cmd": "tship",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TMOVE tps",
+   "cmd": "tps 166 45",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TLOAD",
+   "cmd": "tload",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "sleep",
+   "s": 7
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TSHIP",
+   "cmd": "tship",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TSELSHIP",
+   "cmd": "tselship",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "sleep",
+   "s": 1.0
+  },
+  {
+   "op": "burst",
+   "file": "c4_ship.png",
+   "n": 3,
+   "gap": 0.5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "E"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 2.0
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TSHIP",
+   "cmd": "tship",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "sleep",
+   "s": 14
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TSHIP",
+   "cmd": "tship",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TSTAT",
+   "cmd": "tstat",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "sleep",
+   "s": 60
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TSTAT",
+   "cmd": "tstat",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

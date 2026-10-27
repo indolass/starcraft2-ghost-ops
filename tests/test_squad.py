@@ -137,7 +137,7 @@ class MedicRules(unittest.TestCase):
         import contextlib
         buf = io.StringIO()
         with contextlib.redirect_stdout(buf):
-            build.main(['launch', '--mission', 'ttychus01'])
+            build.main(['launch', '--mission', 'ttychus01', '--preset', 'prototype', '--print-only'])  # never starts the game
         self.assertIn('-difficulty 3', buf.getvalue())
 
     def test_difficulty_report_uses_player_difficulty(self):
@@ -182,7 +182,7 @@ class Adapters(unittest.TestCase):
             self.assertTrue(os.path.isfile(os.path.join(ROOT, meta['config'])))
             hooks = meta.get('start_hooks') or [meta['start_hook']]
             self.assertEqual(hooks[0]['after'], 'TriggerExecute(gt_StartGame, true, false);')
-            self.assertEqual(hooks[0]['call'], 'GhostOps_OnMissionStart();')
+            self.assertTrue(hooks[0]['call'].endswith('GhostOps_OnMissionStart();'))
 
     def test_missions_do_not_share_constants(self):
         a = jsn('adapters', 'traynor02', 'adapter.json')['required_markers']

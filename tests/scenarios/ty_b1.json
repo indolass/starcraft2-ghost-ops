@@ -1,0 +1,290 @@
+{
+ "name": "ty_b1",
+ "mission": "ttychus01",
+ "preset": "grab_free_dev",
+ "why": "episode B (scenario): one group through two capsules; the guardians take no damage from the player",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 10
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TCLEAR",
+   "cmd": "tclear 160 40",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TMARMAKE",
+   "cmd": "tmarmake",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TFREEZEG",
+   "cmd": "tfreezeg 0",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TMOVE tpm",
+   "cmd": "tpm 158 41",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "cmd",
+   "text": "taim 164 44",
+   "wait": 1.0
+  },
+  {
+   "op": "cmd",
+   "text": "tspawn Zergling 10",
+   "wait": 1.5
+  },
+  {
+   "op": "expect",
+   "regex": "TSPAWN 10 Zergling",
+   "note": "ten Zerglings at the entrance of the artifact plaza"
+  },
+  {
+   "op": "cmd",
+   "text": "tspawn Roach 3",
+   "wait": 1.5
+  },
+  {
+   "op": "expect",
+   "regex": "TSPAWN 3 Roach",
+   "note": "three Roaches"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TSELM",
+   "cmd": "tselm 164 44",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "sleep",
+   "s": 1.5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "E"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 1.2
+  },
+  {
+   "op": "click",
+   "x": 512,
+   "y": 330
+  },
+  {
+   "op": "sleep",
+   "s": 1.6
+  },
+  {
+   "op": "cmd",
+   "text": "tcam 170 46",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "E"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 1.2
+  },
+  {
+   "op": "click",
+   "x": 512,
+   "y": 330
+  },
+  {
+   "op": "sleep",
+   "s": 2.0
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TDCS .*\\[1 ",
+   "cmd": "tdcs",
+   "every": 1.5,
+   "timeout": 20
+  },
+  {
+   "op": "burst",
+   "file": "b1_two_capsules.png",
+   "n": 3,
+   "gap": 0.5
+  },
+  {
+   "op": "sleep",
+   "s": 4
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TDCS",
+   "cmd": "tdcs",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "burst",
+   "file": "b2_chase.png",
+   "n": 3,
+   "gap": 0.5
+  },
+  {
+   "op": "sleep",
+   "s": 6
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TDCS",
+   "cmd": "tdcs",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TSTAT",
+   "cmd": "tstat",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "expect",
+   "regex": "TDCS \\[0 ",
+   "note": "the first capsule was thrown"
+  },
+  {
+   "op": "expect",
+   "regex": "TDCS .*\\[1 ",
+   "note": "the second capsule was thrown"
+  },
+  {
+   "op": "cmd",
+   "text": "tpm 170 47",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 5
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TGUARD",
+   "cmd": "tguard",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "cmd",
+   "text": "tatkg",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 8
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TGUARD",
+   "cmd": "tguard",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "sleep",
+   "s": 10
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TGUARD",
+   "cmd": "tguard",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "TDCS",
+   "cmd": "tdcs",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "expect",
+   "regex": "TATKG",
+   "note": "the Marauders attack a guardian"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

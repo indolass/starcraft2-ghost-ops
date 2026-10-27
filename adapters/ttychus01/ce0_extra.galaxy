@@ -1,0 +1,689 @@
+// CE-0 probe: TTychus01 specific state and commands (development only; compiled only with the config key "ce0").
+// Commands are typed into the chat of the test window (the queue scenarios do it). Nothing here is part of a playable build.
+point go_tyAim;
+bool go_tyAimSet;
+
+unit GhostOps_Ce0_First (string lp_type) {
+    return UnitGroupUnit(UnitGroup(lp_type, 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), 1);
+}
+
+string GhostOps_Ce0_Pt (point lp_p) {
+    return FixedToString(PointGetX(lp_p), 1) + "," + FixedToString(PointGetY(lp_p), 1);
+}
+
+string GhostOps_Ce0_Extra () {
+    return "tychus";
+}
+
+void GhostOps_Ce0_MissionStart () {
+}
+
+void GhostOps_Ty_Census (string lp_tag, int lp_player) {
+    unitgroup lv_g;
+    int lv_n;
+    int lv_i;
+    unit lv_u;
+    string lv_t;
+
+    lv_g = UnitGroup(null, lp_player, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32))), 0);
+    lv_n = UnitGroupCount(lv_g, c_unitCountAll);
+    lv_t = lp_tag + " p" + IntToString(lp_player) + " n=" + IntToString(lv_n);
+    lv_i = 1;
+    while ((lv_i <= lv_n) && (lv_i <= 40)) {
+        lv_u = UnitGroupUnit(lv_g, lv_i);
+        lv_t = lv_t + " [" + UnitGetType(lv_u) + " " + GhostOps_Ce0_Pt(UnitGetPosition(lv_u)) + "]";
+        lv_i += 1;
+    }
+
+    GhostOps_Ce0_Write("j", lv_t);
+}
+
+point GhostOps_Ty_Cand (int lp_set, int lp_i) {
+    if (lp_set == 0) {
+        if (lp_i == 0) { return Point(70.0, 30.0); }
+        if (lp_i == 1) { return Point(66.0, 28.0); }
+        if (lp_i == 2) { return Point(76.0, 32.0); }
+        if (lp_i == 3) { return Point(62.0, 22.0); }
+        if (lp_i == 4) { return Point(78.0, 34.0); }
+        if (lp_i == 5) { return Point(60.0, 30.0); }
+        if (lp_i == 6) { return Point(68.0, 36.0); }
+        if (lp_i == 7) { return Point(74.0, 8.0); }
+        if (lp_i == 8) { return Point(60.0, 12.0); }
+        if (lp_i == 9) { return Point(96.0, 25.0); }
+        if (lp_i == 10) { return Point(66.0, 20.0); }
+        if (lp_i == 11) { return Point(100.0, 15.0); }
+    }
+
+    if (lp_set == 1) {
+        if (lp_i == 0) { return Point(158.7, 38.7); }
+        if (lp_i == 1) { return Point(150.6, 31.3); }
+        if (lp_i == 2) { return Point(175.1, 29.4); }
+        if (lp_i == 3) { return Point(162.1, 42.3); }
+        if (lp_i == 4) { return Point(170.7, 10.0); }
+        if (lp_i == 5) { return Point(165.0, 30.0); }
+        if (lp_i == 6) { return Point(180.0, 40.0); }
+        if (lp_i == 7) { return Point(155.0, 50.0); }
+        if (lp_i == 8) { return Point(185.0, 55.0); }
+        if (lp_i == 9) { return Point(162.2, 63.8); }
+        if (lp_i == 10) { return Point(175.0, 70.0); }
+        if (lp_i == 11) { return Point(170.0, 36.0); }
+    }
+
+    return Point(0.0, 0.0);
+}
+
+string GhostOps_Ty_TypeOf (string lp_cmd) {
+    string lv_k;
+
+    lv_k = StringSub(lp_cmd, 3, 3);
+    if (lv_k == "m") {
+        return "Marauder";
+    }
+
+    if (lv_k == "s") {
+        return "SCV";
+    }
+
+    if (lv_k == "g") {
+        return "Ghost";
+    }
+
+    if (lv_k == "d") {
+        return "Medic";
+    }
+
+    return "Marine";
+}
+
+void GhostOps_Ty_Move (string lp_cmd, bool lp_teleport, string lp_x, string lp_y) {
+    unitgroup lv_g;
+    unit lv_u;
+    point lv_p;
+    int lv_i;
+    int lv_n;
+
+    lv_g = UnitGroup(GhostOps_Ty_TypeOf(lp_cmd), 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+    lv_n = UnitGroupCount(lv_g, c_unitCountAll);
+    lv_i = 1;
+    while (lv_i <= lv_n) {
+        lv_u = UnitGroupUnit(lv_g, lv_i);
+        lv_p = Point(StringToFixed(lp_x) + (IntToFixed(lv_i % 4) * 1.2), StringToFixed(lp_y) + (IntToFixed(lv_i / 4) * 1.2));
+        if (lp_teleport) {
+            UnitSetPosition(lv_u, lv_p, false);
+        }
+        else {
+            UnitIssueOrder(lv_u, OrderTargetingPoint(AbilityCommand("move", 0), lv_p), c_orderQueueReplace);
+        }
+
+        lv_i += 1;
+    }
+
+    GhostOps_Ce0_Write("j", "TMOVE " + lp_cmd + " " + IntToString(lv_n) + " units to " + lp_x + "," + lp_y);
+}
+
+bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
+    unit lv_u;
+    unitgroup lv_g;
+    int lv_i;
+    int lv_n;
+    point lv_p;
+    unit lv_k;
+    int lv_j;
+    int lv_m;
+    int lv_c;
+    int lv_z;
+    string lv_t;
+
+    if (GhostOps_FoldTest_Cmd(lp_cmd, lp_a, lp_b)) {
+        return true;
+    }
+
+    if (lp_cmd == "tmap") {
+        lv_u = UnitFromId(6);
+        lv_t = "TMAP artifact " + UnitGetType(lv_u) + " owner " + IntToString(UnitGetOwner(lv_u)) + " at " + GhostOps_Ce0_Pt(UnitGetPosition(lv_u)) + " life " + FixedToString(UnitGetPropertyFixed(lv_u, c_unitPropLife, c_unitPropCurrent), 0);
+        lv_t = lv_t + " | CC " + GhostOps_Ce0_Pt(UnitGetPosition(GhostOps_Ce0_First("CommandCenter"))) + " | p1 start " + GhostOps_Ce0_Pt(PointFromId(1));
+        lv_t = lv_t + " | pts 724 " + GhostOps_Ce0_Pt(PointFromId(724)) + " 433 " + GhostOps_Ce0_Pt(PointFromId(433)) + " 741 " + GhostOps_Ce0_Pt(PointFromId(741)) + " 166 " + GhostOps_Ce0_Pt(PointFromId(166)) + " 439 " + GhostOps_Ce0_Pt(PointFromId(439));
+        GhostOps_Ce0_Write("j", lv_t);
+        lv_t = "TMAP regions";
+        lv_i = 0;
+        while (lv_i < 70) {
+            if (RegionFromId(lv_i) != null) {
+                lv_t = lv_t + " " + IntToString(lv_i) + "=" + GhostOps_Ce0_Pt(RegionGetCenter(RegionFromId(lv_i)));
+            }
+
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", lv_t);
+        lv_g = UnitGroup("StoneZealot", c_playerAny, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32))), 0);
+        lv_n = UnitGroupCount(lv_g, c_unitCountAll);
+        lv_t = "TMAP guardians " + IntToString(lv_n);
+        lv_i = 1;
+        while (lv_i <= lv_n) {
+            lv_u = UnitGroupUnit(lv_g, lv_i);
+            lv_t = lv_t + " [owner " + IntToString(UnitGetOwner(lv_u)) + " " + GhostOps_Ce0_Pt(UnitGetPosition(lv_u)) + " life " + FixedToString(UnitGetPropertyFixed(lv_u, c_unitPropLife, c_unitPropCurrent), 0) + " hidden " + IntToString(BoolToInt(UnitTestState(lv_u, c_unitStateHidden))) + "]";
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", lv_t);
+        GhostOps_Ty_Census("TMAP", 1);
+        return true;
+    }
+
+    if (lp_cmd == "tcensus") {
+        GhostOps_Ty_Census("TCENSUS", StringToInt(lp_a));
+        return true;
+    }
+
+    if (lp_cmd == "tstruct") {
+        // tstruct <player>: the structures of the player (types and places): where the enemy bases are
+        lv_g = UnitGroup(null, StringToInt(lp_a), RegionEntireMap(), UnitFilter((1 << c_targetFilterStructure), 0, (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32))), 0);
+        lv_n = UnitGroupCount(lv_g, c_unitCountAll);
+        lv_t = "TSTRUCT p" + lp_a + " n=" + IntToString(lv_n);
+        lv_i = 1;
+        while ((lv_i <= lv_n) && (lv_i <= 60)) {
+            lv_u = UnitGroupUnit(lv_g, lv_i);
+            lv_t = lv_t + " [" + UnitGetType(lv_u) + " " + GhostOps_Ce0_Pt(UnitGetPosition(lv_u)) + "]";
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "tpass") {
+        // tpass <x> <y>: is the point passable, and the ground path cost from the Command Center
+        lv_t = "TPASS " + lp_a + "," + lp_b + " passable " + IntToString(BoolToInt(PointPathingPassable(Point(StringToFixed(lp_a), StringToFixed(lp_b))))) + " cost " + IntToString(PointPathingCost(UnitGetPosition(GhostOps_Ce0_First("CommandCenter")), Point(StringToFixed(lp_a), StringToFixed(lp_b))));
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "tgeo") {
+        // tgeo <set>: passable / path costs of candidate points: from the Command Center and from the south entrance of the artifact (170,44.5)
+        lv_t = "TGEO set " + lp_a;
+        lv_i = 0;
+        while (lv_i < 12) {
+            lv_p = GhostOps_Ty_Cand(StringToInt(lp_a), lv_i);
+            if (PointGetX(lv_p) > 0.0) {
+                lv_t = lv_t + " | " + GhostOps_Ce0_Pt(lv_p) + " pass " + IntToString(BoolToInt(PointPathingPassable(lv_p))) + " cc " + IntToString(PointPathingCost(UnitGetPosition(GhostOps_Ce0_First("CommandCenter")), lv_p)) + " art " + IntToString(PointPathingCost(Point(170.0, 44.5), lv_p)) + " zerg " + IntToString(PointPathingCost(Point(56.4, 65.5), lv_p));
+            }
+
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "tnear") {
+        // tnear <x> <y>: the units (all owners but the neutral) within 16 of the point: types and places
+        lv_g = UnitGroup(null, c_playerAny, RegionCircle(Point(StringToFixed(lp_a), StringToFixed(lp_b)), 16.0), UnitFilter(0, 0, (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32))), 0);
+        lv_n = UnitGroupCount(lv_g, c_unitCountAll);
+        lv_t = "TNEAR " + lp_a + "," + lp_b + " n=" + IntToString(lv_n);
+        lv_i = 1;
+        while ((lv_i <= lv_n) && (lv_i <= 60)) {
+            lv_u = UnitGroupUnit(lv_g, lv_i);
+            if (UnitGetOwner(lv_u) != 0) {
+                lv_t = lv_t + " [p" + IntToString(UnitGetOwner(lv_u)) + " " + UnitGetType(lv_u) + " " + GhostOps_Ce0_Pt(UnitGetPosition(lv_u)) + "]";
+            }
+
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "tgrid") {
+        // tgrid <y>: one row of the map x = 60..200 step 4: B passable and connected by ground with BOTH the Command Center and the artifact entrance, C with the base only, A with the artifact only, + neither, . not passable
+        lv_t = "TGRID y=" + lp_a + " ";
+        lv_i = 60;
+        while (lv_i <= 200) {
+            lv_p = Point(IntToFixed(lv_i), StringToFixed(lp_a));
+            if (PointPathingPassable(lv_p)) {
+                lv_n = BoolToInt(PointPathingCost(UnitGetPosition(GhostOps_Ce0_First("CommandCenter")), lv_p) < 60000) + 2 * BoolToInt(PointPathingCost(Point(170.0, 44.5), lv_p) < 60000);
+                if (lv_n == 3) {
+                    lv_t = lv_t + "B";
+                }
+                else if (lv_n == 1) {
+                    lv_t = lv_t + "C";
+                }
+                else if (lv_n == 2) {
+                    lv_t = lv_t + "A";
+                }
+                else {
+                    lv_t = lv_t + "+";
+                }
+            }
+            else {
+                lv_t = lv_t + ".";
+            }
+
+            lv_i += 4;
+        }
+
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "tfine") {
+        // tfine <y>: one row x = 136..190 step 2 of the artifact area: # passable (connected to the Command Center), . not passable
+        lv_t = "TFINE y=" + lp_a + " ";
+        lv_i = 136;
+        while (lv_i <= 190) {
+            lv_p = Point(IntToFixed(lv_i), StringToFixed(lp_a));
+            if (PointPathingPassable(lv_p)) {
+                lv_t = lv_t + "#";
+            }
+            else {
+                lv_t = lv_t + ".";
+            }
+
+            lv_i += 2;
+        }
+
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "tstat") {
+        lv_t = "TSTAT on " + IntToString(BoolToInt(go_tyOn)) + " phase " + IntToString(go_tyPhase) + " art " + IntToString(go_tyArtState) + " res " + IntToString(go_tyResult);
+        lv_t = lv_t + " | kitsT " + IntToString(GhostOps_Ty_KitsLeft(0)) + " kitsB " + IntToString(GhostOps_Ty_KitsLeft(1));
+        lv_t = lv_t + " | SCV " + IntToString(GhostOps_Ty_Count("SCV")) + " Marine " + IntToString(GhostOps_Ty_Count("Marine")) + " Medic " + IntToString(GhostOps_Ty_Count("Medic")) + " Ghost " + IntToString(GhostOps_Ty_Count("Ghost")) + " Marauder " + IntToString(GhostOps_Ty_Count("Marauder")) + " Nova " + IntToString(GhostOps_Ty_Count("Nova"));
+        lv_t = lv_t + " | decoys made " + IntToString(go_tyDcMade) + " attracted " + IntToString(go_tyDcAttracted) + " scene " + IntToString(BoolToInt(go_tyScene[1])) + IntToString(BoolToInt(go_tyScene[2])) + IntToString(BoolToInt(go_tyScene[3])) + IntToString(BoolToInt(go_tyScene[4]));
+        lv_t = lv_t + " | extract " + IntToString(go_tyExtractCount) + " drop " + IntToString(go_tyDropCount) + " ship " + IntToString(BoolToInt(go_tyShipMade)) + IntToString(BoolToInt(go_tyShipLanded)) + IntToString(BoolToInt(go_tyShipLeaving)) + " off " + IntToString(go_tyOffDone) + "/" + IntToString(go_tyOffN);
+        lv_t = lv_t + " | land " + IntToString(BoolToInt(go_tyLandOn)) + "/" + IntToString(go_tyLandUnits) + " mar " + IntToString(BoolToInt(go_tyMaraudersCame)) + " time " + FixedToString(GameGetMissionTime(), 1);
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "tdcs") {
+        lv_t = "TDCS";
+        lv_i = 0;
+        while (lv_i < 8) {
+            if (GhostOps_Ty_DcLive(lv_i)) {
+                lv_t = lv_t + " [" + IntToString(lv_i) + " " + GhostOps_Ce0_Pt(UnitGetPosition(go_tyDc[lv_i])) + " life " + FixedToString(UnitGetPropertyFixed(go_tyDc[lv_i], c_unitPropLife, c_unitPropCurrent), 0) + " owner " + IntToString(UnitGetOwner(go_tyDc[lv_i])) + "]";
+            }
+
+            lv_i += 1;
+        }
+
+        lv_t = lv_t + " | Z";
+        lv_i = 0;
+        while (lv_i < 48) {
+            if (go_tyZSt[lv_i] != 0) {
+                lv_t = lv_t + " [" + UnitGetType(go_tyZ[lv_i]) + " st " + IntToString(go_tyZSt[lv_i]) + " dc " + IntToString(go_tyZDc[lv_i]) + " " + GhostOps_Ce0_Pt(UnitGetPosition(go_tyZ[lv_i])) + "]";
+            }
+
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "tmar") {
+        // tmar: every Marauder: place, charges used (cooldown link of the capsule ability) and the current order
+        lv_g = UnitGroup("Marauder", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+        lv_n = UnitGroupCount(lv_g, c_unitCountAll);
+        lv_t = "TMAR n=" + IntToString(lv_n);
+        lv_i = 1;
+        while (lv_i <= lv_n) {
+            lv_u = UnitGroupUnit(lv_g, lv_i);
+            lv_t = lv_t + " [" + GhostOps_Ce0_Pt(UnitGetPosition(lv_u)) + " life " + FixedToString(UnitGetPropertyFixed(lv_u, c_unitPropLife, c_unitPropCurrent), 0) + " cd " + FixedToString(UnitAbilityGetCooldown(lv_u, "GhostOpsPheromone", "Abil/GhostOpsPheromone"), 1) + " used " + FixedToString(UnitGetChargeUsed(lv_u, "Abil/GhostOpsPheromone"), 2) + " regen " + FixedToString(UnitGetChargeRegen(lv_u, "Abil/GhostOpsPheromone"), 2) + " orders " + IntToString(UnitOrderCount(lv_u)) + "]";
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "taim") {
+        // taim <x> <y>: the base point of the next tspawn
+        go_tyAim = Point(StringToFixed(lp_a), StringToFixed(lp_b));
+        go_tyAimSet = true;
+        return true;
+    }
+
+    if (lp_cmd == "tspawn") {
+        // tspawn <type> <n>: n Zerg units of the type (player 2) at the aim point (taim), else next to the first Marauder + 14 east (a target for the capsule tests); they stand still (script controlled)
+        lv_u = GhostOps_Ce0_First("Marauder");
+        if (go_tyAimSet) {
+            lv_p = go_tyAim;
+        }
+        else {
+            lv_p = PointWithOffset(UnitGetPosition(lv_u), 14.0, 0.0);
+        }
+
+        lv_n = StringToInt(lp_b);
+        lv_i = 0;
+        while (lv_i < lv_n) {
+            UnitCreate(1, lp_a, 0, 2, PointWithOffset(lv_p, IntToFixed(lv_i % 5) - 2.0, IntToFixed(lv_i / 5)), 270.0);
+            AISetUnitScriptControlled(UnitLastCreated(), true);
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", "TSPAWN " + IntToString(lv_n) + " " + lp_a + " at " + GhostOps_Ce0_Pt(lv_p));
+        return true;
+    }
+
+    if (lp_cmd == "tclear") {
+        // tclear <x> <y>: every unit and structure of the players 3..6 within 20 of the point is removed (a test shortcut: the Protoss of the entrance stand in the way of a decoy test)
+        lv_n = 0;
+        lv_i = 3;
+        while (lv_i <= 6) {
+            lv_g = UnitGroup(null, lv_i, RegionCircle(Point(StringToFixed(lp_a), StringToFixed(lp_b)), 20.0), UnitFilter(0, 0, (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32))), 0);
+            lv_n += UnitGroupCount(lv_g, c_unitCountAll);
+            UnitGroupLoopBegin(lv_g);
+            while (UnitGroupLoopCurrent() != null) {
+                UnitRemove(UnitGroupLoopCurrent());
+                UnitGroupLoopStep();
+            }
+
+            UnitGroupLoopEnd();
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", "TCLEAR removed " + IntToString(lv_n) + " units of the Protoss near " + lp_a + "," + lp_b);
+        return true;
+    }
+
+    if (lp_cmd == "tguard") {
+        lv_g = UnitGroup("StoneZealot", c_playerAny, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32))), 0);
+        lv_n = UnitGroupCount(lv_g, c_unitCountAll);
+        lv_t = "TGUARD n=" + IntToString(lv_n) + " alive N " + IntToString(UnitGroupCount(go_tyGuardN, c_unitCountAlive)) + " S " + IntToString(UnitGroupCount(go_tyGuardS, c_unitCountAlive)) + " immune " + IntToString(BoolToInt(go_tyGuardImmune));
+        lv_i = 1;
+        while (lv_i <= lv_n) {
+            lv_u = UnitGroupUnit(lv_g, lv_i);
+            lv_t = lv_t + " [o" + IntToString(UnitGetOwner(lv_u)) + " " + GhostOps_Ce0_Pt(UnitGetPosition(lv_u)) + " life " + FixedToString(UnitGetPropertyFixed(lv_u, c_unitPropLife, c_unitPropCurrent), 0) + " ord " + IntToString(UnitOrderCount(lv_u)) + "]";
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "tatkg") {
+        // tatkg: every Marauder / Marine / Ghost is ordered to attack the nearest guardian (to see that the weapons of the player do not hurt it)
+        lv_g = UnitGroup("StoneZealot", c_playerAny, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32))), 0);
+        lv_k = UnitGroupClosestToPoint(lv_g, UnitGetPosition(GhostOps_Ce0_First("Marauder")));
+        lv_g = UnitGroup(null, 1, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterStructure) | (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32))), 0);
+        lv_n = UnitGroupCount(lv_g, c_unitCountAll);
+        lv_i = 1;
+        while (lv_i <= lv_n) {
+            lv_u = UnitGroupUnit(lv_g, lv_i);
+            if ((UnitGetType(lv_u) == "Marauder") || (UnitGetType(lv_u) == "Marine") || (UnitGetType(lv_u) == "Ghost")) {
+                UnitIssueOrder(lv_u, OrderTargetingUnit(AbilityCommand("attack", 0), lv_k), c_orderQueueReplace);
+            }
+
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", "TATKG ordered at the guardian " + GhostOps_Ce0_Pt(UnitGetPosition(lv_k)) + " life " + FixedToString(UnitGetPropertyFixed(lv_k, c_unitPropLife, c_unitPropCurrent), 0));
+        return true;
+    }
+
+    if ((lp_cmd == "tpm") || (lp_cmd == "tps") || (lp_cmd == "tpg") || (lp_cmd == "tpk") || (lp_cmd == "tpd") || (lp_cmd == "tgm") || (lp_cmd == "tgs") || (lp_cmd == "tgg") || (lp_cmd == "tgk") || (lp_cmd == "tgd")) {
+        // tp<t> <x> <y>: every unit of the type t (m Marauder, s SCV, g Ghost, k Marine, d Medic) of the player is put around (x, y); tg<t> <x> <y>: the same units are ordered to move there
+        GhostOps_Ty_Move(lp_cmd, StringSub(lp_cmd, 2, 2) == "p", lp_a, lp_b);
+        return true;
+    }
+
+    if (lp_cmd == "tmarcome") {
+        // tmarcome: the story arrival of the Marauders is brought forward: the Marauders of the totals appear at the base and the module is told (the training scene starts)
+        lv_u = GhostOps_Ce0_First("CommandCenter");
+        lv_n = 0;
+        while (lv_n < go_tyMarauders) {
+            UnitCreate(1, "Marauder", 0, 1, PointWithOffset(UnitGetPosition(lv_u), -4.0 + IntToFixed(lv_n) * 1.5, 7.0), 270.0);
+            lv_n += 1;
+        }
+
+        GhostOps_Ty_OnMarauders();
+        GhostOps_Ce0_Write("j", "TMARCOME " + IntToString(lv_n) + " Marauders at the base");
+        return true;
+    }
+
+    if (lp_cmd == "tselm") {
+        // tselm: every Marauder is selected and the camera looks at the point (lp_a, lp_b) (the next real keys / clicks come from the player's side)
+        lv_g = UnitGroup("Marauder", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+        lv_n = UnitGroupCount(lv_g, c_unitCountAll);
+        UnitClearSelection(1);
+        lv_i = 1;
+        while (lv_i <= lv_n) {
+            UnitSelect(UnitGroupUnit(lv_g, lv_i), 1, true);
+            lv_i += 1;
+        }
+
+        CameraPan(1, Point(StringToFixed(lp_a), StringToFixed(lp_b)), 0.0, -1.0, 10.0, false);
+        GhostOps_Ce0_Write("j", "TSELM " + IntToString(lv_n) + " Marauders selected, camera at " + lp_a + "," + lp_b);
+        return true;
+    }
+
+    if (lp_cmd == "tsel") {
+        // tsel <Type>: the first unit of the type is selected and the camera is on it
+        lv_u = GhostOps_Ce0_First(lp_a);
+        UnitClearSelection(1);
+        UnitSelect(lv_u, 1, true);
+        CameraPan(1, UnitGetPosition(lv_u), 0.0, -1.0, 10.0, false);
+        GhostOps_Ce0_Write("j", "TSEL " + lp_a + " at " + GhostOps_Ce0_Pt(UnitGetPosition(lv_u)));
+        return true;
+    }
+
+    if (lp_cmd == "tcam") {
+        CameraPan(1, Point(StringToFixed(lp_a), StringToFixed(lp_b)), 0.0, -1.0, 10.0, false);
+        return true;
+    }
+
+    if (lp_cmd == "tselcap") {
+        // tselcap: the first living capsule is selected and the camera is on it (to look at its circle and its bar)
+        lv_i = 0;
+        while (lv_i < 8) {
+            if (GhostOps_Ty_DcLive(lv_i)) {
+                UnitClearSelection(1);
+                UnitSelect(go_tyDc[lv_i], 1, true);
+                CameraPan(1, UnitGetPosition(go_tyDc[lv_i]), 0.0, -1.0, 10.0, false);
+                GhostOps_Ce0_Write("j", "TSELCAP selected " + IntToString(lv_i));
+                return true;
+            }
+
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", "TSELCAP none");
+        return true;
+    }
+
+    if (lp_cmd == "tmarmake") {
+        // tmarmake: the Marauders of the totals appear at the base WITHOUT the training scene (episodes of the later parts of the mission)
+        lv_u = GhostOps_Ce0_First("CommandCenter");
+        lv_n = 0;
+        while (lv_n < go_tyMarauders) {
+            UnitCreate(1, "Marauder", 0, 1, PointWithOffset(UnitGetPosition(lv_u), -4.0 + IntToFixed(lv_n) * 1.5, 7.0), 270.0);
+            lv_n += 1;
+        }
+
+        go_tyMaraudersCame = true;
+        go_tyScene[1] = true;
+        GhostOps_Ce0_Write("j", "TMARMAKE " + IntToString(lv_n));
+        return true;
+    }
+
+    if (lp_cmd == "tfreezeg") {
+        // tfreezeg <1|0>: every guardian is paused (1) / released (0): the extraction tests need the guardians out of the way
+        lv_g = UnitGroup("StoneZealot", c_playerAny, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32))), 0);
+        lv_n = UnitGroupCount(lv_g, c_unitCountAll);
+        lv_i = 1;
+        while (lv_i <= lv_n) {
+            libNtve_gf_PauseUnit(UnitGroupUnit(lv_g, lv_i), lp_a != "0");
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", "TFREEZEG " + IntToString(lv_n) + " guardians paused " + IntToString(BoolToInt(lp_a != "0")));
+        return true;
+    }
+
+    if (lp_cmd == "tkillcar") {
+        if ((go_tyCarrier != null) && UnitIsAlive(go_tyCarrier)) {
+            GhostOps_Ce0_Write("j", "TKILLCAR the carrier dies at " + GhostOps_Ce0_Pt(UnitGetPosition(go_tyCarrier)));
+            UnitKill(go_tyCarrier);
+        }
+        else {
+            GhostOps_Ce0_Write("j", "TKILLCAR no carrier");
+        }
+
+        return true;
+    }
+
+    if (lp_cmd == "tselcar") {
+        if ((go_tyCarrier != null) && UnitIsAlive(go_tyCarrier)) {
+            UnitClearSelection(1);
+            UnitSelect(go_tyCarrier, 1, true);
+            CameraPan(1, UnitGetPosition(go_tyCarrier), 0.0, -1.0, 10.0, false);
+        }
+
+        GhostOps_Ce0_Write("j", "TSELCAR carrier " + IntToString(BoolToInt(go_tyCarrier != null)));
+        return true;
+    }
+
+    if (lp_cmd == "tselship") {
+        if (go_tyShipMade && UnitIsAlive(go_tyShip)) {
+            UnitClearSelection(1);
+            UnitSelect(go_tyShip, 1, true);
+            CameraPan(1, UnitGetPosition(go_tyShip), 0.0, -1.0, 10.0, false);
+        }
+
+        GhostOps_Ce0_Write("j", "TSELSHIP made " + IntToString(BoolToInt(go_tyShipMade)));
+        return true;
+    }
+
+    if (lp_cmd == "tload") {
+        // tload: the carrier and every Marine / Ghost / Medic / Marauder / SCV within 12 of the transport are ordered to board it (a scripted order: the stock right click does the same)
+        if (go_tyShipMade && UnitIsAlive(go_tyShip)) {
+            lv_g = UnitGroup(null, 1, RegionCircle(UnitGetPosition(go_tyShip), 12.0), UnitFilter(0, 0, (1 << c_targetFilterStructure) | (1 << c_targetFilterMissile) | (1 << c_targetFilterAir), (1 << (c_targetFilterDead - 32))), 0);
+            lv_n = UnitGroupCount(lv_g, c_unitCountAll);
+            lv_i = 1;
+            while (lv_i <= lv_n) {
+                lv_u = UnitGroupUnit(lv_g, lv_i);
+                UnitIssueOrder(lv_u, OrderTargetingUnit(AbilityCommand("move", 0), go_tyShip), c_orderQueueReplace);
+                lv_i += 1;
+            }
+
+            GhostOps_Ce0_Write("j", "TLOAD " + IntToString(lv_n) + " units sent to the transport");
+        }
+
+        return true;
+    }
+
+    if (lp_cmd == "tship") {
+        lv_t = "TSHIP made " + IntToString(BoolToInt(go_tyShipMade)) + " landed " + IntToString(BoolToInt(go_tyShipLanded)) + " leaving " + IntToString(BoolToInt(go_tyShipLeaving)) + " phase " + IntToString(go_tyPhase) + " res " + IntToString(go_tyResult) + " why " + go_tyDefeatWhy;
+        if (go_tyShipMade && UnitIsAlive(go_tyShip)) {
+            lv_t = lv_t + " | at " + GhostOps_Ce0_Pt(UnitGetPosition(go_tyShip)) + " life " + FixedToString(UnitGetPropertyFixed(go_tyShip, c_unitPropLife, c_unitPropCurrent), 0) + " cargo " + IntToString(UnitCargoValue(go_tyShip, c_unitCargoUnitCount)) + " carrierAboard " + IntToString(BoolToInt(GhostOps_Ty_Boarded())) + " deadline in " + FixedToString(go_tyEvacDeadline - GameGetMissionTime(), 1);
+        }
+
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "tkillstalk") {
+        // tkillstalk: every Stalker of the first Protoss (player 6) is killed: the original brings the Marauders when the initial Stalkers are gone (the natural arrival)
+        lv_g = UnitGroup("Stalker", 6, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32))), 0);
+        lv_n = UnitGroupCount(lv_g, c_unitCountAll);
+        lv_i = 1;
+        while (lv_i <= lv_n) {
+            UnitKill(UnitGroupUnit(lv_g, lv_i));
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", "TKILLSTALK " + IntToString(lv_n) + " Stalkers of the first Protoss killed");
+        return true;
+    }
+
+    if (lp_cmd == "tplayers") {
+        // tplayers: the status of every player slot and the enemy flags (row = source player, column = target) of the players 0..8
+        lv_t = "TPLAYERS status";
+        lv_i = 0;
+        while (lv_i < 16) {
+            lv_t = lv_t + " " + IntToString(lv_i) + "=" + IntToString(PlayerStatus(lv_i)) + "/" + IntToString(PlayerType(lv_i));
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "tsetupv") {
+        // tsetupv: the scene of the capsule check: the Marauders of the totals stand 9 west of the camp of the first Protoss, a Zerg group (8 Zerglings, 4 Roaches, free for the AI) is dropped
+        // into the camp: the Protoss fight them. Nothing is pre-controlled; the capsule is thrown by the real keys afterwards.
+        lv_n = 0;
+        while (lv_n < go_tyMarauders) {
+            UnitCreate(1, "Marauder", 0, 1, Point(90.0 + IntToFixed(lv_n) * 1.5, 40.0), 270.0);
+            lv_n += 1;
+        }
+
+        go_tyMaraudersCame = true;
+        go_tyScene[1] = true;
+        lv_i = 0;
+        while (lv_i < 8) {
+            UnitCreate(1, "Zergling", 0, 2, Point(98.0 + IntToFixed(lv_i % 4), 39.0 + IntToFixed(lv_i / 4)), 270.0);
+            lv_i += 1;
+        }
+
+        lv_i = 0;
+        while (lv_i < 4) {
+            UnitCreate(1, "Roach", 0, 2, Point(99.0 + IntToFixed(lv_i), 41.0), 270.0);
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", "TSETUPV " + IntToString(go_tyMarauders) + " Marauders at the camp, 12 Zerg dropped into it");
+        return true;
+    }
+
+    if (lp_cmd == "tprot") {
+        // tprot: what the Protoss target: how many of them have the capsule (a unit of the type GhostOpsPheromone) as the target of the current order, how many a Zerg unit; the capsules and their life
+        lv_n = 0;
+        lv_c = 0;
+        lv_z = 0;
+        lv_i = 3;
+        while (lv_i <= 6) {
+            lv_g = UnitGroup(null, lv_i, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterMissile) | (1 << c_targetFilterStructure), (1 << (c_targetFilterDead - 32))), 0);
+            lv_k = null;
+            lv_m = UnitGroupCount(lv_g, c_unitCountAll);
+            lv_j = 1;
+            while (lv_j <= lv_m) {
+                lv_u = UnitGroupUnit(lv_g, lv_j);
+                lv_n += 1;
+                if (UnitOrderCount(lv_u) > 0) {
+                    lv_k = OrderGetTargetUnit(UnitOrder(lv_u, 0));
+                    if (lv_k != null) {
+                        if (UnitGetType(lv_k) == "GhostOpsPheromone") {
+                            lv_c += 1;
+                        }
+                        else if (UnitGetOwner(lv_k) == 2) {
+                            lv_z += 1;
+                        }
+                    }
+                }
+
+                lv_j += 1;
+            }
+
+            lv_i += 1;
+        }
+
+        lv_t = "TPROT protoss units " + IntToString(lv_n) + " target the capsule " + IntToString(lv_c) + " target a Zerg " + IntToString(lv_z) + " | capsules";
+        lv_g = UnitGroup("GhostOpsPheromone", c_playerAny, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+        lv_m = UnitGroupCount(lv_g, c_unitCountAll);
+        lv_j = 1;
+        while (lv_j <= lv_m) {
+            lv_u = UnitGroupUnit(lv_g, lv_j);
+            lv_t = lv_t + " [owner " + IntToString(UnitGetOwner(lv_u)) + " life " + FixedToString(UnitGetPropertyFixed(lv_u, c_unitPropLife, c_unitPropCurrent), 0) + " at " + GhostOps_Ce0_Pt(UnitGetPosition(lv_u)) + "]";
+            lv_j += 1;
+        }
+
+        lv_t = lv_t + " | Zerg " + IntToString(UnitGroupCount(UnitGroup(null, 2, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterMissile) | (1 << c_targetFilterStructure), (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive));
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    return false;
+}
