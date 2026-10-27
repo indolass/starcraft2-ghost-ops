@@ -31,8 +31,8 @@ import ce0_session  # noqa: E402
 import ce0_steps  # noqa: E402
 import test_launch  # noqa: E402
 
-PLAYABLE = 'sniper_next_r4'
-DEV = 'sniper_next_r4_campaign_dev'
+PLAYABLE = 'sniper_next_r5'
+DEV = 'sniper_next_r5_campaign_dev'
 OUT = os.environ.get('GHOSTOPS_E2E_RESULT') or os.path.join(ROOT, 'tmp', 'th1_campaign_e2e_result.json')
 RESULT = []
 

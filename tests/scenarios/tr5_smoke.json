@@ -1,0 +1,10 @@
+{
+ "name": "tr5_smoke",
+ "mission": "traynor03",
+ "preset": "defence_r5_dev",
+ "why": "the r5 map compiles and loads (no script compile error) and the probe answers",
+ "steps": [
+  {"op": "start"},
+  {"op": "wait_snap", "settle": 8}
+ ]
+}

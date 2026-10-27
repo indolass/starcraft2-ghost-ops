@@ -1,0 +1,97 @@
+{
+ "name": "tr5_rebels",
+ "mission": "traynor03",
+ "preset": "defence_r5_dev",
+ "why": "the original rescue of a rebel group calls the hook: labels Rebel / Rebel medic over the fighters only, once, after a load again but not doubled",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "dst",
+   "grep": "DST2 landing \\d+ marines 16 ghosts 2",
+   "every": 6,
+   "timeout": 260
+  },
+  {
+   "op": "cmd",
+   "text": "cleane",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "tstat",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "trebel 1",
+   "wait": 9
+  },
+  {
+   "op": "sleep",
+   "s": 12
+  },
+  {
+   "op": "cmd",
+   "text": "tstat",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "rebstat",
+   "wait": 1.4
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "shot",
+   "file": "r1_labels.png"
+  },
+  {
+   "op": "save",
+   "name": "CE0_TR3_R"
+  },
+  {
+   "op": "load",
+   "name": "CE0_TR3_R"
+  },
+  {
+   "op": "sleep",
+   "s": 4
+  },
+  {
+   "op": "cmd",
+   "text": "tstat",
+   "wait": 1.4
+  },
+  {
+   "op": "shot",
+   "file": "r2_after_load.png"
+  },
+  {
+   "op": "expect",
+   "regex": "TSTAT|REBSTAT|TREBEL",
+   "note": "the real rescue of a group: the labels of the rescued fighters, not doubled by a load"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

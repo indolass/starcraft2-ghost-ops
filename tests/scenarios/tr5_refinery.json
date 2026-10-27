@@ -1,0 +1,170 @@
+{
+ "name": "tr5_refinery",
+ "mission": "traynor03",
+ "preset": "defence_r5_dev",
+ "why": "the SCVs build a Refinery on a geyser by real keys at the ordinary price; mining; after a load",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "dst",
+   "grep": "DST2 landing \\d+ marines 16 ghosts 2",
+   "every": 6,
+   "timeout": 260
+  },
+  {
+   "op": "cmd",
+   "text": "cleane",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "refstat",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "refcam 1",
+   "wait": 1.4
+  },
+  {
+   "op": "sleep",
+   "s": 1.5
+  },
+  {
+   "op": "shot",
+   "file": "f0_before.png"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "B"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "shot",
+   "file": "f1_card.png"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "R"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "shot",
+   "file": "f2_aim.png"
+  },
+  {
+   "op": "click",
+   "x": 512,
+   "y": 436
+  },
+  {
+   "op": "sleep",
+   "s": 4
+  },
+  {
+   "op": "shot",
+   "file": "f3_placed.png"
+  },
+  {
+   "op": "cmd",
+   "text": "refstat",
+   "wait": 1.4
+  },
+  {
+   "op": "sleep",
+   "s": 40
+  },
+  {
+   "op": "cmd",
+   "text": "refstat",
+   "wait": 1.4
+  },
+  {
+   "op": "shot",
+   "file": "f4_done.png"
+  },
+  {
+   "op": "sleep",
+   "s": 20
+  },
+  {
+   "op": "cmd",
+   "text": "refstat",
+   "wait": 1.4
+  },
+  {
+   "op": "save",
+   "name": "CE0_TR5_REF"
+  },
+  {
+   "op": "load",
+   "name": "CE0_TR5_REF"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "refstat",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "refcam 1",
+   "wait": 1.4
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "key",
+   "keys": [
+    "B"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "shot",
+   "file": "f5_after_load.png"
+  },
+  {
+   "op": "expect",
+   "regex": "REFSTAT|REFCAM",
+   "note": "geysers, the real build order by B R click, the Refinery, gas income, the same after a load"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

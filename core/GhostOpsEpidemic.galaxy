@@ -30,6 +30,7 @@ fixed go_eFieldR;
 fixed go_eFieldRate;
 fixed go_eMaxStep;
 point go_eTruckAt;
+string go_eShipType;            // the transport unit of the profile ("" = the stock Medivac of the earlier revisions); a Hercules carries 30 and its passengers are rescued in pods when it is destroyed
 fixed go_eTruckFuelMax;
 fixed go_eTruckFuel0;
 fixed go_eCapR;
@@ -733,13 +734,29 @@ void GhostOps_Epi_ShipPark () {
     GhostOps_Epi_Log("transport leaves until the next night, health " + FixedToString(UnitGetPropertyFixed(go_eShip, c_unitPropLife, c_unitPropCurrent), 0));
 }
 
+string GhostOps_Epi_ShipType () {
+    if (go_eShipType == "") {
+        return "Medivac";
+    }
+
+    return go_eShipType;
+}
+
+string GhostOps_Epi_ShipAbil () {
+    if (go_eShipType == "Hercules") {
+        return "HerculesTransport";
+    }
+
+    return "MedivacTransport";
+}
+
 void GhostOps_Epi_ShipOpen () {
     if (go_eShipDead) {
         return;
     }
 
     if (!go_eShipMade) {
-        UnitCreate(1, "Medivac", 0, 1, go_eDock, 270.0);
+        UnitCreate(1, GhostOps_Epi_ShipType(), 0, 1, go_eDock, 270.0);
         go_eShip = UnitLastCreated();
         go_eShipMade = true;
         GhostOps_Epi_Log("transport arrives (first time)");
@@ -752,7 +769,7 @@ void GhostOps_Epi_ShipOpen () {
         GhostOps_Epi_Log("transport arrives again, health " + FixedToString(UnitGetPropertyFixed(go_eShip, c_unitPropLife, c_unitPropCurrent), 0));
     }
 
-    UnitAbilityEnable(go_eShip, "MedivacTransport", true);
+    UnitAbilityEnable(go_eShip, GhostOps_Epi_ShipAbil(), true);
     UIDisplayMessage(PlayerGroupAll(), c_messageAreaDirective, StringExternal("Param/Value/GhostOpsE_MsgShipHere"));
     GhostOps_Epi_Scene(4);
 }
@@ -789,7 +806,7 @@ void GhostOps_Epi_Ship () {
     // after the dawn: no new rides; the ride in progress may end (passengers are never thrown out, never teleported); an empty transport at the base leaves
     lv_cargo = UnitGroupCount(UnitCargoGroup(go_eShip), c_unitCountAlive);
     lv_home = (DistanceBetweenPoints(UnitGetPosition(go_eShip), go_eDock) <= go_eDockR);
-    UnitAbilityEnable(go_eShip, "MedivacTransport", lv_cargo > 0);
+    UnitAbilityEnable(go_eShip, GhostOps_Epi_ShipAbil(), lv_cargo > 0);
     if (lv_home && (lv_cargo == 0)) {
         GhostOps_Epi_ShipPark();
     }

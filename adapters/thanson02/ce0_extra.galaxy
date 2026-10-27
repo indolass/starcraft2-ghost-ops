@@ -284,7 +284,7 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
             while ((lv_i <= lv_n) && (lv_i <= lv_c)) {
                 lv_u = UnitGroupUnit(lv_g, lv_i);
                 UnitSetPosition(lv_u, PointWithOffset(UnitGetPosition(go_eShip), 2.0 + IntToFixed(lv_i % 3), 0.0), false);
-                UnitIssueOrder(go_eShip, OrderTargetingUnit(AbilityCommand("MedivacTransport", 0), lv_u), c_orderQueueAddToEnd);
+                UnitIssueOrder(go_eShip, OrderTargetingUnit(AbilityCommand(GhostOps_Epi_ShipAbil(), 0), lv_u), c_orderQueueAddToEnd);
                 lv_i += 1;
             }
 
@@ -305,7 +305,7 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
 
     if (lp_cmd == "eshipunl") {
         if (go_eShipMade && UnitIsAlive(go_eShip)) {
-            UnitIssueOrder(go_eShip, OrderTargetingPoint(AbilityCommand("MedivacTransport", 2), Point(StringToFixed(lp_a), StringToFixed(lp_b))), c_orderQueueReplace);
+            UnitIssueOrder(go_eShip, OrderTargetingPoint(AbilityCommand(GhostOps_Epi_ShipAbil(), 2), Point(StringToFixed(lp_a), StringToFixed(lp_b))), c_orderQueueReplace);
             GhostOps_Ce0_Write("j", "ESHIPUNL unload ordered at " + lp_a + "," + lp_b);
         }
 
@@ -580,6 +580,18 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
         }
 
         GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "geo") {
+        // geo: the path cost from our base to both infested Command Centers and to the candidate places of the gas truck, with passability and the connection
+        GhostOps_Ce0_Write("j", "GEO base->northCC cost " + IntToString(PointPathingCost(Point(73.5, 91.5), Point(111.5, 156.5))) + " conn " + IntToString(GhostOps_Ce0_B(PointPathingIsConnected(Point(73.5, 91.5), Point(111.5, 156.5)))) + " | base->southCC cost " + IntToString(PointPathingCost(Point(73.5, 91.5), Point(115.5, 31.5))) + " conn " + IntToString(GhostOps_Ce0_B(PointPathingIsConnected(Point(73.5, 91.5), Point(115.5, 31.5)))));
+        return true;
+    }
+
+    if (lp_cmd == "geop") {
+        // geop <x> <y>: passability, the connection with our base and the path cost of one point
+        GhostOps_Ce0_Write("j", "GEOP (" + lp_a + "," + lp_b + ") passable " + IntToString(GhostOps_Ce0_B(PointPathingPassable(Point(StringToFixed(lp_a), StringToFixed(lp_b))))) + " conn " + IntToString(GhostOps_Ce0_B(PointPathingIsConnected(Point(73.5, 91.5), Point(StringToFixed(lp_a), StringToFixed(lp_b))))) + " cost " + IntToString(PointPathingCost(Point(73.5, 91.5), Point(StringToFixed(lp_a), StringToFixed(lp_b)))));
         return true;
     }
 

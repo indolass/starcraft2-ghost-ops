@@ -1,0 +1,191 @@
+//--------------------------------------------------------------------------------------------------
+// Ghost ability "Detector analysis", early-warning mode (config key detector_analysis.early_warning; reusable by any mission whose profile enables it).
+//
+// Why the stock circle comes late (data of the installed game, liberty / campaign data): the Hero Detector Radar (Nova mechanic) applies its buff only to detectors that satisfy the
+// search filter "Visible,Detector" within 25, and the circle actor lives on that detector unit. A detector is "Visible" only when the player sees it, and the Ghost's own sight
+// (about 11) is about the detection radius (10..12): the circle shows up when the Ghost is already at the edge of the detection. A detector in the fog never gets the circle.
+//
+// This mode does not depend on the sight. Every 0.2 s, for every living Ghost, the script looks for enemy detectors (the unit filter "Enemy,Detector": a detector that died or lost
+// its detection no longer carries the Detector behavior) within (its detection radius + the warning margin) of the Ghost. For each of them a beacon unit of ours is put on the detector (and follows
+// it); the beacon carries a hidden buff that makes our range actor draw the circle of the detection radius. The beacon has no sight, no model, no collision, cannot be selected,
+// targeted or detected: nothing of the map and of the enemy army is revealed. A beacon without its detector (dead, out of the margin) is removed at once. The circle does not
+// depend on the selection of any unit. A loaded game removes the beacons and the next tick puts them again.
+//--------------------------------------------------------------------------------------------------
+fixed go_daeMargin;
+trigger go_daeTrig;
+unit[32] go_daeDet;
+unit[32] go_daeBea;
+bool[32] go_daeSeen;
+int go_daeTicks;   // diagnostics read by the probes: ticks, Ghosts seen in the last tick, detectors in range, beacons created
+int go_daeGhosts;
+int go_daeFound;
+int go_daeMade;
+
+int GhostOps_DAE_Slot (unit lp_det) {
+    int lv_i;
+
+    lv_i = 0;
+    while (lv_i < 32) {
+        if (go_daeDet[lv_i] == lp_det) {
+            return lv_i;
+        }
+
+        lv_i += 1;
+    }
+
+    return -1;
+}
+
+int GhostOps_DAE_FreeSlot () {
+    int lv_i;
+
+    lv_i = 0;
+    while (lv_i < 32) {
+        if (go_daeDet[lv_i] == null) {
+            return lv_i;
+        }
+
+        lv_i += 1;
+    }
+
+    return -1;
+}
+
+fixed GhostOps_DAE_Radius (unit lp_det) {
+    if (UnitBehaviorCount(lp_det, "Detector12") > 0) {
+        return 12.0;
+    }
+
+    if (UnitBehaviorCount(lp_det, "Detector10") > 0) {
+        return 10.0;
+    }
+
+    return 11.0;
+}
+
+// the detection behaviors of the game data (Detector10 / 11 / 12 carry the radius); the Galaxy filter string has no reliable "Detector" word, the behavior is the data itself
+bool GhostOps_DAE_IsDetector (unit lp_det) {
+    return (UnitBehaviorCount(lp_det, "Detector10") > 0) || (UnitBehaviorCount(lp_det, "Detector11") > 0) || (UnitBehaviorCount(lp_det, "Detector12") > 0);
+}
+
+void GhostOps_DAE_Drop (int lp_slot) {
+    if (go_daeBea[lp_slot] != null) {
+        UnitRemove(go_daeBea[lp_slot]);
+    }
+
+    go_daeBea[lp_slot] = null;
+    go_daeDet[lp_slot] = null;
+    go_daeSeen[lp_slot] = false;
+}
+
+bool GhostOps_DAE_Tick (bool lp_testConds, bool lp_runActions) {
+    unitgroup lv_g;
+    unitgroup lv_s;
+    unit lv_gh;
+    unit lv_d;
+    point lv_p;
+    fixed lv_r;
+    int lv_i;
+    int lv_k;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    go_daeTicks += 1;
+    go_daeGhosts = 0;
+    go_daeFound = 0;
+    lv_i = 0;
+    while (lv_i < 32) {
+        go_daeSeen[lv_i] = false;
+        lv_i += 1;
+    }
+
+    lv_g = UnitGroup("Ghost", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+    UnitGroupLoopBegin(lv_g);
+    while (UnitGroupLoopCurrent() != null) {
+        lv_gh = UnitGroupLoopCurrent();
+        go_daeGhosts += 1;
+        lv_p = UnitGetPosition(lv_gh);
+        lv_s = UnitGroupSearch(null, c_playerAny, lv_p, 12.0 + go_daeMargin + 2.0, UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+        UnitGroupLoopBegin(lv_s);
+        while (UnitGroupLoopCurrent() != null) {
+            lv_d = UnitGroupLoopCurrent();
+            if (UnitIsAlive(lv_d) && UnitFilterMatch(lv_d, 1, UnitFilterStr("Enemy;Dead,Hidden,Stasis")) && GhostOps_DAE_IsDetector(lv_d)) {
+                lv_r = GhostOps_DAE_Radius(lv_d);
+                if (DistanceBetweenPoints(lv_p, UnitGetPosition(lv_d)) <= (lv_r + go_daeMargin)) {
+                    go_daeFound += 1;
+                    lv_k = GhostOps_DAE_Slot(lv_d);
+                    if (lv_k < 0) {
+                        lv_k = GhostOps_DAE_FreeSlot();
+                        if (lv_k >= 0) {
+                            UnitCreate(1, "GhostOpsWarnBeacon", c_unitCreateIgnorePlacement, 1, UnitGetPosition(lv_d), 0.0);
+                            go_daeBea[lv_k] = UnitLastCreated();
+                            go_daeMade += 1;
+                            go_daeDet[lv_k] = lv_d;
+                            UnitBehaviorAdd(go_daeBea[lv_k], "GhostOpsWarnShow" + IntToString(FixedToInt(lv_r)), go_daeBea[lv_k], 1);
+                        }
+                    }
+
+                    if (lv_k >= 0) {
+                        go_daeSeen[lv_k] = true;
+                        UnitSetPosition(go_daeBea[lv_k], UnitGetPosition(lv_d), false);
+                    }
+                }
+            }
+
+            UnitGroupLoopStep();
+        }
+
+        UnitGroupLoopEnd();
+        UnitGroupLoopStep();
+    }
+
+    UnitGroupLoopEnd();
+    lv_i = 0;
+    while (lv_i < 32) {
+        if ((go_daeDet[lv_i] != null) && !go_daeSeen[lv_i]) {
+            GhostOps_DAE_Drop(lv_i);
+        }
+
+        lv_i += 1;
+    }
+
+    return true;
+}
+
+// a loaded game: the beacons are removed, the next tick puts them again (no stale circle of a detector that is gone)
+bool GhostOps_DAE_Loaded (bool lp_testConds, bool lp_runActions) {
+    int lv_i;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    lv_i = 0;
+    while (lv_i < 32) {
+        if (go_daeDet[lv_i] != null) {
+            GhostOps_DAE_Drop(lv_i);
+        }
+
+        lv_i += 1;
+    }
+
+    return true;
+}
+
+void GhostOps_ApplyDetectorEarlyConfig ();
+
+void GhostOps_DAE_Start () {
+    trigger lv_load;
+
+    GhostOps_ApplyDetectorEarlyConfig();
+    if (go_daeTrig != null) {
+        return;
+    }
+
+    go_daeTrig = TriggerCreate("GhostOps_DAE_Tick");
+    TriggerAddEventTimePeriodic(go_daeTrig, 0.2, c_timeGame);
+    lv_load = TriggerCreate("GhostOps_DAE_Loaded");
+    TriggerAddEventLoadGameDone(lv_load);
+}

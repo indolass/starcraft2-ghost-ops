@@ -1226,6 +1226,113 @@ void GhostOps_Ce0_R3Add (string lp_type, int lp_owner, point lp_pos, string lp_t
     go_r3N += 1;
 }
 
+// rebdmg: a Marine handed over like a rescued one (the hook) and a plain Marine each fight their own paused Ultralisk for 8 s; the life lost shows the rebel damage multiplier
+void GhostOps_Ce0_RebDmg (string lp_swap) {
+    unit lv_a;
+    unit lv_b;
+    unit lv_ua;
+    unit lv_ub;
+    unit lv_o;
+    fixed lv_la;
+    fixed lv_lb;
+
+    lv_o = UnitFromId(23);
+    UnitCreate(1, "Marine", c_unitCreateIgnorePlacement, 1, PointWithOffset(UnitGetPosition(lv_o), -6.0, -6.0), 270.0);
+    lv_a = UnitLastCreated();
+    UnitCreate(1, "Marine", c_unitCreateIgnorePlacement, 1, PointWithOffset(UnitGetPosition(lv_o), -6.0, -12.0), 270.0);
+    lv_b = UnitLastCreated();
+    if (lp_swap == "1") {
+        GhostOps_Tac_OnRescue(lv_b);
+    }
+    else {
+        GhostOps_Tac_OnRescue(lv_a);
+    }
+
+    UnitCreate(2, "Ultralisk", c_unitCreateIgnorePlacement, 2, PointWithOffset(UnitGetPosition(lv_a), 4.0, 0.0), 270.0);
+    lv_ua = UnitLastCreated();
+    UnitCreate(2, "Ultralisk", c_unitCreateIgnorePlacement, 2, PointWithOffset(UnitGetPosition(lv_b), 4.0, 0.0), 270.0);
+    lv_ub = UnitLastCreated();
+    libNtve_gf_PauseUnit(lv_ua, true);
+    libNtve_gf_PauseUnit(lv_ub, true);
+    UnitIssueOrder(lv_a, OrderTargetingUnit(AbilityCommand("attack", 0), lv_ua), c_orderQueueReplace);
+    UnitIssueOrder(lv_b, OrderTargetingUnit(AbilityCommand("attack", 0), lv_ub), c_orderQueueReplace);
+    Wait(8.0, c_timeGame);
+    lv_la = UnitGetPropertyFixed(lv_ua, c_unitPropLifeMax, c_unitPropCurrent) - UnitGetPropertyFixed(lv_ua, c_unitPropLife, c_unitPropCurrent);
+    lv_lb = UnitGetPropertyFixed(lv_ub, c_unitPropLifeMax, c_unitPropCurrent) - UnitGetPropertyFixed(lv_ub, c_unitPropLife, c_unitPropCurrent);
+    GhostOps_Ce0_Write("j", "REBDMG swap " + lp_swap + ": Marine A dealt " + FixedToString(lv_la, 1) + ", Marine B dealt " + FixedToString(lv_lb, 1) + " in 8 s; rebel behavior A " + IntToString(UnitBehaviorCount(lv_a, "GhostOpsRebelDamage")) + " B " + IntToString(UnitBehaviorCount(lv_b, "GhostOpsRebelDamage")) + " target life A-side " + FixedToString(UnitGetPropertyFixed(lv_ua, c_unitPropLife, c_unitPropCurrent), 0));
+    UnitRemove(lv_a);
+    UnitRemove(lv_b);
+    UnitRemove(lv_ua);
+    UnitRemove(lv_ub);
+}
+
+// refstat: the geysers near the player's SCVs, the Refineries of the player, gas and minerals; refcam <n>: the camera centres on the geyser n (a real click then builds there)
+unit GhostOps_Ce0_Geyser (int lp_n) {
+    unitgroup lv_g;
+    unit lv_u;
+    unit lv_s;
+    int lv_k;
+
+    lv_s = UnitGroupUnit(UnitGroup("SCV", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), 1);
+    lv_g = UnitGroup(null, c_playerAny, RegionCircle(UnitGetPosition(lv_s), 40.0), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+    lv_k = 0;
+    UnitGroupLoopBegin(lv_g);
+    while (UnitGroupLoopCurrent() != null) {
+        lv_u = UnitGroupLoopCurrent();
+        if ((StringFind(UnitGetType(lv_u), "Geyser", c_stringNoCase) > 0) || (StringFind(UnitGetType(lv_u), "Vespene", c_stringNoCase) > 0)) {
+            lv_k += 1;
+            if (lv_k == lp_n) {
+                UnitGroupLoopEnd();
+                return lv_u;
+            }
+        }
+
+        UnitGroupLoopStep();
+    }
+
+    UnitGroupLoopEnd();
+    return null;
+}
+
+void GhostOps_Ce0_RefStat () {
+    unit lv_g;
+    int lv_n;
+    string lv_t;
+    string lv_g2;
+
+    lv_g2 = "";
+    lv_n = 1;
+    while (lv_n <= 4) {
+        lv_g = GhostOps_Ce0_Geyser(lv_n);
+        if (lv_g != null) {
+            lv_g2 = lv_g2 + UnitGetType(lv_g) + "@" + FixedToString(PointGetX(UnitGetPosition(lv_g)), 1) + "," + FixedToString(PointGetY(UnitGetPosition(lv_g)), 1) + " ";
+        }
+
+        lv_n += 1;
+    }
+
+    lv_t = "REFSTAT scvs " + IntToString(UnitGroupCount(UnitGroup("SCV", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive));
+    lv_t = lv_t + " refineries " + IntToString(UnitGroupCount(UnitGroup("Refinery", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive));
+    lv_t = lv_t + " gas " + IntToString(PlayerGetPropertyInt(1, c_playerPropVespene)) + " minerals " + IntToString(PlayerGetPropertyInt(1, c_playerPropMinerals));
+    GhostOps_Ce0_Write("j", lv_t + " | geysers " + lv_g2);
+}
+
+// fpstat: the final push state (timer left, warning, waves fired, the enemy units near the landing point, the Hatcheries left); fpt <s>: the evacuation timer restarts with s seconds left
+void GhostOps_Ce0_FpStat () {
+    string lv_t;
+    int lv_p;
+
+    lv_t = "FPSTAT on " + IntToString(GhostOps_Ce0_B(go_defFpOn)) + " left " + FixedToString(TimerGetRemaining(go_defTimer), 0) + " warned " + IntToString(GhostOps_Ce0_B(go_defFpWarned)) + " fired " + IntToString(GhostOps_Ce0_B(go_defFpDone[0])) + IntToString(GhostOps_Ce0_B(go_defFpDone[1])) + IntToString(GhostOps_Ce0_B(go_defFpDone[2]));
+    lv_p = 2;
+    while (lv_p <= 4) {
+        lv_t = lv_t + " | P" + IntToString(lv_p) + " units " + IntToString(UnitGroupCount(UnitGroup(null, lv_p, RegionCircle(Point(go_defLandX, go_defLandY), 70.0), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive));
+        lv_t = lv_t + " hatch " + IntToString(UnitGroupCount(UnitGroup("Hatchery", lv_p, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive) + UnitGroupCount(UnitGroup("Lair", lv_p, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive));
+        lv_p += 1;
+    }
+
+    GhostOps_Ce0_Write("j", lv_t);
+}
+
 bool GhostOps_Ce0_R3Cmd (string lp_cmd, string lp_a, string lp_b) {
     int lv_i;
     unitgroup lv_g;
@@ -1503,6 +1610,36 @@ bool GhostOps_Ce0_R3Cmd (string lp_cmd, string lp_a, string lp_b) {
         return true;
     }
 
+    if (lp_cmd == "fpstat") {
+        GhostOps_Ce0_FpStat();
+        return true;
+    }
+
+    if (lp_cmd == "fpt") {
+        TimerStart(go_defTimer, StringToFixed(lp_a), false, c_timeGame);
+        GhostOps_Ce0_Write("j", "FPT timer restarted with " + lp_a + " s left");
+        return true;
+    }
+
+    if (lp_cmd == "refstat") {
+        GhostOps_Ce0_RefStat();
+        return true;
+    }
+
+    if (lp_cmd == "refcam") {
+        lv_u = GhostOps_Ce0_Geyser(StringToInt(lp_a));
+        CameraPan(1, UnitGetPosition(lv_u), 0.0, -1, 10.0, false);
+        UnitClearSelection(1);
+        UnitSelect(UnitGroupUnit(UnitGroup("SCV", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), 1), 1, true);
+        GhostOps_Ce0_Write("j", "REFCAM geyser " + lp_a + " " + UnitGetType(lv_u));
+        return true;
+    }
+
+    if (lp_cmd == "rebdmg") {
+        GhostOps_Ce0_RebDmg(lp_a);
+        return true;
+    }
+
     if (lp_cmd == "rebstat") {
         lv_t = "";
         lv_i = 0;
@@ -1563,13 +1700,28 @@ fixed go_dsMl;
 int go_dsTick;
 trigger go_dsTrig;
 
+string GhostOps_Ce0_Beacons () {
+    unitgroup lv_g;
+    string lv_t;
+    int lv_n;
+
+    lv_g = UnitGroup("GhostOpsWarnBeacon", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+    lv_n = UnitGroupCount(lv_g, c_unitCountAlive);
+    lv_t = "beacons " + IntToString(lv_n);
+    if (lv_n > 0) {
+        lv_t = lv_t + " bdist " + FixedToString(DistanceBetweenPoints(UnitGetPosition(UnitGroupUnit(lv_g, 1)), UnitGetPosition(go_dsO)), 2);
+    }
+
+    return lv_t;
+}
+
 bool GhostOps_Ce0_DsTick (bool lp_test, bool lp_run) {
     if (!lp_run) {
         return true;
     }
 
     go_dsTick += 1;
-    GhostOps_Ce0_Write("j", "DSMV t=" + FixedToString(GameGetMissionTime(), 1) + " d=" + FixedToString(DistanceBetweenPoints(UnitGetPosition(go_dsO), UnitGetPosition(go_dsG)), 2) + " ghost lost " + FixedToString(go_dsGl - UnitGetPropertyFixed(go_dsG, c_unitPropLife, c_unitPropCurrent), 0) + " bunker lost " + FixedToString(go_dsMl - UnitGetPropertyFixed(go_dsM, c_unitPropLife, c_unitPropCurrent), 0));
+    GhostOps_Ce0_Write("j", "DSMV t=" + FixedToString(GameGetMissionTime(), 1) + " d=" + FixedToString(DistanceBetweenPoints(UnitGetPosition(go_dsO), UnitGetPosition(go_dsG)), 2) + " ghost lost " + FixedToString(go_dsGl - UnitGetPropertyFixed(go_dsG, c_unitPropLife, c_unitPropCurrent), 0) + " bunker lost " + FixedToString(go_dsMl - UnitGetPropertyFixed(go_dsM, c_unitPropLife, c_unitPropCurrent), 0) + " vis " + IntToString(GhostOps_Ce0_B(VisIsVisibleForPlayer(1, UnitGetPosition(go_dsO)))) + " " + GhostOps_Ce0_Beacons());
     UnitSetPropertyFixed(go_dsG, c_unitPropLife, UnitGetPropertyFixed(go_dsG, c_unitPropLifeMax, c_unitPropCurrent));
     UnitSetPropertyFixed(go_dsM, c_unitPropLife, UnitGetPropertyFixed(go_dsM, c_unitPropLifeMax, c_unitPropCurrent));
     go_dsGl = UnitGetPropertyFixed(go_dsG, c_unitPropLife, c_unitPropCurrent);
@@ -1597,6 +1749,7 @@ int GhostOps_Ce0_DsAround () {
 
 bool GhostOps_Ce0_DsCmd (string lp_cmd, string lp_a, string lp_b) {
     point lv_p;
+    unit lv_u;
 
     if (lp_cmd == "dsc") {
         // dsc <dx>: the scene; the Ghost 0 is the subject (its life 3000), the Hydralisk is paused until dsgo
@@ -1620,6 +1773,14 @@ bool GhostOps_Ce0_DsCmd (string lp_cmd, string lp_a, string lp_b) {
         go_dsGl = UnitGetPropertyFixed(go_dsG, c_unitPropLife, c_unitPropCurrent);
         go_dsMl = UnitGetPropertyFixed(go_dsM, c_unitPropLife, c_unitPropCurrent);
         GhostOps_Ce0_Write("j", "DSC scene: ghost " + FixedToString(PointGetX(lv_p), 1) + "," + FixedToString(PointGetY(lv_p), 1) + " hydra 3 N, marine 9 N, overseer " + lp_a + " E, radar " + IntToString(UnitBehaviorCount(go_dsG, "HeroDetectorRadar")));
+        return true;
+    }
+
+    if (lp_cmd == "dsact") {
+        // dsact: the Overseer is an ACTIVE detector (not paused); it stays where it is
+        libNtve_gf_PauseUnit(go_dsO, false);
+        UnitIssueOrder(go_dsO, Order(AbilityCommand("stop", 0)), c_orderQueueReplace);
+        GhostOps_Ce0_Write("j", "DSACT overseer active");
         return true;
     }
 
@@ -1658,9 +1819,33 @@ bool GhostOps_Ce0_DsCmd (string lp_cmd, string lp_a, string lp_b) {
 
     if (lp_cmd == "dsm") {
         // dsm: the life lost since the last reset by the Ghost and by the control Marine; the distance of the Overseer; the radar
-        GhostOps_Ce0_Write("j", "DSM d=" + FixedToString(DistanceBetweenPoints(UnitGetPosition(go_dsO), UnitGetPosition(go_dsG)), 2) + " ghost lost " + FixedToString(go_dsGl - UnitGetPropertyFixed(go_dsG, c_unitPropLife, c_unitPropCurrent), 0) + " bunker lost " + FixedToString(go_dsMl - UnitGetPropertyFixed(go_dsM, c_unitPropLife, c_unitPropCurrent), 0) + " radar " + IntToString(UnitBehaviorCount(go_dsG, "HeroDetectorRadar")) + " circle " + IntToString(UnitBehaviorCount(go_dsO, "HeroDetectorRadarDetected")) + " | ghost alive " + IntToString(GhostOps_Ce0_B(UnitIsAlive(go_dsG))) + " bunker alive " + IntToString(GhostOps_Ce0_B(UnitIsAlive(go_dsM))) + " hydra orders " + IntToString(UnitOrderCount(go_dsH)) + " enemy units within 14: " + IntToString(GhostOps_Ce0_DsAround()));
+        GhostOps_Ce0_Write("j", "DSM d=" + FixedToString(DistanceBetweenPoints(UnitGetPosition(go_dsO), UnitGetPosition(go_dsG)), 2) + " ghost lost " + FixedToString(go_dsGl - UnitGetPropertyFixed(go_dsG, c_unitPropLife, c_unitPropCurrent), 0) + " bunker lost " + FixedToString(go_dsMl - UnitGetPropertyFixed(go_dsM, c_unitPropLife, c_unitPropCurrent), 0) + " radar " + IntToString(UnitBehaviorCount(go_dsG, "HeroDetectorRadar")) + " circle " + IntToString(UnitBehaviorCount(go_dsO, "HeroDetectorRadarDetected")) + " | vis " + IntToString(GhostOps_Ce0_B(VisIsVisibleForPlayer(1, UnitGetPosition(go_dsO)))) + " " + GhostOps_Ce0_Beacons() + " | ghost alive " + IntToString(GhostOps_Ce0_B(UnitIsAlive(go_dsG))) + " bunker alive " + IntToString(GhostOps_Ce0_B(UnitIsAlive(go_dsM))) + " hydra orders " + IntToString(UnitOrderCount(go_dsH)) + " enemy units within 14: " + IntToString(GhostOps_Ce0_DsAround()));
         go_dsGl = UnitGetPropertyFixed(go_dsG, c_unitPropLife, c_unitPropCurrent);
         go_dsMl = UnitGetPropertyFixed(go_dsM, c_unitPropLife, c_unitPropCurrent);
+        return true;
+    }
+
+    if (lp_cmd == "daedbg") {
+        // daedbg: why the early-warning module does (not) see the Overseer: filter, behaviors, the module trigger
+        GhostOps_Ce0_Write("j", "DAEDBG enemy-filter " + IntToString(GhostOps_Ce0_B(UnitFilterMatch(go_dsO, 1, UnitFilterStr("Enemy;Dead,Hidden,Stasis")))) + " enemy+detector-filter " + IntToString(GhostOps_Ce0_B(UnitFilterMatch(go_dsO, 1, UnitFilterStr("Enemy,Detector;Dead,Hidden,Stasis")))));
+        GhostOps_Ce0_Write("j", "DAEDBG det10/11/12 " + IntToString(UnitBehaviorCount(go_dsO, "Detector10")) + IntToString(UnitBehaviorCount(go_dsO, "Detector11")) + IntToString(UnitBehaviorCount(go_dsO, "Detector12")) + " owner " + IntToString(UnitGetOwner(go_dsO)) + " alive " + IntToString(GhostOps_Ce0_B(UnitIsAlive(go_dsO))));
+        GhostOps_Ce0_Write("j", "DAEDBG ticks " + IntToString(go_daeTicks) + " ghosts " + IntToString(go_daeGhosts) + " found " + IntToString(go_daeFound) + " made " + IntToString(go_daeMade) + " trig " + IntToString(GhostOps_Ce0_B(go_daeTrig != null)) + " margin " + FixedToString(go_daeMargin, 1));
+        GhostOps_Ce0_Write("j", "DAEDBG dist " + FixedToString(DistanceBetweenPoints(UnitGetPosition(go_dsO), UnitGetPosition(go_dsG)), 2) + " beacons-now " + GhostOps_Ce0_Beacons());
+        return true;
+    }
+
+    if (lp_cmd == "dsbeacon") {
+        // dsbeacon: does the beacon unit of the early-warning mode exist in the catalog, can it be created and carry the hidden buff
+        UnitCreate(1, "GhostOpsWarnBeacon", c_unitCreateIgnorePlacement, 1, UnitGetPosition(go_dsO), 0.0);
+        lv_u = UnitLastCreated();
+        if (lv_u == null) {
+            GhostOps_Ce0_Write("j", "DSBEACON creation failed: no unit");
+            return true;
+        }
+
+        GhostOps_Ce0_Write("j", "DSBEACON created type " + UnitGetType(lv_u) + " alive " + IntToString(GhostOps_Ce0_B(UnitIsAlive(lv_u))));
+        UnitBehaviorAdd(lv_u, "GhostOpsWarnShow11", lv_u, 1);
+        GhostOps_Ce0_Write("j", "DSBEACON buff count " + IntToString(UnitBehaviorCount(lv_u, "GhostOpsWarnShow11")) + " | " + GhostOps_Ce0_Beacons());
         return true;
     }
 

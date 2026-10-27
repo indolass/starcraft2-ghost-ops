@@ -122,7 +122,7 @@ ZH_ORDER_ITEMS = ('marines', 'bunkers', 'turrets', 'scvs')
 DEF_TEXT_PREFIX = 'Param/Value/GhostOpsDef_'
 DEF_TEXT_KEYS = ('KitsTitle', 'KitsText', 'KitsBunkers', 'KitsTurrets', 'KitsOut', 'LandedFirst', 'LandedRest', 'LandedGhosts', 'SwannName', 'SwannText', 'SalvoHint', 'SalvoName',
                  'SalvoTip', 'RaynorText', 'MattText', 'MattEarly', 'Tip1Title', 'Tip1Text', 'Tip2Title', 'Tip2Text', 'Tip3Title', 'Tip3Text')
-DEF_OPTIONAL_TEXT_KEYS = ('ScannerSwann', 'IntroHold')  # texts of optional scenes (the profile that has them lists them; a profile without them is valid)
+DEF_OPTIONAL_TEXT_KEYS = ('ScannerSwann', 'IntroHold', 'FinalWarn')  # texts of optional scenes (the profile that has them lists them; a profile without them is valid)
 DEF_EXPLAIN_KEYS = ('SwannText', 'RaynorText', 'MattText', 'MattEarly', 'ScannerSwann', 'IntroHold')
 TAIL_BEGIN = '// ==== GHOSTOPS TAIL BEGIN (generated, do not edit) ===='
 TAIL_END = '// ==== GHOSTOPS TAIL END ===='
@@ -229,7 +229,7 @@ def validate_zerohour(cfg):
     errs = []
     if not isinstance(z, dict):
         return ['zerohour must be an object']
-    known = {'order', 'limits', 'prices', 'recommended', 'test_budget', 'arrival_minutes', 'targets', 'ping_every', 'persistent_marks', 'ghost_spawn', 'post_arrival', 'scene', 'texts', 'debug_log', 'lock_production', 'voice', 'min'}
+    known = {'order', 'limits', 'prices', 'recommended', 'test_budget', 'arrival_minutes', 'targets', 'ping_every', 'persistent_marks', 'ghost_spawn', 'post_arrival', 'scene', 'texts', 'debug_log', 'lock_production', 'voice', 'min', 'allow_refinery'}
     for k in z:
         if k not in known:
             errs.append('zerohour.%s is not supported' % k)
@@ -258,6 +258,8 @@ def validate_zerohour(cfg):
     tb = z.get('test_budget', {})
     if not isint(tb.get('minerals')) or not isint(tb.get('gas')) or tb['minerals'] < 0 or tb['gas'] < 0:
         errs.append('zerohour.test_budget needs non-negative integer minerals and gas (a budget of standalone tests only, never written into a campaign)')
+    if 'allow_refinery' in z and not isinstance(z['allow_refinery'], bool):
+        errs.append('zerohour.allow_refinery must be boolean (the SCVs may build a Refinery on a geyser at the ordinary price)')
     if not isinstance(z.get('lock_production'), bool):
         errs.append('zerohour.lock_production must be boolean (no production, building or research during the mission)')
     if z.get('arrival_minutes') != 20:
@@ -329,7 +331,7 @@ def validate_defence(cfg):
     if not isinstance(d, dict):
         return ['defence must be an object']
     for k in d:
-        if k not in ('landing', 'salvo', 'waves', 'scenes', 'texts', 'debug_log'):
+        if k not in ('landing', 'salvo', 'waves', 'scenes', 'texts', 'debug_log', 'final_push'):
             errs.append('defence.%s is not supported' % k)
     if cfg.get('zerohour') is None or not cfg['zerohour'].get('lock_production'):
         errs.append('defence needs zerohour with lock_production true')
@@ -354,6 +356,27 @@ def validate_defence(cfg):
     for k, (lo, hi) in {'scanner_delay': (0, 120), 'scanner_seconds': (3, 30), 'intro_seconds': (3, 30), 'raynor_wait_timers': (0, 1)}.items():
         if k in sc and (not _num(sc[k]) or not lo <= sc[k] <= hi):
             errs.append('defence.scenes.%s must be a number %s..%s' % (k, lo, hi))
+    fp = d.get('final_push')
+    if fp is not None:
+        if not (isinstance(fp, dict) and set(fp) == {'enabled', 'warn_remaining', 'spawn_distance', 'waves'} and isinstance(fp['enabled'], bool) and _num(fp['warn_remaining']) and 10 <= fp['warn_remaining'] <= 600
+                and _num(fp['spawn_distance']) and 10 <= fp['spawn_distance'] <= 120 and isinstance(fp['waves'], list) and 1 <= len(fp['waves']) <= 4):
+            errs.append('defence.final_push needs enabled, warn_remaining 10..600 (s before the end of the timer), spawn_distance 10..120 (cells from our base) and 1..4 waves')
+        else:
+            if fp['enabled'] and 'FinalWarn' not in d.get('texts', {}):
+                errs.append('defence.final_push enabled needs the text FinalWarn')
+            ne = 0
+            for i, w in enumerate(fp['waves']):
+                if not (isinstance(w, dict) and set(w) == {'remaining', 'side', 'units'} and _num(w['remaining']) and 5 <= w['remaining'] <= 900 and w['side'] in (2, 3, 4) and isinstance(w['units'], list) and w['units']):
+                    errs.append('defence.final_push.waves.%d needs remaining 5..900, side 2|3|4 and units' % i)
+                    continue
+                if w['remaining'] > fp['warn_remaining'] + 120:
+                    errs.append('defence.final_push.waves.%d starts long before the warning' % i)
+                for u in w['units']:
+                    if not (isinstance(u, list) and len(u) == 5 and isinstance(u[0], str) and all(isinstance(x, int) and not isinstance(x, bool) and 0 <= x <= 40 for x in u[1:])):
+                        errs.append('defence.final_push.waves.%d.units entries are [type, easy, normal, hard, insane] (counts 0..40)' % i)
+                    ne += 1
+            if ne > 16:
+                errs.append('defence.final_push has at most 16 unit entries in all')
     texts = d.get('texts', {})
     if set(texts) - set(DEF_OPTIONAL_TEXT_KEYS) != set(DEF_TEXT_KEYS):
         errs.append('defence.texts must have exactly the keys %s (and may add %s)' % (DEF_TEXT_KEYS, DEF_OPTIONAL_TEXT_KEYS))
@@ -372,7 +395,7 @@ def validate_detector_analysis(cfg):
     if not isinstance(d, dict):
         return ['detector_analysis must be an object']
     for k in d:
-        if k not in ('enabled', 'texts', 'column', 'row', 'debug_ring', 'always'):
+        if k not in ('enabled', 'texts', 'column', 'row', 'debug_ring', 'always', 'early_warning'):
             errs.append('detector_analysis.%s is not supported' % k)
     if not isinstance(d.get('enabled'), bool):
         errs.append('detector_analysis.enabled must be true or false')
@@ -381,6 +404,10 @@ def validate_detector_analysis(cfg):
             errs.append('detector_analysis.%s must be an integer 0..%d (the place of the passive icon on the Ghost card)' % (k, hi))
     if 'always' in d and not isinstance(d['always'], bool):
         errs.append('detector_analysis.always must be true or false (true: the radar stays on every living Ghost, not only on the selected ones)')
+    ew = d.get('early_warning')
+    if ew is not None:
+        if not (isinstance(ew, dict) and set(ew) == {'enabled', 'margin'} and isinstance(ew['enabled'], bool) and isinstance(ew['margin'], (int, float)) and not isinstance(ew['margin'], bool) and 1 <= ew['margin'] <= 30):
+            errs.append('detector_analysis.early_warning needs enabled (true/false) and margin 1..30 (game cells: how far outside the detection radius the circle appears; the circle is drawn on a beacon of ours, so it does not depend on the sight of the Ghost)')
     texts = d.get('texts', {})
     if set(texts) != {'Name', 'Tip'}:
         errs.append('detector_analysis.texts must have exactly Name and Tip')
@@ -391,6 +418,24 @@ def validate_detector_analysis(cfg):
     if d.get('enabled') and not cfg.get('ghost_tuning'):
         errs.append('detector_analysis needs ghost_tuning (the Ghost override of this mission)')
     return errs
+
+
+def detector_early_fragments(d):
+    """Catalog data of the early-warning mode (map local): the beacon unit (no model, no sight, no collision, not selectable / targetable / detectable), the hidden buffs GhostOpsWarnShow10/11/12
+    and the range actors GhostOpsWarnRange10/11/12 with the explicit radius (not the behavior of a unit that must be visible)."""
+    nl = chr(10)
+    unit = ['    <CUnit id="GhostOpsWarnBeacon" parent="Beacon_TerranSmall">', '        <LifeStart value="25"/>', '        <LifeMax value="25"/>', '        <Radius value="0.1"/>', '        <SeparationRadius value="0"/>',
+            '        <InnerRadius value="0.1"/>', '        <MinimapRadius value="0"/>', '        <Sight value="0"/>', '        <Collide index="Ground" value="0"/>', '        <Collide index="Structure" value="0"/>',
+            '        <Collide index="Burrow" value="0"/>', '        <Collide index="FlyingLow" value="0"/>', '        <Footprint value=""/>', '        <FlagArray index="Unselectable" value="1"/>',
+            '        <FlagArray index="Unclickable" value="1"/>', '        <FlagArray index="Uncommandable" value="1"/>', '        <FlagArray index="Unhighlightable" value="1"/>', '        <FlagArray index="NoScore" value="1"/>', '    </CUnit>', '']
+    beh = []
+    act = []
+    for n in (10, 11, 12):
+        beh += ['    <CBehaviorBuff id="GhostOpsWarnShow%d">' % n, '        <InfoFlags index="Hidden" value="1"/>', '    </CBehaviorBuff>']
+        act += ['    <CActorRange id="GhostOpsWarnRange%d">' % n, '        <Range value="%d"/>' % n, '        <Terms value="Cap 1"/>', '        <IconArcLength value="0.450000"/>', '        <IconTint value="255,60,30,255"/>', '        <FogVisibility value="Visible"/>',
+                '        <On Terms="Behavior.GhostOpsWarnShow%d.On" Send="Create"/>' % n, '        <On Terms="Behavior.GhostOpsWarnShow%d.Off" Send="Destroy"/>' % n, '    </CActorRange>']
+    model = ['    <CModel id="GhostOpsWarnBeacon" parent="Beacon_TerranSmall">', '        <ScaleMax value="0.010000,0.010000,0.010000"/>', '        <ScaleMin value="0.010000,0.010000,0.010000"/>', '        <ShadowRadius value="0"/>', '    </CModel>', '']
+    return {'UnitData.xml': nl.join(unit), 'BehaviorData.xml': nl.join(beh + ['']), 'ActorData.xml': nl.join(act + ['']), 'ModelData.xml': nl.join(model)}
 
 
 def detector_analysis_fragments(d):
@@ -434,6 +479,22 @@ def gen_defence(cfg, adapter=None):
     if sc.get('raynor_wait_timers'):  # the intro takes the trigger queue only after the original has started its timers (hook on gt_StartTimers)
         lines.insert(lines.index('}'), '    go_defRaynorAt = 9999.0;')
     lines.insert(lines.index('}'), '    go_defIntroLen = %.1f;' % sc.get('intro_seconds', 7))
+    fp = d.get('final_push')
+    if fp and fp['enabled']:
+        lines.insert(lines.index('}'), '    go_defFpOn = true;')
+        lines.insert(lines.index('}'), '    go_defFpWaves = %d;' % len(fp['waves']))
+        lines.insert(lines.index('}'), '    go_defFpWarnAt = %.1f;' % fp['warn_remaining'])
+        lines.insert(lines.index('}'), '    go_defFpDist = %.1f;' % fp['spawn_distance'])
+        ent = 0
+        for wi, w in enumerate(fp['waves']):
+            lines.insert(lines.index('}'), '    go_defFpAt[%d] = %.1f;' % (wi, w['remaining']))
+            lines.insert(lines.index('}'), '    go_defFpSide[%d] = %d;' % (wi, w['side']))
+            for u in w['units']:
+                for l in ('    go_defFpEntW[%d] = %d;' % (ent, wi), '    go_defFpEntType[%d] = "%s";' % (ent, u[0]), '    go_defFpEntA[%d] = %d;' % (ent, u[1]), '    go_defFpEntB[%d] = %d;' % (ent, u[2]),
+                          '    go_defFpEntC[%d] = %d;' % (ent, u[3]), '    go_defFpEntD[%d] = %d;' % (ent, u[4])):
+                    lines.insert(lines.index('}'), l)
+                ent += 1
+        lines.insert(lines.index('}'), '    go_defFpEntN = %d;' % ent)
     for w in (adapter or {}).get('defence_waves', []):
         lines.append('bool GhostOps_DEF_%s (bool testConds, bool runActions);' % w['function'][3:-5])
     return nl.join(lines)
@@ -781,6 +842,8 @@ def validate_hanson(cfg):
         if not isinstance(ct, dict) or not isinstance(ct.get('enabled'), bool):
             errs.append('hanson.containers needs enabled (boolean)')
         else:
+            if 'approach' in ct and not isinstance(ct['approach'], bool):
+                errs.append('hanson.containers.approach must be boolean (true: a far placement order is walked to, checked on arrival)')
             for k, (lo, hi) in {'limit': (0, 1000), 'gas_cost': (0, 500), 'damage': (1, 2000), 'radius': (0.5, 8), 'life': (1, 500), 'place_range': (0.5, 6), 'min_free': (0, 4)}.items():
                 if not _num(ct.get(k)) or not lo <= ct[k] <= hi:
                     errs.append('hanson.containers.%s must be a number %s..%s' % (k, lo, hi))
@@ -928,8 +991,11 @@ def validate_tactical(cfg):
     num = lambda v, lo, hi: _num(v) and lo <= v <= hi  # noqa: E731
     pair = lambda v: isinstance(v, list) and len(v) == 2 and all(_num(x) and 0 <= x <= 255 for x in v)  # noqa: E731
     g = t.get('garrison', {})
-    if not num(g.get('damage_multiplier'), 1, 100):
-        errs.append('tactical.garrison.damage_multiplier must be 1..100')
+    if not num(g.get('damage_multiplier'), 0.1, 100):
+        errs.append('tactical.garrison.damage_multiplier must be 0.1..100 (a factor of the ordinary damage; below 1 weakens)')
+    rb = t.get('rebels')
+    if rb is not None and not (isinstance(rb, dict) and set(rb) == {'damage_multiplier'} and num(rb.get('damage_multiplier'), 0.1, 100)):
+        errs.append('tactical.rebels needs exactly damage_multiplier 0.1..100 (the damage of the rescued fighters, a factor of the ordinary damage; health, armor, attack speed and healing stay)')
     z = g.get('zone', {})
     if not pair(z.get('center')) or not num(z.get('radius'), 1, 60):
         errs.append('tactical.garrison.zone needs center [x, y] and radius 1..60')
@@ -1109,7 +1175,7 @@ def validate_ghost_tuning(gt):
         errs.append('ghost_tuning.snipe.exclude_friendly must be boolean')
     rs = sn.get('rifle_shot')
     if rs is not None:
-        if not (isinstance(rs, dict) and set(rs) == {'range', 'assist_radius', 'ability_range', 'texts'} and _num(rs.get('range')) and 3 <= rs['range'] <= 20 and _num(rs.get('assist_radius')) and 0 <= rs['assist_radius'] <= 5
+        if not (isinstance(rs, dict) and set(rs) - {'sounds'} == {'range', 'assist_radius', 'ability_range', 'texts'} and isinstance(rs.get('sounds', False), bool) and _num(rs.get('range')) and 3 <= rs['range'] <= 20 and _num(rs.get('assist_radius')) and 0 <= rs['assist_radius'] <= 5
                 and _num(rs.get('ability_range')) and rs['ability_range'] >= rs.get('range', 0) and rs['ability_range'] <= 1000):
             errs.append('ghost_tuning.snipe.rifle_shot needs range 3..20, assist_radius 0..5, ability_range (range..1000: far beyond any map, like the 500 of MULE / Scanner Sweep, so that the engine never walks the Ghost to the click) and texts')
         else:
@@ -1128,11 +1194,28 @@ def validate_ghost_tuning(gt):
     ra = gt.get('remove_abilities', [])
     if not isinstance(ra, list) or any(x not in GHOST_ABIL_INDEX for x in ra) or len(set(ra)) != len(ra):
         errs.append('ghost_tuning.remove_abilities must be distinct entries of %s' % sorted(GHOST_ABIL_INDEX))
+    fc = gt.get('fire_control')
+    if fc is not None:
+        ok_cell = lambda v, hi: isinstance(v, int) and not isinstance(v, bool) and 0 <= v <= hi  # noqa: E731
+        if not (isinstance(fc, dict) and set(fc) == {'enabled', 'row', 'hold_column', 'free_column'} and isinstance(fc['enabled'], bool) and ok_cell(fc['row'], 2)
+                and ok_cell(fc['hold_column'], 4) and ok_cell(fc['free_column'], 4) and fc['hold_column'] != fc['free_column']):
+            errs.append('ghost_tuning.fire_control needs enabled (boolean), row 0..2 and two different columns hold_column / free_column 0..4 (the stock Hold Fire / Weapons Free pair, the auto-fire switch)')
     if not errs and gt['cloak_net_per_second'] > gt['regen_per_second']:
         errs.append('ghost_tuning.cloak_net_per_second must not exceed regen_per_second (the cloak can only cost energy; equal = a free cloak)')
     if not errs and gt['energy_start'] > gt['energy_max']:
         errs.append('ghost_tuning.energy_start must not exceed energy_max')
     return errs
+
+
+def fire_control_unit_lines(fc):
+    """The auto-fire switch of the Ghosts: the stock Hold Fire / Weapons Free pair (a ready-made toggle of the game, one of the two buttons is available at a time), put on the card at
+    explicit cells. The Ghost of a campaign map may not carry them (the Evacuation map does not); with them a Ghost does not choose targets itself while holding fire, explicit attack
+    orders and the abilities still work."""
+    if not (fc or {}).get('enabled'):
+        return []
+    return ['        <AbilArray Link="GhostHoldFire"/>', '        <AbilArray Link="GhostWeaponsFree"/>', '        <CardLayouts index="0">',
+            '            <LayoutButtons Face="GhostHoldFire" Type="AbilCmd" AbilCmd="GhostHoldFire,Execute" Row="%d" Column="%d"/>' % (fc['row'], fc['hold_column']),
+            '            <LayoutButtons Face="WeaponsFree" Type="AbilCmd" AbilCmd="GhostWeaponsFree,Execute" Row="%d" Column="%d"/>' % (fc['row'], fc['free_column']), '        </CardLayouts>']
 
 
 def ghost_tuning_fragments(gt):
@@ -1151,6 +1234,7 @@ def ghost_tuning_fragments(gt):
             '        <EnergyMax value="%s"/>' % g(gt['energy_max']),
             '        <EnergyRegenRate value="%s"/>' % g(gt['regen_per_second']),
         ] + ['        <AbilArray index="%d" removed="1"/>' % GHOST_ABIL_INDEX[x] for x in gt.get('remove_abilities', [])]
+        + fire_control_unit_lines(gt.get('fire_control'))
         + ['    </CUnit>', '']),
         'BehaviorData.xml': nl.join([
             '    <CBehaviorBuff id="GhostCloak">',
@@ -1194,7 +1278,11 @@ def ghost_tuning_fragments(gt):
             '    <CActorModel id="GhostOpsShotMissImpact" parent="ModelAnimationStyleOneShot">', '        <Model value="RaynorAttackImpact"/>', '        <HostSiteOps Ops="SOpTargetPoint"/>',
             '        <On Terms="Effect.GhostOpsShotMiss.Stop" Send="Create"/>', '    </CActorModel>',
             # the range ring of the shot is the range of the rifle, not the long range of the ability
-            '    <CActorRange id="GhostSnipeRange" parent="RangeAbil" abil="Snipe">', '        <Range value="%s"/>' % g(rs['range']), '    </CActorRange>', ''])
+            '    <CActorRange id="GhostSnipeRange" parent="RangeAbil" abil="Snipe">', '        <Range value="%s"/>' % g(rs['range']), '    </CActorRange>', ''] + ([
+            # sounds of the shot (the stock attack sounds of the Ghost): the launch with every shot, the impact for a hit and for a miss; not checked by ear (the test game is muted)
+            '    <CActorSound id="GhostOpsShotLaunchSound" parent="SoundOneShot">', '        <Sound value="Ghost_SnipeLaunch"/>', '        <On Terms="Effect.GhostOpsShotCast.Start" Send="Create"/>', '    </CActorSound>',
+            '    <CActorSound id="GhostOpsShotHitSound" parent="SoundOneShot">', '        <Sound value="Ghost_SnipeImpact"/>', '        <On Terms="Effect.SnipeDamage.Impact" Send="Create"/>', '    </CActorSound>',
+            '    <CActorSound id="GhostOpsShotMissSound" parent="SoundOneShot">', '        <Sound value="Ghost_SnipeImpact"/>', '        <On Terms="Effect.GhostOpsShotMiss.Impact" Send="Create"/>', '    </CActorSound>', ''] if rs.get('sounds') else []))
     return frags
 
 
@@ -1237,7 +1325,7 @@ def hanson_fragments(h, cfg):
             '    <CUnit id="Firebat">', '        <AbilArray Link="GhostOpsPlaceContainer"/>', '        <CardLayouts index="0">',
             '            <LayoutButtons Face="GhostOpsPlaceContainer" Type="AbilCmd" AbilCmd="GhostOpsPlaceContainer,Execute" Row="2" Column="1"/>', '        </CardLayouts>', '    </CUnit>', '']
     abil = ['    <CAbilEffectTarget id="GhostOpsPlaceContainer">', '        <EditorCategories value="Race:Terran,AbilityorEffectType:Units"/>', '        <Effect index="0" value="GhostOpsContainerArea"/>',
-            '        <ErrorAlert value="Error"/>', '        <Range value="%s"/>' % g(ct['place_range']), '        <CastIntroTime value="0.3"/>', '        <CursorEffect value="GhostOpsContainerArea"/>',
+            ] + ([] if ct.get('approach') else ['        <ErrorAlert value="Error"/>']) + ['        <Range value="%s"/>' % g(ct['place_range']), '        <CastIntroTime value="0.3"/>', '        <CursorEffect value="GhostOpsContainerArea"/>',
             # like a building: the model of the container under the cursor and the footprint colours (green = placeable, red = not); the container itself is made by the module
             '        <PlaceUnit value="GhostOpsFuelContainer"/>', '        <Placeholder value="GhostOpsFuelContainer"/>', '        <ProducedUnitArray value="GhostOpsFuelContainer"/>',
             '        <CmdButtonArray index="Execute" DefaultButtonFace="GhostOpsPlaceContainer"/>', '    </CAbilEffectTarget>', '']
@@ -1366,7 +1454,7 @@ def tactical_fragments(t, gt=None):
         'MoverData.xml': nl.join(mover + ['']) if mover else '',
         # the projectile unit has no model of its own and showed as a white dome: the stock pod missile of the Odin barrage (smoke trail is part of the model)
         'ModelData.xml': nl.join(['    <CModel id="GhostOpsAPMissile" parent="MissileBarragePod">', '        <Model value="Assets\\Effects\\Terran\\PodMissile\\PodMissile.m3"/>', '    </CModel>', '']) if (mover and gr.get('effects')) else '',
-        'BehaviorData.xml': nl.join(behavior('GhostOpsGarrisonDamage', gm) + extra_beh + ['']),
+        'BehaviorData.xml': nl.join(behavior('GhostOpsGarrisonDamage', gm) + (behavior('GhostOpsRebelDamage', t['rebels']['damage_multiplier']) if t.get('rebels') else []) + extra_beh + ['']),
         'ButtonData.xml': nl.join(button + ['']) if button else '',
         'RequirementData.xml': nl.join([
             '    <CRequirement id="TrainNuke">',
@@ -1446,6 +1534,9 @@ def catalog_fragments(cfg):
     if cfg.get('detector_analysis') and cfg['detector_analysis'].get('enabled'):
         for name, frag in detector_analysis_fragments(cfg['detector_analysis']).items():
             frags[name] = frags.get(name, '') + frag
+        if (cfg['detector_analysis'].get('early_warning') or {}).get('enabled'):
+            for name, frag in detector_early_fragments(cfg['detector_analysis']).items():
+                frags[name] = frags.get(name, '') + frag
     if 'UnitData.xml' in frags:
         frags['UnitData.xml'] = merge_same_id(frags['UnitData.xml'], 'CUnit', 'Ghost')
         frags['UnitData.xml'] = merge_same_id(frags['UnitData.xml'], 'CUnit', 'MissileTurret')
@@ -1564,6 +1655,7 @@ def gen_tactical(cfg):
         '    go_tacGrenBoth = %s;' % b((t.get('grenade') or {}).get('carriers') == 'both'),
         '    go_tacStatus = %s;' % b(t.get('status_lines')),
         '    go_tacRebelLabels = %s;' % b((t.get('rebel_labels') or {}).get('enabled')),
+        '    go_tacRebelDmg = %s;' % b(bool(t.get('rebels'))),
         '    go_tacMsgEmpty = %s;' % b('GrenadeEmpty' in t.get('texts', {})),
         '    go_tacVictory = %s;' % b((t.get('victory') or {}).get('enabled')),
         '    go_tacVicCount = %d;' % len((t.get('victory') or {}).get('types', [])),
@@ -1649,7 +1741,7 @@ def gen_hanson(cfg):
         lines.append('    go_hTurretY[%d] = %.4f;' % (i, t['y']))
     ct = h.get('containers') or {}
     fu = h.get('convoy_fuel') or {}
-    lines += ['    go_hAllowRefinery = %s;' % b(h.get('allow_refinery')), '    go_hContOn = %s;' % b(ct.get('enabled')), '    go_hFuelOn = %s;' % b(fu.get('enabled'))]
+    lines += ['    go_hAllowRefinery = %s;' % b(h.get('allow_refinery')), '    go_hContOn = %s;' % b(ct.get('enabled')), '    go_hContApproach = %s;' % b(ct.get('approach')), '    go_hFuelOn = %s;' % b(fu.get('enabled'))]
     if ct.get('enabled'):
         lines += ['    go_hContLimit = %d;' % ct['limit'], '    go_hContCost = %d;' % ct['gas_cost'], '    go_hContOwner = %d;' % ct['owner'], '    go_hContMinFree = %.2f;' % ct['min_free'], '    go_hContRange = %.2f;' % ct['place_range'],
                   '    go_hContFriendHard = %.4f;' % ct['friendly']['hard'], '    go_hContFriendOther = %.4f;' % ct['friendly']['other'], '    go_hContStrBonus = %s;' % ('true' if ct.get('structure_bonus', 0) > 0 else 'false')]
@@ -1759,6 +1851,8 @@ def validate_epidemic(cfg):
     num(tr, 'first_night', 1, 20, 'transport')
     num(tr, 'dock_radius', 4, 60, 'transport')
     num(tr, 'warn_seconds', 10, 200, 'transport')
+    if 'unit' in tr and tr['unit'] not in ('Medivac', 'Hercules'):
+        errs.append('epidemic.transport.unit must be Medivac (8 places, the cargo dies with it) or Hercules (the large stock transport of the campaign: 30 places, passengers rescued in pods)')
     dk = tr.get('dock')
     if not (isinstance(dk, list) and len(dk) == 2 and all(_num(v) and 0 <= v <= 400 for v in dk)):
         errs.append('epidemic.transport.dock must be [x, y]')
@@ -1800,6 +1894,8 @@ def gen_epidemic(cfg):
              '    go_eProtMax = %d;' % p['max'], '    go_eProtTypeN = %d;' % len(p['types'])]
     for i, name in enumerate(p['types']):
         lines.append('    go_eProtType[%d] = "%s";' % (i, name))
+    if tr.get('unit') and tr['unit'] != 'Medivac':
+        lines.append('    go_eShipType = "%s";' % tr['unit'])
     lines += ['    go_eShipOn = %s;' % b(tr['enabled']), '    go_eShipFirstNight = %d;' % tr['first_night'], '    go_eDock = Point(%.4f, %.4f);' % (tr['dock'][0], tr['dock'][1]),
               '    go_eDockR = %.2f;' % tr['dock_radius'], '    go_eWarnSec = %.1f;' % tr['warn_seconds'],
               '    go_eHudX = %d;' % e['hud']['offset_x'], '    go_eHudY = %d;' % e['hud']['offset_y'], '    go_eHudW = %d;' % e['hud']['width'], '    go_eHudH = %d;' % e['hud']['height'], '}', '']
@@ -1842,7 +1938,7 @@ def gen_zerohour(cfg):
     b = lambda v: 'true' if v else 'false'  # noqa: E731
     o, pa, sc = z['order'], z['post_arrival'], z['scene']
     lines = ['// Generated TRaynor03 configuration', 'void GhostOps_ApplyZeroHourConfig () {', '    go_zhEnabled = true;',
-             '    go_zhDebug = %s;' % b(z.get('debug_log')), '    go_zhLockProduction = %s;' % b(z['lock_production']),
+             '    go_zhDebug = %s;' % b(z.get('debug_log')), '    go_zhLockProduction = %s;' % b(z['lock_production']), '    go_zhAllowRefinery = %s;' % b(z.get('allow_refinery')),
              '    go_zhOrdMarines = %d;' % o['marines'], '    go_zhOrdBunkers = %d;' % o['bunkers'], '    go_zhOrdTurrets = %d;' % o['turrets'], '    go_zhOrdScvs = %d;' % o['scvs'],
              '    go_zhTargetCount = %d;' % len(z['targets']),
              '    go_zhPingEvery = %.1f;' % z['ping_every'], '    go_zhMarksPersist = %s;' % b(z.get('persistent_marks')), '    go_zhGhostX = %.4f;' % z['ghost_spawn'][0], '    go_zhGhostY = %.4f;' % z['ghost_spawn'][1],
@@ -2137,7 +2233,9 @@ def build_block(adapter, cfg):
         extra += gen_epidemic(cfg) + '\n'
     if cfg.get('scene'):
         extra += gen_scene(cfg) + '\n'
-    if adapter.get('detector_analysis'):
+    if (cfg.get('detector_analysis') or {}).get('early_warning', {}).get('enabled') and adapter.get('detector_analysis'):
+        extra += chr(10).join(['// Generated detector-analysis configuration (early warning)', 'void GhostOps_ApplyDetectorEarlyConfig () {', '    go_daeMargin = %.2f;' % cfg['detector_analysis']['early_warning']['margin'], '}', '']) + chr(10)
+    elif adapter.get('detector_analysis'):
         extra += chr(10).join(['// Generated detector-analysis configuration', 'void GhostOps_ApplyDetectorAnalysisConfig () {', '    go_daEnabled = true;', '    go_daAlways = %s;' % ('true' if (cfg.get('detector_analysis') or {}).get('always') else 'false'), '}', '']) + chr(10)
     if cfg.get('ce0'):
         extra += gen_ce0(cfg) + '\n'
@@ -2266,12 +2364,16 @@ def apply_ce0(adapter, cfg):
         # the original tips ask for a Reactor / Engineering Bay and talk about buildings the player does not have here
         for tip in ('gt_TipBunkerQ_Func', 'gt_TipReactorQ_Func', 'gt_TipEngineeringBayQ_Func', 'gt_TipMissileTurretQ_Func'):
             hooks.append({'function': tip, 'before': '// Actions', 'call': 'if (go_defEnabled && runActions) { return true; }'})
-        hooks.append({'function': 'gt_StartTimers_Func', 'after': 'TimerWindowSetColor(gv_evacuationTimerWindow, c_timerWindowColorTime, Color(0.00, 100.00, 0.00), 0.0);', 'call': 'GhostOps_DEF_OnTimersStarted();'})
+        hooks.append({'function': 'gt_StartTimers_Func', 'after': 'TimerWindowSetColor(gv_evacuationTimerWindow, c_timerWindowColorTime, Color(0.00, 100.00, 0.00), 0.0);', 'call': 'go_defTimer = gv_evacuationTimer; GhostOps_DEF_OnTimersStarted();'})
         a['defence'] = True
     if (cfg.get('detector_analysis') or {}).get('enabled'):
-        mods.append('core/GhostOpsDetector.galaxy')
         st = (adapter.get('start_hooks') or [adapter.get('start_hook')])[0]
-        hooks.append({'function': st['function'], 'after': st['after'], 'call': 'GhostOps_DA_Start();'})
+        if ((cfg['detector_analysis'].get('early_warning') or {}).get('enabled')):
+            mods.append('core/GhostOpsDetectorEarly.galaxy')
+            hooks.append({'function': st['function'], 'after': st['after'], 'call': 'GhostOps_DAE_Start();'})
+        else:
+            mods.append('core/GhostOpsDetector.galaxy')
+            hooks.append({'function': st['function'], 'after': st['after'], 'call': 'GhostOps_DA_Start();'})
         a['detector_analysis'] = True
     if cfg.get('campaign'):
         mods.append('core/GhostOpsCampaign.galaxy')
@@ -2299,7 +2401,7 @@ def load_plan(path):
     if not isinstance(plan, dict) or not re.fullmatch(r'[A-Za-z0-9_-]{1,40}', str(plan.get('operation_id', ''))):
         raise ConfigError('plan: operation_id must be 1..40 characters of [A-Za-z0-9_-]')
     for k in plan:
-        if k not in ('operation_id', 'mission', 'preset', 'order', 'cost'):
+        if k not in ('operation_id', 'mission', 'preset', 'order', 'cost', 'snapshot'):
             raise ConfigError('plan: unsupported key "%s"' % k)
     return plan
 
@@ -2321,6 +2423,15 @@ def context(args):
         plan = load_plan(plan_path)
         if plan.get('mission') not in (None, args.mission):
             raise ConfigError('plan is for mission %s, not %s' % (plan.get('mission'), args.mission))
+        if plan.get('snapshot') is not None:
+            # a Mission Workshop build (a free test): the plan carries the COMPLETE resolved configuration of the variant; it is used as it is (nothing of the base profile can change it
+            # afterwards) and has no campaign part; the unique operation-style id gives the map its own file name
+            if not isinstance(plan['snapshot'], dict) or plan['snapshot'].get('mission') != args.mission or plan['snapshot'].get('campaign'):
+                raise ConfigError('plan snapshot must be a resolved configuration of %s without a campaign part' % args.mission)
+            cfg = json.loads(json.dumps(plan['snapshot']))
+            adapter = json.loads(json.dumps(adapter))
+            adapter['_op'] = plan['operation_id']
+            return apply_ce0(adapter, cfg), cfg, preset
         if not cfg.get('campaign'):
             raise ConfigError('profile %s has no campaign key: it cannot carry an operation' % preset)
         cfg = deep_merge(cfg, {'campaign': {'operation_id': plan['operation_id']}})
@@ -2365,6 +2476,58 @@ def build_manifest_path(key):
 
 def install_manifest_path(key):
     return os.path.join(ROOT, 'build', 'install_%s.json' % key)
+
+
+def _file_digest(path):
+    try:
+        return sha256(read(path))
+    except OSError:
+        return 'missing'
+
+
+def inputs_digest(adapter, cfg, preset, src_path=None):
+    """One hash of EVERYTHING that decides the bytes of a built map: the resolved configuration (the settings of the profile with the inheritance, the order of an operation, the voice mode,
+    the shared lines already applied), the adapter, the Galaxy modules, the generator and its helpers, the original (source) map and every audio clip that goes into the map.
+    A change of any of them makes the build stale; nothing else does. Used by `prepare` (a ready map is not rebuilt, not copied again) and by the launcher (status)."""
+    h = hashlib.sha256()
+    h.update(json.dumps(cfg, sort_keys=True, default=str, ensure_ascii=True).encode('utf-8'))
+    h.update(json.dumps({k: v for k, v in adapter.items()}, sort_keys=True, default=str, ensure_ascii=True).encode('utf-8'))
+    files = [os.path.join(ROOT, 'tools', n) for n in ('build.py', 'galaxy_lint.py', 'sc2mpq.py', 'lines_table.py')]
+    for d in (os.path.join(ROOT, 'core'), os.path.join(ROOT, 'adapters', adapter['mission'])):
+        if os.path.isdir(d):
+            files += [os.path.join(d, n) for n in sorted(os.listdir(d)) if os.path.isfile(os.path.join(d, n))]
+    if src_path is None:
+        src_path = paths(adapter, None, preset)[0]
+    files.append(src_path)
+    files += [c[1] for c in audio_clips(cfg)]
+    for f in files:
+        h.update(os.path.relpath(f, ROOT).replace(chr(92), '/').encode('utf-8'))
+        h.update(_file_digest(f).encode('ascii'))
+    return h.hexdigest()
+
+
+def build_status(args):
+    """'ready' when the installed map is exactly the up-to-date build of this profile (inputs unchanged, built file and installed file match the manifests), else 'needs_build'.
+    A protected map of the Owner counts as ready (it is started as it is)."""
+    adapter, cfg, preset = context(args)
+    kept = os.path.join(SC2_DIR, 'Maps', 'GhostOps', output_name(adapter, preset))
+    if os.path.isfile(kept) and isolation.is_protected(kept):
+        return 'ready'
+    man_path = build_manifest_path(key_for(adapter, preset))
+    mp = install_manifest_path(key_for(adapter, preset))
+    if not (os.path.isfile(man_path) and os.path.isfile(mp) and os.path.isfile(kept)):
+        return 'needs_build'
+    try:
+        man = json.loads(read(man_path, 'r'))
+        rec = json.loads(read(mp, 'r'))
+        out = paths(adapter, None, preset)[1]
+        if man.get('inputs_hash') != inputs_digest(adapter, cfg, preset):
+            return 'needs_build'
+        if not os.path.isfile(out) or sha256(read(out)) != man.get('output_sha256') or sha256(read(kept)) != man.get('output_sha256') or rec.get('sha256') != man.get('output_sha256'):
+            return 'needs_build'
+    except (OSError, ValueError, KeyError):
+        return 'needs_build'
+    return 'ready'
 
 
 def cmd_build(args):
@@ -2488,6 +2651,7 @@ def cmd_build(args):
     with open(out, 'wb') as f:
         f.write(built)
     manifest['output_sha256'] = sha256(built)
+    manifest['inputs_hash'] = inputs_digest(adapter, cfg, preset, src)
     os.makedirs(os.path.join(ROOT, 'build'), exist_ok=True)
     with open(build_manifest_path(key_for(adapter, preset)), 'w') as f:
         json.dump(manifest, f, indent=2)
@@ -2585,8 +2749,8 @@ def cmd_verify(args):
 
 
 def sc2_running():
-    out = subprocess.run(['tasklist', '/FI', 'IMAGENAME eq SC2_x64.exe', '/FO', 'CSV', '/NH'], capture_output=True, text=True, creationflags=0x08000000).stdout
-    return 'SC2_x64.exe' in out
+    import procs  # a ToolHelp snapshot: milliseconds (tasklist took up to 25 s while the game ran)
+    return bool(procs.pids_of('SC2_x64.exe'))
 
 
 def install_key(adapter, preset, args):
@@ -2703,6 +2867,9 @@ def prepare(args, progress=None):
             print('refused: the installed %s differs from the registered Owner version; nothing is changed' % os.path.basename(kept))
             return 6
         print('Owner version kept as it is (not rebuilt): %s' % kept)
+        return 0
+    if build_status(args) == 'ready':
+        print('up to date: the installed map is the current build of this profile (not rebuilt, not copied again): %s' % kept)
         return 0
     note('build')
     rc = cmd_build(args)

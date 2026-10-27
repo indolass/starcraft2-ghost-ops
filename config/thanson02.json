@@ -535,7 +535,7 @@
       }
     ]
   },
-  "default_preset": "epidemic_free_r3",
+  "default_preset": "epidemic_free_r4",
   "presets": {
     "epidemic_free": {
       "label": "Эпидемия — Тест: бесплатный отряд (ревизия 1, прежняя)",
@@ -587,11 +587,11 @@
       }
     },
     "epidemic_free_r3": {
-      "label": "Эпидемия — Тест: бесплатный отряд (ревизия 3)",
+      "label": "Эпидемия — Тест: бесплатный отряд (ревизия 3, прежняя)",
       "message": "Ghost Ops — Эпидемия, тест: бесплатный отряд, ревизия 3",
       "message_en": "Ghost Ops - Epidemic, test: free squad, revision 3",
       "experimental": true,
-      "badge": "Для проверки · свободный тест",
+      "badge": "Прежняя версия · свободный тест",
       "extends": "epidemic_free_r2",
       "card": "Режим «Свободный тест»: бесплатный конечный отряд, без списаний и переноса в кампанию. Оригинальная «Эпидемия» с топливом геллионов, газовозом, защищёнными днём зданиями, ночным транспортом, взрывными контейнерами, наземным залпом турелей (A) и теперь с комплектом оборонительных бункеров: {bunkers} комплекта бункеров ({bunker_places} мест; строите и размещаете сами), {kits} комплектов турелей. Состав: 2 призрака; морпехи: всего {marines_total} ({marines_stock} штатных и {marines} добавленных, из них {bunker_places} встают в бункеры); огнемётчики, медики; КСМ: всего {scvs_total} ({scvs_stock} штатных и {scvs_extra} добавленных); геллионы: штатные и {hellions} добавленных. Анализ детекторов работает постоянно. Пополнения армии нет.",
       "details": [
@@ -698,6 +698,90 @@
           "transport": {
             "warn_seconds": 25
           }
+        }
+      }
+    },
+    "epidemic_free_r4": {
+      "label": "Эпидемия — Тест: бесплатный отряд (ревизия 4)",
+      "message": "Ghost Ops: Эпидемия, ревизия 4, бесплатный тест",
+      "message_en": "Ghost Ops - Outbreak: revision 4, free test",
+      "experimental": true,
+      "badge": "Для проверки · свободный тест",
+      "extends": "epidemic_free_r3",
+      "card": "Ревизия 4 (ревизия 3 сохранена): постоянная маскировка обоих призраков днём и ночью без расхода энергии (вражеские детекторы остаются); запас хода геллионов 122 вместо 100 и запас топлива газовоза 490 вместо 400 (скорость газовоза прежняя); газовоз перенесён к ближайшей вражеской базе с заражённым командным центром; ночной транспорт — штатный большой «Геркулес» (вместимость 30, штатная скорость; при уничтожении пассажиры спасаются в капсулах); анализ детекторов с ранним предупреждением. Оборона, состав отряда, укрепления, волны и урон войск не менялись. Числа экспериментальные, не утверждены Owner. Режим «Свободный тест» (ничего не списывается и не зачисляется; в кампании этой миссии нет): бесплатный конечный отряд, без списаний и переноса в кампанию. Оригинальная «Эпидемия» с топливом геллионов, газовозом, защищёнными днём зданиями, ночным транспортом, взрывными контейнерами, наземным залпом турелей (A) и теперь с комплектом оборонительных бункеров: {bunkers} комплекта бункеров ({bunker_places} мест; строите и размещаете сами), {kits} комплектов турелей. Состав: 2 призрака; морпехи: всего {marines_total} ({marines_stock} штатных и {marines} добавленных, из них {bunker_places} встают в бункеры); огнемётчики, медики; КСМ: всего {scvs_total} ({scvs_stock} штатных и {scvs_extra} добавленных); геллионы: штатные и {hellions} добавленных. Анализ детекторов работает постоянно. Пополнения армии нет.",
+      "details": [
+        "ТЕСТОВЫЙ КОМПЛЕКТ, не утверждённый баланс; в кампанию не пишет и результата не предлагает",
+        "Ревизии 1 и 2 сохранены: карточки «Эпидемия — Тест: бесплатный отряд» (ревизия 1) и (ревизия 2)"
+      ],
+      "overrides": {
+        "operatives": {
+          "ghost_permanent_cloak": true
+        },
+        "epidemic": {
+          "fuel": {
+            "tank": 122
+          },
+          "truck": {
+            "fuel_max": 490,
+            "fuel_start": 490
+          },
+          "night_cloak": {
+            "net_per_second": 0
+          },
+          "transport": {
+            "unit": "Hercules"
+          }
+        },
+        "detector_analysis": {
+          "early_warning": {
+            "enabled": true,
+            "margin": 12
+          },
+          "texts": {
+            "Tip": {
+              "ru": "Призрак заранее видит зоны обнаружения вражеских детекторов: круг появляется, когда призрак ещё не обнаружен (с запасом для обхода), и тогда, когда сам детектор в тумане; круг идёт за детектором. Внутри круга маскировка не скрывает призрака. Карта и армия противника не раскрываются.",
+              "en": "The Ghost sees the detection zones of the enemy detectors in advance: the circle appears while the Ghost is not yet detected (with a margin to walk around), also when the detector is in the fog; the circle follows the detector. Inside the circle the cloak does not hide the Ghost. The map and the enemy army are not revealed."
+            }
+          }
+        }
+      }
+    },
+    "epidemic_free_r4_ce0_dev": {
+      "label": "Эпидемия, ревизия 4, проба CE-0 (служебный)",
+      "message": "Ghost Ops - Outbreak r4, CE-0 probe (dev)",
+      "message_en": "Ghost Ops - Outbreak r4, CE-0 probe (dev)",
+      "hidden": true,
+      "extends": "epidemic_free_r4",
+      "card": "Technical probe",
+      "details": [
+        "Development only"
+      ],
+      "overrides": {
+        "hanson": {
+          "debug_log": true
+        },
+        "epidemic": {
+          "debug_log": true,
+          "dev_cycle": {
+            "day": 150,
+            "night": 120
+          },
+          "salvo": {
+            "cooldown": 24
+          }
+        },
+        "ce0": {
+          "operation_id": "CE0-TH02",
+          "census_types": [
+            "Ghost",
+            "Marine",
+            "SCV",
+            "Hellion",
+            "TankerTruck",
+            "Medivac",
+            "MissileTurret",
+            "Bunker"
+          ]
         }
       }
     }

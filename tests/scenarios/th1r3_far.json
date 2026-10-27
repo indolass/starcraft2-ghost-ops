@@ -1,7 +1,7 @@
 {
  "name": "th1r3_far",
  "mission": "thanson01",
- "preset": "sniper_next_r4_ce0_dev",
+ "preset": "sniper_next_r5_ce0_dev",
  "why": "the rifle shot at a click inside the weapon range, beyond it, and far beyond the technical range (minimap): no walking, one shot per order (also with two Ghosts selected), cooldown, energy untouched",
  "steps": [
   {

@@ -1,7 +1,7 @@
 {
  "name": "th1r3_contshot",
  "mission": "thanson01",
- "preset": "sniper_next_r4_ce0_dev",
+ "preset": "sniper_next_r5_ce0_dev",
  "why": "the finished container action: Firebat places by C + click, the Ghost shoots it by R + click on the container: exactly one blast, near enemy hurt, none far, container gone, no second blast; a click beside it does not pick it (assist); the ordinary Marine attack still blasts",
  "steps": [
   {

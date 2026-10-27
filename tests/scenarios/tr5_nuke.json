@@ -1,0 +1,361 @@
+{
+ "name": "tr5_nuke",
+ "mission": "traynor03",
+ "preset": "defence_r5_dev",
+ "why": "the nuclear strike of revision 3: range 48 from a safe distance, the real key N and a minimap click, cancel does not spend, two real launches, no third, a load does not duplicate, the area against the real Hatcheries and meter units",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "dst",
+   "grep": "DST2 landing \\d+ marines 16 ghosts 2",
+   "every": 6,
+   "timeout": 260
+  },
+  {
+   "op": "cmd",
+   "text": "cleane",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "tpause",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "ndum 29.9 34.9",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "gsel1 74.5 34.9",
+   "wait": 1.4
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "cmd",
+   "text": "tlife 88",
+   "wait": 0.9
+  },
+  {
+   "op": "cmd",
+   "text": "tlife 122",
+   "wait": 0.9
+  },
+  {
+   "op": "cmd",
+   "text": "tlife 259",
+   "wait": 0.9
+  },
+  {
+   "op": "cmd",
+   "text": "tlife 93",
+   "wait": 0.9
+  },
+  {
+   "op": "cmd",
+   "text": "tlife 198",
+   "wait": 0.9
+  },
+  {
+   "op": "cmd",
+   "text": "tlife 57",
+   "wait": 0.9
+  },
+  {
+   "op": "cmd",
+   "text": "tlife 119",
+   "wait": 0.9
+  },
+  {
+   "op": "cmd",
+   "text": "tlife 164",
+   "wait": 0.9
+  },
+  {
+   "op": "cmd",
+   "text": "tstat",
+   "wait": 1.4
+  },
+  {
+   "op": "key",
+   "keys": [
+    "N"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.6
+  },
+  {
+   "op": "click",
+   "x": 42,
+   "y": 713
+  },
+  {
+   "op": "sleep",
+   "s": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "tord 1",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "tstat",
+   "wait": 1.4
+  },
+  {
+   "op": "shot",
+   "file": "k1_aim.png"
+  },
+  {
+   "op": "sleep",
+   "s": 9
+  },
+  {
+   "op": "cmd",
+   "text": "tord 1",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "tstat",
+   "wait": 1.4
+  },
+  {
+   "op": "shot",
+   "file": "k2_launch.png"
+  },
+  {
+   "op": "burst",
+   "file": "k3_flight_",
+   "n": 3
+  },
+  {
+   "op": "sleep",
+   "s": 9
+  },
+  {
+   "op": "burst",
+   "file": "k4_blast_",
+   "n": 3
+  },
+  {
+   "op": "cmd",
+   "text": "tstat",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "ndumr",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "tlife 88",
+   "wait": 0.9
+  },
+  {
+   "op": "cmd",
+   "text": "tlife 122",
+   "wait": 0.9
+  },
+  {
+   "op": "cmd",
+   "text": "tlife 259",
+   "wait": 0.9
+  },
+  {
+   "op": "cmd",
+   "text": "tlife 93",
+   "wait": 0.9
+  },
+  {
+   "op": "cmd",
+   "text": "tlife 198",
+   "wait": 0.9
+  },
+  {
+   "op": "cmd",
+   "text": "tlife 57",
+   "wait": 0.9
+  },
+  {
+   "op": "cmd",
+   "text": "tlife 119",
+   "wait": 0.9
+  },
+  {
+   "op": "cmd",
+   "text": "tlife 164",
+   "wait": 0.9
+  },
+  {
+   "op": "save",
+   "name": "CE0_TR3_N"
+  },
+  {
+   "op": "load",
+   "name": "CE0_TR3_N"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "tstat",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "gsel2 50.0 99.5",
+   "wait": 1.4
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "cmd",
+   "text": "tnuke2 94.5 99.5",
+   "wait": 1.4
+  },
+  {
+   "op": "sleep",
+   "s": 5
+  },
+  {
+   "op": "cmd",
+   "text": "tstat",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "cancel 2",
+   "wait": 1.4
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "tstat",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "tnuke2 94.5 99.5",
+   "wait": 1.4
+  },
+  {
+   "op": "sleep",
+   "s": 24
+  },
+  {
+   "op": "cmd",
+   "text": "tstat",
+   "wait": 1.4
+  },
+  {
+   "op": "burst",
+   "file": "k5_second_",
+   "n": 2
+  },
+  {
+   "op": "cmd",
+   "text": "tlife 88",
+   "wait": 0.9
+  },
+  {
+   "op": "cmd",
+   "text": "tlife 122",
+   "wait": 0.9
+  },
+  {
+   "op": "cmd",
+   "text": "tlife 259",
+   "wait": 0.9
+  },
+  {
+   "op": "cmd",
+   "text": "tlife 93",
+   "wait": 0.9
+  },
+  {
+   "op": "cmd",
+   "text": "tlife 198",
+   "wait": 0.9
+  },
+  {
+   "op": "cmd",
+   "text": "tlife 57",
+   "wait": 0.9
+  },
+  {
+   "op": "cmd",
+   "text": "tlife 119",
+   "wait": 0.9
+  },
+  {
+   "op": "cmd",
+   "text": "tlife 164",
+   "wait": 0.9
+  },
+  {
+   "op": "cmd",
+   "text": "tnuke1 38.0 92.0",
+   "wait": 1.4
+  },
+  {
+   "op": "sleep",
+   "s": 4
+  },
+  {
+   "op": "cmd",
+   "text": "tord 1",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "tstat",
+   "wait": 1.4
+  },
+  {
+   "op": "expect",
+   "regex": "TSTAT|TLIFE|TORD|R3 lost|NDUM|TNUKE",
+   "note": "the two real launches, the cancel, the counter, the third refused, the area"
+  },
+  {
+   "op": "expect_def",
+   "bank": "GhostOpsDevTac",
+   "regex": "launch|aim|ready|cancel|grenade",
+   "note": "Tactical log"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

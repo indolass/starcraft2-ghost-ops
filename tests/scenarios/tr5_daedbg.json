@@ -1,0 +1,154 @@
+{
+ "name": "tr5_daedbg",
+ "mission": "traynor03",
+ "preset": "defence_r5_dev",
+ "why": "why the early-warning beacon is not created: filter, behaviors, trigger",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "dst",
+   "grep": "DST2 landing \\d+ marines 16 ghosts 2",
+   "every": 6,
+   "timeout": 260
+  },
+  {
+   "op": "cmd",
+   "text": "cleane",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "ghold",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "pausem",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "nofoe",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "selonly Marine",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "dsc 30",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "dsact",
+   "wait": 0.6
+  },
+  {
+   "op": "sleep",
+   "s": 2.0
+  },
+  {
+   "op": "cmd",
+   "text": "daedbg",
+   "wait": 0.6
+  },
+  {
+   "op": "cmd",
+   "text": "dsmv 16",
+   "wait": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "dsgo",
+   "wait": 0.3
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "dspause",
+   "wait": 0.3
+  },
+  {
+   "op": "sleep",
+   "s": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "dsm",
+   "wait": 0.6
+  },
+  {
+   "op": "cmd",
+   "text": "daedbg",
+   "wait": 0.6
+  },
+  {
+   "op": "cmd",
+   "text": "dsmv 8",
+   "wait": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "dsgo",
+   "wait": 0.3
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "dsm",
+   "wait": 0.6
+  },
+  {
+   "op": "cmd",
+   "text": "daedbg",
+   "wait": 0.6
+  },
+  {
+   "op": "cmd",
+   "text": "dsbeacon",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 1.0
+  },
+  {
+   "op": "cmd",
+   "text": "dsm",
+   "wait": 1.0
+  },
+  {
+   "op": "expect",
+   "regex": "DSBEACON|DSM",
+   "note": "beacon creation"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

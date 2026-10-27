@@ -58,6 +58,7 @@ bank go_zhBank;
 trigger go_zhTick;
 trigger go_zhLockTrig;
 bool go_zhLockProduction;
+bool go_zhAllowRefinery;       // the SCVs may build a Refinery on a geyser at the ordinary price (and rebuild a lost one); every other lock stays
 int go_zhLockTypes;
 string[32] go_zhLockSeen;
 trigger go_zhSceneTick;
@@ -313,7 +314,7 @@ void GhostOps_ZH_LockType (string lp_type) {
     lv_n = TechTreeUnitProducesUnitCount(lp_type);
     lv_i = 0;
     while (lv_i < lv_n) {
-        if (TechTreeUnitProducesUnit(lp_type, lv_i) != "Nuke") {
+        if ((TechTreeUnitProducesUnit(lp_type, lv_i) != "Nuke") && !(go_zhAllowRefinery && (TechTreeUnitProducesUnit(lp_type, lv_i) == "Refinery"))) {
             TechTreeUnitAllow(1, TechTreeUnitProducesUnit(lp_type, lv_i), false);
         }
 
@@ -351,7 +352,7 @@ void GhostOps_ZH_LockFixed () {
     lv_i = 0;
     while (lv_i < 16) {
         // the defence variant: Bunker (8) and Missile Turret (7) are switched by the kit tick of its own module
-        if (!(go_defEnabled && ((lv_i == 7) || (lv_i == 8)))) {
+        if (!(go_defEnabled && ((lv_i == 7) || (lv_i == 8))) && !(go_zhAllowRefinery && (lv_i == 4))) {
             TechTreeUnitAllow(1, lv_types[lv_i], false);
         }
 
@@ -401,6 +402,11 @@ bool GhostOps_ZH_LockTick (bool lp_testConds, bool lp_runActions) {
 
     // the strike chain of the tactical module must keep its missile
     TechTreeUnitAllow(1, "Nuke", true);
+    if (go_zhAllowRefinery) {
+        // every second again: no other restriction of the campaign may take the permission back
+        TechTreeUnitAllow(1, "Refinery", true);
+    }
+
     return true;
 }
 

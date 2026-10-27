@@ -1,0 +1,151 @@
+{
+ "name": "tr5_fp",
+ "mission": "traynor03",
+ "preset": "defence_r5_dev",
+ "why": "the final push is not cancelled by dead hatcheries; the warning; three waves once; a load does not double them",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "dst",
+   "grep": "DST2 landing \\d+ marines 16 ghosts 2",
+   "every": 6,
+   "timeout": 260
+  },
+  {
+   "op": "cmd",
+   "text": "cleane",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "tpause",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "fpstat",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "kg 2",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "kg 3",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "kg 4",
+   "wait": 1.4
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "fpstat",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "fpt 250",
+   "wait": 1
+  },
+  {
+   "op": "sleep",
+   "s": 15
+  },
+  {
+   "op": "cmd",
+   "text": "fpstat",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "fpt 205",
+   "wait": 1
+  },
+  {
+   "op": "sleep",
+   "s": 10
+  },
+  {
+   "op": "cmd",
+   "text": "fpstat",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "fpt 155",
+   "wait": 1
+  },
+  {
+   "op": "sleep",
+   "s": 10
+  },
+  {
+   "op": "cmd",
+   "text": "fpstat",
+   "wait": 1.4
+  },
+  {
+   "op": "save",
+   "name": "CE0_TR5_FP"
+  },
+  {
+   "op": "load",
+   "name": "CE0_TR5_FP"
+  },
+  {
+   "op": "sleep",
+   "s": 4
+  },
+  {
+   "op": "cmd",
+   "text": "fpstat",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "fpt 105",
+   "wait": 1
+  },
+  {
+   "op": "sleep",
+   "s": 10
+  },
+  {
+   "op": "cmd",
+   "text": "fpstat",
+   "wait": 1.4
+  },
+  {
+   "op": "expect",
+   "regex": "FPSTAT|FPT",
+   "note": "final push: warning, each wave once, after all hatcheries are dead, not doubled by a load"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

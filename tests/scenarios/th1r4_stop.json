@@ -1,7 +1,7 @@
 {
  "name": "th1r4_stop",
  "mission": "thanson01",
- "preset": "sniper_next_r4_ce0_dev",
+ "preset": "sniper_next_r5_ce0_dev",
  "why": "stop pressed at several moments after the shot click: shots and cooldown",
  "steps": [
   {

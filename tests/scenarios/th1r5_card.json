@@ -1,0 +1,57 @@
+{
+ "name": "th1r5_card",
+ "mission": "thanson01",
+ "preset": "sniper_next_r5_ce0_dev",
+ "why": "which abilities the Ghost has in the Evacuation map and what its card shows (hold fire missing?)",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 6
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "nstat",
+   "grep": "NSTAT ghosts 2 firebats 2",
+   "every": 5,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "rselg 2",
+   "wait": 1.4
+  },
+  {
+   "op": "sleep",
+   "s": 1.5
+  },
+  {
+   "op": "shot",
+   "file": "c0_card.png"
+  },
+  {
+   "op": "cmd",
+   "text": "gabil",
+   "wait": 1.4
+  },
+  {
+   "op": "expect",
+   "regex": "GABIL|RSELG",
+   "note": "Ghost abilities and hold fire / weapons free in the TH01 r5 map; the card picture"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

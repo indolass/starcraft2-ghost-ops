@@ -254,17 +254,17 @@ class ZeroHour(unittest.TestCase):
 class CampaignVersions(unittest.TestCase):
     def test_a_new_campaign_operation_gets_the_current_versions(self):
         import campaign_flow as cf
-        self.assertEqual(cf.step_of('traynor03')['preset'], 'defence_r4')
-        self.assertEqual(cf.step_of('thanson01')['preset'], 'sniper_next_r4')
+        self.assertEqual(cf.step_of('traynor03')['preset'], 'defence_r5')
+        self.assertEqual(cf.step_of('thanson01')['preset'], 'sniper_next_r5')
         self.assertEqual(cf.step_of('traynor02')['preset'], 'tactical_next')
 
     def test_the_order_of_the_current_zero_hour_matches_its_config(self):
         import campaign_flow as cf
         fl = cf.CampaignFlow(None, path=os.path.join(ROOT, 'tmp', 'unit_campaign_unused.json'))
-        info = fl.order_info('traynor03', 'defence_r4')
-        self.assertEqual(info['recommended'], cfg(TR3, 'defence_r4')['zerohour']['recommended'])
-        self.assertEqual(cfg(TR3, 'defence_r4')['tactical']['garrison']['damage_multiplier'], 1)
-        self.assertIs(cfg(TR3, 'defence_r4')['tactical']['nuke']['require_vision'], False)
+        info = fl.order_info('traynor03', 'defence_r5')
+        self.assertEqual(info['recommended'], cfg(TR3, 'defence_r5')['zerohour']['recommended'])
+        self.assertEqual(cfg(TR3, 'defence_r5')['tactical']['garrison']['damage_multiplier'], 0.85)
+        self.assertIs(cfg(TR3, 'defence_r5')['tactical']['nuke']['require_vision'], False)
         self.assertNotIn('require_vision', cfg(TR3, 'defence_r3')['tactical']['nuke'])
 
     def test_old_versions_are_labelled_as_earlier_and_the_default_is_the_current(self):
@@ -272,10 +272,11 @@ class CampaignVersions(unittest.TestCase):
         self.assertIn('прежняя', cards['defence_next']['label'])
         self.assertIn('прежняя', cards['defence']['label'])
         self.assertIn('прежняя', cards['defence_r3']['label'])
-        self.assertIn('кампания', cards['defence_r4']['label'])
-        self.assertIn('НОВОЙ операции', cards['defence_r4']['card'])
-        self.assertIn('ничего не списывается', cards['defence_r4']['card'])
-        self.assertEqual(launcher_core.default_profile('traynor03'), 'defence_r4')
+        self.assertIn('прежняя', cards['defence_r4']['label'])
+        self.assertIn('кампания', cards['defence_r5']['label'])
+        self.assertIn('НОВОЙ операции', cards['defence_r5']['card'])
+        self.assertIn('ничего не списывается', cards['defence_r5']['card'])
+        self.assertEqual(launcher_core.default_profile('traynor03'), 'defence_r5')
         for m in ('thanson01', 'thanson02'):
             for p in launcher_core.profiles_of(m):
                 self.assertTrue('кампани' in p['card'] or 'Свободный тест' in p['card'] or p['name'] in ('sniper', 'sniper_next'), p['name'])

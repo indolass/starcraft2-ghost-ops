@@ -801,6 +801,152 @@ bool GhostOps_DEF_GroupTick (bool lp_testConds, bool lp_runActions) {
     return true;
 }
 
+
+//--------------------------------------------------------------------------------------------------
+// The final push (config defence.final_push; optional). The ordinary waves are scaled by the share of the living marked Hatcheries of their base, so after all the Hatcheries are
+// destroyed nothing attacks any more (the last minutes were calm). The final push does not depend on the share: at set moments before the end of the evacuation timer (seconds
+// REMAINING, the original timer) a group of every set side appears at a point on the line from the (destroyed) base of that side towards our base, at a set distance from our base
+// (the spawn point is NOT inside the cleared base, no Nydus is created there), and attacks our base. A warning comes before the first wave. The done flags live in saved globals:
+// a loaded game never repeats a wave. After the timer the ordinary post-timer waves of the zerohour module go on.
+//--------------------------------------------------------------------------------------------------
+timer go_defTimer; // the original evacuation timer, copied by the gt_StartTimers hook (the original global is declared after this module)
+bool go_defFpOn;
+int go_defFpWaves;
+fixed go_defFpWarnAt;
+fixed go_defFpDist;
+bool go_defFpWarned;
+fixed[4] go_defFpAt;
+int[4] go_defFpSide;
+bool[4] go_defFpDone;
+int go_defFpEntN;
+int[16] go_defFpEntW;
+string[16] go_defFpEntType;
+int[16] go_defFpEntA;
+int[16] go_defFpEntB;
+int[16] go_defFpEntC;
+int[16] go_defFpEntD;
+trigger go_defFpTrig;
+
+point GhostOps_DEF_FpSpawn (int lp_side) {
+    int lv_i;
+    int lv_n;
+    fixed lv_x;
+    fixed lv_y;
+    fixed lv_dx;
+    fixed lv_dy;
+    fixed lv_len;
+    fixed lv_d;
+
+    lv_n = 0;
+    lv_x = 0.0;
+    lv_y = 0.0;
+    lv_i = 0;
+    while (lv_i < go_zhTargetCount) {
+        if (go_defTgtGrp[lv_i] == (lp_side - 2)) {
+            lv_x += PointGetX(go_defTgtPos[lv_i]);
+            lv_y += PointGetY(go_defTgtPos[lv_i]);
+            lv_n += 1;
+        }
+
+        lv_i += 1;
+    }
+
+    if (lv_n == 0) {
+        return Point(go_defLandX, go_defLandY);
+    }
+
+    lv_x = lv_x / IntToFixed(lv_n);
+    lv_y = lv_y / IntToFixed(lv_n);
+    lv_dx = lv_x - go_defLandX;
+    lv_dy = lv_y - go_defLandY;
+    lv_len = SquareRoot((lv_dx * lv_dx) + (lv_dy * lv_dy));
+    lv_d = go_defFpDist;
+    if ((lv_len <= lv_d) || (lv_len < 1.0)) {
+        return Point(lv_x, lv_y);
+    }
+
+    return Point(go_defLandX + (lv_dx * lv_d / lv_len), go_defLandY + (lv_dy * lv_d / lv_len));
+}
+
+int GhostOps_DEF_FpQty (int lp_e) {
+    int lv_idx;
+
+    lv_idx = PlayerDifficulty(1);
+    if (lv_idx == 1) {
+        return go_defFpEntA[lp_e];
+    }
+
+    if (lv_idx == 2) {
+        return go_defFpEntB[lp_e];
+    }
+
+    if (lv_idx == 3) {
+        return go_defFpEntC[lp_e];
+    }
+
+    return go_defFpEntD[lp_e];
+}
+
+void GhostOps_DEF_FpFire (int lp_w) {
+    int lv_e;
+    int lv_q;
+    point lv_sp;
+    int lv_side;
+
+    lv_side = go_defFpSide[lp_w];
+    lv_sp = GhostOps_DEF_FpSpawn(lv_side);
+    lv_e = 0;
+    while (lv_e < go_defFpEntN) {
+        if (go_defFpEntW[lv_e] == lp_w) {
+            lv_q = GhostOps_DEF_FpQty(lv_e);
+            if (lv_q > 0) {
+                UnitCreate(lv_q, go_defFpEntType[lv_e], 0, lv_side, lv_sp, 270.0);
+                UnitGroupIssueOrder(UnitLastCreatedGroup(), OrderTargetingPoint(AbilityCommand("attack", 0), Point(go_defLandX, go_defLandY)), c_orderQueueReplace);
+            }
+        }
+
+        lv_e += 1;
+    }
+
+    GhostOps_DEF_Log("final push wave " + IntToString(lp_w) + " of side " + IntToString(lv_side) + " at (" + FixedToString(PointGetX(lv_sp), 1) + ", " + FixedToString(PointGetY(lv_sp), 1) + ")");
+}
+
+bool GhostOps_DEF_FpTick (bool lp_testConds, bool lp_runActions) {
+    fixed lv_rem;
+    int lv_w;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    if (!go_defStarted || !go_defFpOn) {
+        return true;
+    }
+
+    lv_rem = TimerGetRemaining(go_defTimer);
+    if (lv_rem <= 0.0) {
+        return true;
+    }
+
+    if (!go_defFpWarned && (lv_rem <= go_defFpWarnAt)) {
+        go_defFpWarned = true;
+        UIDisplayMessage(PlayerGroupAll(), c_messageAreaDirective, StringExternal("Param/Value/GhostOpsDef_FinalWarn"));
+        GhostOps_DEF_Log("final push warning, remaining " + FixedToString(lv_rem, 0));
+    }
+
+    lv_w = 0;
+    while (lv_w < go_defFpWaves) {
+        if (!go_defFpDone[lv_w] && (lv_rem <= go_defFpAt[lv_w])) {
+            go_defFpDone[lv_w] = true;
+            GhostOps_DEF_FpFire(lv_w);
+        }
+
+        lv_w += 1;
+    }
+
+    return true;
+}
+
 //--------------------------------------------------------------------------------------------------
 // Scenes
 //--------------------------------------------------------------------------------------------------
@@ -1005,4 +1151,9 @@ void GhostOps_DEF_Start () {
     TriggerAddEventTimePeriodic(TriggerCreate("GhostOps_DEF_GroupTick"), 1.0, c_timeGame);
     go_defLoadTrig = TriggerCreate("GhostOps_DEF_Loaded");
     TriggerAddEventLoadGameDone(go_defLoadTrig);
+
+    if (go_defFpOn && (go_defFpTrig == null)) {
+        go_defFpTrig = TriggerCreate("GhostOps_DEF_FpTick");
+        TriggerAddEventTimePeriodic(go_defFpTrig, 1.0, c_timeGame);
+    }
 }

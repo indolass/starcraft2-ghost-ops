@@ -467,6 +467,21 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
         return true;
     }
 
+    if (lp_cmd == "gabil") {
+        // gabil: the abilities of Ghost 0, hold fire / weapons free: exist, enabled
+        lv_scv = GhostOps_SquadUnit(0);
+        lv_t = "";
+        lv_i = 0;
+        while (lv_i < UnitAbilityCount(lv_scv)) {
+            lv_t = lv_t + UnitAbilityGet(lv_scv, lv_i) + " ";
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", "GABIL ghost abilities: " + lv_t);
+        GhostOps_Ce0_Write("j", "GABIL holdfire exists " + IntToString(GhostOps_Ce0_B(UnitAbilityExists(lv_scv, "GhostHoldFire"))) + " enabled " + IntToString(GhostOps_Ce0_B(UnitAbilityCheck(lv_scv, "GhostHoldFire", true))) + " weaponsfree exists " + IntToString(GhostOps_Ce0_B(UnitAbilityExists(lv_scv, "GhostWeaponsFree"))) + " enabled " + IntToString(GhostOps_Ce0_B(UnitAbilityCheck(lv_scv, "GhostWeaponsFree", true))));
+        return true;
+    }
+
     if (lp_cmd == "ncu") {
         // direct creation (no effect, no ability) of the barrel and of the container; catalog fields of the container
         lv_scv = GhostOps_Ce0_First("Firebat");

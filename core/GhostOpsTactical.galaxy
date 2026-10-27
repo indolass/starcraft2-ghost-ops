@@ -87,6 +87,7 @@ trigger go_tacStatusTrig;
 
 // Labels above the rescued fighters (TRaynor02 v2): a text tag follows the unit (hidden in the fog, destroyed with the unit, drawn again after a loaded game)
 bool go_tacRebelLabels;
+bool go_tacRebelDmg;                // the rescued fighters carry the damage factor of the profile (tactical.rebels)
 bool go_tacMsgEmpty;           // the text "charges are out" exists in this profile
 unit[64] go_tacRebUnit;
 int[64] go_tacRebTag;
@@ -371,6 +372,10 @@ void GhostOps_Tac_OnRescue (unit lp_unit) {
 
     UnitGroupAdd(go_tacRescued, lp_unit);
     GhostOps_Tac_Log("rescued " + UnitGetType(lp_unit));
+    if (go_tacRebelDmg && (UnitBehaviorCount(lp_unit, "GhostOpsRebelDamage") == 0)) {
+        UnitBehaviorAdd(lp_unit, "GhostOpsRebelDamage", lp_unit, 1);
+    }
+
     GhostOps_Tac_RebelLabel(lp_unit);
 }
 

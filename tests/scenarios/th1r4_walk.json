@@ -1,7 +1,7 @@
 {
  "name": "th1r4_walk",
  "mission": "thanson01",
- "preset": "sniper_next_r4_ce0_dev",
+ "preset": "sniper_next_r5_ce0_dev",
  "why": "at which click distance does the Ghost start to walk after the rifle shot order",
  "steps": [
   {

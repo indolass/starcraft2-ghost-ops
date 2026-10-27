@@ -1,0 +1,157 @@
+{
+ "name": "th2r4_geo",
+ "mission": "thanson02",
+ "preset": "epidemic_free_r4_ce0_dev",
+ "why": "geometry: which infested CC is nearer by ground path and where a connected passable truck place on our side of it is",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "cmd",
+   "text": "geo",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "geop 95.5 150.5",
+   "wait": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "geop 95.5 144.5",
+   "wait": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "geop 95.5 138.5",
+   "wait": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "geop 101.5 150.5",
+   "wait": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "geop 101.5 144.5",
+   "wait": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "geop 101.5 138.5",
+   "wait": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "geop 107.5 150.5",
+   "wait": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "geop 107.5 144.5",
+   "wait": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "geop 107.5 138.5",
+   "wait": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "geop 113.5 150.5",
+   "wait": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "geop 113.5 144.5",
+   "wait": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "geop 113.5 138.5",
+   "wait": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "geop 99.5 37.5",
+   "wait": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "geop 99.5 43.5",
+   "wait": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "geop 99.5 49.5",
+   "wait": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "geop 105.5 37.5",
+   "wait": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "geop 105.5 43.5",
+   "wait": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "geop 105.5 49.5",
+   "wait": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "geop 111.5 37.5",
+   "wait": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "geop 111.5 43.5",
+   "wait": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "geop 111.5 49.5",
+   "wait": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "geop 117.5 37.5",
+   "wait": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "geop 117.5 43.5",
+   "wait": 0.8
+  },
+  {
+   "op": "cmd",
+   "text": "geop 117.5 49.5",
+   "wait": 0.8
+  },
+  {
+   "op": "expect",
+   "regex": "GEO|GEOP",
+   "note": "path costs of both infested Command Centers and passable / connected candidate places on our base side"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

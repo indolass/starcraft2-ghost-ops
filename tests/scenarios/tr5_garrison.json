@@ -1,0 +1,54 @@
+{
+ "name": "tr5_garrison",
+ "mission": "traynor03",
+ "preset": "defence_r5_dev",
+ "why": "the garrison weapon: ordinary damage in the zone (about 6.5/s against armor 2), no weapon outside",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "dst",
+   "grep": "DST2 landing \\d+ marines 16 ghosts 2",
+   "every": 6,
+   "timeout": 260
+  },
+  {
+   "op": "cmd",
+   "text": "cleane",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "ztx in",
+   "wait": 12
+  },
+  {
+   "op": "cmd",
+   "text": "ztx out",
+   "wait": 12
+  },
+  {
+   "op": "expect",
+   "regex": "ZTX",
+   "note": "garrison damage inside and outside the zone (Ultralisk life lost in 8 s)"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

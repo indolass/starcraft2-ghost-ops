@@ -52,6 +52,7 @@ string[48] go_hLockSeen;
 
 // ---- prepared detonations (config keys hanson.containers / convoy_fuel / hud / lines; all off in the old profile) ----
 bool go_hContOn;
+bool go_hContApproach;         // revision-5 rule: the order is never refused for its distance, the Firebat walks and places; the checks are made on arrival (Complete stage)
 bool go_hAllowRefinery;        // the one exception of the development lock: the gas source may be rebuilt
 bool go_hGasWarned;            // the "gas source lost" message was shown (saved with the game)
 bool go_hFuelOn;
@@ -648,7 +649,7 @@ bool GhostOps_Hanson_ContCreated (bool lp_testConds, bool lp_runActions) {
     else if (GhostOps_Hanson_Gas() < go_hContCost) {
         lv_why = 1;
     }
-    else if ((EventUnit() != null) && (DistanceBetweenPoints(UnitGetPosition(EventUnit()), lv_pos) > (go_hContRange + 0.5))) {
+    else if (!go_hContApproach && (EventUnit() != null) && (DistanceBetweenPoints(UnitGetPosition(EventUnit()), lv_pos) > (go_hContRange + 0.5))) {
         lv_why = 4;
     }
     else if (!PointPathingPassable(lv_pos)) {
@@ -778,6 +779,42 @@ bool GhostOps_Hanson_ContFarTick (bool lp_testConds, bool lp_runActions) {
                 UnitIssueOrder(lv_u, Order(AbilityCommand("stop", 0)), c_orderQueueReplace);
                 GhostOps_Hanson_Say("PlaceFarMsg");
                 GhostOps_Hanson_Log("container order refused: too far (mouse order)");
+            }
+        }
+
+        UnitGroupLoopStep();
+    }
+
+    UnitGroupLoopEnd();
+    return true;
+}
+
+// A placement order further than the range is NOT refused any more: the Firebat walks to the point and places the container there (the working range limits the EXECUTION, not the
+// order). A point that can never be built on (not passable, a structure on it, a container on it) is refused at once with a plain message, without any walking; the gas, the limit and the
+// place are checked once more when the Firebat arrives (GhostOps_Hanson_ContCreated, Complete stage). A walk that is cancelled charges nothing.
+bool GhostOps_Hanson_ContSpotTick (bool lp_testConds, bool lp_runActions) {
+    unitgroup lv_g;
+    unit lv_u;
+    order lv_o;
+    point lv_pos;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    lv_g = UnitGroup("Firebat", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+    UnitGroupLoopBegin(lv_g);
+    while (UnitGroupLoopCurrent() != null) {
+        lv_u = UnitGroupLoopCurrent();
+        if (UnitOrderCount(lv_u) > 0) {
+            lv_o = UnitOrder(lv_u, 0);
+            if (AbilityCommandGetAbility(OrderGetAbilityCommand(lv_o)) == "GhostOpsPlaceContainer") {
+                lv_pos = OrderGetTargetPosition(lv_o);
+                if (!PointPathingPassable(lv_pos) || (UnitGroupCount(UnitGroup(null, c_playerAny, RegionCircle(lv_pos, go_hContMinFree), UnitFilter((1 << c_targetFilterStructure), 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive) > 0)) {
+                    UnitIssueOrder(lv_u, Order(AbilityCommand("stop", 0)), c_orderQueueReplace);
+                    GhostOps_Hanson_Say("PlaceFailSpot");
+                    GhostOps_Hanson_Log("container order refused: the point cannot be built on (nothing walked, nothing charged)");
+                }
             }
         }
 
@@ -1475,10 +1512,16 @@ void GhostOps_Hanson_Start () {
     GhostOps_Hanson_CreateHud();
     if (go_hContOn) {
         go_hContCreatedTrig = TriggerCreate("GhostOps_Hanson_ContCreated");
-        TriggerAddEventUnitAbility(go_hContCreatedTrig, null, AbilityCommand("GhostOpsPlaceContainer", 0), c_unitAbilStageExecute, false);
-        go_hContFarTrig = TriggerCreate("GhostOps_Hanson_ContFar");
-        TriggerAddEventUnitAbility(go_hContFarTrig, null, AbilityCommand("GhostOpsPlaceContainer", 0), c_unitAbilStageQueue, false);
-        TriggerAddEventTimePeriodic(TriggerCreate("GhostOps_Hanson_ContFarTick"), 0.1, c_timeGame);
+        if (go_hContApproach) {
+            TriggerAddEventUnitAbility(go_hContCreatedTrig, null, AbilityCommand("GhostOpsPlaceContainer", 0), c_unitAbilStageComplete, false);
+            TriggerAddEventTimePeriodic(TriggerCreate("GhostOps_Hanson_ContSpotTick"), 0.1, c_timeGame);
+        }
+        else {
+            TriggerAddEventUnitAbility(go_hContCreatedTrig, null, AbilityCommand("GhostOpsPlaceContainer", 0), c_unitAbilStageExecute, false);
+            go_hContFarTrig = TriggerCreate("GhostOps_Hanson_ContFar");
+            TriggerAddEventUnitAbility(go_hContFarTrig, null, AbilityCommand("GhostOpsPlaceContainer", 0), c_unitAbilStageQueue, false);
+            TriggerAddEventTimePeriodic(TriggerCreate("GhostOps_Hanson_ContFarTick"), 0.1, c_timeGame);
+        }
         go_hContDiedTrig = TriggerCreate("GhostOps_Hanson_ContDied");
         TriggerAddEventUnitDied(go_hContDiedTrig, null);
     }
