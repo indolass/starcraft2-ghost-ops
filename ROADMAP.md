@@ -243,3 +243,7 @@ Recorded in `docs/MISSION_ROADMAP.md` (playthrough results, agreed directions, e
 ## TTychus01 «Хватай и беги»: феромонные приманки (documents only, 2026-10-27)
 
 Agreed design recorded in `docs/MISSION_ROADMAP.md` section 8.2; nothing is implemented, no game was run. Shared mechanics reused as they are: the turret ground salvo (key A) and the Ghost abilities of the other missions (permanent cloak, early detector warning, auto-fire switch, rifle shot). New mission mechanics: marauder pheromone decoys (attract the nearest Zerg groups, then a short rage against the Protoss), an artifact carried only by an SCV with an evacuation transport, and replacement of the original guardian / artifact-race victory and defeat checks. Planned stages (not a permission to start): A one decoy through the real interface -> B one Zerg group led through the Protoss to the guardians (+ save / load) -> C the full episode with replaced conditions -> D base, tutorial, economy, original events -> E free build for the Owner's full playthrough.
+
+## Folding and redeploying fortifications (documents only, 2026-10-27)
+
+Agreed as the next shared mechanic, recorded in `docs/MISSION_ROADMAP.md` (section "Общая механика: сворачивание и повторная установка сооружений"), `docs/ARCHITECTURE.md` and `docs/MISSION_SETTINGS_AND_CAMPAIGN_ECONOMY.md`. First queue: bunkers and missile turrets; one shared implementation with mission settings; open: dismantling time, other buildings, display of the returned kit's state. Not implemented; a plan, not a permission to start.
