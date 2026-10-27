@@ -1452,6 +1452,9 @@ void GhostOps_Ty_ShipTick () {
         if (DistanceBetweenPoints(UnitGetPosition(go_tyShip), go_tyEvacSite) < 2.5) {
             GhostOps_Ty_ShipLanded();
         }
+        else if (GameGetMissionTime() >= go_tyEvacDeadline) {
+            GhostOps_Ty_Fail("DefeatTimeout");
+        }
 
         return;
     }
