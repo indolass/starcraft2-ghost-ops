@@ -78,22 +78,58 @@ void GhostOps_DAE_Drop (int lp_slot) {
     go_daeSeen[lp_slot] = false;
 }
 
+// One Ghost: every enemy detector within (its radius + the margin) of the point gets a beacon (or keeps it and the beacon follows it). A separate function with ONE group loop: a group loop
+// inside a group loop of the same function stops the outer loop after its first unit (measured in the game: the second Ghost was never looked at).
+void GhostOps_DAE_Scan (point lp_p) {
+    unitgroup lv_s;
+    unit lv_d;
+    fixed lv_r;
+    int lv_k;
+
+    lv_s = UnitGroupSearch(null, c_playerAny, lp_p, 12.0 + go_daeMargin + 2.0, UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+    UnitGroupLoopBegin(lv_s);
+    while (UnitGroupLoopCurrent() != null) {
+        lv_d = UnitGroupLoopCurrent();
+        if (UnitIsAlive(lv_d) && UnitFilterMatch(lv_d, 1, UnitFilterStr("Enemy;Dead,Hidden,Stasis")) && GhostOps_DAE_IsDetector(lv_d)) {
+            lv_r = GhostOps_DAE_Radius(lv_d);
+            if (DistanceBetweenPoints(lp_p, UnitGetPosition(lv_d)) <= (lv_r + go_daeMargin)) {
+                go_daeFound += 1;
+                lv_k = GhostOps_DAE_Slot(lv_d);
+                if (lv_k < 0) {
+                    lv_k = GhostOps_DAE_FreeSlot();
+                    if (lv_k >= 0) {
+                        UnitCreate(1, "GhostOpsWarnBeacon", c_unitCreateIgnorePlacement, 1, UnitGetPosition(lv_d), 0.0);
+                        go_daeBea[lv_k] = UnitLastCreated();
+                        go_daeMade += 1;
+                        go_daeDet[lv_k] = lv_d;
+                        UnitBehaviorAdd(go_daeBea[lv_k], "GhostOpsWarnShow" + IntToString(FixedToInt(lv_r)), go_daeBea[lv_k], 1);
+                    }
+                }
+
+                if (lv_k >= 0) {
+                    go_daeSeen[lv_k] = true;
+                    UnitSetPosition(go_daeBea[lv_k], UnitGetPosition(lv_d), false);
+                }
+            }
+        }
+
+        UnitGroupLoopStep();
+    }
+
+    UnitGroupLoopEnd();
+}
+
 bool GhostOps_DAE_Tick (bool lp_testConds, bool lp_runActions) {
     unitgroup lv_g;
-    unitgroup lv_s;
-    unit lv_gh;
-    unit lv_d;
-    point lv_p;
-    fixed lv_r;
+    point[8] lv_gp;
+    int lv_n;
     int lv_i;
-    int lv_k;
 
     if (!lp_runActions) {
         return true;
     }
 
     go_daeTicks += 1;
-    go_daeGhosts = 0;
     go_daeFound = 0;
     lv_i = 0;
     while (lv_i < 32) {
@@ -101,47 +137,24 @@ bool GhostOps_DAE_Tick (bool lp_testConds, bool lp_runActions) {
         lv_i += 1;
     }
 
+    // the positions of the living Ghosts first (one loop), then one scan each (no nested group loops)
+    lv_n = 0;
     lv_g = UnitGroup("Ghost", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
     UnitGroupLoopBegin(lv_g);
-    while (UnitGroupLoopCurrent() != null) {
-        lv_gh = UnitGroupLoopCurrent();
-        go_daeGhosts += 1;
-        lv_p = UnitGetPosition(lv_gh);
-        lv_s = UnitGroupSearch(null, c_playerAny, lv_p, 12.0 + go_daeMargin + 2.0, UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
-        UnitGroupLoopBegin(lv_s);
-        while (UnitGroupLoopCurrent() != null) {
-            lv_d = UnitGroupLoopCurrent();
-            if (UnitIsAlive(lv_d) && UnitFilterMatch(lv_d, 1, UnitFilterStr("Enemy;Dead,Hidden,Stasis")) && GhostOps_DAE_IsDetector(lv_d)) {
-                lv_r = GhostOps_DAE_Radius(lv_d);
-                if (DistanceBetweenPoints(lv_p, UnitGetPosition(lv_d)) <= (lv_r + go_daeMargin)) {
-                    go_daeFound += 1;
-                    lv_k = GhostOps_DAE_Slot(lv_d);
-                    if (lv_k < 0) {
-                        lv_k = GhostOps_DAE_FreeSlot();
-                        if (lv_k >= 0) {
-                            UnitCreate(1, "GhostOpsWarnBeacon", c_unitCreateIgnorePlacement, 1, UnitGetPosition(lv_d), 0.0);
-                            go_daeBea[lv_k] = UnitLastCreated();
-                            go_daeMade += 1;
-                            go_daeDet[lv_k] = lv_d;
-                            UnitBehaviorAdd(go_daeBea[lv_k], "GhostOpsWarnShow" + IntToString(FixedToInt(lv_r)), go_daeBea[lv_k], 1);
-                        }
-                    }
-
-                    if (lv_k >= 0) {
-                        go_daeSeen[lv_k] = true;
-                        UnitSetPosition(go_daeBea[lv_k], UnitGetPosition(lv_d), false);
-                    }
-                }
-            }
-
-            UnitGroupLoopStep();
-        }
-
-        UnitGroupLoopEnd();
+    while ((UnitGroupLoopCurrent() != null) && (lv_n < 8)) {
+        lv_gp[lv_n] = UnitGetPosition(UnitGroupLoopCurrent());
+        lv_n += 1;
         UnitGroupLoopStep();
     }
 
     UnitGroupLoopEnd();
+    go_daeGhosts = lv_n;
+    lv_i = 0;
+    while (lv_i < lv_n) {
+        GhostOps_DAE_Scan(lv_gp[lv_i]);
+        lv_i += 1;
+    }
+
     lv_i = 0;
     while (lv_i < 32) {
         if ((go_daeDet[lv_i] != null) && !go_daeSeen[lv_i]) {

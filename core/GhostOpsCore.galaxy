@@ -851,3 +851,26 @@ unit GhostOps_SpawnOperativesInCargo (int lp_player, unit lp_carrier) {
     TriggerAddEventTimeElapsed(go_startStateTrigger, 0.5, c_timeGame);
     return lv_first;
 }
+
+// Free kit counters on the build buttons (shared by the missions with kits): the NAME of the stock button of the structure ("Bunker", "MissileTurret") is switched to the
+// prepared text "<structure> (free kits: N)" every time the counter of the mission changes; the count comes from the mission's own counter (reserve on the start of a
+// construction, release on cancel, no second deduction), this function only shows it. Texts exist for 0..30.
+int[3] go_kitLblShown;
+
+void GhostOps_KitLabel (int lp_slot, string lp_button, string lp_prefix, int lp_n) {
+    if (lp_n < 0) {
+        lp_n = 0;
+    }
+
+    if (lp_n > 30) {
+        lp_n = 30;
+    }
+
+    if (go_kitLblShown[lp_slot] == (lp_n + 1)) {
+        return;
+    }
+
+    go_kitLblShown[lp_slot] = lp_n + 1;
+    CatalogFieldValueSet(c_gameCatalogButton, lp_button, "Name", 1, "Param/Value/" + lp_prefix + IntToString(lp_n));
+}
+

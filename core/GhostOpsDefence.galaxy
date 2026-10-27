@@ -382,6 +382,8 @@ bool GhostOps_DEF_KitTick (bool lp_testConds, bool lp_runActions) {
     // the build buttons follow the kits left
     TechTreeUnitAllow(1, "Bunker", GhostOps_DEF_KitsLeft(1) > 0);
     TechTreeUnitAllow(1, "MissileTurret", GhostOps_DEF_KitsLeft(2) > 0);
+    GhostOps_KitLabel(1, "Bunker", "GhostOpsKitBtnBunker", GhostOps_DEF_KitsLeft(1));
+    GhostOps_KitLabel(0, "MissileTurret", "GhostOpsKitBtnTurret", GhostOps_DEF_KitsLeft(2));
     GhostOps_DEF_KitObjective();
     return true;
 }

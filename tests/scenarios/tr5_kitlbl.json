@@ -1,0 +1,195 @@
+{
+ "name": "tr5_kitlbl",
+ "mission": "traynor03",
+ "preset": "defence_r5_dev",
+ "why": "free kit counts in the names of the build buttons of Hour X: shown and following the shared counter (real keys, pictures)",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "dst",
+   "grep": "DST2 landing \\d+ marines 16 ghosts 2",
+   "every": 6,
+   "timeout": 260
+  },
+  {
+   "op": "cmd",
+   "text": "cleane",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "tpause",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "dst",
+   "wait": 1.4
+  },
+  {
+   "op": "cmd",
+   "text": "refcam 1",
+   "wait": 1.4
+  },
+  {
+   "op": "sleep",
+   "s": 1.5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "B"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "T"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "shot",
+   "file": "t1_aim_turret.png"
+  },
+  {
+   "op": "click",
+   "x": 420,
+   "y": 330
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "dst",
+   "wait": 1.4
+  },
+  {
+   "op": "shot",
+   "file": "t2_after_click1.png"
+  },
+  {
+   "op": "cmd",
+   "text": "refcam 1",
+   "wait": 1.4
+  },
+  {
+   "op": "sleep",
+   "s": 1.5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "B"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "U"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "shot",
+   "file": "t3_aim_bunker.png"
+  },
+  {
+   "op": "click",
+   "x": 600,
+   "y": 330
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "dst",
+   "wait": 1.4
+  },
+  {
+   "op": "shot",
+   "file": "t4_after_click2.png"
+  },
+  {
+   "op": "cmd",
+   "text": "refcam 1",
+   "wait": 1.4
+  },
+  {
+   "op": "sleep",
+   "s": 1.5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "B"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "T"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "shot",
+   "file": "t5_aim_again.png"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "expect",
+   "regex": "DST ",
+   "note": "kit counters after each real placement"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

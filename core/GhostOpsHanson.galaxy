@@ -790,7 +790,7 @@ bool GhostOps_Hanson_ContFarTick (bool lp_testConds, bool lp_runActions) {
 }
 
 // A placement order further than the range is NOT refused any more: the Firebat walks to the point and places the container there (the working range limits the EXECUTION, not the
-// order). A point that can never be built on (not passable, a structure on it, a container on it) is refused at once with a plain message, without any walking; the gas, the limit and the
+// order). A point that can never be built on or reached (not passable, not connected with the Firebat, a structure on it, a container on it) is refused at once with a plain message, without any walking; the gas, the limit and the
 // place are checked once more when the Firebat arrives (GhostOps_Hanson_ContCreated, Complete stage). A walk that is cancelled charges nothing.
 bool GhostOps_Hanson_ContSpotTick (bool lp_testConds, bool lp_runActions) {
     unitgroup lv_g;
@@ -810,10 +810,10 @@ bool GhostOps_Hanson_ContSpotTick (bool lp_testConds, bool lp_runActions) {
             lv_o = UnitOrder(lv_u, 0);
             if (AbilityCommandGetAbility(OrderGetAbilityCommand(lv_o)) == "GhostOpsPlaceContainer") {
                 lv_pos = OrderGetTargetPosition(lv_o);
-                if (!PointPathingPassable(lv_pos) || (UnitGroupCount(UnitGroup(null, c_playerAny, RegionCircle(lv_pos, go_hContMinFree), UnitFilter((1 << c_targetFilterStructure), 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive) > 0)) {
+                if (!PointPathingPassable(lv_pos) || !PointPathingIsConnected(UnitGetPosition(lv_u), lv_pos) || (UnitGroupCount(UnitGroup(null, c_playerAny, RegionCircle(lv_pos, go_hContMinFree), UnitFilter((1 << c_targetFilterStructure), 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive) > 0)) {
                     UnitIssueOrder(lv_u, Order(AbilityCommand("stop", 0)), c_orderQueueReplace);
                     GhostOps_Hanson_Say("PlaceFailSpot");
-                    GhostOps_Hanson_Log("container order refused: the point cannot be built on (nothing walked, nothing charged)");
+                    GhostOps_Hanson_Log("container order refused: the point cannot be built on or reached (nothing walked, nothing charged)");
                 }
             }
         }
@@ -1456,11 +1456,13 @@ bool GhostOps_Hanson_KitTick (bool lp_testConds, bool lp_runActions) {
     // the build buttons follow the kits left
     if (go_hKitOn) {
         TechTreeUnitAllow(1, "MissileTurret", GhostOps_Hanson_KitsLeft() > 0);
+        GhostOps_KitLabel(0, "MissileTurret", "GhostOpsKitBtnTurret", GhostOps_Hanson_KitsLeft());
         GhostOps_Hanson_KitObjective(0);
     }
 
     if (go_hBkOn) {
         TechTreeUnitAllow(1, "Bunker", GhostOps_Hanson_KitsLeftF(1) > 0);
+        GhostOps_KitLabel(1, "Bunker", "GhostOpsKitBtnBunker", GhostOps_Hanson_KitsLeftF(1));
         GhostOps_Hanson_KitObjective(1);
     }
 

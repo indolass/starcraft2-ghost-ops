@@ -723,7 +723,9 @@
           },
           "truck": {
             "fuel_max": 490,
-            "fuel_start": 490
+            "fuel_start": 490,
+            "x": 107.5,
+            "y": 144.5
           },
           "night_cloak": {
             "net_per_second": 0
@@ -782,6 +784,28 @@
             "MissileTurret",
             "Bunker"
           ]
+        }
+      }
+    },
+    "epidemic_free_r4_cycle_dev": {
+      "label": "Эпидемия, ревизия 4, короткие сутки (отладка)",
+      "message": "Ghost Ops - Outbreak r4, short cycle (dev)",
+      "message_en": "Ghost Ops - Outbreak r4, short cycle (dev)",
+      "hidden": true,
+      "extends": "epidemic_free_r4_ce0_dev",
+      "card": "Technical probe: a shortened day / night for the check of the transitions",
+      "details": [
+        "Development only"
+      ],
+      "overrides": {
+        "epidemic": {
+          "dev_cycle": {
+            "day": 60,
+            "night": 60
+          },
+          "transport": {
+            "warn_seconds": 25
+          }
         }
       }
     }

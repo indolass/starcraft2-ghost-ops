@@ -1,0 +1,211 @@
+{
+ "name": "th2r4_ship",
+ "mission": "thanson02",
+ "preset": "epidemic_free_r4_cycle_dev",
+ "why": "Hercules: 20 marines loaded (capacity), fly, save / load, does the dawn still come after the load",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "eclock",
+   "grep": "night 1/2",
+   "every": 6,
+   "timeout": 330
+  },
+  {
+   "op": "cmd",
+   "text": "eship",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "eshipload 20",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 12
+  },
+  {
+   "op": "cmd",
+   "text": "eship",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "eshipgo 100 108",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 14
+  },
+  {
+   "op": "cmd",
+   "text": "eship",
+   "wait": 1.5
+  },
+  {
+   "op": "expect",
+   "regex": "ESHIP|ECLOCK",
+   "note": "ship / clock"
+  },
+  {
+   "op": "save",
+   "name": "CE0_TH2_SH"
+  },
+  {
+   "op": "load",
+   "name": "CE0_TH2_SH"
+  },
+  {
+   "op": "sleep",
+   "s": 4
+  },
+  {
+   "op": "cmd",
+   "text": "eship",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "eclock",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 14
+  },
+  {
+   "op": "cmd",
+   "text": "eclock",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "eship",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 14
+  },
+  {
+   "op": "cmd",
+   "text": "eclock",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "eship",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 14
+  },
+  {
+   "op": "cmd",
+   "text": "eclock",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "eship",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 14
+  },
+  {
+   "op": "cmd",
+   "text": "eclock",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "eship",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 14
+  },
+  {
+   "op": "cmd",
+   "text": "eclock",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "eship",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 14
+  },
+  {
+   "op": "cmd",
+   "text": "eclock",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "eship",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 14
+  },
+  {
+   "op": "cmd",
+   "text": "eclock",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "eship",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 14
+  },
+  {
+   "op": "cmd",
+   "text": "eclock",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "eship",
+   "wait": 1.5
+  },
+  {
+   "op": "expect",
+   "regex": "ESHIP|ECLOCK",
+   "note": "ship / clock"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

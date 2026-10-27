@@ -144,7 +144,7 @@
   },
   {
    "op": "expect",
-   "regex": "DSBEACON|DSM",
+   "regex": "DAEDBG|DSBEACON|DSM",
    "note": "beacon creation"
   },
   {

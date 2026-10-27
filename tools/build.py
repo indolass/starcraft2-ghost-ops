@@ -432,9 +432,10 @@ def detector_early_fragments(d):
     act = []
     for n in (10, 11, 12):
         beh += ['    <CBehaviorBuff id="GhostOpsWarnShow%d">' % n, '        <InfoFlags index="Hidden" value="1"/>', '    </CBehaviorBuff>']
-        act += ['    <CActorRange id="GhostOpsWarnRange%d">' % n, '        <Range value="%d"/>' % n, '        <Terms value="Cap 1"/>', '        <IconArcLength value="0.450000"/>', '        <IconTint value="255,60,30,255"/>', '        <FogVisibility value="Visible"/>',
+        act += ['    <CActorRange id="GhostOpsWarnRange%d">' % n, '        <Range value="%d"/>' % n, '        <Icon value="Assets' + chr(92) + 'Textures' + chr(92) + 'RadarIcon2.dds"/>', '        <Terms value="Cap 1"/>', '        <IconArcLength value="0.450000"/>', '        <IconTint value="255,60,30,255"/>', '        <FogVisibility value="Visible"/>',
                 '        <On Terms="Behavior.GhostOpsWarnShow%d.On" Send="Create"/>' % n, '        <On Terms="Behavior.GhostOpsWarnShow%d.Off" Send="Destroy"/>' % n, '    </CActorRange>']
     model = ['    <CModel id="GhostOpsWarnBeacon" parent="Beacon_TerranSmall">', '        <ScaleMax value="0.010000,0.010000,0.010000"/>', '        <ScaleMin value="0.010000,0.010000,0.010000"/>', '        <ShadowRadius value="0"/>', '    </CModel>', '']
+    act = ['    <CActorUnit id="GhostOpsWarnBeacon" parent="Beacon_TerranSmall" unitName="GhostOpsWarnBeacon">', '        <Model value="GhostOpsWarnBeacon"/>', '    </CActorUnit>'] + act  # the unit uses OUR tiny model, not the visible red beacon of its parent
     return {'UnitData.xml': nl.join(unit), 'BehaviorData.xml': nl.join(beh + ['']), 'ActorData.xml': nl.join(act + ['']), 'ModelData.xml': nl.join(model)}
 
 
@@ -2116,6 +2117,12 @@ def profile_texts(cfg):
     return {'ruRU': p['message'], 'enUS': p.get('message_en', p['message'])}
 
 
+def kit_labels_needed(cfg):
+    """The free kit counters on the build buttons (core/GhostOpsCore.galaxy GhostOps_KitLabel) exist where the mission has kits: the defence profile or Hanson kits."""
+    hs = cfg.get('hanson') or {}
+    return bool(cfg.get('defence') or (hs.get('turret_kits') or {}).get('enabled') or (hs.get('bunker_kits') or {}).get('enabled'))
+
+
 def text_entries(cfg):
     """{locale: [(key, value)]}: the profile message plus the texts of the tactical module."""
     out = {loc: [(PROFILE_KEY, v)] for loc, v in profile_texts(cfg).items()}
@@ -2154,6 +2161,11 @@ def text_entries(cfg):
         for loc, lang in (('ruRU', 'ru'), ('enUS', 'en')):
             out.setdefault(loc, []).append(('Button/Name/GhostOpsDetectorAnalysis', da['texts']['Name'][lang]))
             out.setdefault(loc, []).append(('Button/Tooltip/GhostOpsDetectorAnalysis', da['texts']['Tip'][lang]))
+    if kit_labels_needed(cfg):
+        for loc, lang in (('ruRU', 'ru'), ('enUS', 'en')):
+            for n in range(31):
+                out.setdefault(loc, []).append(('Param/Value/GhostOpsKitBtnBunker%d' % n, ('Бункер, комплектов: %d' if lang == 'ru' else 'Bunker, kits: %d') % n))
+                out.setdefault(loc, []).append(('Param/Value/GhostOpsKitBtnTurret%d' % n, ('Турель, комплектов: %d' if lang == 'ru' else 'Turret, kits: %d') % n))
     pn = cfg.get('panel')
     if pn and pn.get('enabled'):
         for loc, lang in (('ruRU', 'ru'), ('enUS', 'en')):

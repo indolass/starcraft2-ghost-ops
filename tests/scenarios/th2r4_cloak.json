@@ -1,0 +1,127 @@
+{
+ "name": "th2r4_cloak",
+ "mission": "thanson02",
+ "preset": "epidemic_free_r4_cycle_dev",
+ "why": "permanent cloak of both Ghosts: no energy use by day, at night, after a load; the clock after a load",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "cmd",
+   "text": "eghost",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "eclock",
+   "wait": 1.5
+  },
+  {
+   "op": "until",
+   "cmd": "eclock",
+   "grep": "night 1/1",
+   "every": 8,
+   "timeout": 260
+  },
+  {
+   "op": "cmd",
+   "text": "eghost",
+   "wait": 1.5
+  },
+  {
+   "op": "expect",
+   "regex": "EGHOST|ECLOCK",
+   "note": "cloak / clock"
+  },
+  {
+   "op": "save",
+   "name": "CE0_TH2_CL"
+  },
+  {
+   "op": "load",
+   "name": "CE0_TH2_CL"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "eghost",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "eclock",
+   "wait": 1.5
+  },
+  {
+   "op": "expect",
+   "regex": "EGHOST|ECLOCK",
+   "note": "cloak / clock"
+  },
+  {
+   "op": "sleep",
+   "s": 20
+  },
+  {
+   "op": "cmd",
+   "text": "eclock",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 20
+  },
+  {
+   "op": "cmd",
+   "text": "eclock",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 20
+  },
+  {
+   "op": "cmd",
+   "text": "eclock",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 20
+  },
+  {
+   "op": "cmd",
+   "text": "eclock",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "eghost",
+   "wait": 1.5
+  },
+  {
+   "op": "expect",
+   "regex": "EGHOST|ECLOCK",
+   "note": "cloak / clock"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

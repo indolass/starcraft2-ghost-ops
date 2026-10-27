@@ -29,6 +29,11 @@
   },
   {
    "op": "cmd",
+   "text": "nclear",
+   "wait": 1.0
+  },
+  {
+   "op": "cmd",
    "text": "ngas 300",
    "wait": 1.5
   },

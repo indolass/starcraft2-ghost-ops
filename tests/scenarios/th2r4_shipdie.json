@@ -1,0 +1,91 @@
+{
+ "name": "th2r4_shipdie",
+ "mission": "thanson02",
+ "preset": "epidemic_free_r4_cycle_dev",
+ "why": "what happens to the passengers when the Hercules is destroyed",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "eclock",
+   "grep": "night 1/2",
+   "every": 6,
+   "timeout": 330
+  },
+  {
+   "op": "cmd",
+   "text": "snap",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "eshipload 4",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 10
+  },
+  {
+   "op": "cmd",
+   "text": "eship",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "snap",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "ekillship",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 8
+  },
+  {
+   "op": "cmd",
+   "text": "eship",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "snap",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 10
+  },
+  {
+   "op": "cmd",
+   "text": "snap",
+   "wait": 1.5
+  },
+  {
+   "op": "expect",
+   "regex": "Marine|ESHIP",
+   "note": "passengers when the transport is destroyed"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

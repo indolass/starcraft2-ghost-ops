@@ -400,9 +400,28 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
         return true;
     }
 
+    if (lp_cmd == "nclear") {
+        // nclear: every unit of the enemy players 2 and 3 is removed (the original waves would otherwise walk into a slow test)
+        lv_i = 2;
+        while (lv_i <= 3) {
+            lv_g = UnitGroup(null, lv_i, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterStructure), (1 << (c_targetFilterDead - 32))), 0);
+            UnitGroupLoopBegin(lv_g);
+            while (UnitGroupLoopCurrent() != null) {
+                UnitRemove(UnitGroupLoopCurrent());
+                UnitGroupLoopStep();
+            }
+
+            UnitGroupLoopEnd();
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", "NCLEAR enemy units of players 2 and 3 removed");
+        return true;
+    }
+
     if (lp_cmd == "nbunk") {
         lv_scv = GhostOps_Ce0_First("Firebat");
-        UnitCreate(1, "SupplyDepot", 0, 1, PointWithOffset(UnitGetPosition(lv_scv), StringToFixed(lp_a), StringToFixed(lp_b)), 270.0);
+        UnitCreate(1, "SupplyDepot", c_unitCreateIgnorePlacement, 1, PointWithOffset(UnitGetPosition(lv_scv), StringToFixed(lp_a), StringToFixed(lp_b)), 270.0);
         GhostOps_Ce0_Write("j", "NBUNK depots of player 1 now " + IntToString(UnitGroupCount(UnitGroup("SupplyDepot", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive)) + " at " + FixedToString(PointGetX(UnitGetPosition(UnitLastCreated())), 1) + "," + FixedToString(PointGetY(UnitGetPosition(UnitLastCreated())), 1));
         return true;
     }
@@ -479,6 +498,13 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
 
         GhostOps_Ce0_Write("j", "GABIL ghost abilities: " + lv_t);
         GhostOps_Ce0_Write("j", "GABIL holdfire exists " + IntToString(GhostOps_Ce0_B(UnitAbilityExists(lv_scv, "GhostHoldFire"))) + " enabled " + IntToString(GhostOps_Ce0_B(UnitAbilityCheck(lv_scv, "GhostHoldFire", true))) + " weaponsfree exists " + IntToString(GhostOps_Ce0_B(UnitAbilityExists(lv_scv, "GhostWeaponsFree"))) + " enabled " + IntToString(GhostOps_Ce0_B(UnitAbilityCheck(lv_scv, "GhostWeaponsFree", true))));
+        return true;
+    }
+
+    if (lp_cmd == "rcat") {
+        // rcat: the catalog values of the rifle shot in the running map: cooldown, energy cost, range, cast time, damage; the sound actors of the shot
+        GhostOps_Ce0_Write("j", "RCAT cooldown " + CatalogFieldValueGet(c_gameCatalogAbil, "Snipe", "Cost[0].Cooldown.TimeUse", 1) + " energy " + CatalogFieldValueGet(c_gameCatalogAbil, "Snipe", "Cost[0].Vital[Energy]", 1) + " castintro " + CatalogFieldValueGet(c_gameCatalogAbil, "Snipe", "CastIntroTime", 1));
+        GhostOps_Ce0_Write("j", "RCAT damage " + CatalogFieldValueGet(c_gameCatalogEffect, "SnipeDamage", "Amount", 1) + " range " + CatalogFieldValueGet(c_gameCatalogAbil, "Snipe", "Range[0]", 1));
         return true;
     }
 
@@ -843,6 +869,15 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
 
     if (lp_cmd == "rdum") {
         // rdum <n> <dist>: n paused enemy Ultralisks (life 500) in a row at <dist> cells east of Ghost 0, 1.5 cells apart (south to north), the target dummies of the shot test; the own fighters are paused
+        lv_i = 0;
+        while (lv_i < go_rDumN) {
+            if (go_rDum[lv_i] != null) {
+                UnitRemove(go_rDum[lv_i]);
+            }
+
+            lv_i += 1;
+        }
+
         go_rDumN = StringToInt(lp_a);
         if (go_rDumN > 12) {
             go_rDumN = 12;

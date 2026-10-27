@@ -1,0 +1,64 @@
+{
+ "name": "th2r4_truck",
+ "mission": "thanson02",
+ "preset": "epidemic_free_r4_ce0_dev",
+ "why": "can the Tanker Truck leave its new place",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "cmd",
+   "text": "etruckmv 100 140",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 8
+  },
+  {
+   "op": "cmd",
+   "text": "etruckmv 100 140",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 8
+  },
+  {
+   "op": "cmd",
+   "text": "etruckmv 74 92",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 10
+  },
+  {
+   "op": "cmd",
+   "text": "etruckmv 74 92",
+   "wait": 1.5
+  },
+  {
+   "op": "expect",
+   "regex": "ETRUCKMV",
+   "note": "does the truck leave its place at (107.5,144.5)"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

@@ -1,0 +1,268 @@
+{
+ "name": "th2r4_fuel",
+ "mission": "thanson02",
+ "preset": "epidemic_free_r4_ce0_dev",
+ "why": "r4: the truck now waits near the north infested Command Center (107.5,144.5): hellions run dry on the way, scenes, capture, the truck drives to them and refuels them, save / load, back to the base",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "eclock",
+   "grep": "night 0/1",
+   "every": 8,
+   "timeout": 330
+  },
+  {
+   "op": "cmd",
+   "text": "estat",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "egoh 104 108",
+   "wait": 1.2
+  },
+  {
+   "op": "sleep",
+   "s": 28
+  },
+  {
+   "op": "cmd",
+   "text": "estat",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "egoh 105 138",
+   "wait": 1.2
+  },
+  {
+   "op": "sleep",
+   "s": 30
+  },
+  {
+   "op": "cmd",
+   "text": "estat",
+   "wait": 1.2
+  },
+  {
+   "op": "expect",
+   "regex": "ESTAT|EMOVE",
+   "note": "information first drive"
+  },
+  {
+   "op": "expect_def",
+   "bank": "GhostOpsDevEpi",
+   "regex": ".",
+   "note": "Epi log (information) first drive"
+  },
+  {
+   "op": "until",
+   "cmd": "estat",
+   "grep": "stage 2",
+   "every": 8,
+   "timeout": 150
+  },
+  {
+   "op": "sleep",
+   "s": 14
+  },
+  {
+   "op": "shot",
+   "file": "s1.png"
+  },
+  {
+   "op": "cmd",
+   "text": "estat",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "etpm 104 138",
+   "wait": 1.2
+  },
+  {
+   "op": "until",
+   "cmd": "estat",
+   "grep": "stage 3",
+   "every": 6,
+   "timeout": 90
+  },
+  {
+   "op": "sleep",
+   "s": 4
+  },
+  {
+   "op": "shot",
+   "file": "s2.png"
+  },
+  {
+   "op": "cmd",
+   "text": "estat",
+   "wait": 1.2
+  },
+  {
+   "op": "save",
+   "name": "CE0_TH2_A"
+  },
+  {
+   "op": "cmd",
+   "text": "egotruckhell",
+   "wait": 1.2
+  },
+  {
+   "op": "expect",
+   "regex": "EGOTRUCKHELL",
+   "note": "truck order"
+  },
+  {
+   "op": "sleep",
+   "s": 10
+  },
+  {
+   "op": "cmd",
+   "text": "estat",
+   "wait": 1.2
+  },
+  {
+   "op": "sleep",
+   "s": 8
+  },
+  {
+   "op": "cmd",
+   "text": "estat",
+   "wait": 1.2
+  },
+  {
+   "op": "sleep",
+   "s": 8
+  },
+  {
+   "op": "cmd",
+   "text": "estat",
+   "wait": 1.2
+  },
+  {
+   "op": "sleep",
+   "s": 8
+  },
+  {
+   "op": "cmd",
+   "text": "estat",
+   "wait": 1.2
+  },
+  {
+   "op": "shot",
+   "file": "s3.png"
+  },
+  {
+   "op": "load",
+   "name": "CE0_TH2_A"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "estat",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "egotruckhell",
+   "wait": 1.2
+  },
+  {
+   "op": "expect",
+   "regex": "EGOTRUCKHELL",
+   "note": "truck order"
+  },
+  {
+   "op": "sleep",
+   "s": 14
+  },
+  {
+   "op": "cmd",
+   "text": "estat",
+   "wait": 1.2
+  },
+  {
+   "op": "sleep",
+   "s": 8
+  },
+  {
+   "op": "cmd",
+   "text": "estat",
+   "wait": 1.2
+  },
+  {
+   "op": "sleep",
+   "s": 8
+  },
+  {
+   "op": "cmd",
+   "text": "estat",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "egot 74 92",
+   "wait": 1.2
+  },
+  {
+   "op": "expect",
+   "regex": "ESTAT|EGOTRUCKHELL",
+   "note": "truck, hellion fuel after the load"
+  },
+  {
+   "op": "until",
+   "cmd": "estat",
+   "grep": "stage 4",
+   "every": 8,
+   "timeout": 400
+  },
+  {
+   "op": "sleep",
+   "s": 10
+  },
+  {
+   "op": "shot",
+   "file": "s4.png"
+  },
+  {
+   "op": "cmd",
+   "text": "estat",
+   "wait": 1.2
+  },
+  {
+   "op": "expect",
+   "regex": "ESTAT|EGOTRUCKHELL",
+   "note": "information route"
+  },
+  {
+   "op": "expect_def",
+   "bank": "GhostOpsDevEpi",
+   "regex": ".",
+   "note": "Epi log (information) route"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

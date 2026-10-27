@@ -195,6 +195,15 @@
    "wait": 0.6
   },
   {
+   "op": "cmd",
+   "text": "dscam",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 1.0
+  },
+  {
    "op": "shot",
    "file": "ew_18.png"
   },
@@ -340,6 +349,15 @@
    "s": 1.0
   },
   {
+   "op": "cmd",
+   "text": "dscam",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 1.0
+  },
+  {
    "op": "shot",
    "file": "ew_18_b.png"
   },
@@ -356,6 +374,15 @@
    "op": "cmd",
    "text": "dsm",
    "wait": 0.3
+  },
+  {
+   "op": "cmd",
+   "text": "dscam",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 1.0
   },
   {
    "op": "shot",
