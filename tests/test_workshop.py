@@ -108,6 +108,27 @@ class Editing(WorkshopCase):
         self.assertTrue(any('КСМ: 12 всего — 4 штатных + 8 добавленных' in ln for ln in lines), lines)
         self.assertTrue(any('бесплатный тест' in ln for ln in lines))
 
+    def test_recommendation_follows_the_test_order_and_is_not_a_lost_field(self):
+        v = workshop.new_variant('thanson01', 'v')
+        self.assertNotIn('p_kit_rec', workshop.BY_ID)
+        workshop.set_field(v, 'th1_kits', 9)
+        cfg = workshop.effective_cfg(v)
+        self.assertEqual(cfg['hanson']['turret_kits']['order']['turret_kits'], 9)
+        self.assertEqual(cfg['hanson']['turret_kits']['recommended'], 9)
+        lines, _ = workshop.summary(v)
+        self.assertIn('Рекомендация = заказ (одно значение): 9 комплектов', lines)
+
+    def test_evacuation_summary_shows_the_full_preparation_cost(self):
+        v = workshop.new_variant('thanson01', 'v')
+        workshop.set_field(v, 'th1_kits', 4)
+        workshop.set_field(v, 'th1_scvs', 2)
+        lines, _ = workshop.summary(v)
+        self.assertTrue(any('4×75' in ln and '2×50' in ln and '2400' not in ln and '1400 минералов, 500 газа' in ln for ln in lines), lines)
+
+    def test_epidemic_summary_says_there_are_no_campaign_purchases(self):
+        lines, _ = workshop.summary(workshop.new_variant('thanson02', 'v'))
+        self.assertTrue(any('не подключены' in ln for ln in lines), lines)
+
 
 class Validation(WorkshopCase):
     def test_impossible_values_are_errors_unusual_ones_warnings(self):

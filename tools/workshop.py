@@ -160,7 +160,6 @@ FIELDS = [
     _f('p_kit', 'economy', 'Цена комплекта турели', ('hanson', 'turret_kits', 'price', 'minerals'), 'int', 'минералов', 0, 500, 5, missions=('thanson01', 'thanson02')),
     _f('p_th1_scv', 'economy', 'Цена дополнительного КСМ', ('hanson', 'turret_kits', 'scv', 'price', 'minerals'), 'int', 'минералов', 0, 500, 5),
     _f('p_kit_limit', 'economy', 'Предел комплектов турелей', ('hanson', 'turret_kits', 'limit'), 'int', 'шт.', 1, 60, 1),
-    _f('p_kit_rec', 'economy', 'Рекомендуемое число комплектов', ('hanson', 'turret_kits', 'recommended'), 'int', 'шт.', 0, 60, 1),
 ]
 BY_ID = {f.id: f for f in FIELDS}
 
@@ -316,12 +315,17 @@ def summary(variant):
         if fs.get('marines') is not None:
             lines.append('Морпехи добавленных: %d' % fs['marines'])
         lines.append('Контейнер: %d газа, отправка колонны: %d газа' % (cfg['hanson']['containers']['gas_cost'], cfg['hanson']['convoy_fuel']['gas_cost']))
+        lines.append('Рекомендация = заказ (одно значение): %d комплектов' % tk['recommended'])
+        cost = {r: tk['order']['turret_kits'] * tk['price'][r] + tk['order']['scvs'] * scv['price'][r] + tk['preparation'][r] for r in ('minerals', 'gas')}
+        lines.append('Стоимость подготовки в кампании (комплекты %d×%d + КСМ %d×%d + плата за подготовку %d): %d минералов, %d газа; бесплатный тест не списывает' % (
+            tk['order']['turret_kits'], tk['price']['minerals'], tk['order']['scvs'], scv['price']['minerals'], tk['preparation']['minerals'], cost['minerals'], cost['gas']))
     elif m == 'thanson02':
         fs = cfg['hanson']['free_squad']
         e = cfg['epidemic']
         lines += ['Призраки: 2', 'Морпехи: %d всего — %d штатных + %d добавленных' % (e['stock_marines'] + fs['marines'], e['stock_marines'], fs['marines']),
                   'КСМ: %d всего — %d штатных + %d добавленных' % (e['stock_scvs'] + fs['scvs'], e['stock_scvs'], fs['scvs']),
-                  'Комплекты бункеров: %d, комплекты турелей: %d' % (cfg['hanson']['bunker_kits']['order']['bunker_kits'], cfg['hanson']['turret_kits']['order']['turret_kits'])]
+                  'Комплекты бункеров: %d, комплекты турелей: %d' % (cfg['hanson']['bunker_kits']['order']['bunker_kits'], cfg['hanson']['turret_kits']['order']['turret_kits']),
+                  'Закупки кампании для «Эпидемии» не подключены: стоимости подготовки нет, только бесплатный тест']
     lines.append('Режим: бесплатный тест — запас и результаты настоящей кампании не затрагиваются')
     diffs = []
     shown = {f.id: f for f in supported_fields(m, base)}

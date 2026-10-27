@@ -1737,9 +1737,21 @@ int GhostOps_Ce0_DsAround () {
     return lv_n;
 }
 
+fixed DsOff (int lp_i) {
+    if (lp_i == 0) { return 0.0; }
+    if (lp_i == 1) { return 1.0; }
+    if (lp_i == 2) { return 1.5; }
+    if (lp_i == 3) { return 2.0; }
+    if (lp_i == 4) { return 2.5; }
+    if (lp_i == 5) { return 3.0; }
+    return 4.0;
+}
+
 bool GhostOps_Ce0_DsCmd (string lp_cmd, string lp_a, string lp_b) {
     point lv_p;
     unit lv_u;
+    string lv_t;
+    int lv_i;
 
     if (lp_cmd == "dsc") {
         // dsc <dx>: the scene; the Ghost 0 is the subject (its life 3000), the Hydralisk is paused until dsgo
@@ -1821,6 +1833,29 @@ bool GhostOps_Ce0_DsCmd (string lp_cmd, string lp_a, string lp_b) {
         GhostOps_Ce0_Write("j", "DAEDBG det10/11/12 " + IntToString(UnitBehaviorCount(go_dsO, "Detector10")) + IntToString(UnitBehaviorCount(go_dsO, "Detector11")) + IntToString(UnitBehaviorCount(go_dsO, "Detector12")) + " owner " + IntToString(UnitGetOwner(go_dsO)) + " alive " + IntToString(GhostOps_Ce0_B(UnitIsAlive(go_dsO))));
         GhostOps_Ce0_Write("j", "DAEDBG ticks " + IntToString(go_daeTicks) + " ghosts " + IntToString(go_daeGhosts) + " found " + IntToString(go_daeFound) + " trig " + IntToString(GhostOps_Ce0_B(go_daeTrig != null)) + " margin " + FixedToString(go_daeMargin, 1));
         GhostOps_Ce0_Write("j", "DAEDBG dist " + FixedToString(DistanceBetweenPoints(UnitGetPosition(go_dsO), UnitGetPosition(go_dsG)), 2) + " " + GhostOps_Ce0_Beacons());
+        return true;
+    }
+
+    if (lp_cmd == "dsvis") {
+        // dsvis: how much around the revealed detector the player sees: the cell of the Overseer and points at 0 / 1 / 1.5 / 2 / 2.5 / 3 / 4 cells, and two real enemy Zerglings at 1.5 and 4 cells
+        lv_t = "DSVIS d=" + FixedToString(DistanceBetweenPoints(UnitGetPosition(go_dsO), UnitGetPosition(go_dsG)), 1) + " points";
+        lv_i = 0;
+        while (lv_i < 7) {
+            lv_t = lv_t + " " + IntToString(lv_i) + ":" + IntToString(GhostOps_Ce0_B(VisIsVisibleForPlayer(1, PointWithOffset(UnitGetPosition(go_dsO), 0.0, DsOff(lv_i)))));
+            lv_i += 1;
+        }
+
+        UnitCreate(1, "Zergling", c_unitCreateIgnorePlacement, 2, PointWithOffset(UnitGetPosition(go_dsO), 0.0, 1.5), 270.0);
+        lv_u = UnitLastCreated();
+        libNtve_gf_PauseUnit(lv_u, true);
+        GhostOps_Ce0_Write("j", lv_t);
+        GhostOps_Ce0_Write("j", "DSVIS zergling at 1.5 visible " + IntToString(GhostOps_Ce0_B(UnitFilterMatch(lv_u, 1, UnitFilterStr("Enemy,Visible")))));
+        UnitRemove(lv_u);
+        UnitCreate(1, "Zergling", c_unitCreateIgnorePlacement, 2, PointWithOffset(UnitGetPosition(go_dsO), 0.0, 4.0), 270.0);
+        lv_u = UnitLastCreated();
+        libNtve_gf_PauseUnit(lv_u, true);
+        GhostOps_Ce0_Write("j", "DSVIS zergling at 4 visible " + IntToString(GhostOps_Ce0_B(UnitFilterMatch(lv_u, 1, UnitFilterStr("Enemy,Visible")))));
+        UnitRemove(lv_u);
         return true;
     }
 

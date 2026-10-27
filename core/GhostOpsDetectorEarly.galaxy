@@ -9,8 +9,8 @@
 // This mode makes the detector visible EARLIER and only that: every 0.2 s, for every living Ghost, the script looks for enemy detectors (the unit behaviors Detector10/11/12: a detector that
 // died or lost its detection no longer carries them) within (its detection radius + the warning margin) of the Ghost and reveals a small patch (2 cells) around exactly that detector for
 // half a second. The stock radar then puts its buff on the visible detector and the circle of the real detection radius is drawn on it; it follows a moving detector because the patch
-// is placed at its current position every tick. The map and the rest of the enemy army are NOT revealed; the detector itself is seen while it is a danger for the Ghost (the price of the
-// method, to be stated plainly). The radar searches 25 cells around the Ghost, so radius 12 + margin 13 is the limit of the margin. A loaded game just continues (a trigger is saved).
+// is placed at its current position every tick. The map and the rest of the enemy army are NOT revealed; the patch (about 1.5 cells around the detector, measured: an ordinary enemy 1.5 cells from it is seen, 4 cells not) is visible while the detector is a danger for the Ghost (the price of the
+// method). The radar searches 25 cells around the Ghost, so radius 12 + margin 13 is the limit of the margin. A loaded game just continues (a trigger is saved).
 //--------------------------------------------------------------------------------------------------
 fixed go_daeMargin;
 trigger go_daeTrig;
