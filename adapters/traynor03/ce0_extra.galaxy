@@ -1701,18 +1701,8 @@ int go_dsTick;
 trigger go_dsTrig;
 
 string GhostOps_Ce0_Beacons () {
-    unitgroup lv_g;
-    string lv_t;
-    int lv_n;
-
-    lv_g = UnitGroup("GhostOpsWarnBeacon", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
-    lv_n = UnitGroupCount(lv_g, c_unitCountAlive);
-    lv_t = "beacons " + IntToString(lv_n);
-    if (lv_n > 0) {
-        lv_t = lv_t + " bdist " + FixedToString(DistanceBetweenPoints(UnitGetPosition(UnitGroupUnit(lv_g, 1)), UnitGetPosition(go_dsO)), 2);
-    }
-
-    return lv_t;
+    // the "beacons" field of the DSM / DSMV lines: the stock radar buff on the Overseer (it carries the circle) and whether the player sees the Overseer's cell
+    return "radarbuff " + IntToString(UnitBehaviorCount(go_dsO, "HeroDetectorRadarDetected"));
 }
 
 bool GhostOps_Ce0_DsTick (bool lp_test, bool lp_run) {
@@ -1829,23 +1819,8 @@ bool GhostOps_Ce0_DsCmd (string lp_cmd, string lp_a, string lp_b) {
         // daedbg: why the early-warning module does (not) see the Overseer: filter, behaviors, the module trigger
         GhostOps_Ce0_Write("j", "DAEDBG enemy-filter " + IntToString(GhostOps_Ce0_B(UnitFilterMatch(go_dsO, 1, UnitFilterStr("Enemy;Dead,Hidden,Stasis")))) + " enemy+detector-filter " + IntToString(GhostOps_Ce0_B(UnitFilterMatch(go_dsO, 1, UnitFilterStr("Enemy,Detector;Dead,Hidden,Stasis")))));
         GhostOps_Ce0_Write("j", "DAEDBG det10/11/12 " + IntToString(UnitBehaviorCount(go_dsO, "Detector10")) + IntToString(UnitBehaviorCount(go_dsO, "Detector11")) + IntToString(UnitBehaviorCount(go_dsO, "Detector12")) + " owner " + IntToString(UnitGetOwner(go_dsO)) + " alive " + IntToString(GhostOps_Ce0_B(UnitIsAlive(go_dsO))));
-        GhostOps_Ce0_Write("j", "DAEDBG ticks " + IntToString(go_daeTicks) + " ghosts " + IntToString(go_daeGhosts) + " found " + IntToString(go_daeFound) + " made " + IntToString(go_daeMade) + " trig " + IntToString(GhostOps_Ce0_B(go_daeTrig != null)) + " margin " + FixedToString(go_daeMargin, 1));
-        GhostOps_Ce0_Write("j", "DAEDBG dist " + FixedToString(DistanceBetweenPoints(UnitGetPosition(go_dsO), UnitGetPosition(go_dsG)), 2) + " beacons-now " + GhostOps_Ce0_Beacons());
-        return true;
-    }
-
-    if (lp_cmd == "dsbeacon") {
-        // dsbeacon: does the beacon unit of the early-warning mode exist in the catalog, can it be created and carry the hidden buff
-        UnitCreate(1, "GhostOpsWarnBeacon", c_unitCreateIgnorePlacement, 1, UnitGetPosition(go_dsO), 0.0);
-        lv_u = UnitLastCreated();
-        if (lv_u == null) {
-            GhostOps_Ce0_Write("j", "DSBEACON creation failed: no unit");
-            return true;
-        }
-
-        GhostOps_Ce0_Write("j", "DSBEACON created type " + UnitGetType(lv_u) + " alive " + IntToString(GhostOps_Ce0_B(UnitIsAlive(lv_u))));
-        UnitBehaviorAdd(lv_u, "GhostOpsWarnShow11", lv_u, 1);
-        GhostOps_Ce0_Write("j", "DSBEACON buff count " + IntToString(UnitBehaviorCount(lv_u, "GhostOpsWarnShow11")) + " | " + GhostOps_Ce0_Beacons());
+        GhostOps_Ce0_Write("j", "DAEDBG ticks " + IntToString(go_daeTicks) + " ghosts " + IntToString(go_daeGhosts) + " found " + IntToString(go_daeFound) + " trig " + IntToString(GhostOps_Ce0_B(go_daeTrig != null)) + " margin " + FixedToString(go_daeMargin, 1));
+        GhostOps_Ce0_Write("j", "DAEDBG dist " + FixedToString(DistanceBetweenPoints(UnitGetPosition(go_dsO), UnitGetPosition(go_dsG)), 2) + " " + GhostOps_Ce0_Beacons());
         return true;
     }
 

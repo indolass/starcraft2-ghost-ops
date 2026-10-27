@@ -406,8 +406,8 @@ def validate_detector_analysis(cfg):
         errs.append('detector_analysis.always must be true or false (true: the radar stays on every living Ghost, not only on the selected ones)')
     ew = d.get('early_warning')
     if ew is not None:
-        if not (isinstance(ew, dict) and set(ew) == {'enabled', 'margin'} and isinstance(ew['enabled'], bool) and isinstance(ew['margin'], (int, float)) and not isinstance(ew['margin'], bool) and 1 <= ew['margin'] <= 30):
-            errs.append('detector_analysis.early_warning needs enabled (true/false) and margin 1..30 (game cells: how far outside the detection radius the circle appears; the circle is drawn on a beacon of ours, so it does not depend on the sight of the Ghost)')
+        if not (isinstance(ew, dict) and set(ew) == {'enabled', 'margin'} and isinstance(ew['enabled'], bool) and isinstance(ew['margin'], (int, float)) and not isinstance(ew['margin'], bool) and 1 <= ew['margin'] <= 13):
+            errs.append('detector_analysis.early_warning needs enabled (true/false) and margin 1..13 (game cells: how far outside the detection radius the circle appears; the stock radar of the Ghost looks 25 cells around it, so radius 12 + margin 13 is the limit)')
     texts = d.get('texts', {})
     if set(texts) != {'Name', 'Tip'}:
         errs.append('detector_analysis.texts must have exactly Name and Tip')
@@ -418,25 +418,6 @@ def validate_detector_analysis(cfg):
     if d.get('enabled') and not cfg.get('ghost_tuning'):
         errs.append('detector_analysis needs ghost_tuning (the Ghost override of this mission)')
     return errs
-
-
-def detector_early_fragments(d):
-    """Catalog data of the early-warning mode (map local): the beacon unit (no model, no sight, no collision, not selectable / targetable / detectable), the hidden buffs GhostOpsWarnShow10/11/12
-    and the range actors GhostOpsWarnRange10/11/12 with the explicit radius (not the behavior of a unit that must be visible)."""
-    nl = chr(10)
-    unit = ['    <CUnit id="GhostOpsWarnBeacon" parent="Beacon_TerranSmall">', '        <LifeStart value="25"/>', '        <LifeMax value="25"/>', '        <Radius value="0.1"/>', '        <SeparationRadius value="0"/>',
-            '        <InnerRadius value="0.1"/>', '        <MinimapRadius value="0"/>', '        <Sight value="0"/>', '        <Collide index="Ground" value="0"/>', '        <Collide index="Structure" value="0"/>',
-            '        <Collide index="Burrow" value="0"/>', '        <Collide index="FlyingLow" value="0"/>', '        <Footprint value=""/>', '        <FlagArray index="Unselectable" value="1"/>',
-            '        <FlagArray index="Unclickable" value="1"/>', '        <FlagArray index="Uncommandable" value="1"/>', '        <FlagArray index="Unhighlightable" value="1"/>', '        <FlagArray index="NoScore" value="1"/>', '    </CUnit>', '']
-    beh = []
-    act = []
-    for n in (10, 11, 12):
-        beh += ['    <CBehaviorBuff id="GhostOpsWarnShow%d">' % n, '        <InfoFlags index="Hidden" value="1"/>', '    </CBehaviorBuff>']
-        act += ['    <CActorRange id="GhostOpsWarnRange%d">' % n, '        <Range value="%d"/>' % n, '        <Icon value="Assets' + chr(92) + 'Textures' + chr(92) + 'RadarIcon2.dds"/>', '        <Terms value="Cap 1"/>', '        <IconArcLength value="0.450000"/>', '        <IconTint value="255,60,30,255"/>', '        <FogVisibility value="Visible"/>',
-                '        <On Terms="Behavior.GhostOpsWarnShow%d.On" Send="Create"/>' % n, '        <On Terms="Behavior.GhostOpsWarnShow%d.Off" Send="Destroy"/>' % n, '    </CActorRange>']
-    model = ['    <CModel id="GhostOpsWarnBeacon" parent="Beacon_TerranSmall">', '        <ScaleMax value="0.010000,0.010000,0.010000"/>', '        <ScaleMin value="0.010000,0.010000,0.010000"/>', '        <ShadowRadius value="0"/>', '    </CModel>', '']
-    act = ['    <CActorUnit id="GhostOpsWarnBeacon" parent="Beacon_TerranSmall" unitName="GhostOpsWarnBeacon">', '        <Model value="GhostOpsWarnBeacon"/>', '    </CActorUnit>'] + act  # the unit uses OUR tiny model, not the visible red beacon of its parent
-    return {'UnitData.xml': nl.join(unit), 'BehaviorData.xml': nl.join(beh + ['']), 'ActorData.xml': nl.join(act + ['']), 'ModelData.xml': nl.join(model)}
 
 
 def detector_analysis_fragments(d):
@@ -1535,9 +1516,6 @@ def catalog_fragments(cfg):
     if cfg.get('detector_analysis') and cfg['detector_analysis'].get('enabled'):
         for name, frag in detector_analysis_fragments(cfg['detector_analysis']).items():
             frags[name] = frags.get(name, '') + frag
-        if (cfg['detector_analysis'].get('early_warning') or {}).get('enabled'):
-            for name, frag in detector_early_fragments(cfg['detector_analysis']).items():
-                frags[name] = frags.get(name, '') + frag
     if 'UnitData.xml' in frags:
         frags['UnitData.xml'] = merge_same_id(frags['UnitData.xml'], 'CUnit', 'Ghost')
         frags['UnitData.xml'] = merge_same_id(frags['UnitData.xml'], 'CUnit', 'MissileTurret')
@@ -2247,7 +2225,7 @@ def build_block(adapter, cfg):
         extra += gen_scene(cfg) + '\n'
     if (cfg.get('detector_analysis') or {}).get('early_warning', {}).get('enabled') and adapter.get('detector_analysis'):
         extra += chr(10).join(['// Generated detector-analysis configuration (early warning)', 'void GhostOps_ApplyDetectorEarlyConfig () {', '    go_daeMargin = %.2f;' % cfg['detector_analysis']['early_warning']['margin'], '}', '']) + chr(10)
-    elif adapter.get('detector_analysis'):
+    if adapter.get('detector_analysis'):
         extra += chr(10).join(['// Generated detector-analysis configuration', 'void GhostOps_ApplyDetectorAnalysisConfig () {', '    go_daEnabled = true;', '    go_daAlways = %s;' % ('true' if (cfg.get('detector_analysis') or {}).get('always') else 'false'), '}', '']) + chr(10)
     if cfg.get('ce0'):
         extra += gen_ce0(cfg) + '\n'
@@ -2380,11 +2358,11 @@ def apply_ce0(adapter, cfg):
         a['defence'] = True
     if (cfg.get('detector_analysis') or {}).get('enabled'):
         st = (adapter.get('start_hooks') or [adapter.get('start_hook')])[0]
+        mods.append('core/GhostOpsDetector.galaxy')
         if ((cfg['detector_analysis'].get('early_warning') or {}).get('enabled')):
             mods.append('core/GhostOpsDetectorEarly.galaxy')
-            hooks.append({'function': st['function'], 'after': st['after'], 'call': 'GhostOps_DAE_Start();'})
+            hooks.append({'function': st['function'], 'after': st['after'], 'call': 'GhostOps_DA_Start(); GhostOps_DAE_Start();'})
         else:
-            mods.append('core/GhostOpsDetector.galaxy')
             hooks.append({'function': st['function'], 'after': st['after'], 'call': 'GhostOps_DA_Start();'})
         a['detector_analysis'] = True
     if cfg.get('campaign'):

@@ -1,0 +1,101 @@
+{
+ "name": "tr5_ring",
+ "mission": "traynor03",
+ "preset": "defence_r5_dev",
+ "why": "is the circle of the beacon drawn when the beacon is in the sight of the Ghost",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "dst",
+   "grep": "DST2 landing \\d+ marines 16 ghosts 2",
+   "every": 6,
+   "timeout": 260
+  },
+  {
+   "op": "cmd",
+   "text": "cleane",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "ghold",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "pausem",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "nofoe",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "selonly Marine",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "dsc 6",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "dsact",
+   "wait": 0.6
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "cmd",
+   "text": "dsbeacon",
+   "wait": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "dscam",
+   "wait": 1.2
+  },
+  {
+   "op": "sleep",
+   "s": 2.5
+  },
+  {
+   "op": "shot",
+   "file": "r1_beacon_visible.png"
+  },
+  {
+   "op": "cmd",
+   "text": "dsm",
+   "wait": 1.2
+  },
+  {
+   "op": "expect",
+   "regex": "DSBEACON|DSM",
+   "note": "beacon next to the Ghost: is the circle drawn at all"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}
