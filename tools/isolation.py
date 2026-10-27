@@ -87,7 +87,18 @@ def protect_all():
 
 
 def running_commands():
-    """Command lines of the running SC2 processes: [(pid, creation, command line)]."""
+    """Command lines of the running SC2 processes: [(pid, creation, command line)]. Read natively (milliseconds); the PowerShell query is only the fallback (it took 17-25 s while the game ran)."""
+    sys.path.insert(0, HERE) if HERE not in sys.path else None
+    import procs
+    rows = []
+    for pid in procs.pids_of('SC2_x64.exe'):
+        cmd = procs.command_line(pid)
+        if cmd is None:
+            rows = None
+            break
+        rows.append((pid, process_created(pid) or '', cmd))
+    if rows is not None:
+        return rows
     ps = "Get-CimInstance Win32_Process -Filter \"Name='SC2_x64.exe'\" | ForEach-Object { '{0}|{1}|{2}' -f $_.ProcessId, $_.CreationDate.ToString('o'), $_.CommandLine }"
     try:
         out = subprocess.run(['powershell', '-NoProfile', '-Command', ps], capture_output=True, text=True, timeout=30, creationflags=0x08000000).stdout

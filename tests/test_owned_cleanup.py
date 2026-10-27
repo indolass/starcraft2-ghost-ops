@@ -38,6 +38,15 @@ class OwnedCleanup(unittest.TestCase):
         self.assertFalse(isolation.same_moment('2026-10-27T00:51:57.6857300+01:00', '2026-10-26T23:51:58.685730Z'))
         self.assertFalse(isolation.same_moment(None, '2026-10-26T23:51:58Z'))
 
+    def test_native_command_line_of_a_process(self):
+        import procs
+        t0 = __import__('time').time()
+        cmd = procs.command_line(os.getpid())
+        self.assertIsNotNone(cmd)
+        self.assertIn('python', cmd.lower())
+        self.assertLess(__import__('time').time() - t0, 2.0)  # the PowerShell query took 17-25 s while the game ran
+        self.assertIsNone(procs.command_line(999999999))
+
 
 if __name__ == '__main__':
     unittest.main()

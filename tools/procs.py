@@ -39,3 +39,34 @@ def pids_of(image):
                 except ValueError:
                     pass
         return res
+
+
+def command_line(pid):
+    """Command line of a process of the same user (NtQueryInformationProcess, information class 60): milliseconds. The old PowerShell query took 17-25 s while the game ran and made every
+    install / uninstall guard slow. Returns None when it cannot be read (the caller may fall back to the slow way)."""
+    try:
+        k = ctypes.windll.kernel32
+        nt = ctypes.windll.ntdll
+        k.OpenProcess.restype = wintypes.HANDLE
+        h = k.OpenProcess(0x1000, False, int(pid))  # PROCESS_QUERY_LIMITED_INFORMATION
+        if not h:
+            return None
+        try:
+            size = 8192
+            buf = ctypes.create_string_buffer(size)
+            ret = wintypes.ULONG(0)
+            status = nt.NtQueryInformationProcess(h, 60, buf, size, ctypes.byref(ret))
+            if status != 0:
+                return None
+            length = int.from_bytes(buf.raw[0:2], 'little')  # UNICODE_STRING: Length, MaximumLength, (padding), Buffer pointer that points INSIDE our buffer
+            ptr = int.from_bytes(buf.raw[8:16], 'little')
+            base = ctypes.addressof(buf)
+            off = ptr - base
+            if length <= 0 or off < 0 or off + length > size:
+                return None
+            return buf.raw[off:off + length].decode('utf-16-le', 'replace')
+        finally:
+            k.CloseHandle(h)
+    except Exception:  # noqa: BLE001
+        return None
+
