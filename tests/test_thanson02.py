@@ -68,7 +68,7 @@ class Config(unittest.TestCase):
 
     def test_card_shows_the_mode_and_the_composition(self):
         names = [p['name'] for p in launcher_core.profiles_of('thanson02')]
-        self.assertEqual(names, ['epidemic_free', 'epidemic_free_r2', 'epidemic_free_r3', 'epidemic_free_r4', 'epidemic_free_r5'])
+        self.assertEqual(names, ['epidemic_free', 'epidemic_free_r2', 'epidemic_free_r3', 'epidemic_free_r4', 'epidemic_free_r5', 'epidemic_free_r6'])
         card = next(p for p in launcher_core.profiles_of('thanson02') if p['name'] == 'epidemic_free_r2')
         self.assertIn('Свободный тест', card['card'])
         nm, st = self.cfg['hanson']['free_squad']['marines'], self.cfg['epidemic']['stock_marines']
@@ -130,6 +130,48 @@ class Hooks(unittest.TestCase):
         self.assertTrue(re.search(r'GhostOps_Epi_OnNight\(gv_night, gv_nIGHT_DURATION\);', out))
         self.assertTrue(re.search(r'GhostOps_Epi_OnDay\(gv_day, gv_dAY_DURATION\);', out))
         self.assertTrue(out.count('GhostOps_Epi_ExtraHellions') >= 2)
+
+
+class TruckRevision6(unittest.TestCase):
+    """Revision 6: the gas truck stands in Area 7 and is taken only by a close approach; the older revisions keep their old settings."""
+
+    def test_truck_in_area_7_and_close_capture_only_in_revision_6(self):
+        ad = build.load_adapter('thanson02')
+        r6 = build.resolve_config(ad, 'epidemic_free_r6')[0]['epidemic']['truck']
+        r5 = build.resolve_config(ad, 'epidemic_free_r5')[0]['epidemic']['truck']
+        self.assertEqual((r6['x'], r6['y']), (100.1, 68.4))
+        self.assertEqual((r6['capture_radius'], r6['capture_units'], r6['close_capture']), (2.0, 1, True))
+        self.assertEqual(r6['defenders']['infested_terran'] + r6['defenders']['civilian'], 0)  # no extra army: the infested objects of the map around stay
+        self.assertEqual((r5['x'], r5['y'], r5['capture_radius'], r5['capture_units']), (107.5, 144.5, 8.0, 2))
+        self.assertNotIn('close_capture', r5)
+        for k in ('fuel_max', 'fuel_start', 'speed', 'life', 'gas_to_fuel', 'base_refill_rate'):
+            self.assertEqual(r6[k], r5[k], k)  # fuel, speed unchanged
+        gen6 = build.gen_epidemic(build.resolve_config(ad, 'epidemic_free_r6')[0])
+        gen5 = build.gen_epidemic(build.resolve_config(ad, 'epidemic_free_r5')[0])
+        self.assertIn('go_eCapClose = true;', gen6)
+        self.assertIn('go_eCapClose = false;', gen5)
+
+    def test_card_names_the_revision_and_the_two_changes(self):
+        cards = {p['name']: p for p in launcher_core.profiles_of('thanson02')}
+        c6 = cards['epidemic_free_r6']
+        self.assertIn('ревизия 6', c6['label'])
+        self.assertIn('Газовоз в Area 7', c6['card'])
+        self.assertIn('Захват только при близком подходе', c6['card'])
+        self.assertIn('Газовоз в Area 7', ' '.join(c6['details']))
+        self.assertEqual(launcher_core.default_profile('thanson02'), 'epidemic_free_r6')
+        self.assertIn('прежняя', cards['epidemic_free_r5']['label'])
+
+    def test_close_capture_needs_a_small_radius(self):
+        ad = build.load_adapter('thanson02')
+        c = build.resolve_config(ad, 'epidemic_free_r6')[0]
+        c['epidemic']['truck']['capture_radius'] = 8.0
+        self.assertTrue(any('close_capture' in e for e in build.validate_epidemic(c)))
+
+    def test_detection_and_capture_are_separate_in_the_module(self):
+        mod = open(os.path.join(ROOT, 'core', 'GhostOpsEpidemic.galaxy'), encoding='utf-8').read()
+        self.assertIn('GhostOpsE_MsgTruckSeen', mod)
+        self.assertIn('GhostOpsE_MsgTruckCaptured', mod)
+        self.assertLess(mod.index('go_eTruckSeen = true;'), mod.index('GhostOpsE_MsgTruckCaptured'))
 
 
 if __name__ == '__main__':

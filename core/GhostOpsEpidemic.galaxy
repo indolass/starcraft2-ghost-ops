@@ -35,6 +35,9 @@ fixed go_eTruckFuelMax;
 fixed go_eTruckFuel0;
 fixed go_eCapR;
 int go_eCapN;
+bool go_eCapClose;            // revision 6: the truck is free until a ground fighter stands right next to it (go_eCapR); coming into the big area only marks it as found
+fixed go_eDetectR;
+bool go_eTruckSeen;
 fixed go_eGasToFuel;
 fixed go_eTruckBaseRate;
 fixed go_eRevealR;
@@ -548,8 +551,19 @@ void GhostOps_Epi_Truck (fixed lp_dt) {
 
     // the capture: infantry of the player near the free truck, once
     if (UnitGetOwner(go_eTruck) != 1) {
+        // detection is NOT capture: a fighter in the big area only reports the truck (one message); the truck stays nobody's, neither the Zerg nor the guardians pick it as a target
+        if (go_eCapClose && !go_eTruckSeen && (GhostOps_Epi_InfantryNear(UnitGetPosition(go_eTruck), go_eDetectR) > 0)) {
+            go_eTruckSeen = true;
+            UIDisplayMessage(PlayerGroupAll(), c_messageAreaDirective, StringExternal("Param/Value/GhostOpsE_MsgTruckSeen"));
+            GhostOps_Epi_Log("truck found (not captured)");
+        }
+
         if (GhostOps_Epi_InfantryNear(UnitGetPosition(go_eTruck), go_eCapR) >= go_eCapN) {
             UnitSetOwner(go_eTruck, 1, true);
+            if (go_eCapClose) {
+                UIDisplayMessage(PlayerGroupAll(), c_messageAreaDirective, StringExternal("Param/Value/GhostOpsE_MsgTruckCaptured"));
+            }
+
             go_eStage = 3;
             go_eScene[0] = true;
             go_eScene[1] = true;

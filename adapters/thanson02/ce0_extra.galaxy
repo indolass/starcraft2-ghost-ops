@@ -168,6 +168,40 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
         return true;
     }
 
+    if (lp_cmd == "etr") {
+        // etr: the way out of the truck's place: passable, ground path cost to the base and to every hellion (65536 = no way)
+        lv_t = "ETR truck at " + GhostOps_Ce0_Pt(UnitGetPosition(go_eTruck)) + " owner " + IntToString(UnitGetOwner(go_eTruck)) + " seen " + IntToString(BoolToInt(go_eTruckSeen)) + " stage " + IntToString(go_eStage) + " pass " + IntToString(BoolToInt(PointPathingPassable(UnitGetPosition(go_eTruck)))) + " costBase " + IntToString(PointPathingCost(UnitGetPosition(go_eTruck), go_eBase)) + " hellions";
+        lv_i = 0;
+        while (lv_i < go_eHellN) {
+            if (UnitIsAlive(go_eHell[lv_i])) {
+                lv_t = lv_t + " " + IntToString(PointPathingCost(UnitGetPosition(go_eTruck), UnitGetPosition(go_eHell[lv_i])));
+            }
+
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "ezerg") {
+        // ezerg <n>: n infested Terrans of the enemy (player 3) next to the truck, free (not script controlled): they attack what they see that is an enemy
+        lv_n = StringToInt(lp_a);
+        lv_i = 0;
+        while (lv_i < lv_n) {
+            UnitCreate(1, "InfestedTerranCampaign", 0, 3, PointWithOffset(UnitGetPosition(go_eTruck), 4.0 + IntToFixed(lv_i), 0.0), 270.0);
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", "EZERG " + IntToString(lv_n) + " enemies next to the truck, truck life " + FixedToString(UnitGetPropertyFixed(go_eTruck, c_unitPropLife, c_unitPropCurrent), 0));
+        return true;
+    }
+
+    if (lp_cmd == "etlife") {
+        GhostOps_Ce0_Write("j", "ETLIFE truck life " + FixedToString(UnitGetPropertyFixed(go_eTruck, c_unitPropLife, c_unitPropCurrent), 0) + " owner " + IntToString(UnitGetOwner(go_eTruck)) + " fuel " + FixedToString(UnitGetPropertyFixed(go_eTruck, c_unitPropEnergy, c_unitPropCurrent), 1) + " at " + GhostOps_Ce0_Pt(UnitGetPosition(go_eTruck)));
+        return true;
+    }
+
     if (lp_cmd == "estat") {
         lv_t = "ESTAT stage " + IntToString(go_eStage) + " night " + IntToString(BoolToInt(go_eIsNight)) + " scenes";
         lv_i = 0;

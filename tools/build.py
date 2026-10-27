@@ -1775,7 +1775,7 @@ def gen_hanson(cfg):
 
 
 EPI_TEXT_PREFIX = 'Param/Value/GhostOpsE_'
-EPI_TEXT_KEYS = ('SwannName', 'TychusName', 'HansonName', 'L_GAS', 'L_TRUCK', 'L_CAPTURE', 'L_BASE', 'L_SHIP', 'L_PROT', 'MsgTruckLost', 'MsgShipHere', 'MsgShipLost', 'MsgDawn',
+EPI_TEXT_KEYS = ('SwannName', 'TychusName', 'HansonName', 'L_GAS', 'L_TRUCK', 'L_CAPTURE', 'L_BASE', 'L_SHIP', 'L_PROT', 'MsgTruckLost', 'MsgTruckSeen', 'MsgTruckCaptured', 'MsgShipHere', 'MsgShipLost', 'MsgDawn',
                  'HudSel', 'HudMin', 'HudAll', 'HudDry', 'HudTruck', 'HudTruckFree', 'HudTruckLost', 'ProtDay', 'ProtNight', 'ObjTruckTitle', 'ObjTruckText', 'NoFuelName', 'NoFuelDesc')
 
 
@@ -1829,6 +1829,12 @@ def validate_epidemic(cfg):
     else:
         for k, lo, hi in (('infested_terran', 0, 20), ('civilian', 0, 20), ('radius', 2, 15)):
             num(d, k, lo, hi, 'truck.defenders')
+    if 'close_capture' in t and not isinstance(t['close_capture'], bool):
+        errs.append('epidemic.truck.close_capture must be boolean')
+    if 'detect_radius' in t:
+        num(t, 'detect_radius', 2, 60, 'truck')
+    if t.get('close_capture') and not (_num(t.get('capture_radius')) and t['capture_radius'] <= 4 and t.get('capture_units') == 1):
+        errs.append('epidemic.truck.close_capture needs capture_radius <= 4 (a ground fighter right next to the truck) and capture_units 1')
     num(e['hellions'], 'extra', 0, 10, 'hellions')
     num(e['night_cloak'], 'net_per_second', -50, 0, 'night_cloak')
     p = e['protected']
@@ -1875,7 +1881,8 @@ def gen_epidemic(cfg):
              '    go_eTank = %.2f;' % f['tank'], '    go_ePerCell = %.3f;' % f['per_cell'], '    go_eFillPoor = %.3f;' % f['base_fill_poor'], '    go_eFillGood = %.3f;' % f['base_fill_good'],
              '    go_eBaseRate = %.2f;' % f['base_rate'], '    go_eFieldR = %.2f;' % f['field_radius'], '    go_eFieldRate = %.2f;' % f['field_rate'], '    go_eMaxStep = %.2f;' % f['max_step'],
              '    go_eTruckAt = Point(%.4f, %.4f);' % (t['x'], t['y']), '    go_eTruckFuelMax = %.2f;' % t['fuel_max'], '    go_eTruckFuel0 = %.2f;' % t['fuel_start'],
-             '    go_eCapR = %.2f;' % t['capture_radius'], '    go_eCapN = %d;' % t['capture_units'], '    go_eGasToFuel = %.3f;' % t['gas_to_fuel'], '    go_eTruckBaseRate = %.2f;' % t['base_refill_rate'],
+             '    go_eCapR = %.2f;' % t['capture_radius'], '    go_eCapN = %d;' % t['capture_units'],
+             '    go_eCapClose = %s;' % b(t.get('close_capture', False)), '    go_eDetectR = %.2f;' % t.get('detect_radius', t['reveal_radius']), '    go_eGasToFuel = %.3f;' % t['gas_to_fuel'], '    go_eTruckBaseRate = %.2f;' % t['base_refill_rate'],
              '    go_eRevealR = %.2f;' % t['reveal_radius'], '    go_eRevealSec = %.2f;' % t['reveal_seconds'],
              '    go_eDefTerran = %d;' % t['defenders']['infested_terran'], '    go_eDefCivil = %d;' % t['defenders']['civilian'], '    go_eDefR = %.2f;' % t['defenders']['radius'],
              '    go_eExtraHell = %d;' % e['hellions']['extra'],

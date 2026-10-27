@@ -1,0 +1,224 @@
+{
+ "name": "th2r6_truck",
+ "mission": "thanson02",
+ "preset": "epidemic_free_r6_ce0_dev",
+ "why": "Epidemic r6: truck in Area 7; detection is not capture; capture only by a close approach; save / load before and after; attack after the capture; the truck drives out",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 10
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ETR truck",
+   "cmd": "etr",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "expect",
+   "regex": "pass 1",
+   "note": "the new place of the truck is passable"
+  },
+  {
+   "op": "expect",
+   "regex": "costBase [0-9]+",
+   "note": "the cost to the base is a number"
+  },
+  {
+   "op": "cmd",
+   "text": "etpm 90 68",
+   "wait": 2.0
+  },
+  {
+   "op": "sleep",
+   "s": 4
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ETR truck",
+   "cmd": "etr",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "expect",
+   "regex": "owner 0 seen 1",
+   "note": "inside the big area: the truck is found, NOT captured, still nobody's"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ETLIFE",
+   "cmd": "etlife",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "expect",
+   "regex": "owner 0",
+   "note": "still free after the detection"
+  },
+  {
+   "op": "save",
+   "name": "CE0_TH2R6_T1"
+  },
+  {
+   "op": "load",
+   "name": "CE0_TH2R6_T1"
+  },
+  {
+   "op": "sleep",
+   "s": 4
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ETR truck",
+   "cmd": "etr",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "expect",
+   "regex": "owner 0 seen 1 stage [0-9]",
+   "note": "after save / load: still free, still found"
+  },
+  {
+   "op": "cmd",
+   "text": "egom 100.1 68.4",
+   "wait": 2.0
+  },
+  {
+   "op": "sleep",
+   "s": 14
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ETLIFE",
+   "cmd": "etlife",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "burst",
+   "file": "t1_captured.png",
+   "n": 2,
+   "gap": 0.5
+  },
+  {
+   "op": "expect",
+   "regex": "owner 1",
+   "note": "a fighter walked right up to the truck: captured"
+  },
+  {
+   "op": "save",
+   "name": "CE0_TH2R6_T2"
+  },
+  {
+   "op": "load",
+   "name": "CE0_TH2R6_T2"
+  },
+  {
+   "op": "sleep",
+   "s": 4
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ETLIFE",
+   "cmd": "etlife",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "expect",
+   "regex": "owner 1 fuel 490",
+   "note": "after save / load: still ours, the fuel is not doubled"
+  },
+  {
+   "op": "cmd",
+   "text": "ezerg 3",
+   "wait": 2.0
+  },
+  {
+   "op": "sleep",
+   "s": 8
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ETLIFE",
+   "cmd": "etlife",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "burst",
+   "file": "t2_attacked.png",
+   "n": 2,
+   "gap": 0.5
+  },
+  {
+   "op": "expect",
+   "regex": "life ([0-9]|[0-9][0-9]|1[0-4][0-9]) owner 1",
+   "note": "after the capture the enemies attack the truck (life below 150)"
+  },
+  {
+   "op": "cmd",
+   "text": "etruckmv 73.5 91.5",
+   "wait": 2.0
+  },
+  {
+   "op": "sleep",
+   "s": 25
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ETLIFE",
+   "cmd": "etlife",
+   "every": 3,
+   "timeout": 45
+  },
+  {
+   "op": "expect",
+   "regex": "at ",
+   "note": "the truck drives out of Area 7 toward the base"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}
