@@ -33,6 +33,11 @@ class OwnedCleanup(unittest.TestCase):
         finally:
             isolation.OWNED = old
 
+    def test_creation_times_compare_as_instants(self):
+        self.assertTrue(isolation.same_moment('2026-10-27T00:51:57.6857300+01:00', '2026-10-26T23:51:57.685730Z'))
+        self.assertFalse(isolation.same_moment('2026-10-27T00:51:57.6857300+01:00', '2026-10-26T23:51:58.685730Z'))
+        self.assertFalse(isolation.same_moment(None, '2026-10-26T23:51:58Z'))
+
 
 if __name__ == '__main__':
     unittest.main()

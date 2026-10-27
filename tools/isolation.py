@@ -151,6 +151,23 @@ def process_created(pid):
         k.CloseHandle(h)
 
 
+def same_moment(a, b):
+    """Two ISO creation times (any offset: the old records carry +01:00, the new ones UTC 'Z') are the same instant."""
+    import datetime
+    if not a or not b:
+        return False
+    try:
+        import re
+        fix = lambda t: re.sub(r'(\.\d{6})\d+', lambda m: m.group(1), t.replace('Z', '+00:00'))  # noqa: E731 - 7-digit fractions are not parsed by older Python
+        pa = datetime.datetime.fromisoformat(fix(a))
+        pb = datetime.datetime.fromisoformat(fix(b))
+        if pa.tzinfo is None or pb.tzinfo is None:
+            return a == b
+        return abs((pa - pb).total_seconds()) < 0.01
+    except ValueError:
+        return a == b
+
+
 def _owned_all():
     try:
         with open(OWNED, encoding='utf-8') as f:
@@ -182,7 +199,7 @@ def is_owned(pid, job=None):
     created = process_created(pid)
     if created is None:
         return False
-    return any(r['pid'] == pid and r['created'] == created and (job is None or r.get('job') == job) for r in _owned_all())
+    return any(r['pid'] == pid and same_moment(r.get('created'), created) and (job is None or r.get('job') == job) for r in _owned_all())
 
 
 def close_owned(pid, job=None):

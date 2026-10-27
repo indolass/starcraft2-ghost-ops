@@ -39,7 +39,7 @@ def make_window_class(ctk, pal):
             self.backend = backend or WorkshopBackend()
             self.title('Ghost Ops — Мастерская миссий: %s' % TITLES.get(mission, mission))
             self.geometry('1180x780')
-            self.minsize(800, 560)
+            self.minsize(1040, 600)
             self.transient(app)
             self.variant = None
             self.section = 'squad'
@@ -83,7 +83,8 @@ def make_window_class(ctk, pal):
 
             body = ctk.CTkFrame(self, fg_color='transparent')
             body.grid(row=1, column=0, sticky='nsew', padx=12, pady=6)
-            body.grid_columnconfigure(1, weight=1)
+            body.grid_columnconfigure(1, weight=3, minsize=600)
+            body.grid_columnconfigure(2, weight=2, minsize=250)
             body.grid_rowconfigure(0, weight=1)
             left = ctk.CTkFrame(body, fg_color=PANEL, corner_radius=12, width=210)
             left.grid(row=0, column=0, sticky='ns', padx=(0, 6))
@@ -98,8 +99,8 @@ def make_window_class(ctk, pal):
             self.center = ctk.CTkScrollableFrame(body, fg_color=PANEL, corner_radius=12)
             self.center.grid(row=0, column=1, sticky='nsew', padx=6)
             self.center.grid_columnconfigure(0, weight=1)
-            self.right = ctk.CTkScrollableFrame(body, fg_color=PANEL, corner_radius=12, width=330)
-            self.right.grid(row=0, column=2, sticky='ns', padx=(6, 0))
+            self.right = ctk.CTkScrollableFrame(body, fg_color=PANEL, corner_radius=12, width=250)
+            self.right.grid(row=0, column=2, sticky='nsew', padx=(6, 0))
             self.right.grid_columnconfigure(0, weight=1)
 
             bar = ctk.CTkFrame(self, fg_color=PANEL, corner_radius=12)
