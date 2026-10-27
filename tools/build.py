@@ -2666,7 +2666,7 @@ def resolve_config(adapter, preset=None, diag=False, no_voice=False):
         name = preset or raw.get('default_preset')
         if name not in presets:
             raise ConfigError('unknown preset "%s" for %s; available: %s' % (name, adapter['mission'], ', '.join(presets)))
-        base = {k: v for k, v in raw.items() if k not in ('presets', 'default_preset')}
+        base = {k: v for k, v in raw.items() if k not in ('presets', 'default_preset', 'launcher')}  # `launcher` = data of the launcher window, never of the build
         chain, cur = [], name  # the whole chain of "extends" (a hidden development preset may extend another development preset)
         while cur is not None:
             if cur not in presets:
@@ -2865,22 +2865,31 @@ def inputs_digest(adapter, cfg, preset, src_path=None):
 def build_status(args):
     """'ready' when the installed map is exactly the up-to-date build of this profile (inputs unchanged, built file and installed file match the manifests), else 'needs_build'.
     A protected map of the Owner counts as ready (it is started as it is)."""
+    return 'ready' if build_status_detail(args) == 'ready' else 'needs_build'
+
+
+def build_status_detail(args):
+    """'ready'; 'needs_install' (the build is current but the installed copy is missing / different); 'needs_build' (no build, or the inputs changed since it)."""
     adapter, cfg, preset = context(args)
     kept = os.path.join(SC2_DIR, 'Maps', 'GhostOps', output_name(adapter, preset))
     if os.path.isfile(kept) and isolation.is_protected(kept):
         return 'ready'
     man_path = build_manifest_path(key_for(adapter, preset))
     mp = install_manifest_path(key_for(adapter, preset))
-    if not (os.path.isfile(man_path) and os.path.isfile(mp) and os.path.isfile(kept)):
+    if not os.path.isfile(man_path):
         return 'needs_build'
     try:
         man = json.loads(read(man_path, 'r'))
-        rec = json.loads(read(mp, 'r'))
         out = paths(adapter, None, preset)[1]
         if man.get('inputs_hash') != inputs_digest(adapter, cfg, preset):
             return 'needs_build'
-        if not os.path.isfile(out) or sha256(read(out)) != man.get('output_sha256') or sha256(read(kept)) != man.get('output_sha256') or rec.get('sha256') != man.get('output_sha256'):
+        if not os.path.isfile(out) or sha256(read(out)) != man.get('output_sha256'):
             return 'needs_build'
+        if not (os.path.isfile(mp) and os.path.isfile(kept)):
+            return 'needs_install'
+        rec = json.loads(read(mp, 'r'))
+        if sha256(read(kept)) != man.get('output_sha256') or rec.get('sha256') != man.get('output_sha256'):
+            return 'needs_install'
     except (OSError, ValueError, KeyError):
         return 'needs_build'
     return 'ready'

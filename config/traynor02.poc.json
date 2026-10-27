@@ -597,6 +597,13 @@
             }
           }
         }
+      },
+      "launch": {
+        "revision": 1,
+        "mode": "standalone",
+        "changes": [
+          "Малый отряд: сильный гарнизон, два призрака, одна ядерная ракета"
+        ]
       }
     },
     "tactical_dev": {
@@ -826,6 +833,16 @@
             }
           }
         }
+      },
+      "launch": {
+        "revision": 2,
+        "mode": "standalone",
+        "changes": [
+          "Бронебойный удар по области, ядерный удар дальше и сильнее",
+          "Метки повстанцев",
+          "Новая победа"
+        ],
+        "campaign_step": true
       }
     },
     "tactical_next_dev": {
@@ -882,5 +899,8 @@
         }
       }
     }
+  },
+  "launcher": {
+    "current_revision": 2
   }
 }

@@ -48,10 +48,13 @@ python tools/build.py uninstall --mission ...   # exact rollback
 ### Liberation Day (TRaynor01) variants
 
 Double click **`GhostOps_Launcher.pyw`** (project root, no console window): the graphical launcher (CustomTkinter, Russian).
-Pick a mission on the left, a difficulty card below the mission card (*Подробнее* shows exact numbers), press *Начать миссию*:
+Pick a mission on the left: the screen shows ONE version, the one the Owner checks now (`launcher.current_revision` in the mission config), with its mode (*Свободный тест* /
+*Кампания*), the squad, up to three changes, the build state and the button *Запустить тест · версия N*; the earlier versions are in the closed section *Архив версий — N*
+(*Запустить архивную версию N*), difficulty is a separate chooser only where a version has real difficulties (Liberation Day); *Подробнее* shows the long text, the technical profile
+and the map path, *Скопировать сведения о тесте* copies mission / version / mode / profile / map / build and the launch that really ran last. Press the start button:
 the map is built, verified, installed and started through the same code as the CLI (stages *Проверка окружения -> Подготовка
-карты -> Проверка -> Установка -> Запуск*, no fake percentage). It remembers the last mission and profile (first start:
-Liberation Day, Лёгкий), refuses a second start while one is running, and never closes a running StarCraft II (it tells you
+карты -> Проверка -> Установка -> Запуск*, no fake percentage). It remembers the last mission (first start:
+Liberation Day; a remembered old version never brings you back into the archive), refuses a second start while one is running, and never closes a running StarCraft II (it tells you
 to close it yourself). Settings (game folder, diagnostic log) are behind *Настройки*. Settings file:
 `%APPDATA%\GhostOps\launcher_settings.json`; log: `%APPDATA%\GhostOps\launcher.log`; both are separate from the game configs.
 First start installs CustomTkinter 5.2.2 into `tmp\thirdparty\ctk` (`requirements-gui.txt`; Pillow and tkinter come with

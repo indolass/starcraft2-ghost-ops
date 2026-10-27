@@ -305,11 +305,212 @@ def tactical_lines(cfg):
     ]
 
 
+# ---------------------------------------------------------------------------------------------- versions, modes, archive (the launcher window)
+# One source of the version the Owner checks now: config `launcher.current_revision` of the mission (never the order of the cards, the highest number or a parsed name).
+# Every visible profile carries a `launch` block: revision number, mode ("free" = free test, "standalone" = a separate launch of a map that has no free-test twin, "campaign" = the
+# profile of the campaign window), optional difficulty, up to three short changes. The profiles of one revision are ONE version with several modes.
+MODE_TITLES = {'free': 'Свободный тест', 'standalone': 'Отдельный запуск', 'campaign': 'Кампания'}
+MODE_LINES = {
+    'free': 'Свободный тест — бесплатно, без переноса ресурсов',
+    'standalone': 'Отдельный запуск — самостоятельная карта, результат не зачисляется',
+    'campaign': 'Кампания — подготовка и оплаченная операция в окне «Кампания»',
+}
+LAUNCH_MODES = ('free', 'standalone')  # the modes that start a map straight from the launcher
+
+
+class LauncherDataError(ValueError):
+    pass
+
+
+def _revision_label(number, title=''):
+    return 'Версия %d' % number + ((' · ' + title) if title else '')
+
+
+def revisions_of(mission_id):
+    """[Revision] newest first (numbers are compared as numbers: 10 is newer than 9). Revision = {number, label, title, modes, variants, changes, note, campaign, presets, current}.
+    `variants[mode]` is a list of {preset, difficulty, changes}; hidden (service / development) profiles never appear."""
+    adapter = build.load_adapter(mission_id)
+    raw = build.load_json(adapter['config'])
+    presets = raw.get('presets') or {}
+    current = (raw.get('launcher') or {}).get('current_revision')
+    revs = {}
+    for name, p in presets.items():
+        if p.get('hidden'):
+            continue
+        lb = p.get('launch')
+        if not lb:
+            raise LauncherDataError('profile %s / %s has no `launch` data' % (mission_id, name))
+        r = revs.setdefault(int(lb['revision']), {'number': int(lb['revision']), 'title': lb.get('version_title', ''), 'variants': {}, 'changes': [], 'note': '', 'campaign': False, 'presets': []})
+        r['presets'].append(name)
+        r['variants'].setdefault(lb['mode'], []).append({'preset': name, 'difficulty': lb.get('difficulty'), 'changes': list(lb.get('changes') or [])})
+        for c in lb.get('changes') or []:
+            if c not in r['changes']:
+                r['changes'].append(c)
+        r['changes'] = r['changes'][:3]
+        if lb.get('note'):
+            r['note'] = lb['note']
+        if lb['mode'] == 'campaign' or lb.get('campaign_step'):
+            r['campaign'] = True
+    out = []
+    for n in sorted(revs, reverse=True):
+        r = revs[n]
+        r['label'] = _revision_label(n, r['title'])
+        r['modes'] = [m for m in LAUNCH_MODES if m in r['variants']] + (['campaign'] if r['campaign'] else [])
+        r['current'] = (n == current)
+        out.append(r)
+    return out
+
+
+def current_revision(mission_id):
+    """The revision number the Owner is asked to check, from the explicit setting of the mission (an error when it is missing or names no revision: no silent guess)."""
+    raw = build.load_json(build.load_adapter(mission_id)['config'])
+    n = (raw.get('launcher') or {}).get('current_revision')
+    if not isinstance(n, int) or n not in [r['number'] for r in revisions_of(mission_id)]:
+        raise LauncherDataError('mission %s: launcher.current_revision is missing or names no revision' % mission_id)
+    return n
+
+
+def revision_by_number(mission_id, number):
+    return next((r for r in revisions_of(mission_id) if r['number'] == number), None)
+
+
+def revision_of_preset(mission_id, preset):
+    """Revision number of a profile (visible or not: a hidden development profile has none)."""
+    raw = build.load_json(build.load_adapter(mission_id)['config'])
+    lb = ((raw.get('presets') or {}).get(preset) or {}).get('launch')
+    return int(lb['revision']) if lb else None
+
+
+def archive_of(mission_id):
+    cur = current_revision(mission_id)
+    return [r for r in revisions_of(mission_id) if r['number'] != cur]
+
+
+def preset_for(rev, mode, difficulty=None):
+    """The profile that a (revision, mode, difficulty) choice launches; None for the campaign mode (it opens the campaign window, no profile is started from here)."""
+    if mode == 'campaign':
+        return None
+    vs = (rev['variants'].get(mode)) or []
+    if not vs:
+        return None
+    if len(vs) == 1 or difficulty is None:
+        return vs[0]['preset']
+    return next((v['preset'] for v in vs if v['difficulty'] == difficulty), vs[0]['preset'])
+
+
+def difficulties_of(rev, mode):
+    vs = rev['variants'].get(mode) or []
+    return [v['difficulty'] for v in vs] if len(vs) > 1 and all(v['difficulty'] for v in vs) else []
+
+
+def composition_line(mission_id, preset):
+    """One short factual line of the squad from the RESOLVED configuration of the profile (the numbers live in the config); never raises."""
+    try:
+        cfg = build.resolve_config(build.load_adapter(mission_id), preset)[0]
+    except Exception:  # noqa: BLE001
+        return ''
+    squad = cfg.get('operatives', {}).get('squad') or []
+    ghosts = squad.count('Ghost')
+    hh, ee, zh, ty, tac = cfg.get('hanson') or {}, cfg.get('epidemic') or {}, cfg.get('zerohour') or {}, cfg.get('tychus') or {}, cfg.get('tactical') or {}
+    parts = []
+    if ty:
+        t = ty['totals']
+        return 'КСМ %d, морпехи %d, медики %d, призраки %d, мародёры %d; комплекты: бункеры %d, турели %d' % (t['scvs'], t['marines'], t['medics'], t['ghosts'], t['marauders'], ty['kits']['bunker'], ty['kits']['turret'])
+    if ghosts:
+        parts.append('призраки %d' % ghosts)
+    if zh and zh.get('order'):
+        o = zh['order']
+        parts.append('гарнизон: морпехи %d, бункеры %d, турели %d, КСМ +%d' % (o.get('marines', 0), o.get('bunkers', 0), o.get('turrets', 0), o.get('scvs', 0)))
+    if (tac.get('nuke') or {}).get('count'):
+        parts.append('ядерных ракет %d' % tac['nuke']['count'])
+    fsq = hh.get('free_squad') or {}
+    tk = hh.get('turret_kits') or {}
+    bk = hh.get('bunker_kits') or {}
+    if ee:
+        marines = fsq.get('marines', 0) + ee.get('stock_marines', 0)
+        parts.append('морпехи %d' % marines)
+        if (tk.get('order') or {}).get('turret_kits'):
+            parts.append('комплекты турелей %d' % tk['order']['turret_kits'])
+        if (bk.get('order') or {}).get('bunker_kits'):
+            parts.append('бункеров %d' % bk['order']['bunker_kits'])
+        parts.append('геллионы штатные +%d' % (ee.get('hellions') or {}).get('extra', 0))
+    elif hh:
+        if fsq.get('marines'):
+            parts.append('морпехи %d' % fsq['marines'])
+        if (tk.get('order') or {}).get('turret_kits'):
+            parts.append('комплекты турелей %d' % tk['order']['turret_kits'])
+        if (tk.get('order') or {}).get('scvs') or fsq.get('scvs'):
+            parts.append('КСМ +%d' % ((tk.get('order') or {}).get('scvs', 0) + fsq.get('scvs', 0)))
+    return ', '.join(parts)
+
+
+def open_operations(mission_id, path=None):
+    """Operations of the campaign that are not finished for this mission: [{id, profile, revision, state}]. Read only; a missing / unreadable campaign file gives []."""
+    try:
+        import campaign
+        p = path or campaign.campaign_path()
+        if not os.path.isfile(p):
+            return []
+        st = campaign.load(p)
+    except Exception:  # noqa: BLE001
+        return []
+    out = []
+    for oid, op in (st.get('operations') or {}).items():
+        if op.get('mission') == mission_id and op.get('state') not in ('accepted', 'abandoned'):
+            out.append({'id': oid, 'profile': op.get('profile'), 'revision': revision_of_preset(mission_id, op.get('profile')), 'state': op.get('state')})
+    return out
+
+
+BUILD_TEXT = {'ready': 'Сборка установлена', 'needs_build': 'Нужно собрать (карта будет собрана при запуске)', 'needs_install': 'Нужно обновить установку (при запуске карта будет скопирована в игру)',
+              'building': 'Подготовка…', 'unknown': ''}
+
+
+def build_state_text(state, last_error=None):
+    if last_error:
+        return 'Ошибка подготовки: %s' % last_error
+    return BUILD_TEXT.get(state, '')
+
+
+def test_info(mission_id, revision, mode, preset, difficulty=None, game_dir=None, no_voice=False, build_hash='', extra=''):
+    """The text that the Owner copies to say which build is being checked."""
+    rev = revision_by_number(mission_id, revision)
+    info = mission_info(mission_id) or {'title': mission_id}
+    path, there = installed_map_info(mission_id, preset, game_dir, no_voice) if preset else ('', False)
+    lines = ['Миссия: %s (%s)' % (info['title'], mission_id),
+             'Версия: %s%s' % (rev['label'] if rev else str(revision), ' (текущая для проверки)' if rev and rev['current'] else ' (архив)'),
+             'Режим: %s' % MODE_TITLES.get(mode, mode),
+             'Профиль: %s' % (preset or '— (кампания: профиль выбирает окно «Кампания»)')]
+    if difficulty:
+        lines.append('Сложность: %s' % difficulty)
+    if path:
+        lines.append('Карта: %s%s' % (path, '' if there else ' (ещё не установлена)'))
+    if build_hash:
+        lines.append('Сборка: %s' % build_hash)
+    if extra:
+        lines.append(extra)
+    return '\n'.join(lines)
+
+
+def last_launch_text(rec):
+    """Text of the launch that REALLY happened (the record is written when the start was done, not taken from the current choice of the window)."""
+    if not rec:
+        return 'Запусков из этого окна ещё не было.'
+    info = mission_info(rec.get('mission')) or {'title': rec.get('mission')}
+    lines = ['Последний запуск (%s)' % rec.get('time', ''), 'Миссия: %s (%s)' % (info['title'], rec.get('mission')),
+             'Версия: %s%s' % (rec.get('revision_label', ''), ' (архив)' if rec.get('archive') else ''), 'Режим: %s' % MODE_TITLES.get(rec.get('mode'), rec.get('mode')), 'Профиль: %s' % rec.get('preset')]
+    if rec.get('difficulty'):
+        lines.append('Сложность: %s' % rec['difficulty'])
+    lines.append('Карта: %s' % rec.get('map', ''))
+    if rec.get('build_hash'):
+        lines.append('Сборка: %s' % rec['build_hash'])
+    return '\n'.join(lines)
+
+
 # ---------------------------------------------------------------------------------------------- settings
 class Settings:
     def __init__(self, path=SETTINGS_PATH):
         self.path = path
-        self.data = {'game_dir': DEFAULT_GAME_DIR, 'mission': DEFAULT_MISSION, 'profiles': {}, 'no_voice': False}
+        self.data = {'game_dir': DEFAULT_GAME_DIR, 'mission': DEFAULT_MISSION, 'profiles': {}, 'no_voice': False, 'last_launch': None, 'last_error': None}
         self.load()
 
     def load(self):
@@ -347,6 +548,19 @@ class Settings:
             return None
         remembered = self.data.get('profiles', {}).get(mission_id)
         return remembered if remembered in names else default_profile(mission_id)
+
+    def record_launch(self, rec):
+        self.data['last_launch'] = rec
+        self.data['last_error'] = None
+        self.save()
+
+    def record_error(self, mission_id, preset, message):
+        self.data['last_error'] = {'mission': mission_id, 'preset': preset, 'message': message}
+        self.save()
+
+    def last_error_for(self, mission_id, preset):
+        e = self.data.get('last_error') or {}
+        return e.get('message') if (e.get('mission'), e.get('preset')) == (mission_id, preset) else None
 
     def remember(self, mission_id, preset):
         self.data['mission'] = mission_id
@@ -395,10 +609,19 @@ class BuildBackend:
         return build.prepare(self.args(mission, preset), progress)
 
     def status(self, mission, preset, game_dir=None):
-        """'ready' (the installed map is the current build: starting needs no build and no copy) or 'needs_build'; fast, reads only hashes."""
+        """'ready' (the installed map is the current build: starting needs no build and no copy), 'needs_install' (built and up to date, the installed copy is missing or different)
+        or 'needs_build'; fast, reads only hashes."""
         if game_dir:
             build.SC2_DIR = game_dir
-        return build.build_status(self.args(mission, preset))
+        return build.build_status_detail(self.args(mission, preset))
+
+    def build_hash(self, mission, preset):
+        """Short id of the current build of a profile (the hash of its inputs); '' when it is not known."""
+        try:
+            adapter, cfg, name = build.context(self.args(mission, preset))
+            return build.inputs_digest(adapter, cfg, name)[:12]
+        except Exception:  # noqa: BLE001
+            return ''
 
     def start(self, mission, preset):
         a = self.args(mission, preset)
@@ -410,7 +633,7 @@ class BuildBackend:
         return build.start_detached(command, owner=True)
 
 
-STATUS_TEXT = {'ready': 'Готова к запуску', 'needs_build': 'Нужна сборка (карта будет собрана при запуске)', 'building': 'Сборка…', 'unknown': ''}
+STATUS_TEXT = {'ready': 'Готова к запуску', 'needs_build': 'Нужна сборка (карта будет собрана при запуске)', 'needs_install': 'Нужно обновить установку', 'building': 'Сборка…', 'unknown': ''}
 
 
 def map_status_text(backend, mission, preset, game_dir=None):
@@ -446,8 +669,9 @@ class Launcher:
             self.busy = True
             return True
 
-    def run(self, mission_id, preset, on_stage=None):
-        """Synchronous pipeline (call begin() first). Always releases the slot; never raises."""
+    def run(self, mission_id, preset, on_stage=None, info=None):
+        """Synchronous pipeline (call begin() first). Always releases the slot; never raises. `info` = what the window said it was launching (version, mode, difficulty); the record of the last
+        launch is written only after the start really happened and holds the map and the build that were really started."""
         note = on_stage or (lambda stage: None)
         buf = io.StringIO()
         try:
@@ -477,17 +701,36 @@ class Launcher:
                                                'или включите в настройках «Без добавленной озвучки»: портреты, тексты и порядок сцен останутся.', 'error', buf.getvalue()))
                 if rc != 0:
                     why = [ln.strip() for ln in buf.getvalue().splitlines() if re.search(r'INVALID|FAIL|error|refus|MUST', ln, re.I) or ln.startswith('  tactical')]
-                    return self._finish(Result(False, 'Не удалось подготовить карту (код %s).%s' % (rc, (' ' + ' | '.join(why[:2])) if why else ''), 'error', buf.getvalue()))
+                    msg = 'Не удалось подготовить карту (код %s).%s' % (rc, (' ' + ' | '.join(why[:2])) if why else '')
+                    self._remember_error(mission_id, preset, msg)
+                    return self._finish(Result(False, msg, 'error', buf.getvalue()))
                 self.log('prepare (build + check + install, or nothing when up to date) took %.1f s' % (time.time() - t_begin))
                 note('start')
                 t_start = time.time()
                 rc = self.backend.start(mission_id, preset)
                 self.log('game process start took %.1f s' % (time.time() - t_start))
             if rc != 0:
+                self._remember_error(mission_id, preset, 'Не удалось запустить игру (код %s).' % rc)
                 return self._finish(Result(False, 'Не удалось запустить игру (код %s).' % rc, 'error', buf.getvalue()))
+            self._record_launch(mission_id, preset, info)
             return self._finish(Result(True, 'Игра запускается. Окно запускателя можно закрыть.', 'ok', buf.getvalue()))
         except Exception as e:  # noqa: BLE001 - the interface must never stay locked
             return self._finish(Result(False, 'Неожиданная ошибка: %s' % e, 'error', buf.getvalue()))
+
+    def _remember_error(self, mission_id, preset, message):
+        try:
+            self.settings.record_error(mission_id, preset, message)
+        except Exception:  # noqa: BLE001 - the interface must never stay locked by a settings problem
+            pass
+
+    def _record_launch(self, mission_id, preset, info):
+        try:
+            path, _ = installed_map_info(mission_id, preset, self.settings.game_dir, self.settings.no_voice)
+            h = self.backend.build_hash(mission_id, preset) if hasattr(self.backend, 'build_hash') else ''
+            rec = dict(info or {}, mission=mission_id, preset=preset, map=path, build_hash=h, time=time.strftime('%Y-%m-%d %H:%M:%S'))
+            self.settings.record_launch(rec)
+        except Exception:  # noqa: BLE001
+            pass
 
     def _finish(self, result):
         if result.output:
@@ -497,13 +740,13 @@ class Launcher:
             self.busy = False
         return result
 
-    def start_async(self, mission_id, preset, on_stage, on_done):
+    def start_async(self, mission_id, preset, on_stage, on_done, info=None):
         """Runs in a worker thread; callbacks are called from that thread (the GUI forwards them through a queue)."""
         if not self.begin():
             return False
 
         def work():
-            on_done(self.run(mission_id, preset, on_stage))
+            on_done(self.run(mission_id, preset, on_stage, info))
         threading.Thread(target=work, daemon=True).start()
         return True
 
@@ -518,6 +761,14 @@ def queue_summary(st=None):
     except Exception:  # noqa: BLE001
         return None
     jobs = st.get('jobs') or []
+    def recent(j):  # a finished / cancelled / failed test is shown for half an hour after it ended (an old one is not kept on the screen of the Owner; the log of the queue keeps it)
+        if j['state'] in ('waiting', 'preparing', 'running', 'interrupted'):
+            return True
+        try:
+            return time.time() - time.mktime(time.strptime(j['updated'], '%Y-%m-%d %H:%M:%S')) < 1800
+        except (KeyError, ValueError, TypeError):
+            return True
+    jobs = [j for j in jobs if recent(j)]
     if not jobs:
         return None
     waiting = [j for j in jobs if j['state'] in ('waiting', 'preparing', 'running', 'interrupted')]

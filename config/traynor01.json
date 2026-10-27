@@ -74,10 +74,30 @@
       }
     ],
     "talk": [
-      {"id": "GhostOpsTalkRaynor1", "facial": "TRaynor01Raynor00003", "seconds": 3.1, "group": "raynor"},
-      {"id": "GhostOpsTalkRaynor2", "facial": "TRaynor01Raynor00011", "seconds": 3.1, "group": "raynor"},
-      {"id": "GhostOpsTalkRaynor3", "facial": "TRaynor01Raynor00043", "seconds": 2.9, "group": "raynor"},
-      {"id": "GhostOpsTalkRaynor4", "facial": "TRaynor01Raynor00044", "seconds": 2.8, "group": "raynor"}
+      {
+        "id": "GhostOpsTalkRaynor1",
+        "facial": "TRaynor01Raynor00003",
+        "seconds": 3.1,
+        "group": "raynor"
+      },
+      {
+        "id": "GhostOpsTalkRaynor2",
+        "facial": "TRaynor01Raynor00011",
+        "seconds": 3.1,
+        "group": "raynor"
+      },
+      {
+        "id": "GhostOpsTalkRaynor3",
+        "facial": "TRaynor01Raynor00043",
+        "seconds": 2.9,
+        "group": "raynor"
+      },
+      {
+        "id": "GhostOpsTalkRaynor4",
+        "facial": "TRaynor01Raynor00044",
+        "seconds": 2.8,
+        "group": "raynor"
+      }
     ]
   },
   "scene": {
@@ -125,17 +145,50 @@
   "panel": {
     "enabled": true,
     "texts": {
-      "Name0": {"ru": "Призрак 1", "en": "Ghost 1"},
-      "Name1": {"ru": "Призрак 2", "en": "Ghost 2"},
-      "Dead": {"ru": "погиб", "en": "dead"},
-      "Infinite": {"ru": "Маскировка: ∞", "en": "Cloak: infinite"},
-      "Cloak": {"ru": "маскировка", "en": "cloak"},
-      "Seconds": {"ru": "с", "en": "s"},
-      "Regen": {"ru": "Восстановление", "en": "Recovery"},
-      "Hold": {"ru": "Наведение: расход на паузе", "en": "Aiming - cloak drain paused"},
-      "Ready": {"ru": "готов", "en": "ready"},
-      "Grenades": {"ru": "Гранаты", "en": "Grenades"},
-      "Footer": {"ru": "Время — игровые секунды", "en": "Time in game seconds"}
+      "Name0": {
+        "ru": "Призрак 1",
+        "en": "Ghost 1"
+      },
+      "Name1": {
+        "ru": "Призрак 2",
+        "en": "Ghost 2"
+      },
+      "Dead": {
+        "ru": "погиб",
+        "en": "dead"
+      },
+      "Infinite": {
+        "ru": "Маскировка: ∞",
+        "en": "Cloak: infinite"
+      },
+      "Cloak": {
+        "ru": "маскировка",
+        "en": "cloak"
+      },
+      "Seconds": {
+        "ru": "с",
+        "en": "s"
+      },
+      "Regen": {
+        "ru": "Восстановление",
+        "en": "Recovery"
+      },
+      "Hold": {
+        "ru": "Наведение: расход на паузе",
+        "en": "Aiming - cloak drain paused"
+      },
+      "Ready": {
+        "ru": "готов",
+        "en": "ready"
+      },
+      "Grenades": {
+        "ru": "Гранаты",
+        "en": "Grenades"
+      },
+      "Footer": {
+        "ru": "Время — игровые секунды",
+        "en": "Time in game seconds"
+      }
     }
   },
   "default_preset": "easy",
@@ -156,7 +209,15 @@
         "Два призрака по 100 здоровья",
         "Snipe без дополнительной перезарядки",
         "Энергия 100, +20 в секунду вне маскировки, маскировка −10 в секунду"
-      ]
+      ],
+      "launch": {
+        "revision": 1,
+        "mode": "standalone",
+        "difficulty": "Лёгкий",
+        "changes": [
+          "Два призрака, быстрые точные выстрелы"
+        ]
+      }
     },
     "hard": {
       "label": "Сложный",
@@ -175,7 +236,15 @@
         "Snipe: перезарядка 5 секунд у каждого призрака отдельно",
         "Остальное как в лёгком варианте"
       ],
-      "experimental": false
+      "experimental": false,
+      "launch": {
+        "revision": 1,
+        "mode": "standalone",
+        "difficulty": "Сложный",
+        "changes": [
+          "Два призрака, перезарядка точного выстрела 5 с"
+        ]
+      }
     },
     "easy_dev": {
       "label": "Лёгкий (отладка)",
@@ -219,10 +288,24 @@
         },
         "panel": {
           "texts": {
-            "Name0": {"ru": "Призрак", "en": "Ghost"}
+            "Name0": {
+              "ru": "Призрак",
+              "en": "Ghost"
+            }
           }
         }
+      },
+      "launch": {
+        "revision": 1,
+        "mode": "standalone",
+        "difficulty": "Экстремальный",
+        "changes": [
+          "Один призрак (45 здоровья), перезарядка выстрела 8 с, без расхода энергии"
+        ]
       }
     }
+  },
+  "launcher": {
+    "current_revision": 1
   }
 }
