@@ -103,6 +103,10 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
     int lv_c;
     string lv_t;
 
+    if (GhostOps_FoldTest_Cmd(lp_cmd, lp_a, lp_b)) {
+        return true;
+    }
+
     if (lp_cmd == "epath") {
         // ground path cost from the Command Center to the area centers and to a grid of passable points (the place of the gas truck is chosen from this)
         lv_t = "EPATH areas";

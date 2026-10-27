@@ -347,6 +347,10 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
     int lv_n;
     int lv_c;
 
+    if (GhostOps_FoldTest_Cmd(lp_cmd, lp_a, lp_b)) {
+        return true;
+    }
+
     if (lp_cmd == "nship") {
         // the convoy reaches the colony ship: every unit of the colonists' player is put 4 cells from the ship region and ordered to move into it (the original then loads, counts and removes them)
         lv_g = UnitGroup(null, 4, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32))), 0);

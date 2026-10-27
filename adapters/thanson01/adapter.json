@@ -8,6 +8,7 @@
   "adapter_source": "adapters/thanson01/adapter.galaxy",
   "config": "config/thanson01.json",
   "modules": [
+    "core/GhostOpsFold.galaxy",
     "core/GhostOpsHanson.galaxy"
   ],
   "generators": [

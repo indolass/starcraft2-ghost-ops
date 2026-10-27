@@ -8,6 +8,7 @@
   "adapter_source": "adapters/traynor03/adapter.galaxy",
   "config": "config/traynor03.json",
   "modules": [
+    "core/GhostOpsFold.galaxy",
     "core/GhostOpsTactical.galaxy",
     "core/GhostOpsZeroHour.galaxy"
   ],

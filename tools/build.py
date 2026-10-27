@@ -206,10 +206,14 @@ def validate_config(cfg):
         errs += validate_audio(cfg['audio'])
     if cfg.get('scene') is not None:
         errs += validate_scene(cfg)
+    if cfg.get('fold') is not None:
+        errs += validate_fold(cfg)
     if cfg.get('hanson') is not None:
         errs += validate_hanson(cfg)
     if cfg.get('epidemic') is not None:
         errs += validate_epidemic(cfg)
+    if cfg.get('tychus') is not None:
+        errs += validate_tychus(cfg)
     if cfg.get('ce0') is not None:
         errs += validate_ce0(cfg)
     if cfg.get('campaign') is not None:
@@ -1513,12 +1517,19 @@ def catalog_fragments(cfg):
     if cfg.get('epidemic'):
         for name, frag in epidemic_fragments(cfg['epidemic']).items():
             frags[name] = frags.get(name, '') + frag
+    if cfg.get('tychus'):
+        for name, frag in tychus_fragments(cfg['tychus']).items():
+            frags[name] = frags.get(name, '') + frag
     if cfg.get('detector_analysis') and cfg['detector_analysis'].get('enabled'):
         for name, frag in detector_analysis_fragments(cfg['detector_analysis']).items():
+            frags[name] = frags.get(name, '') + frag
+    if (cfg.get('fold') or {}).get('enabled'):
+        for name, frag in fold_fragments(cfg['fold']).items():
             frags[name] = frags.get(name, '') + frag
     if 'UnitData.xml' in frags:
         frags['UnitData.xml'] = merge_same_id(frags['UnitData.xml'], 'CUnit', 'Ghost')
         frags['UnitData.xml'] = merge_same_id(frags['UnitData.xml'], 'CUnit', 'MissileTurret')
+        frags['UnitData.xml'] = merge_same_id(frags['UnitData.xml'], 'CUnit', 'Bunker')
     if 'AbilData.xml' in frags:
         frags['AbilData.xml'] = merge_same_id(frags['AbilData.xml'], 'CAbilBuild', 'TerranBuild')
     if 'ActorData.xml' in frags:
@@ -1909,6 +1920,235 @@ def epidemic_fragments(e):
     return frags
 
 
+# ---- TTychus01 "Grab and run" (config key "tychus"; core/GhostOpsTychus.galaxy) ----------------------------------------------------------
+TY_TEXT_PREFIX = 'Param/Value/GhostOpsTy_'
+TY_TEXT_KEYS = ('KitsTitle', 'KitsText', 'KitsBunkers', 'KitsTurrets', 'KitsOut', 'DecoyGone', 'DecoyNoPath', 'ExtractTag', 'ExtractStart', 'ExtractHeld', 'ExtractBusy', 'ExtractLost',
+                'ExtractCancelled', 'CarrierTag', 'Captured', 'CarrierDied', 'OffWave', 'ShipCalled', 'ShipLanded', 'Leaving', 'Evacuated', 'EvacNoCarrier', 'DefeatShip', 'DefeatTimeout',
+                'DefeatNoScv', 'DefeatZerg', 'ZergTaking', 'TrainMark', 'ObjGrabTitle', 'ObjGrabText', 'ObjEscapeTitle', 'ObjEscapeText', 'N_swann', 'N_horner', 'N_tychus',
+                'L_TrainWarn', 'L_TrainDecoy', 'L_Guards', 'L_Site', 'L_Captured', 'L_Escape', 'L_Landed')
+TY_BUTTON_KEYS = ('PheroName', 'PheroTip', 'PheroUnit', 'ExtractName', 'ExtractTip', 'EvacName', 'EvacTip', 'CarrierName', 'CarrierDesc')
+TY_LINE_KEYS = tuple(k for k in TY_TEXT_KEYS if k.startswith('L_'))
+
+
+def validate_tychus(cfg):
+    """TTychus01 "Grab and run" free test (config key "tychus"). Every number is an experimental first value, never an Owner-approved one."""
+    t = cfg['tychus']
+    errs = []
+    if not isinstance(t, dict):
+        return ['tychus must be an object']
+
+    def num(d, k, lo, hi, where):
+        v = d.get(k) if isinstance(d, dict) else None
+        if not (_num(v) and lo <= v <= hi):
+            errs.append('tychus.%s.%s must be a number %g..%g' % (where, k, lo, hi))
+
+    def pt(d, k, where):
+        v = d.get(k) if isinstance(d, dict) else None
+        if not (isinstance(v, list) and len(v) == 2 and all(_num(x) and 0 <= x <= 400 for x in v)):
+            errs.append('tychus.%s.%s must be [x, y]' % (where, k))
+
+    def units(lst, where, mx):
+        if not (isinstance(lst, list) and 1 <= len(lst) <= mx and all(isinstance(u, dict) and re.fullmatch(r'[A-Za-z0-9]{3,40}', str(u.get('type', ''))) and isinstance(u.get('count'), int)
+                                                                       and not isinstance(u.get('count'), bool) and 0 <= u['count'] <= 40 for u in lst)):
+            errs.append('tychus.%s must be 1..%d entries {"type": id, "count": 0..40}' % (where, mx))
+
+    for k in ('debug_log', 'allow_refinery'):
+        if not isinstance(t.get(k), bool):
+            errs.append('tychus.%s must be boolean' % k)
+    for k in ('totals', 'kits', 'decoy', 'guardians', 'artifact', 'evac', 'offensive', 'landing', 'scene'):
+        if not isinstance(t.get(k), dict):
+            errs.append('tychus.%s must be an object' % k)
+    if errs:
+        return errs
+    for k, lo, hi in (('scvs', 1, 40), ('marines', 0, 40), ('medics', 0, 12), ('marauders', 0, 8), ('ghosts', 0, 6)):
+        if not (isinstance(t['totals'].get(k), int) and not isinstance(t['totals'].get(k), bool) and lo <= t['totals'][k] <= hi):
+            errs.append('tychus.totals.%s must be an integer %d..%d' % (k, lo, hi))
+    for k in ('turret', 'bunker'):
+        if not (isinstance(t['kits'].get(k), int) and not isinstance(t['kits'].get(k), bool) and 0 <= t['kits'][k] <= 30):
+            errs.append('tychus.kits.%s must be an integer 0..30' % k)
+    d = t['decoy']
+    for k, lo, hi in (('range', 3, 40), ('radius', 2, 20), ('charges', 1, 10), ('recharge', 1, 300), ('life', 5, 300), ('rage', 0, 30), ('health', 50, 5000), ('cast_intro', 0, 3),
+                      ('next_range', 2, 60), ('rage_range', 2, 40)):
+        num(d, k, lo, hi, 'decoy')
+    pt(d, 'reach', 'decoy')
+    if not (isinstance(d.get('hotkey'), str) and len(d['hotkey']) == 1 and d['hotkey'].isupper() and d['hotkey'].isalpha()):
+        errs.append('tychus.decoy.hotkey must be one capital letter')
+    if not all(isinstance(d.get(k), int) and not isinstance(d.get(k), bool) for k in ('row', 'column')) or not (0 <= d.get('row', -1) <= 2 and 0 <= d.get('column', -1) <= 4):
+        errs.append('tychus.decoy.row / column must be a card cell (row 0..2, column 0..4)')
+    for k in ('immune_to_player', 'prefer_zerg'):
+        if not isinstance(t['guardians'].get(k), bool):
+            errs.append('tychus.guardians.%s must be boolean' % k)
+    a = t['artifact']
+    for k, lo, hi in (('extract_seconds', 1, 60), ('pickup_seconds', 0.5, 60), ('reach', 3, 30), ('range', 2, 15), ('take_seconds', 1, 120)):
+        num(a, k, lo, hi, 'artifact')
+    if not (isinstance(a.get('hotkey'), str) and len(a['hotkey']) == 1 and a['hotkey'].isupper() and a['hotkey'].isalpha()):
+        errs.append('tychus.artifact.hotkey must be one capital letter')
+    if not all(isinstance(a.get(k), int) and not isinstance(a.get(k), bool) for k in ('row', 'column')):
+        errs.append('tychus.artifact.row / column must be a card cell')
+    e = t['evac']
+    for k in ('site', 'from', 'exit'):
+        pt(e, k, 'evac')
+    for k, lo, hi in (('window', 10, 600), ('arrive', 1, 300), ('flight_max', 3, 120)):
+        num(e, k, lo, hi, 'evac')
+    if not (isinstance(e.get('hotkey'), str) and len(e['hotkey']) == 1 and e['hotkey'].isupper() and e['hotkey'].isalpha()):
+        errs.append('tychus.evac.hotkey must be one capital letter')
+    o = t['offensive']
+    pt(o, 'spawn', 'offensive')
+    num(o, 'waves', 0, 20, 'offensive')
+    num(o, 'gap', 1, 300, 'offensive')
+    units(o.get('units'), 'offensive.units', 4)
+    l = t['landing']
+    pt(l, 'site', 'landing')
+    num(l, 'hold', 5, 300, 'landing')
+    units(l.get('units'), 'landing.units', 3)
+    num(t['scene'], 'approach_radius', 10, 200, 'scene')
+    texts = t.get('texts')
+    want = set(TY_TEXT_KEYS) | set(TY_BUTTON_KEYS)
+    if not isinstance(texts, dict) or set(texts) != want:
+        errs.append('tychus.texts must have exactly the keys %s' % (sorted(want),))
+    else:
+        for k, v in texts.items():
+            if not isinstance(v, dict) or not all(isinstance(v.get(x), str) and v[x] and chr(10) not in v[x] for x in ('ru', 'en')):
+                errs.append('tychus.texts.%s needs non-empty single-line ru and en texts' % k)
+    if 'salvo' in t:
+        sv = t['salvo']
+        errs += validate_salvo(sv, 'tychus.salvo') if isinstance(sv, dict) else ['tychus.salvo must be an object']
+        tx = sv.get('texts') if isinstance(sv, dict) else None
+        if not (isinstance(tx, dict) and set(tx) == {'Name', 'Tip'} and all(isinstance(v, dict) and all(isinstance(v.get(x), str) and v[x] for x in ('ru', 'en')) for v in tx.values())):
+            errs.append('tychus.salvo.texts must be {Name, Tip} with ru and en texts')
+    if not cfg.get('ghost_tuning'):
+        errs.append('tychus needs ghost_tuning (the Ghost override of this mission)')
+    return errs
+
+
+def gen_tychus(cfg):
+    """GhostOps_ApplyTychusConfig(): constants of the TTychus01 module."""
+    t = cfg.get('tychus')
+    if not t:
+        return chr(10).join(['// no TTychus01 module settings in this build (stub)', 'void GhostOps_ApplyTychusConfig () {', '    go_tyOn = false;', '}', ''])
+    b = lambda v: 'true' if v else 'false'  # noqa: E731
+    d, a, e, o, l = t['decoy'], t['artifact'], t['evac'], t['offensive'], t['landing']
+    tot = t['totals']
+    lines = ['// Generated TTychus01 configuration', 'void GhostOps_ApplyTychusConfig () {', '    go_tyOn = true;', '    go_tyDebug = %s;' % b(t['debug_log']),
+             '    go_tyScvs = %d;' % tot['scvs'], '    go_tyMarines = %d;' % tot['marines'], '    go_tyMedics = %d;' % tot['medics'], '    go_tyMarauders = %d;' % tot['marauders'],
+             '    go_tyKitT = %d;' % t['kits']['turret'], '    go_tyKitB = %d;' % t['kits']['bunker'], '    go_tyAllowRefinery = %s;' % b(t['allow_refinery']),
+             '    go_tyDcRadius = %.2f;' % d['radius'], '    go_tyDcRage = %.2f;' % d['rage'], '    go_tyDcLife = %.2f;' % d['life'], '    go_tyDcHealth = %.1f;' % d['health'],
+             '    go_tyDcNext = %.2f;' % d['next_range'], '    go_tyDcRageRange = %.2f;' % d['rage_range'], '    go_tyDcReachX = %.2f;' % d['reach'][0], '    go_tyDcReachY = %.2f;' % d['reach'][1],
+             '    go_tyGuardImmune = %s;' % b(t['guardians']['immune_to_player']), '    go_tyGuardPrefer = %s;' % b(t['guardians']['prefer_zerg']),
+             '    go_tyExtractSec = %.2f;' % a['extract_seconds'], '    go_tyPickupSec = %.2f;' % a['pickup_seconds'], '    go_tyExtractReach = %.2f;' % a['reach'], '    go_tyTakeSec = %.2f;' % a['take_seconds'],
+             '    go_tyEvacWindow = %.1f;' % e['window'], '    go_tyEvacArrive = %.1f;' % e['arrive'], '    go_tyFlightMax = %.1f;' % e['flight_max'],
+             '    go_tyEvacSite = Point(%.3f, %.3f);' % tuple(e['site']), '    go_tyEvacFrom = Point(%.3f, %.3f);' % tuple(e['from']), '    go_tyEvacExit = Point(%.3f, %.3f);' % tuple(e['exit']),
+             '    go_tyOffSpawn = Point(%.3f, %.3f);' % tuple(o['spawn']), '    go_tyOffWaves = %d;' % o['waves'], '    go_tyOffGap = %.1f;' % o['gap'],
+             '    go_tyLandSite = Point(%.3f, %.3f);' % tuple(l['site']), '    go_tyLandHold = %.1f;' % l['hold'], '    go_tySceneR = %.1f;' % t['scene']['approach_radius']]
+    for i, u in enumerate(o['units']):
+        lines += ['    go_tyOffType[%d] = "%s";' % (i, u['type']), '    go_tyOffCount[%d] = %d;' % (i, u['count'])]
+    for i, u in enumerate(l['units']):
+        lines += ['    go_tyLandType[%d] = "%s";' % (i, u['type']), '    go_tyLandCount[%d] = %d;' % (i, u['count'])]
+    lines += ['}', '']
+    return chr(10).join(lines)
+
+
+def ty_text(v, t, lang):
+    """A text of the module with the numbers of the configuration put in."""
+    g = lambda x: '%g' % x  # noqa: E731
+    d, a, e = t['decoy'], t['artifact'], t['evac']
+    rep = {'{range}': g(d['range']), '{radius}': g(d['radius']), '{health}': g(d['health']), '{life}': g(d['life']), '{rage}': g(d['rage']), '{charges}': g(d['charges']), '{recharge}': g(d['recharge']),
+           '{seconds}': g(a['extract_seconds']), '{window}': g(e['window']), '{hotkey_d}': d['hotkey'], '{hotkey_x}': a['hotkey'], '{hotkey_e}': e['hotkey']}
+    for k, x in rep.items():
+        v = v.replace(k, x)
+    return v
+
+
+def tychus_fragments(t):
+    """Catalog data of the free test (map local): the kits of Bunkers / Missile Turrets (no second payment, only the Command Center is needed), the ground salvo of the turrets, the pheromone
+    decoy of the Marauder (ability with charges, shell, capsule unit with a life bar and a circle, pointer), the extraction of the artifact (ability of the SCV) and the evacuation (ability of the
+    landed Hercules), the buff of the carrier."""
+    g = lambda v: '%g' % v  # noqa: E731
+    nl = chr(10)
+    bs = chr(92)
+    d, a, e = t['decoy'], t['artifact'], t['evac']
+    frags = {
+        'UnitData.xml': nl.join([
+            '    <CUnit id="MissileTurret">', '        <CostResource index="Minerals" value="0"/>', '    </CUnit>',
+            '    <CUnit id="Bunker">', '        <CostResource index="Minerals" value="0"/>', '    </CUnit>',
+            '    <CUnit id="GhostOpsPheromone" parent="ExplodingBarrelLarge">', '        <LifeStart value="%s"/>' % g(d['health']), '        <LifeMax value="%s"/>' % g(d['health']), '        <LifeArmor value="0"/>',
+            '        <FlagArray index="Destructible" value="0"/>', '        <BehaviorArray index="0" removed="1"/>',
+            '        <Collide index="Ground" value="0"/>', '        <Collide index="Structure" value="0"/>', '        <Collide index="Burrow" value="0"/>', '        <Footprint value=""/>',
+            '        <Radius value="0.5"/>', '        <InnerRadius value="0.4"/>', '    </CUnit>',
+            '    <CUnit id="Marauder">', '        <AbilArray Link="GhostOpsPheromone"/>', '        <CardLayouts index="0">',
+            '            <LayoutButtons Face="GhostOpsPheromone" Type="AbilCmd" AbilCmd="GhostOpsPheromone,Execute" Row="%d" Column="%d"/>' % (d['row'], d['column']), '        </CardLayouts>', '    </CUnit>',
+            '    <CUnit id="SCV">', '        <AbilArray Link="GhostOpsExtract"/>', '        <CardLayouts index="0">',
+            '            <LayoutButtons Face="GhostOpsExtract" Type="AbilCmd" AbilCmd="GhostOpsExtract,Execute" Row="%d" Column="%d"/>' % (a['row'], a['column']), '        </CardLayouts>', '    </CUnit>',
+            '    <CUnit id="Hercules">', '        <AbilArray Link="GhostOpsEvacuate"/>', '        <CardLayouts index="0">',
+            '            <LayoutButtons Face="GhostOpsEvacuate" Type="AbilCmd" AbilCmd="GhostOpsEvacuate,Execute" Row="1" Column="1"/>', '        </CardLayouts>', '    </CUnit>', '']),
+        'AbilData.xml': nl.join([
+            '    <CAbilBuild id="TerranBuild">', '        <InfoArray index="Build6">', '            <Button Requirements="HaveCommandCenter"/>', '        </InfoArray>',
+            '        <InfoArray index="Build7">', '            <Button Requirements="HaveCommandCenter"/>', '        </InfoArray>', '    </CAbilBuild>',
+            '    <CAbilEffectTarget id="GhostOpsPheromone">', '        <EditorCategories value="Race:Terran,AbilityorEffectType:Units"/>', '        <Effect index="0" value="GhostOpsPheroLaunch"/>',
+            '        <Range value="%s"/>' % g(d['range']), '        <Arc value="360"/>', '        <CastIntroTime value="%s"/>' % g(d['cast_intro']), '        <Flags index="BestUnit" value="1"/>',
+            '        <CursorEffect value="GhostOpsPheroAim"/>',
+            # the charges of the stock abilities: a Charge with the counts and a Cooldown with the SAME link (its TimeUse is the time that restores one charge), both per unit
+            '        <Cost index="0">', '            <Charge>', '                <CountMax value="%d"/>' % d['charges'], '                <CountStart value="%d"/>' % d['charges'], '                <CountUse value="1"/>',
+            '                <Link value="Abil/GhostOpsPheromone"/>', '                <Location value="Unit"/>', '            </Charge>', '            <Cooldown>', '                <Link value="Abil/GhostOpsPheromone"/>',
+            '                <Location value="Unit"/>', '                <TimeUse value="%s"/>' % g(d['recharge']), '            </Cooldown>', '        </Cost>',
+            '        <CmdButtonArray index="Execute" DefaultButtonFace="GhostOpsPheromone"/>', '    </CAbilEffectTarget>',
+            '    <CAbilEffectTarget id="GhostOpsExtract">', '        <EditorCategories value="Race:Terran,AbilityorEffectType:Units"/>', '        <Effect index="0" value="GhostOpsExtractMark"/>', '        <Range value="%s"/>' % g(a['range']),
+            '        <CastIntroTime value="0"/>', '        <TargetFilters value="Neutral;Self,Player,Ally,Enemy,Missile,Dead,Hidden"/>', '        <CmdButtonArray index="Execute" DefaultButtonFace="GhostOpsExtract"/>', '    </CAbilEffectTarget>',
+            '    <CAbilEffectInstant id="GhostOpsEvacuate">', '        <EditorCategories value="Race:Terran,AbilityorEffectType:Units"/>', '        <Flags index="Transient" value="1"/>',
+            '        <CmdButtonArray index="Execute" DefaultButtonFace="GhostOpsEvacuate"/>', '    </CAbilEffectInstant>', '']),
+        'ButtonData.xml': nl.join([
+            '    <CButton id="GhostOpsPheromone">', '        <Icon value="Assets' + bs + 'Textures' + bs + 'btn-ability-terran-punishergrenade-color.dds"/>', '        <EditorCategories value="Race:Terran"/>', '    </CButton>',
+            '    <CButton id="GhostOpsExtract">', '        <Icon value="Assets' + bs + 'Textures' + bs + 'btn-ability-terran-salvage.dds"/>', '        <EditorCategories value="Race:Terran"/>', '    </CButton>',
+            '    <CButton id="GhostOpsEvacuate">', '        <Icon value="Assets' + bs + 'Textures' + bs + 'btn-ability-terran-calldownextrasupplies-color.dds"/>', '        <EditorCategories value="Race:Terran"/>', '    </CButton>', '']),
+        'EffectData.xml': nl.join([
+            '    <CEffectLaunchMissile id="GhostOpsPheroLaunch">', '        <EditorCategories value="Race:Terran"/>', '        <ImpactEffect value="GhostOpsPheroSpawn"/>', '        <ImpactLocation Value="TargetPoint"/>',
+            '        <AmmoUnit value="PunisherGrenadesLMWeapon"/>', '    </CEffectLaunchMissile>',
+            '    <CEffectCreateUnit id="GhostOpsPheroSpawn">', '        <EditorCategories value="Race:Terran"/>', '        <SpawnOwner Value="Caster"/>', '        <SpawnUnit value="GhostOpsPheromone"/>',
+            '        <SpawnRange value="0"/>', '        <WhichLocation Value="TargetPoint"/>', '    </CEffectCreateUnit>',
+            # only the pointer reads this effect (CursorEffect): its radius is the area of attraction; it is never executed
+            '    <CEffectEnumArea id="GhostOpsPheroAim">', '        <EditorCategories value="Race:Terran"/>', '        <AreaArray Radius="%s"/>' % g(d['radius']),
+            '        <SearchFilters value="Ground;Player,Ally,Neutral,Air,Missile,Stasis,Dead,Hidden,Invulnerable"/>', '    </CEffectEnumArea>',
+            '    <CEffectEnumArea id="GhostOpsExtractMark">', '        <EditorCategories value="Race:Terran"/>', '        <AreaArray Radius="0.5"/>', '        <SearchFilters value="Ground;Missile,Dead,Hidden"/>', '    </CEffectEnumArea>', '']),
+        'BehaviorData.xml': nl.join([
+            '    <CBehaviorBuff id="GhostOpsPheroShow">', '        <InfoFlags index="Hidden" value="1"/>', '    </CBehaviorBuff>',
+            '    <CBehaviorBuff id="GhostOpsCarrier">', '        <InfoIcon value="Assets' + bs + 'Textures' + bs + 'btn-ability-terran-salvage.dds"/>', '    </CBehaviorBuff>', '']),
+        'ModelData.xml': nl.join(['    <CModel id="GhostOpsPheromone" parent="GasCanister">', '        <Model value="Assets' + bs + 'Buildings' + bs + 'Resources' + bs + 'GasCanister' + bs + 'GasCanister.m3"/>', '    </CModel>', '']),
+        'ActorData.xml': nl.join([
+            '    <CActorUnit id="GhostOpsPheromone" parent="GenericUnitStandardNoAutoSoundLinks" unitName="GhostOpsPheromone">', '        <On Terms="ActorCreation" Send="Create GasCanisterGlow"/>', '    </CActorUnit>',
+            '    <CActorRange id="GhostOpsPheroRadius">', '        <Range value="%s"/>' % g(d['radius']), '        <On Terms="Behavior.GhostOpsPheroShow.On" Send="Create"/>',
+            '        <On Terms="Behavior.GhostOpsPheroShow.Off" Send="Destroy"/>', '    </CActorRange>',
+            '    <CActorModel id="GhostOpsPheroCursorModel" parent="TerranCursorModel" abil="GhostOpsPheromone"/>', '    <CActorSplat id="GhostOpsPheroCursorSplat" parent="TerranCursorSplat" abil="GhostOpsPheromone"/>',
+            '    <CActorRange id="GhostOpsPheroRange" parent="RangeAbil" abil="GhostOpsPheromone"/>', '']),
+    }
+    if t.get('salvo'):
+        for name, frag in salvo_fragments(t['salvo'], with_cost=False).items():
+            frags[name] = frags.get(name, '') + nl + frag
+    return frags
+
+
+def tychus_text_entries(t):
+    out = {}
+    for loc, lang in (('ruRU', 'ru'), ('enUS', 'en')):
+        rows = []
+        for k in TY_TEXT_KEYS:
+            v = ty_text(t['texts'][k][lang], t, lang)
+            if k in TY_LINE_KEYS:
+                v = EXPLAIN_STYLE[0] + v + EXPLAIN_STYLE[1]
+            rows.append((TY_TEXT_PREFIX + k, v))
+        x = lambda k: ty_text(t['texts'][k][lang], t, lang)  # noqa: E731
+        rows += [('Button/Name/GhostOpsPheromone', x('PheroName')), ('Button/Tooltip/GhostOpsPheromone', x('PheroTip')), ('Button/Hotkey/GhostOpsPheromone', t['decoy']['hotkey']),
+                 ('Unit/Name/GhostOpsPheromone', x('PheroUnit')),
+                 ('Button/Name/GhostOpsExtract', x('ExtractName')), ('Button/Tooltip/GhostOpsExtract', x('ExtractTip')), ('Button/Hotkey/GhostOpsExtract', t['artifact']['hotkey']),
+                 ('Button/Name/GhostOpsEvacuate', x('EvacName')), ('Button/Tooltip/GhostOpsEvacuate', x('EvacTip')), ('Button/Hotkey/GhostOpsEvacuate', t['evac']['hotkey']),
+                 ('Behavior/Name/GhostOpsCarrier', x('CarrierName')), ('Behavior/Description/GhostOpsCarrier', x('CarrierDesc'))]
+        if t.get('salvo'):
+            sv = t['salvo']
+            rows += [('Button/Name/GhostOpsTurretSalvo', salvo_text(sv['texts']['Name'][lang], sv)), ('Button/Tooltip/GhostOpsTurretSalvo', salvo_text(sv['texts']['Tip'][lang], sv)),
+                     ('Button/Hotkey/GhostOpsTurretSalvo', sv.get('hotkey', 'G'))]
+        out[loc] = rows
+    return out
+
+
 def gen_zerohour(cfg):
     """GhostOps_ApplyZeroHourConfig(): constants of the TRaynor03 module."""
     if not cfg.get('zerohour'):  # the original-like trace profile: the module stays off
@@ -2095,10 +2335,107 @@ def profile_texts(cfg):
     return {'ruRU': p['message'], 'enUS': p.get('message_en', p['message'])}
 
 
+# ---- the shared fold / redeploy mechanic of bunkers and turrets (core/GhostOpsFold.galaxy) ----
+FOLD_TEXTS = {
+    'ru': {
+        'Bunker': 'бункер', 'Turret': 'турель', 'Life': 'здоровье', 'Salvo': 'залп восстановится через', 'Sec': 'с',
+        'Done': 'Сооружение свёрнуто, получен комплект', 'UseOld': 'Строится из комплекта свёрнутого сооружения', 'Coming': 'КСМ идёт разбирать сооружение',
+        'Started': 'Разборка началась', 'Working': 'Разборка', 'Cancelled': 'Разборка отменена: сооружение осталось, комплект не выдан',
+        'NoNotMine': 'Сворачивать можно только сооружения игрока', 'NoNotFinished': 'Сворачивать можно только законченное сооружение',
+        'NoGarrison': 'Сначала выведите гарнизон из бункера', 'NoScv': 'Нет свободного КСМ для разборки', 'Lost': 'Сооружение потеряно: комплект не выдан',
+        'ScvLost': 'Разбирающий КСМ погиб: сооружение осталось, комплект не выдан', 'ScvStopped': 'КСМ отвлечён: разборка отменена, сооружение осталось',
+    },
+    'en': {
+        'Bunker': 'bunker', 'Turret': 'turret', 'Life': 'life', 'Salvo': 'the salvo is ready in', 'Sec': 's',
+        'Done': 'Structure folded, kit received', 'UseOld': 'Building from the kit of a folded structure', 'Coming': 'An SCV is coming to dismantle the structure',
+        'Started': 'Dismantling started', 'Working': 'Dismantling', 'Cancelled': 'Dismantling cancelled: the structure stays, no kit',
+        'NoNotMine': 'Only structures of the player can be folded', 'NoNotFinished': 'Only a finished structure can be folded',
+        'NoGarrison': 'Unload the bunker first', 'NoScv': 'No free SCV to dismantle', 'Lost': 'The structure is lost: no kit',
+        'ScvLost': 'The dismantling SCV died: the structure stays, no kit', 'ScvStopped': 'The SCV was called away: dismantling cancelled, the structure stays',
+    },
+}
+
+
+def validate_fold(cfg):
+    f = cfg['fold']
+    errs = []
+    keys = {'enabled', 'duration', 'hotkey', 'bunker', 'turret', 'row', 'column'}
+    if not (isinstance(f, dict) and set(f) == keys and isinstance(f['enabled'], bool) and _num(f['duration']) and 1 <= f['duration'] <= 120
+            and isinstance(f['hotkey'], str) and len(f['hotkey']) == 1 and f['hotkey'].isalpha() and f['hotkey'].isupper()
+            and isinstance(f['bunker'], bool) and isinstance(f['turret'], bool)
+            and all(isinstance(f[k], int) and not isinstance(f[k], bool) for k in ('row', 'column')) and 0 <= f['row'] <= 2 and 0 <= f['column'] <= 4):
+        return ['fold needs enabled, duration 1..120 (game seconds), hotkey (one capital letter), bunker / turret (booleans), row 0..2 and column 0..4 of the card cell']
+    if f['enabled'] and not (f['bunker'] or f['turret']):
+        errs.append('fold enabled needs bunker and / or turret')
+    kits = bool(cfg.get('defence')) or bool((cfg.get('hanson') or {}).get('turret_kits', {}).get('enabled')) or bool(cfg.get('tychus'))
+    bkits = bool(cfg.get('defence')) or bool((cfg.get('hanson') or {}).get('bunker_kits', {}).get('enabled')) or bool(cfg.get('tychus'))
+    if f['enabled'] and f['turret'] and not kits:
+        errs.append('fold.turret needs the turret kits of the mission (hanson.turret_kits, defence or tychus)')
+    if f['enabled'] and f['bunker'] and not bkits:
+        errs.append('fold.bunker needs the bunker kits of the mission (hanson.bunker_kits, defence or tychus)')
+    return errs
+
+
+def fold_fragments(f):
+    """Catalog data of the fold command: two instant abilities (fold / cancel) on the cards of the Bunker and the Missile Turret in ONE cell (the script shows one of them), their buttons,
+    the buff that shows the dismantling on the structure."""
+    nl = chr(10)
+    cell = 'Row="%d" Column="%d"' % (f['row'], f['column'])
+    def unit(uid):
+        return ['    <CUnit id="%s">' % uid, '        <AbilArray Link="GhostOpsFold"/>', '        <AbilArray Link="GhostOpsFoldCancel"/>', '        <CardLayouts index="0">',
+                '            <LayoutButtons Face="GhostOpsFold" Type="AbilCmd" AbilCmd="GhostOpsFold,Execute" %s/>' % cell,
+                '            <LayoutButtons Face="GhostOpsFoldCancel" Type="AbilCmd" AbilCmd="GhostOpsFoldCancel,Execute" %s/>' % cell, '        </CardLayouts>', '    </CUnit>']
+    units = (unit('MissileTurret') if f['turret'] else []) + (unit('Bunker') if f['bunker'] else [])
+    return {
+        'UnitData.xml': nl.join(units + ['']),
+        'AbilData.xml': nl.join([
+            '    <CAbilEffectInstant id="GhostOpsFold">', '        <EditorCategories value="Race:Terran,AbilityorEffectType:Units"/>', '        <Flags index="Transient" value="1"/>',
+            '        <CmdButtonArray index="Execute" DefaultButtonFace="GhostOpsFold"/>', '    </CAbilEffectInstant>',
+            '    <CAbilEffectInstant id="GhostOpsFoldCancel">', '        <EditorCategories value="Race:Terran,AbilityorEffectType:Units"/>', '        <Flags index="Transient" value="1"/>',
+            '        <CmdButtonArray index="Execute" DefaultButtonFace="GhostOpsFoldCancel"/>', '    </CAbilEffectInstant>', '']),
+        'ButtonData.xml': nl.join([
+            '    <CButton id="GhostOpsFold">', '        <Icon value="Assets' + chr(92) + 'Textures' + chr(92) + 'btn-ability-terran-salvage.dds"/>', '        <EditorCategories value="Race:Terran"/>', '    </CButton>',
+            '    <CButton id="GhostOpsFoldCancel">', '        <Icon value="Assets' + chr(92) + 'Textures' + chr(92) + 'btn-command-cancel.dds"/>', '        <EditorCategories value="Race:Terran"/>', '    </CButton>', '']),
+        'BehaviorData.xml': nl.join([
+            '    <CBehaviorBuff id="GhostOpsFolding">', '        <InfoIcon value="Assets' + chr(92) + 'Textures' + chr(92) + 'btn-ability-terran-salvage.dds"/>',
+            '        <Duration value="%g"/>' % f['duration'], '    </CBehaviorBuff>', '']),
+    }
+
+
+def fold_text_entries(f):
+    out = {}
+    for loc, lang in (('ruRU', 'ru'), ('enUS', 'en')):
+        t = FOLD_TEXTS[lang]
+        rows = [('Param/Value/GhostOpsFold_' + k, v) for k, v in t.items()]
+        d = '%g' % f['duration']
+        if lang == 'ru':
+            name, tip, cname, ctip = 'Свернуть', ('Горячая клавиша [%s]. КСМ подойдёт и разберёт сооружение за %s игровых секунд: сооружение исчезнет, и вы получите один комплект того же типа '
+                                                  '(деньги не возвращаются). Здоровье и перезарядка залпа сохранятся в комплекте. Бункер должен быть пуст. Отмена, гибель КСМ или '
+                                                  'разрушение сооружения комплект не дают.') % (f['hotkey'], d), 'Отменить разборку', 'Горячая клавиша [%s]. Разборка прекращается, сооружение остаётся.' % f['hotkey']
+            bname, btip = 'Разборка сооружения', 'Идёт разборка: по окончании сооружение исчезнет и вы получите комплект.'
+        else:
+            name, tip, cname, ctip = 'Fold', ('Hotkey [%s]. An SCV walks up and dismantles the structure in %s game seconds: the structure disappears and you get one kit of the same type '
+                                              '(no refund). Life and the salvo cooldown are kept in the kit. A bunker must be empty. Cancel, the death of the SCV or the destruction of the '
+                                              'structure give no kit.') % (f['hotkey'], d), 'Cancel dismantling', 'Hotkey [%s]. The dismantling stops, the structure stays.' % f['hotkey']
+            bname, btip = 'Dismantling', 'In progress: when finished the structure disappears and you get a kit.'
+        rows += [('Button/Name/GhostOpsFold', name), ('Button/Tooltip/GhostOpsFold', tip), ('Button/Hotkey/GhostOpsFold', f['hotkey']),
+                 ('Button/Name/GhostOpsFoldCancel', cname), ('Button/Tooltip/GhostOpsFoldCancel', ctip), ('Button/Hotkey/GhostOpsFoldCancel', f['hotkey']),
+                 ('Behavior/Name/GhostOpsFolding', bname), ('Behavior/Description/GhostOpsFolding', btip)]
+        out[loc] = rows
+    return out
+
+
+def gen_fold(cfg):
+    f = cfg.get('fold') or {'enabled': False, 'duration': 8, 'bunker': False, 'turret': False}
+    b = lambda v: 'true' if v else 'false'  # noqa: E731
+    return chr(10).join(['// Generated fold configuration', 'void GhostOps_ApplyFoldConfig () {', '    go_foldOn = %s;' % b(f['enabled']), '    go_foldDuration = %g;' % f['duration'],
+                         '    go_foldFam[0] = %s;' % b(f['turret']), '    go_foldFam[1] = %s;' % b(f['bunker']), '}', ''])
+
+
 def kit_labels_needed(cfg):
     """The free kit counters on the build buttons (core/GhostOpsCore.galaxy GhostOps_KitLabel) exist where the mission has kits: the defence profile or Hanson kits."""
     hs = cfg.get('hanson') or {}
-    return bool(cfg.get('defence') or (hs.get('turret_kits') or {}).get('enabled') or (hs.get('bunker_kits') or {}).get('enabled'))
+    return bool(cfg.get('defence') or cfg.get('tychus') or (hs.get('turret_kits') or {}).get('enabled') or (hs.get('bunker_kits') or {}).get('enabled'))
 
 
 def text_entries(cfg):
@@ -2139,6 +2476,9 @@ def text_entries(cfg):
         for loc, lang in (('ruRU', 'ru'), ('enUS', 'en')):
             out.setdefault(loc, []).append(('Button/Name/GhostOpsDetectorAnalysis', da['texts']['Name'][lang]))
             out.setdefault(loc, []).append(('Button/Tooltip/GhostOpsDetectorAnalysis', da['texts']['Tip'][lang]))
+    if (cfg.get('fold') or {}).get('enabled'):
+        for loc, rows in fold_text_entries(cfg['fold']).items():
+            out.setdefault(loc, []).extend(rows)
     if kit_labels_needed(cfg):
         for loc, lang in (('ruRU', 'ru'), ('enUS', 'en')):
             for n in range(31):
@@ -2189,6 +2529,9 @@ def text_entries(cfg):
                 out.setdefault(loc, []).append(('Button/Name/GhostOpsTurretSalvo', salvo_text(esv['texts']['Name'][lang], esv)))
                 out.setdefault(loc, []).append(('Button/Tooltip/GhostOpsTurretSalvo', salvo_text(esv['texts']['Tip'][lang], esv)))
                 out.setdefault(loc, []).append(('Button/Hotkey/GhostOpsTurretSalvo', esv.get('hotkey', 'G')))
+    if cfg.get('tychus'):
+        for loc, rows in tychus_text_entries(cfg['tychus']).items():
+            out.setdefault(loc, []).extend(rows)
     zh = cfg.get('zerohour')
     if zh:
         for loc, lang in (('ruRU', 'ru'), ('enUS', 'en')):
@@ -2221,8 +2564,12 @@ def build_block(adapter, cfg):
         extra += gen_hanson_test(cfg) + '\n' + gen_hanson(cfg) + '\n'
     if 'epidemic' in gens:
         extra += gen_epidemic(cfg) + '\n'
+    if 'tychus' in gens:
+        extra += gen_tychus(cfg) + '\n'
     if cfg.get('scene'):
         extra += gen_scene(cfg) + '\n'
+    if 'core/GhostOpsFold.galaxy' in mods:
+        extra += gen_fold(cfg) + '\n'
     if (cfg.get('detector_analysis') or {}).get('early_warning', {}).get('enabled') and adapter.get('detector_analysis'):
         extra += chr(10).join(['// Generated detector-analysis configuration (early warning)', 'void GhostOps_ApplyDetectorEarlyConfig () {', '    go_daeMargin = %.2f;' % cfg['detector_analysis']['early_warning']['margin'], '}', '']) + chr(10)
     if adapter.get('detector_analysis'):
@@ -2339,12 +2686,18 @@ def apply_ce0(adapter, cfg):
     """Optional modules chosen by the RESOLVED config, added to a COPY of the adapter:
     key "ce0" (development probe, only in *_dev profiles) and key "campaign" (the campaign journal of a playable profile that takes part in the
     economy). Without a key the adapter is returned untouched, so a profile without it contains nothing of it."""
-    if not cfg.get('ce0') and not cfg.get('campaign') and not cfg.get('defence') and not (cfg.get('detector_analysis') or {}).get('enabled'):
+    needs_fold = bool(cfg.get('defence')) or 'core/GhostOpsHanson.galaxy' in (adapter.get('modules') or []) or bool(cfg.get('tychus'))
+    if not cfg.get('ce0') and not cfg.get('campaign') and not cfg.get('defence') and not (cfg.get('detector_analysis') or {}).get('enabled') and not needs_fold:
         return adapter
     a = json.loads(json.dumps(adapter))
     a['generators'] = adapter.get('generators', ['tactical'] if adapter.get('modules') else [])
     mods = list(adapter.get('modules') or [])
     hooks = list(adapter.get('extra_hooks', []))
+    if needs_fold:
+        if 'core/GhostOpsFold.galaxy' not in mods:
+            mods.insert(0, 'core/GhostOpsFold.galaxy')  # before the modules that call its hooks
+        st0 = (adapter.get('start_hooks') or [adapter.get('start_hook')])[0]
+        hooks.append({'function': st0['function'], 'after': st0['after'], 'call': 'GhostOps_Fold_Start();'})
     if cfg.get('defence'):
         mods.append('core/GhostOpsDefence.galaxy')
         for w in adapter.get('defence_waves', []):
@@ -2370,10 +2723,11 @@ def apply_ce0(adapter, cfg):
         hooks += list(adapter.get('campaign_hooks', []))
         a['campaign'] = True
     if cfg.get('ce0'):
+        ft = ['core/GhostOpsFoldTest.galaxy'] if (needs_fold or 'core/GhostOpsFold.galaxy' in mods) else []  # dev probes of the fold mechanic (called first by the CE-0 command function of the adapter)
         if 'ce0_trace' not in adapter:
-            mods += ['core/GhostOpsCe0.galaxy', adapter['ce0_extra']]
+            mods += ['core/GhostOpsCe0.galaxy'] + ft + [adapter['ce0_extra']]
         elif cfg.get('defence') or cfg.get('zerohour'):
-            mods += ['core/GhostOpsCe0.galaxy', adapter['ce0_trace'], adapter['ce0_extra']]
+            mods += ['core/GhostOpsCe0.galaxy', adapter['ce0_trace']] + ft + [adapter['ce0_extra']]
         else:  # the original-like profile: the trace probe alone
             mods += ['core/GhostOpsCe0.galaxy', adapter['ce0_trace'], adapter['ce0_trace_only']]
         hooks += list(adapter.get('ce0_hooks', []))

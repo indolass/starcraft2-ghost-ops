@@ -1,0 +1,121 @@
+{
+ "name": "th2r5_fold",
+ "mission": "thanson02",
+ "preset": "epidemic_free_r5_ce0_dev",
+ "why": "fold connection: key Z on a turret and on an occupied bunker",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "sleep",
+   "s": 30
+  },
+  {
+   "op": "cmd",
+   "text": "fstat",
+   "wait": 1.3
+  },
+  {
+   "op": "cmd",
+   "text": "fnew MissileTurret 6",
+   "wait": 1.3
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "cmd",
+   "text": "fsel MissileTurret",
+   "wait": 1.3
+  },
+  {
+   "op": "sleep",
+   "s": 1.5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "Z"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 14
+  },
+  {
+   "op": "cmd",
+   "text": "fstat",
+   "wait": 1.3
+  },
+  {
+   "op": "expect",
+   "regex": "FSTAT",
+   "note": "turret folded: one kit stored, the turret gone"
+  },
+  {
+   "op": "cmd",
+   "text": "fnew Bunker 10",
+   "wait": 1.3
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "cmd",
+   "text": "fload",
+   "wait": 1.3
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "cmd",
+   "text": "fsel Bunker",
+   "wait": 1.3
+  },
+  {
+   "op": "sleep",
+   "s": 1.5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "Z"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 6
+  },
+  {
+   "op": "cmd",
+   "text": "fstat",
+   "wait": 1.3
+  },
+  {
+   "op": "expect",
+   "regex": "FSTAT|FLOAD",
+   "note": "bunker with a garrison: refused, no kit"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

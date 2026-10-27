@@ -1915,6 +1915,10 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
     unit lv_u;
     unitgroup lv_g;
 
+    if (GhostOps_FoldTest_Cmd(lp_cmd, lp_a, lp_b)) {
+        return true;
+    }
+
     if (GhostOps_Ce0_DefCmd(lp_cmd, lp_a, lp_b)) {
         return true;
     }

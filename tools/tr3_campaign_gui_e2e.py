@@ -1,13 +1,13 @@
 """TRaynor03 campaign path through the REAL campaign window (CustomTkinter widgets) with the REAL backend (build + install + start of the game in the small muted test window).
 Development tool, test data only (its own campaign file, its own journal Bank, a made-up stock; the Owner's campaign file, Bank and saves are never touched).
 
-  A. a NEW operation: the window recommends version 5 (`defence_r5`) -> recommended order -> pay once -> the unique map set of version 5 is built, installed and started
+  A. a NEW operation: the window recommends version 6 (`defence_r6`) -> recommended order -> pay once -> the unique map set of version 6 is built, installed and started
   B. the same operation is continued from the window: no second payment, the same map
-  C. an OLD paid operation of version 2 (`defence_next`) is continued from the window: its own earlier map (not version 5), no payment
+  C. an OLD paid operation of version 2 (`defence_next`) is continued from the window: its own earlier map (not version 6), no payment
 
 The maps of the test operations are removed at the end (their names carry the test operation numbers OP0091+, no Owner operation uses them).
 
-  python tools/test_queue.py enqueue --label tr3gui --mission traynor03 --preset defence_r5 -- python tools/tr3_campaign_gui_e2e.py
+  python tools/test_queue.py enqueue --label tr3gui --mission traynor03 --preset defence_r6 -- python tools/tr3_campaign_gui_e2e.py
 """
 import json
 import os
@@ -99,25 +99,25 @@ def main():
         # ---- A: a new operation -------------------------------------------------------------------------------------------------------
         seed(FILE_A, 5000, 2000)
         root, win, flow = open_window(FILE_A)
-        check('A1 the window recommends version 5 for a new operation', win.t3 == 'defence_r5' and cf.step_of('traynor03')['preset'] == 'defence_r5', win.t3)
+        check('A1 the window recommends version 6 for a new operation', win.t3 == 'defence_r6' and cf.step_of('traynor03')['preset'] == 'defence_r6', win.t3)
         texts = g.all_text(win)
-        check('A2 the card says it is the current version', any('версия 5 — ТЕКУЩАЯ' in t for t in texts))
+        check('A2 the card says it is the current version', any('версия 6 — ТЕКУЩАЯ' in t for t in texts))
         check('A3 the earlier versions are labelled as earlier', any('Версия 4 (прежняя)' in t for t in texts) and any('Версия 2 (прежняя)' in t for t in texts))
         g.click(root, win, 'Рекомендуемый заказ')
         order = dict(win.order)
-        q = flow.quote('traynor03', 'defence_r5', order)
+        q = flow.quote('traynor03', 'defence_r6', order)
         check('A4 the recommended order is valid and its cost is shown', q['ok'], q)
         before = flow.stock()
         g.click(root, win, 'Оплатить и начать')
         g.wait_done(root, win, 420)
         op_id, op = op_of(flow, 'traynor03')
-        check('A5 one operation, paid once, profile version 5', op is not None and op['profile'] == 'defence_r5', op)
+        check('A5 one operation, paid once, profile version 6', op is not None and op['profile'] == 'defence_r6', op)
         after = flow.stock()
         check('A6 the stock fell by exactly the quoted cost', before['minerals'] - after['minerals'] == q['cost']['minerals'] and before['gas'] - after['gas'] == q['cost']['gas'], (before, after, q['cost']))
         plan = json.load(open(os.path.join(cf.plans_dir(), op_id + '.json'), encoding='utf-8'))
-        check('A7 the plan holds the version-5 profile and the order', plan['preset'] == 'defence_r5' and plan.get('order') == order, plan)
+        check('A7 the plan holds the version-6 profile and the order', plan['preset'] == 'defence_r6' and plan.get('order') == order, plan)
         st = session()
-        check('A8 the started map is the unique version-5 map of the operation', st['preset'].startswith('defence_r5') and ('__' + op_id) in os.path.basename(st['map']) and os.path.isfile(st['map']), st['map'])
+        check('A8 the started map is the unique version-6 map of the operation', st['preset'].startswith('defence_r6') and ('__' + op_id) in os.path.basename(st['map']) and os.path.isfile(st['map']), st['map'])
         removed.append(st['map'])
         check('A10 the test game of A is closed (our own pid only)', close_game())
         root.destroy()
@@ -125,7 +125,7 @@ def main():
         # ---- B: the same operation continued ---------------------------------------------------------------------------------------------
         root, win, flow = open_window(FILE_A)
         texts = g.all_text(win)
-        check('B1 the window shows the operation map as version 5', any('Карта операции: Оборона и диверсии, версия 5' in t for t in texts))
+        check('B1 the window shows the operation map as version 6', any('Карта операции: Оборона и диверсии, версия 6' in t for t in texts))
         before = flow.stock()
         g.click(root, win, 'Продолжить сохранение')
         g.wait_done(root, win, 420)
@@ -153,7 +153,7 @@ def main():
         g.click(root, win, 'Продолжить сохранение')
         g.wait_done(root, win, 420)
         st4 = session()
-        check('C5 continuing starts the OLD map, not version 5', st4['map'] == st3['map'] and 'defence_r5' not in os.path.basename(st4['map']), st4['map'])
+        check('C5 continuing starts the OLD map, not version 6', st4['map'] == st3['map'] and 'defence_r6' not in os.path.basename(st4['map']), st4['map'])
         check('C6 no payment on continuing', flow.stock() == before)
         check('C7 the operation profile stayed defence_next', flow.state()['operations'][oid]['profile'] == 'defence_next')
         check('C8 the test game of C is closed', close_game())

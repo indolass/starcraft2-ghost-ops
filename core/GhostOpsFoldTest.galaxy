@@ -1,0 +1,146 @@
+//--------------------------------------------------------------------------------------------------
+// Development probes of the shared fold mechanic (only in hidden *_dev profiles; every adapter's CE-0 command function calls GhostOps_FoldTest_Cmd first).
+//   fstat            the stored kits of both families, the dismantlings in progress, the first turret / bunker of the player (life, salvo cooldown), the SCV count
+//   fnew <T> <dx> <dy>  a FINISHED structure of the type T (Bunker / MissileTurret) of the player at the offset from the first SCV (placement ignored)
+//   fhurt <pct>      the life of the first turret (or the bunker when there is none) set to pct of its maximum
+//   fcd              the remaining salvo cooldown of the first turret
+//   fsel <T>         the first structure of the type is selected, the camera on it
+//   fkill            the structure that is being dismantled is killed
+//   fload            a Marine is created inside the first Bunker (a garrison)
+//   fnoscv           every SCV of the player is paused (no free worker is found) / fnoscv 0 releases them
+//--------------------------------------------------------------------------------------------------
+unit GhostOps_FoldTest_First (string lp_type) {
+    return UnitGroupUnit(UnitGroup(lp_type, 1, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32)) | (1 << (c_targetFilterHidden - 32))), 0), 1);
+}
+
+string GhostOps_FoldTest_One (string lp_type) {
+    unit lv_u;
+    string lv_t;
+
+    lv_u = GhostOps_FoldTest_First(lp_type);
+    if (lv_u == null) {
+        return lp_type + " none";
+    }
+
+    lv_t = lp_type + " life " + FixedToString(UnitGetPropertyFixed(lv_u, c_unitPropLife, c_unitPropCurrent), 0) + "/" + FixedToString(UnitGetPropertyFixed(lv_u, c_unitPropLifeMax, c_unitPropCurrent), 0);
+    if (lp_type == "MissileTurret") {
+        lv_t = lv_t + " cd " + FixedToString(UnitAbilityGetCooldown(lv_u, "GhostOpsTurretSalvo", "Abil/GhostOpsTurretSalvo"), 1);
+    }
+
+    lv_t = lv_t + " at " + FixedToString(PointGetX(UnitGetPosition(lv_u)), 1) + "," + FixedToString(PointGetY(UnitGetPosition(lv_u)), 1);
+    if (UnitTestState(lv_u, c_unitStateUnderConstruction)) {
+        lv_t = lv_t + " (under construction)";
+    }
+
+    return lv_t;
+}
+
+bool GhostOps_FoldTest_Cmd (string lp_cmd, string lp_a, string lp_b) {
+    unit lv_u;
+    unit lv_s;
+    string lv_t;
+    int lv_i;
+    int lv_n;
+    unitgroup lv_g;
+
+    if (lp_cmd == "fstat") {
+        lv_t = "FSTAT on " + IntToString(BoolToInt(go_foldOn)) + " stored T " + IntToString(go_foldStoredN[0]) + " B " + IntToString(go_foldStoredN[1]);
+        if (go_foldStoredN[0] > 0) {
+            lv_t = lv_t + " | T0 life " + FixedToString(go_foldStoredLife[0], 0) + " cdEnd " + FixedToString(go_foldStoredCd[0], 1) + " now " + FixedToString(GameGetMissionTime(), 1);
+        }
+
+        lv_i = 0;
+        lv_n = 0;
+        while (lv_i < 8) {
+            if (go_foldState[lv_i] != 0) {
+                lv_t = lv_t + " | slot " + IntToString(lv_i) + " state " + IntToString(go_foldState[lv_i]);
+            }
+
+            lv_i += 1;
+        }
+
+        lv_i = 0;
+        while (lv_i < 16) {
+            if (go_foldUseUnit[lv_i] != null) {
+                lv_t = lv_t + " | use " + IntToString(lv_i) + " life " + FixedToString(go_foldUseLife[lv_i], 0);
+            }
+
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", lv_t);
+        GhostOps_Ce0_Write("j", "FSTAT " + GhostOps_FoldTest_One("MissileTurret") + " | " + GhostOps_FoldTest_One("Bunker") + " | turrets " + IntToString(UnitGroupCount(UnitGroup("MissileTurret", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive))
+            + " bunkers " + IntToString(UnitGroupCount(UnitGroup("Bunker", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive)));
+        return true;
+    }
+
+    if (lp_cmd == "fnew") {
+        lv_s = GhostOps_FoldTest_First("SCV");
+        UnitCreate(1, lp_a, c_unitCreateIgnorePlacement, 1, PointWithOffset(UnitGetPosition(lv_s), StringToFixed(lp_b), 0.0), 270.0);
+        GhostOps_Ce0_Write("j", "FNEW created " + lp_a + " at " + FixedToString(PointGetX(UnitGetPosition(UnitLastCreated())), 1) + "," + FixedToString(PointGetY(UnitGetPosition(UnitLastCreated())), 1));
+        return true;
+    }
+
+    if (lp_cmd == "fhurt") {
+        lv_u = GhostOps_FoldTest_First("MissileTurret");
+        if (lv_u == null) {
+            lv_u = GhostOps_FoldTest_First("Bunker");
+        }
+
+        UnitSetPropertyFixed(lv_u, c_unitPropLife, UnitGetPropertyFixed(lv_u, c_unitPropLifeMax, c_unitPropCurrent) * StringToFixed(lp_a) / 100.0);
+        GhostOps_Ce0_Write("j", "FHURT " + GhostOps_FoldTest_One(UnitGetType(lv_u)));
+        return true;
+    }
+
+    if (lp_cmd == "fcd") {
+        GhostOps_Ce0_Write("j", "FCD " + GhostOps_FoldTest_One("MissileTurret"));
+        return true;
+    }
+
+    if (lp_cmd == "fsel") {
+        lv_u = GhostOps_FoldTest_First(lp_a);
+        UnitClearSelection(1);
+        UnitSelect(lv_u, 1, true);
+        CameraPan(1, UnitGetPosition(lv_u), 0.0, -1.0, 10.0, false);
+        GhostOps_Ce0_Write("j", "FSEL " + lp_a + " selected");
+        return true;
+    }
+
+    if (lp_cmd == "fkill") {
+        lv_i = 0;
+        while (lv_i < 8) {
+            if (go_foldState[lv_i] != 0) {
+                UnitKill(go_foldStruct[lv_i]);
+                GhostOps_Ce0_Write("j", "FKILL the structure in dismantling slot " + IntToString(lv_i) + " killed");
+                return true;
+            }
+
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", "FKILL nothing is being dismantled");
+        return true;
+    }
+
+    if (lp_cmd == "fload") {
+        lv_u = GhostOps_FoldTest_First("Bunker");
+        UnitCargoCreate(lv_u, "Marine", 1);
+        GhostOps_Ce0_Write("j", "FLOAD cargo of the bunker " + IntToString(UnitCargoValue(lv_u, c_unitCargoUnitCount)));
+        return true;
+    }
+
+    if (lp_cmd == "fnoscv") {
+        lv_g = UnitGroup("SCV", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+        lv_n = UnitGroupCount(lv_g, c_unitCountAll);
+        lv_i = 1;
+        while (lv_i <= lv_n) {
+            libNtve_gf_PauseUnit(UnitGroupUnit(lv_g, lv_i), lp_a != "0");
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", "FNOSCV " + IntToString(lv_n) + " SCVs paused " + IntToString(BoolToInt(lp_a != "0")));
+        return true;
+    }
+
+    return false;
+}

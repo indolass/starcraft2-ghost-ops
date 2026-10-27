@@ -1,0 +1,227 @@
+{
+ "name": "th1r6_fold2",
+ "mission": "thanson01",
+ "preset": "sniper_next_r6_ce0_dev",
+ "why": "cancel by Z, destroyed during the dismantling, save / load during the dismantling",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 6
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "nstat",
+   "grep": "NSTAT ghosts 2 firebats 2",
+   "every": 5,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "enter",
+   "wait": 1.3
+  },
+  {
+   "op": "sleep",
+   "s": 25
+  },
+  {
+   "op": "cmd",
+   "text": "nclear",
+   "wait": 1.0
+  },
+  {
+   "op": "cmd",
+   "text": "fnew MissileTurret 5",
+   "wait": 1.3
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "cmd",
+   "text": "fsel MissileTurret",
+   "wait": 1.3
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "key",
+   "keys": [
+    "Z"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 1.5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "Z"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "fstat",
+   "wait": 1.3
+  },
+  {
+   "op": "expect",
+   "regex": "FSTAT",
+   "note": "cancel by the second press of Z: no dismantling, the turret stays"
+  },
+  {
+   "op": "cmd",
+   "text": "fnew MissileTurret 9",
+   "wait": 1.3
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "cmd",
+   "text": "fsel MissileTurret",
+   "wait": 1.3
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "key",
+   "keys": [
+    "Z"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 5
+  },
+  {
+   "op": "cmd",
+   "text": "fkill",
+   "wait": 1.3
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "fstat",
+   "wait": 1.3
+  },
+  {
+   "op": "cmd",
+   "text": "nkits",
+   "wait": 1.3
+  },
+  {
+   "op": "expect",
+   "regex": "FSTAT|FKILL|NKITS",
+   "note": "the structure destroyed during the dismantling: no kit"
+  },
+  {
+   "op": "cmd",
+   "text": "fnew MissileTurret 6",
+   "wait": 1.3
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "cmd",
+   "text": "fsel MissileTurret",
+   "wait": 1.3
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "key",
+   "keys": [
+    "Z"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "fhurt 70",
+   "wait": 1.3
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "save",
+   "name": "CE0_TH1R6_FOLD"
+  },
+  {
+   "op": "load",
+   "name": "CE0_TH1R6_FOLD"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "fstat",
+   "wait": 1.3
+  },
+  {
+   "op": "sleep",
+   "s": 9
+  },
+  {
+   "op": "cmd",
+   "text": "fstat",
+   "wait": 1.3
+  },
+  {
+   "op": "cmd",
+   "text": "nkits",
+   "wait": 1.3
+  },
+  {
+   "op": "expect",
+   "regex": "FSTAT|NKITS",
+   "note": "save during the dismantling, load: it continues, exactly one kit, no building plus kit"
+  },
+  {
+   "op": "expect_def",
+   "bank": "GhostOpsDevHanson",
+   "regex": "fold|kit",
+   "note": "Hanson log: kit reserved / state applied / folded"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

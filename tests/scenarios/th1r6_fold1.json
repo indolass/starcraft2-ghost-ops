@@ -1,0 +1,303 @@
+{
+ "name": "th1r6_fold1",
+ "mission": "thanson01",
+ "preset": "sniper_next_r6_ce0_dev",
+ "why": "fold of a damaged turret with the salvo on cooldown by the real keys (A, Z), kit with state, reconstruction from the kit by the real build keys",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 6
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "nstat",
+   "grep": "NSTAT ghosts 2 firebats 2",
+   "every": 5,
+   "timeout": 150
+  },
+  {
+   "op": "cmd",
+   "text": "enter",
+   "wait": 1.3
+  },
+  {
+   "op": "sleep",
+   "s": 25
+  },
+  {
+   "op": "cmd",
+   "text": "nclear",
+   "wait": 1.0
+  },
+  {
+   "op": "cmd",
+   "text": "nkits",
+   "wait": 1.3
+  },
+  {
+   "op": "cmd",
+   "text": "fstat",
+   "wait": 1.3
+  },
+  {
+   "op": "cmd",
+   "text": "fnew MissileTurret 5",
+   "wait": 1.3
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "cmd",
+   "text": "fsel MissileTurret",
+   "wait": 1.3
+  },
+  {
+   "op": "sleep",
+   "s": 1.5
+  },
+  {
+   "op": "shot",
+   "file": "f1_card.png"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "A"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.6
+  },
+  {
+   "op": "click",
+   "x": 512,
+   "y": 330
+  },
+  {
+   "op": "sleep",
+   "s": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "fcd",
+   "wait": 1.3
+  },
+  {
+   "op": "key",
+   "keys": [
+    "Z"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "cmd",
+   "text": "fstat",
+   "wait": 1.3
+  },
+  {
+   "op": "shot",
+   "file": "f2_walking.png"
+  },
+  {
+   "op": "cmd",
+   "text": "fhurt 40",
+   "wait": 1.3
+  },
+  {
+   "op": "sleep",
+   "s": 4
+  },
+  {
+   "op": "cmd",
+   "text": "fstat",
+   "wait": 1.3
+  },
+  {
+   "op": "shot",
+   "file": "f3_working.png"
+  },
+  {
+   "op": "sleep",
+   "s": 8
+  },
+  {
+   "op": "cmd",
+   "text": "fstat",
+   "wait": 1.3
+  },
+  {
+   "op": "cmd",
+   "text": "nkits",
+   "wait": 1.3
+  },
+  {
+   "op": "shot",
+   "file": "f4_after.png"
+  },
+  {
+   "op": "expect",
+   "regex": "FSTAT|NKITS|FCD|FHURT|FNEW",
+   "note": "fold of a damaged turret with the salvo on cooldown: kit and its state"
+  },
+  {
+   "op": "cmd",
+   "text": "nselscv",
+   "wait": 1.3
+  },
+  {
+   "op": "sleep",
+   "s": 1.5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "B"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "T"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "click",
+   "x": 480,
+   "y": 380
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "fstat",
+   "wait": 1.3
+  },
+  {
+   "op": "cmd",
+   "text": "nkits",
+   "wait": 1.3
+  },
+  {
+   "op": "cmd",
+   "text": "nselscv",
+   "wait": 1.3
+  },
+  {
+   "op": "sleep",
+   "s": 1.5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "B"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "T"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "click",
+   "x": 600,
+   "y": 380
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "cmd",
+   "text": "fstat",
+   "wait": 1.3
+  },
+  {
+   "op": "cmd",
+   "text": "nkits",
+   "wait": 1.3
+  },
+  {
+   "op": "shot",
+   "file": "f5_reserved.png"
+  },
+  {
+   "op": "expect",
+   "regex": "FSTAT|NKITS",
+   "note": "construction from the returned kit (reserve with state)"
+  },
+  {
+   "op": "sleep",
+   "s": 30
+  },
+  {
+   "op": "cmd",
+   "text": "fstat",
+   "wait": 1.3
+  },
+  {
+   "op": "cmd",
+   "text": "nkits",
+   "wait": 1.3
+  },
+  {
+   "op": "cmd",
+   "text": "fcd",
+   "wait": 1.3
+  },
+  {
+   "op": "shot",
+   "file": "f6_rebuilt.png"
+  },
+  {
+   "op": "expect",
+   "regex": "FSTAT|NKITS|FCD",
+   "note": "the rebuilt turret: life and salvo cooldown carried over, not reset"
+  },
+  {
+   "op": "expect_def",
+   "bank": "GhostOpsDevHanson",
+   "regex": "fold|kit",
+   "note": "Hanson log: kit reserved / state applied / folded"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

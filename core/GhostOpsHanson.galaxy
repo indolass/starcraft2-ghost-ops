@@ -1278,6 +1278,30 @@ int GhostOps_Hanson_KitsLeft () {
     return GhostOps_Hanson_KitsLeftF(0);
 }
 
+// the shared fold module (core/GhostOpsFold.galaxy) gives a kit back: the structure that was folded no longer counts as spent
+void GhostOps_Kit_Returned (int lp_fam) {
+    if (lp_fam == 1) {
+        if (go_hBkSpent > 0) {
+            go_hBkSpent -= 1;
+        }
+        else {
+            go_hBkOrdered += 1;
+        }
+    }
+    else {
+        if (go_hKitSpent > 0) {
+            go_hKitSpent -= 1;
+        }
+        else {
+            go_hKitOrdered += 1;
+        }
+    }
+}
+
+void GhostOps_Kit_Log (string lp_text) {
+    GhostOps_Hanson_Log(lp_text);
+}
+
 bool GhostOps_Hanson_EnemyNear (point lp_pos) {
     int lv_p;
 
@@ -1388,6 +1412,7 @@ void GhostOps_Hanson_KitScan (int lp_fam) {
                     go_hTrkPos[lv_slot] = UnitGetPosition(lv_u);
                     go_hTrkHurtAt[lv_slot] = -100.0;
                     go_hTrkState[lv_slot] = 1;
+                    GhostOps_Fold_OnReserve(lv_u, lp_fam);
                     GhostOps_Hanson_Log("kit reserved (" + GhostOps_Hanson_FamType(lp_fam) + ")");
                 }
             }
@@ -1432,6 +1457,7 @@ bool GhostOps_Hanson_KitTick (bool lp_testConds, bool lp_runActions) {
                 if (!UnitTestState(lv_u, c_unitStateUnderConstruction)) {
                     // finished: the kit is spent and the place of the tracker is free again (the unit stays marked in its custom value)
                     GhostOps_Hanson_FamAddSpent(go_hTrkFam[lv_k]);
+                    GhostOps_Fold_OnFinish(lv_u);
                     go_hTrkState[lv_k] = 0;
                     GhostOps_Hanson_Log("kit spent (construction finished, " + GhostOps_Hanson_FamType(go_hTrkFam[lv_k]) + ")");
                 }
@@ -1440,9 +1466,11 @@ bool GhostOps_Hanson_KitTick (bool lp_testConds, bool lp_runActions) {
                 if ((GameGetMissionTime() - go_hTrkHurtAt[lv_k] < 4.0) || GhostOps_Hanson_EnemyNear(go_hTrkPos[lv_k])) {
                     // damaged or an enemy next to it: it was destroyed, the kit is gone; a cancelled construction is neither
                     GhostOps_Hanson_FamAddConsumed(go_hTrkFam[lv_k]);
+                    GhostOps_Fold_OnBurn(lv_u);
                     GhostOps_Hanson_Log("unfinished structure destroyed: kit consumed (" + GhostOps_Hanson_FamType(go_hTrkFam[lv_k]) + ")");
                 }
                 else {
+                    GhostOps_Fold_OnCancel(lv_u);
                     GhostOps_Hanson_Log("construction cancelled: kit freed (" + GhostOps_Hanson_FamType(go_hTrkFam[lv_k]) + ")");
                 }
 

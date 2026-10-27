@@ -1,0 +1,623 @@
+//--------------------------------------------------------------------------------------------------
+// Fold / redeploy of fortifications (config key "fold"; ONE shared module for every mission that has the kits of bunkers and turrets: Hour X, Evacuation, Epidemic, Grab and run).
+//
+// The player selects a finished Bunker / Missile Turret and presses "Fold" (ability GhostOpsFold, instant, on the card of the structure). The nearest free SCV walks to the structure and
+// dismantles it for go_foldDuration game seconds (text tag over the structure with the seconds left, the buff GhostOpsFolding on the structure). Only when the time is over the structure
+// disappears and ONE kit of its family is added to the shared kit counter of the mission (the same counter the build button shows): the structure was counted as "spent"; the owner module
+// takes one back (GhostOps_Kit_Returned). Nothing is refunded. A kit carries the state of the structure it came from: the life at the moment the dismantling finished and the moment
+// the cooldown of the ground salvo ends. The next construction from a returned kit (oldest returned kit first, then the fresh ones; the number of kits is the owner's counter) gets this
+// state at the end of its construction: no free repair, no reset of the salvo; a cancelled construction puts the kit back with the same state, a destroyed unfinished one burns it.
+//
+// Rules: only finished structures of the player; a Bunker must be empty (checked at the start and at the end); cancel of the dismantling, death of the SCV or a new order of the player
+// to that SCV leave the structure and give no kit; the destruction of the structure during the dismantling gives no kit; the structure stays vulnerable; one SCV works on one structure, a
+// second order on the same structure does nothing; the state lives in saved globals only, so a loaded game never has the building and its kit at the same time (the structure is removed and
+// the kit stored in ONE script step).
+//
+// The module knows the family numbers 0 = Missile Turret, 1 = Bunker; the owner of the kit counter (Hanson, Defence, Tychus module) implements GhostOps_Kit_Returned and calls the
+// four hooks GhostOps_Fold_OnReserve / OnFinish / OnCancel / OnBurn at the places where it reserves, spends, frees and burns a kit.
+//--------------------------------------------------------------------------------------------------
+bool go_foldOn;
+fixed go_foldDuration;
+bool[2] go_foldFam;
+trigger go_foldTrig;
+
+// stored (returned) kits per family, oldest first; a family holds at most 24
+int[2] go_foldStoredN;
+fixed[48] go_foldStoredLife;      // [fam * 24 + i] life at the end of the dismantling
+fixed[48] go_foldStoredCd;        // [fam * 24 + i] game time at which the salvo cooldown ends (<= now: ready)
+
+// constructions that use a stored kit (key: the unit): life / cooldown end to apply at the end of the construction
+unit[16] go_foldUseUnit;
+int[16] go_foldUseFam;
+fixed[16] go_foldUseLife;         // < 0: a fresh kit, nothing to apply
+fixed[16] go_foldUseCd;
+
+// dismantlings in progress
+unit[8] go_foldStruct;
+unit[8] go_foldScv;
+int[8] go_foldFamOf;
+int[8] go_foldState;              // 0 free, 1 SCV walks, 2 dismantling
+fixed[8] go_foldStart;
+int[8] go_foldTag;
+
+void GhostOps_Kit_Returned (int lp_fam);
+void GhostOps_Kit_Log (string lp_text);
+
+string GhostOps_Fold_FamName (int lp_fam) {
+    if (lp_fam == 1) {
+        return "Bunker";
+    }
+
+    return "MissileTurret";
+}
+
+int GhostOps_Fold_FamOfType (string lp_type) {
+    if (lp_type == "Bunker") {
+        return 1;
+    }
+
+    if (lp_type == "MissileTurret") {
+        return 0;
+    }
+
+    return -1;
+}
+
+text GhostOps_Fold_FamText (int lp_fam) {
+    if (lp_fam == 1) {
+        return StringExternal("Param/Value/GhostOpsFold_Bunker");
+    }
+
+    return StringExternal("Param/Value/GhostOpsFold_Turret");
+}
+
+// "life 45%, the salvo is ready / ready in N s" of a state
+text GhostOps_Fold_StateText (fixed lp_life, fixed lp_maxLife, fixed lp_cdEnd) {
+    fixed lv_left;
+    text lv_t;
+
+    lv_t = StringExternal("Param/Value/GhostOpsFold_Life") + StringToText(" ") + IntToText(FixedToInt((lp_life * 100.0 / lp_maxLife) + 0.5)) + StringToText("%");
+    lv_left = lp_cdEnd - GameGetMissionTime();
+    if (lv_left > 0.5) {
+        lv_t = lv_t + StringToText(", ") + StringExternal("Param/Value/GhostOpsFold_Salvo") + StringToText(" ") + IntToText(FixedToInt(lv_left + 0.5)) + StringToText(" ") + StringExternal("Param/Value/GhostOpsFold_Sec");
+    }
+
+    return lv_t;
+}
+
+void GhostOps_Fold_Msg (text lp_t) {
+    UIDisplayMessage(PlayerGroupAll(), c_messageAreaDirective, lp_t);
+}
+
+void GhostOps_Fold_Say (string lp_key) {
+    GhostOps_Fold_Msg(StringExternal("Param/Value/GhostOpsFold_" + lp_key));
+}
+
+// ---- the stored kits -------------------------------------------------------------------------------
+void GhostOps_Fold_StorePush (int lp_fam, fixed lp_life, fixed lp_cdEnd) {
+    int lv_n;
+
+    lv_n = go_foldStoredN[lp_fam];
+    if (lv_n >= 24) {
+        return;
+    }
+
+    go_foldStoredLife[lp_fam * 24 + lv_n] = lp_life;
+    go_foldStoredCd[lp_fam * 24 + lv_n] = lp_cdEnd;
+    go_foldStoredN[lp_fam] = lv_n + 1;
+}
+
+// a cancelled construction gives its kit back to the FRONT: it is the next one again, with the same state
+void GhostOps_Fold_StorePushFront (int lp_fam, fixed lp_life, fixed lp_cdEnd) {
+    int lv_i;
+
+    if (go_foldStoredN[lp_fam] >= 24) {
+        return;
+    }
+
+    lv_i = go_foldStoredN[lp_fam];
+    while (lv_i > 0) {
+        go_foldStoredLife[lp_fam * 24 + lv_i] = go_foldStoredLife[lp_fam * 24 + lv_i - 1];
+        go_foldStoredCd[lp_fam * 24 + lv_i] = go_foldStoredCd[lp_fam * 24 + lv_i - 1];
+        lv_i -= 1;
+    }
+
+    go_foldStoredLife[lp_fam * 24] = lp_life;
+    go_foldStoredCd[lp_fam * 24] = lp_cdEnd;
+    go_foldStoredN[lp_fam] += 1;
+}
+
+void GhostOps_Fold_StorePopFront (int lp_fam) {
+    int lv_i;
+
+    lv_i = 1;
+    while (lv_i < go_foldStoredN[lp_fam]) {
+        go_foldStoredLife[lp_fam * 24 + lv_i - 1] = go_foldStoredLife[lp_fam * 24 + lv_i];
+        go_foldStoredCd[lp_fam * 24 + lv_i - 1] = go_foldStoredCd[lp_fam * 24 + lv_i];
+        lv_i += 1;
+    }
+
+    if (go_foldStoredN[lp_fam] > 0) {
+        go_foldStoredN[lp_fam] -= 1;
+    }
+}
+
+int GhostOps_Fold_Stored (int lp_fam) {
+    return go_foldStoredN[lp_fam];
+}
+
+// ---- hooks of the owner of the kit counter ------------------------------------------------------------
+int GhostOps_Fold_UseSlot (unit lp_u) {
+    int lv_i;
+
+    lv_i = 0;
+    while (lv_i < 16) {
+        if (go_foldUseUnit[lv_i] == lp_u) {
+            return lv_i;
+        }
+
+        lv_i += 1;
+    }
+
+    return -1;
+}
+
+int GhostOps_Fold_UseFree () {
+    int lv_i;
+
+    lv_i = 0;
+    while (lv_i < 16) {
+        if (go_foldUseUnit[lv_i] == null) {
+            return lv_i;
+        }
+
+        lv_i += 1;
+    }
+
+    return -1;
+}
+
+// a construction of the family has reserved a kit: it takes the oldest returned kit, or a fresh one
+void GhostOps_Fold_OnReserve (unit lp_u, int lp_fam) {
+    int lv_s;
+
+    if (!go_foldOn) {
+        return;
+    }
+
+    lv_s = GhostOps_Fold_UseFree();
+    if (lv_s < 0) {
+        return;
+    }
+
+    go_foldUseUnit[lv_s] = lp_u;
+    go_foldUseFam[lv_s] = lp_fam;
+    if (go_foldStoredN[lp_fam] > 0) {
+        go_foldUseLife[lv_s] = go_foldStoredLife[lp_fam * 24];
+        go_foldUseCd[lv_s] = go_foldStoredCd[lp_fam * 24];
+        GhostOps_Fold_StorePopFront(lp_fam);
+        GhostOps_Fold_Msg(StringExternal("Param/Value/GhostOpsFold_UseOld") + StringToText(": ") + GhostOps_Fold_FamText(lp_fam) + StringToText(", ")
+            + GhostOps_Fold_StateText(go_foldUseLife[lv_s], UnitGetPropertyFixed(lp_u, c_unitPropLifeMax, c_unitPropCurrent), go_foldUseCd[lv_s]));
+        GhostOps_Kit_Log("kit of a folded structure reserved: life " + FixedToString(go_foldUseLife[lv_s], 0));
+    }
+    else {
+        go_foldUseLife[lv_s] = -1.0;
+        go_foldUseCd[lv_s] = 0.0;
+    }
+}
+
+// the construction is finished: the stored state is applied (the structure comes out as the one that was folded)
+void GhostOps_Fold_OnFinish (unit lp_u) {
+    int lv_s;
+    fixed lv_left;
+
+    lv_s = GhostOps_Fold_UseSlot(lp_u);
+    if (lv_s < 0) {
+        return;
+    }
+
+    if (UnitIsAlive(lp_u) && (go_foldUseLife[lv_s] >= 0.0)) {
+        UnitSetPropertyFixed(lp_u, c_unitPropLife, MinF(go_foldUseLife[lv_s], UnitGetPropertyFixed(lp_u, c_unitPropLifeMax, c_unitPropCurrent)));
+        lv_left = go_foldUseCd[lv_s] - GameGetMissionTime();
+        if ((go_foldUseFam[lv_s] == 0) && (lv_left > 0.0)) {
+            UnitAbilityAddCooldown(lp_u, "GhostOpsTurretSalvo", "Abil/GhostOpsTurretSalvo", lv_left);
+        }
+
+        GhostOps_Kit_Log("state of the kit applied: life " + FixedToString(go_foldUseLife[lv_s], 0) + " salvo left " + FixedToString(lv_left, 1));
+    }
+
+    go_foldUseUnit[lv_s] = null;
+}
+
+// the construction was cancelled: the kit goes back to the front with its state (no improvement)
+void GhostOps_Fold_OnCancel (unit lp_u) {
+    int lv_s;
+
+    lv_s = GhostOps_Fold_UseSlot(lp_u);
+    if (lv_s < 0) {
+        return;
+    }
+
+    if (go_foldUseLife[lv_s] >= 0.0) {
+        GhostOps_Fold_StorePushFront(go_foldUseFam[lv_s], go_foldUseLife[lv_s], go_foldUseCd[lv_s]);
+    }
+
+    go_foldUseUnit[lv_s] = null;
+}
+
+// the unfinished structure was destroyed: the kit burns with its state
+void GhostOps_Fold_OnBurn (unit lp_u) {
+    int lv_s;
+
+    lv_s = GhostOps_Fold_UseSlot(lp_u);
+    if (lv_s < 0) {
+        return;
+    }
+
+    go_foldUseUnit[lv_s] = null;
+}
+
+// ---- the dismantling ---------------------------------------------------------------------------------------
+int GhostOps_Fold_SlotOf (unit lp_u) {
+    int lv_i;
+
+    lv_i = 0;
+    while (lv_i < 8) {
+        if ((go_foldState[lv_i] != 0) && (go_foldStruct[lv_i] == lp_u)) {
+            return lv_i;
+        }
+
+        lv_i += 1;
+    }
+
+    return -1;
+}
+
+bool GhostOps_Fold_ScvBusy (unit lp_scv) {
+    int lv_i;
+
+    lv_i = 0;
+    while (lv_i < 8) {
+        if ((go_foldState[lv_i] != 0) && (go_foldScv[lv_i] == lp_scv)) {
+            return true;
+        }
+
+        lv_i += 1;
+    }
+
+    return false;
+}
+
+// the nearest living SCV of the player that does not dismantle another structure (the ones that are not carrying anything come first by the distance only: simple and predictable)
+unit GhostOps_Fold_PickScv (unit lp_struct) {
+    unitgroup lv_g;
+    unit lv_best;
+    unit lv_u;
+    fixed lv_bd;
+    fixed lv_d;
+    int lv_n;
+    int lv_i;
+
+    lv_best = null;
+    lv_bd = 100000.0;
+    lv_g = UnitGroup("SCV", 1, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32)) | (1 << (c_targetFilterHidden - 32))), 0);
+    lv_n = UnitGroupCount(lv_g, c_unitCountAll);
+    lv_i = 1;
+    while (lv_i <= lv_n) {
+        lv_u = UnitGroupUnit(lv_g, lv_i);
+        if (UnitIsAlive(lv_u) && !GhostOps_Fold_ScvBusy(lv_u) && !UnitTestState(lv_u, c_unitStateUnderConstruction)) {
+            lv_d = DistanceBetweenPoints(UnitGetPosition(lv_u), UnitGetPosition(lp_struct));
+            if (lv_d < lv_bd) {
+                lv_bd = lv_d;
+                lv_best = lv_u;
+            }
+        }
+
+        lv_i += 1;
+    }
+
+    return lv_best;
+}
+
+void GhostOps_Fold_Free (int lp_i, bool lp_cancelled) {
+    if (go_foldTag[lp_i] > 0) {
+        TextTagDestroy(go_foldTag[lp_i]);
+        go_foldTag[lp_i] = 0;
+    }
+
+    if (UnitIsValid(go_foldStruct[lp_i]) && UnitIsAlive(go_foldStruct[lp_i])) {
+        UnitBehaviorRemove(go_foldStruct[lp_i], "GhostOpsFolding", 1);
+        UnitAbilityShow(go_foldStruct[lp_i], "GhostOpsFold", true);
+        UnitAbilityShow(go_foldStruct[lp_i], "GhostOpsFoldCancel", false);
+    }
+
+    if (lp_cancelled && UnitIsValid(go_foldScv[lp_i]) && UnitIsAlive(go_foldScv[lp_i]) && (go_foldState[lp_i] == 1)) {
+        UnitIssueOrder(go_foldScv[lp_i], Order(AbilityCommand("stop", 0)), c_orderQueueReplace);
+    }
+
+    go_foldState[lp_i] = 0;
+    go_foldStruct[lp_i] = null;
+    go_foldScv[lp_i] = null;
+}
+
+// the structure and the SCV may still be what the dismantling needs: null = fine, else the key of the refusal text
+string GhostOps_Fold_Problem (unit lp_u, bool lp_atEnd) {
+    if ((lp_u == null) || !UnitIsAlive(lp_u)) {
+        return "Gone";
+    }
+
+    if (UnitGetOwner(lp_u) != 1) {
+        return "NotMine";
+    }
+
+    if (UnitTestState(lp_u, c_unitStateUnderConstruction)) {
+        return "NotFinished";
+    }
+
+    if ((UnitGetType(lp_u) == "Bunker") && (UnitCargoValue(lp_u, c_unitCargoUnitCount) > 0)) {
+        return "Garrison";
+    }
+
+    return "";
+}
+
+void GhostOps_Fold_Begin (unit lp_u) {
+    int lv_fam;
+    int lv_i;
+    int lv_slot;
+    unit lv_scv;
+    string lv_p;
+
+    if (!go_foldOn || (lp_u == null)) {
+        return;
+    }
+
+    lv_fam = GhostOps_Fold_FamOfType(UnitGetType(lp_u));
+    if ((lv_fam < 0) || !go_foldFam[lv_fam]) {
+        return;
+    }
+
+    if (GhostOps_Fold_SlotOf(lp_u) >= 0) {
+        return;
+    }
+
+    lv_p = GhostOps_Fold_Problem(lp_u, false);
+    if (lv_p != "") {
+        GhostOps_Fold_Say("No" + lv_p);
+        return;
+    }
+
+    lv_slot = -1;
+    lv_i = 0;
+    while ((lv_i < 8) && (lv_slot < 0)) {
+        if (go_foldState[lv_i] == 0) {
+            lv_slot = lv_i;
+        }
+
+        lv_i += 1;
+    }
+
+    if (lv_slot < 0) {
+        GhostOps_Fold_Say("NoScv");
+        return;
+    }
+
+    lv_scv = GhostOps_Fold_PickScv(lp_u);
+    if (lv_scv == null) {
+        GhostOps_Fold_Say("NoScv");
+        return;
+    }
+
+    go_foldStruct[lv_slot] = lp_u;
+    go_foldScv[lv_slot] = lv_scv;
+    go_foldFamOf[lv_slot] = lv_fam;
+    go_foldState[lv_slot] = 1;
+    go_foldTag[lv_slot] = 0;
+    UnitAbilityShow(lp_u, "GhostOpsFold", false);
+    UnitAbilityShow(lp_u, "GhostOpsFoldCancel", true);
+    UnitIssueOrder(lv_scv, OrderTargetingPoint(AbilityCommand("move", 0), UnitGetPosition(lp_u)), c_orderQueueReplace);
+    GhostOps_Fold_Say("Coming");
+    GhostOps_Kit_Log("fold ordered: " + UnitGetType(lp_u));
+}
+
+void GhostOps_Fold_Cancel (unit lp_u) {
+    int lv_i;
+
+    lv_i = GhostOps_Fold_SlotOf(lp_u);
+    if (lv_i < 0) {
+        return;
+    }
+
+    GhostOps_Fold_Free(lv_i, true);
+    GhostOps_Fold_Say("Cancelled");
+    GhostOps_Kit_Log("fold cancelled by the player");
+}
+
+void GhostOps_Fold_Finish (int lp_i) {
+    unit lv_u;
+    int lv_fam;
+    fixed lv_life;
+    fixed lv_cdEnd;
+    fixed lv_cd;
+    fixed lv_max;
+
+    lv_u = go_foldStruct[lp_i];
+    lv_fam = go_foldFamOf[lp_i];
+    lv_life = UnitGetPropertyFixed(lv_u, c_unitPropLife, c_unitPropCurrent);
+    lv_max = UnitGetPropertyFixed(lv_u, c_unitPropLifeMax, c_unitPropCurrent);
+    lv_cdEnd = 0.0;
+    if (lv_fam == 0) {
+        lv_cd = UnitAbilityGetCooldown(lv_u, "GhostOpsTurretSalvo", "Abil/GhostOpsTurretSalvo");
+        if (lv_cd > 0.0) {
+            lv_cdEnd = GameGetMissionTime() + lv_cd;
+        }
+    }
+
+    // ONE step: the structure goes, the kit comes (a save never sees both)
+    GhostOps_Fold_Free(lp_i, false);
+    UnitRemove(lv_u);
+    GhostOps_Fold_StorePush(lv_fam, lv_life, lv_cdEnd);
+    GhostOps_Kit_Returned(lv_fam);
+    GhostOps_Fold_Msg(StringExternal("Param/Value/GhostOpsFold_Done") + StringToText(": ") + GhostOps_Fold_FamText(lv_fam) + StringToText(", ") + GhostOps_Fold_StateText(lv_life, lv_max, lv_cdEnd));
+    GhostOps_Kit_Log("folded: kit stored, life " + FixedToString(lv_life, 0));
+}
+
+bool GhostOps_Fold_Tick (bool lp_testConds, bool lp_runActions) {
+    int lv_i;
+    string lv_p;
+    fixed lv_left;
+    unit lv_u;
+    unit lv_s;
+    bool lv_away;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    lv_i = 0;
+    while (lv_i < 8) {
+        if (go_foldState[lv_i] != 0) {
+            lv_u = go_foldStruct[lv_i];
+            lv_s = go_foldScv[lv_i];
+            lv_p = GhostOps_Fold_Problem(lv_u, false);
+            if (lv_p != "") {
+                GhostOps_Fold_Free(lv_i, true);
+                if (lv_p != "Gone") {
+                    GhostOps_Fold_Say("No" + lv_p);
+                }
+                else {
+                    GhostOps_Fold_Say("Lost");
+                }
+            }
+            else if (!UnitIsValid(lv_s) || !UnitIsAlive(lv_s)) {
+                GhostOps_Fold_Free(lv_i, true);
+                GhostOps_Fold_Say("ScvLost");
+            }
+            else if (go_foldState[lv_i] == 1) {
+                if (DistanceBetweenPoints(UnitGetPosition(lv_s), UnitGetPosition(lv_u)) <= 3.4) {
+                    go_foldState[lv_i] = 2;
+                    go_foldStart[lv_i] = GameGetMissionTime();
+                    UnitIssueOrder(lv_s, Order(AbilityCommand("stop", 0)), c_orderQueueReplace);
+                    UnitBehaviorAdd(lv_u, "GhostOpsFolding", lv_u, 1);
+                    TextTagCreate(StringExternal("Param/Value/GhostOpsFold_Working"), 24, UnitGetPosition(lv_u), 2.2, true, false, PlayerGroupAll());
+                    go_foldTag[lv_i] = TextTagLastCreated();
+                    GhostOps_Fold_Say("Started");
+                }
+                else if (UnitOrderCount(lv_s) == 0) {
+                    // the SCV stopped on the way (a blocked path or a new order of the player): the dismantling is cancelled
+                    GhostOps_Fold_Free(lv_i, true);
+                    GhostOps_Fold_Say("ScvStopped");
+                }
+            }
+            else {
+                lv_left = go_foldDuration - (GameGetMissionTime() - go_foldStart[lv_i]);
+                lv_away = false;
+                if (UnitOrderCount(lv_s) > 0) {
+                    // an automatic repair of the structure does not cancel anything (the SCV is put back to work); any other order of the player (move, harvest, build, attack) does
+                    if (AbilityCommandGetAbility(OrderGetAbilityCommand(UnitOrder(lv_s, 0))) == "Repair") {
+                        UnitIssueOrder(lv_s, Order(AbilityCommand("stop", 0)), c_orderQueueReplace);
+                    }
+                    else if (AbilityCommandGetAbility(OrderGetAbilityCommand(UnitOrder(lv_s, 0))) != "stop") {
+                        lv_away = true;
+                    }
+                }
+
+                if (lv_away || (DistanceBetweenPoints(UnitGetPosition(lv_s), UnitGetPosition(lv_u)) > 4.5)) {
+                    // the player ordered the SCV away: the dismantling is cancelled, the structure stays
+                    GhostOps_Fold_Free(lv_i, false);
+                    GhostOps_Fold_Say("ScvStopped");
+                }
+                else if (lv_left <= 0.0) {
+                    lv_p = GhostOps_Fold_Problem(lv_u, true);
+                    if (lv_p != "") {
+                        GhostOps_Fold_Free(lv_i, false);
+                        GhostOps_Fold_Say("No" + lv_p);
+                    }
+                    else {
+                        GhostOps_Fold_Finish(lv_i);
+                    }
+                }
+                else if (go_foldTag[lv_i] > 0) {
+                    TextTagSetText(go_foldTag[lv_i], StringExternal("Param/Value/GhostOpsFold_Working") + StringToText(" ") + IntToText(FixedToInt(lv_left + 0.99)));
+                }
+            }
+        }
+
+        lv_i += 1;
+    }
+
+    return true;
+}
+
+bool GhostOps_Fold_OnFold (bool lp_testConds, bool lp_runActions) {
+    if (!lp_runActions) {
+        return true;
+    }
+
+    GhostOps_Fold_Begin(EventUnit());
+    return true;
+}
+
+bool GhostOps_Fold_OnCancelCmd (bool lp_testConds, bool lp_runActions) {
+    if (!lp_runActions) {
+        return true;
+    }
+
+    GhostOps_Fold_Cancel(EventUnit());
+    return true;
+}
+
+// a new Bunker / Turret (a construction that has just started) must not show the cancel button
+bool GhostOps_Fold_Sync (bool lp_testConds, bool lp_runActions) {
+    unitgroup lv_g;
+    unit lv_u;
+    int lv_f;
+    int lv_n;
+    int lv_i;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    lv_f = 0;
+    while (lv_f < 2) {
+        if (go_foldFam[lv_f]) {
+            lv_g = UnitGroup(GhostOps_Fold_FamName(lv_f), 1, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32)) | (1 << (c_targetFilterHidden - 32))), 0);
+            lv_n = UnitGroupCount(lv_g, c_unitCountAll);
+            lv_i = 1;
+            while (lv_i <= lv_n) {
+                lv_u = UnitGroupUnit(lv_g, lv_i);
+                if (GhostOps_Fold_SlotOf(lv_u) < 0) {
+                    UnitAbilityShow(lv_u, "GhostOpsFoldCancel", false);
+                    UnitAbilityEnable(lv_u, "GhostOpsFold", !UnitTestState(lv_u, c_unitStateUnderConstruction));
+                }
+
+                lv_i += 1;
+            }
+        }
+
+        lv_f += 1;
+    }
+
+    return true;
+}
+
+void GhostOps_ApplyFoldConfig ();
+
+void GhostOps_Fold_Start () {
+    trigger lv_t;
+
+    GhostOps_ApplyFoldConfig();
+    if (!go_foldOn || (go_foldTrig != null)) {
+        return;
+    }
+
+    go_foldTrig = TriggerCreate("GhostOps_Fold_Tick");
+    TriggerAddEventTimePeriodic(go_foldTrig, 0.25, c_timeGame);
+    lv_t = TriggerCreate("GhostOps_Fold_OnFold");
+    TriggerAddEventUnitAbility(lv_t, null, AbilityCommand("GhostOpsFold", 0), c_unitAbilStageComplete, false);
+    lv_t = TriggerCreate("GhostOps_Fold_OnCancelCmd");
+    TriggerAddEventUnitAbility(lv_t, null, AbilityCommand("GhostOpsFoldCancel", 0), c_unitAbilStageComplete, false);
+    lv_t = TriggerCreate("GhostOps_Fold_Sync");
+    TriggerAddEventTimePeriodic(lv_t, 0.5, c_timeGame);
+}

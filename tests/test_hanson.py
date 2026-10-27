@@ -79,8 +79,8 @@ class HansonConfig(unittest.TestCase):
     def test_dev_preset_is_hidden(self):
         raw = build.load_json(ADAPTER['config'])
         self.assertTrue(raw['presets']['sniper_dev']['hidden'])
-        self.assertEqual([p['name'] for p in launcher_core.profiles_of('thanson01')], ['sniper', 'sniper_next', 'sniper_next_r2', 'sniper_next_free_r2', 'sniper_next_r3', 'sniper_next_free_r3', 'sniper_next_r4', 'sniper_next_free_r4', 'sniper_next_r5', 'sniper_next_free_r5'])
-        self.assertEqual(launcher_core.default_profile('thanson01'), 'sniper_next_r5')
+        self.assertEqual([p['name'] for p in launcher_core.profiles_of('thanson01')], ['sniper', 'sniper_next', 'sniper_next_r2', 'sniper_next_free_r2', 'sniper_next_r3', 'sniper_next_free_r3', 'sniper_next_r4', 'sniper_next_free_r4', 'sniper_next_r5', 'sniper_next_free_r5', 'sniper_next_r6', 'sniper_next_free_r6'])
+        self.assertEqual(launcher_core.default_profile('thanson01'), 'sniper_next_r6')
         self.assertEqual(launcher_core.mission_info('thanson01')['status'], 'Эксперимент')
         dev, _ = build.resolve_config(ADAPTER, 'sniper_dev')
         self.assertTrue(dev['hanson']['debug_log'])
@@ -211,7 +211,7 @@ class HansonCode(unittest.TestCase):
         self.assertEqual(man['audio'], [])
         arc = sc2mpq.Archive(build.read(os.path.join(ROOT, 'dist', 'GhostOps_THanson01_sniper.SC2Map')))
         script = arc.read('MapScript.galaxy').decode('utf-8-sig')
-        self.assertEqual(script.count(build.HOOK_TAG), 7)
+        self.assertEqual(script.count(build.HOOK_TAG), 8)  # the seven mission hooks and the start call of the shared fold module
         self.assertEqual(script.count('GhostOps_Hanson_Hold(TriggerGetCurrent())'), 1)
 
 
