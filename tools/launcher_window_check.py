@@ -147,7 +147,10 @@ def main(argv):
     nums = [r['number'] for r in core.archive_of('traynor03')]
     check('traynor03: the archive is sorted as numbers, newest first', nums == sorted(nums, reverse=True) and 5 in nums and 0 in nums, nums)
     check('traynor03: hidden / service profiles are not in the archive', all(r['number'] in (0, 1, 2, 3, 4, 5) for r in core.archive_of('traynor03')))
-    app.scroll._parent_canvas.yview_moveto(1.0)
+    cv = app.scroll._parent_canvas
+    cv.update_idletasks()
+    inner = max(1, cv.bbox('all')[3])
+    cv.yview_moveto(max(0.0, (app.archive_button.winfo_rooty() - app.scroll.winfo_rooty() - 10) / inner + cv.yview()[0]))  # the header of the archive at the top of the view
     pump(0.6)
     shot('02_archive_open')
     app.scroll._parent_canvas.yview_moveto(0.0)
