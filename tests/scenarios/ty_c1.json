@@ -21,44 +21,14 @@
    "op": "mark"
   },
   {
-   "op": "mark"
+   "op": "cmd",
+   "text": "tsetupc",
+   "wait": 3.0
   },
   {
-   "op": "until",
-   "grep": "TCLEAR",
-   "cmd": "tclear 160 40",
-   "every": 3,
-   "timeout": 45
-  },
-  {
-   "op": "mark"
-  },
-  {
-   "op": "until",
-   "grep": "TMARMAKE",
-   "cmd": "tmarmake",
-   "every": 3,
-   "timeout": 45
-  },
-  {
-   "op": "mark"
-  },
-  {
-   "op": "until",
-   "grep": "TFREEZEG",
-   "cmd": "tfreezeg 1",
-   "every": 3,
-   "timeout": 45
-  },
-  {
-   "op": "mark"
-  },
-  {
-   "op": "until",
-   "grep": "TMOVE tps",
-   "cmd": "tps 168 47",
-   "every": 3,
-   "timeout": 45
+   "op": "expect",
+   "regex": "TSETUP tsetupc",
+   "note": "the set-up of episode C"
   },
   {
    "op": "mark"

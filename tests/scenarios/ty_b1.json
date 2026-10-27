@@ -21,69 +21,14 @@
    "op": "mark"
   },
   {
-   "op": "mark"
-  },
-  {
-   "op": "until",
-   "grep": "TCLEAR",
-   "cmd": "tclear 160 40",
-   "every": 3,
-   "timeout": 45
-  },
-  {
-   "op": "mark"
-  },
-  {
-   "op": "until",
-   "grep": "TMARMAKE",
-   "cmd": "tmarmake",
-   "every": 3,
-   "timeout": 45
-  },
-  {
-   "op": "mark"
-  },
-  {
-   "op": "until",
-   "grep": "TFREEZEG",
-   "cmd": "tfreezeg 0",
-   "every": 3,
-   "timeout": 45
-  },
-  {
-   "op": "mark"
-  },
-  {
-   "op": "until",
-   "grep": "TMOVE tpm",
-   "cmd": "tpm 158 41",
-   "every": 3,
-   "timeout": 45
-  },
-  {
    "op": "cmd",
-   "text": "taim 164 44",
-   "wait": 1.0
-  },
-  {
-   "op": "cmd",
-   "text": "tspawn Zergling 10",
-   "wait": 1.5
+   "text": "tsetupb",
+   "wait": 3.0
   },
   {
    "op": "expect",
-   "regex": "TSPAWN 10 Zergling",
-   "note": "ten Zerglings at the entrance of the artifact plaza"
-  },
-  {
-   "op": "cmd",
-   "text": "tspawn Roach 3",
-   "wait": 1.5
-  },
-  {
-   "op": "expect",
-   "regex": "TSPAWN 3 Roach",
-   "note": "three Roaches"
+   "regex": "TSETUP tsetupb",
+   "note": "the set-up of episode B"
   },
   {
    "op": "mark"

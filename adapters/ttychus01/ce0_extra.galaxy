@@ -685,5 +685,67 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
         return true;
     }
 
+    if ((lp_cmd == "tsetupb") || (lp_cmd == "tsetupc")) {
+        // tsetupb / tsetupc: the whole set-up of the episodes B and C in ONE command (fewer typed lines: a typed line is sometimes lost when the game is busy). Both: the Protoss within 20 of the
+        // entrance of the artifact plaza are removed and the Marauders of the totals appear. b: the Marauders stand at the entrance (158; 41), ten Zerglings and three Roaches wait at (164; 44)
+        // (script controlled), the guardians are free. c: the guardians are paused and every SCV stands south of the artifact (168; 47).
+        lv_i = 3;
+        while (lv_i <= 6) {
+            lv_g = UnitGroup(null, lv_i, RegionCircle(Point(160.0, 40.0), 20.0), UnitFilter(0, 0, (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32))), 0);
+            UnitGroupLoopBegin(lv_g);
+            while (UnitGroupLoopCurrent() != null) {
+                UnitRemove(UnitGroupLoopCurrent());
+                UnitGroupLoopStep();
+            }
+
+            UnitGroupLoopEnd();
+            lv_i += 1;
+        }
+
+        lv_n = 0;
+        while (lv_n < go_tyMarauders) {
+            UnitCreate(1, "Marauder", 0, 1, Point(158.0 + IntToFixed(lv_n), 41.0), 270.0);
+            lv_n += 1;
+        }
+
+        go_tyMaraudersCame = true;
+        go_tyScene[1] = true;
+        if (lp_cmd == "tsetupb") {
+            lv_i = 0;
+            while (lv_i < 10) {
+                UnitCreate(1, "Zergling", 0, 2, Point(162.0 + IntToFixed(lv_i % 5), 43.0 + IntToFixed(lv_i / 5)), 270.0);
+                AISetUnitScriptControlled(UnitLastCreated(), true);
+                lv_i += 1;
+            }
+
+            lv_i = 0;
+            while (lv_i < 3) {
+                UnitCreate(1, "Roach", 0, 2, Point(163.0 + IntToFixed(lv_i), 45.0), 270.0);
+                AISetUnitScriptControlled(UnitLastCreated(), true);
+                lv_i += 1;
+            }
+        }
+        else {
+            lv_g = UnitGroup("StoneZealot", c_playerAny, RegionEntireMap(), UnitFilter(0, 0, (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32))), 0);
+            lv_n = UnitGroupCount(lv_g, c_unitCountAll);
+            lv_i = 1;
+            while (lv_i <= lv_n) {
+                libNtve_gf_PauseUnit(UnitGroupUnit(lv_g, lv_i), true);
+                lv_i += 1;
+            }
+
+            lv_g = UnitGroup("SCV", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+            lv_n = UnitGroupCount(lv_g, c_unitCountAll);
+            lv_i = 1;
+            while (lv_i <= lv_n) {
+                UnitSetPosition(UnitGroupUnit(lv_g, lv_i), Point(168.0 + IntToFixed(lv_i % 4) * 1.2, 47.0 + IntToFixed(lv_i / 4) * 1.2), false);
+                lv_i += 1;
+            }
+        }
+
+        GhostOps_Ce0_Write("j", "TSETUP " + lp_cmd);
+        return true;
+    }
+
     return false;
 }
