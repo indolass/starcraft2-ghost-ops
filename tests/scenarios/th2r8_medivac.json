@@ -1,0 +1,168 @@
+{
+ "name": "th2r8_medivac",
+ "mission": "thanson02",
+ "preset": "epidemic_free_r7_ce0_dev",
+ "why": "r8 control experiment: do the posted clicks board a stock Medivac (L + click, right click)?",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "cmd",
+   "text": "egather 78 104",
+   "wait": 2.0
+  },
+  {
+   "op": "cmd",
+   "text": "emedivac 78 104",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "burst",
+   "file": "m0_medivac.png",
+   "n": 2,
+   "gap": 0.5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "L"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "move",
+   "x": 284,
+   "y": 302
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "click",
+   "x": 284,
+   "y": 302
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "burst",
+   "file": "m1_0_after.png",
+   "n": 1,
+   "gap": 0
+  },
+  {
+   "op": "sleep",
+   "s": 6
+  },
+  {
+   "op": "key",
+   "keys": [
+    "L"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "move",
+   "x": 284,
+   "y": 454
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "click",
+   "x": 284,
+   "y": 454
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "burst",
+   "file": "m1_1_after.png",
+   "n": 1,
+   "gap": 0
+  },
+  {
+   "op": "sleep",
+   "s": 6
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EMEDCARGO",
+   "cmd": "emedcargo",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "EMEDCARGO",
+   "note": "CONTROL: a stock Medivac, L + click on two marines (cargo is in the line)"
+  },
+  {
+   "op": "cmd",
+   "text": "egather 78 104",
+   "wait": 2.0
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "rclick",
+   "x": 507,
+   "y": 277
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EMEDCARGO",
+   "cmd": "emedcargo",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "EMEDCARGO",
+   "note": "CONTROL: right click on the Medivac"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

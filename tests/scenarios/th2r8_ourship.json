@@ -1,0 +1,220 @@
+{
+ "name": "th2r8_ourship",
+ "mission": "thanson02",
+ "preset": "epidemic_free_r7_ce0_dev",
+ "why": "r8 control: our night transport, a clean run: L + click on four marines",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "cmd",
+   "text": "eshipnow",
+   "wait": 2.0
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "cmd",
+   "text": "egather 78 104",
+   "wait": 2.0
+  },
+  {
+   "op": "cmd",
+   "text": "eselshipq",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "burst",
+   "file": "o0_our_ship.png",
+   "n": 2,
+   "gap": 0.5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "L"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "move",
+   "x": 284,
+   "y": 302
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "click",
+   "x": 284,
+   "y": 302
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "burst",
+   "file": "o1_0_after.png",
+   "n": 1,
+   "gap": 0
+  },
+  {
+   "op": "sleep",
+   "s": 6
+  },
+  {
+   "op": "key",
+   "keys": [
+    "L"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "move",
+   "x": 284,
+   "y": 454
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "click",
+   "x": 284,
+   "y": 454
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "burst",
+   "file": "o1_1_after.png",
+   "n": 1,
+   "gap": 0
+  },
+  {
+   "op": "sleep",
+   "s": 6
+  },
+  {
+   "op": "key",
+   "keys": [
+    "L"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "move",
+   "x": 744,
+   "y": 302
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "click",
+   "x": 744,
+   "y": 302
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "burst",
+   "file": "o1_2_after.png",
+   "n": 1,
+   "gap": 0
+  },
+  {
+   "op": "sleep",
+   "s": 6
+  },
+  {
+   "op": "key",
+   "keys": [
+    "L"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "move",
+   "x": 744,
+   "y": 454
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "click",
+   "x": 744,
+   "y": 454
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "burst",
+   "file": "o1_3_after.png",
+   "n": 1,
+   "gap": 0
+  },
+  {
+   "op": "sleep",
+   "s": 6
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ESQUAD",
+   "cmd": "esquad 78 104",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "ESQUAD",
+   "note": "OUR ship (eshipnow), nothing done before: L + click on four marines"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

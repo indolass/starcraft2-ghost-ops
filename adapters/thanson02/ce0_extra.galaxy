@@ -6,6 +6,7 @@ int go_ce0DumN;
 point go_ce0Aim;
 unit go_ce0Air;
 int go_ce0ScvN;
+unit[4] go_ce0Sq;               // the four marines of the raid squad (set by egather)
 
 unit GhostOps_Ce0_First (string lp_type) {
     return UnitGroupUnit(UnitGroup(lp_type, 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), 1);
@@ -984,6 +985,7 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
             }
 
             UnitIssueOrder(lv_u, Order(AbilityCommand("stop", 0)), c_orderQueueReplace);
+            go_ce0Sq[lv_i - 1] = lv_u;
             lv_i += 1;
         }
 
@@ -1000,6 +1002,60 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
             GhostOps_Ce0_Write("j", "ESELSHIPQ ship selected at " + GhostOps_Ce0_Pt(UnitGetPosition(go_eShip)));
         }
 
+        return true;
+    }
+
+    if (lp_cmd == "emedivac") {
+        // emedivac <x> <y>: control experiment for the boarding clicks: a stock Medivac of the player is made at the point and selected (nothing else is changed); emedcargo reports its cargo
+        if (lp_b == "x") {
+            UnitCreate(1, "Hercules", c_unitCreateIgnorePlacement, 1, Point(StringToFixed(lp_a), 104.0), 270.0);
+        }
+        else {
+            UnitCreate(1, "Medivac", c_unitCreateIgnorePlacement, 1, Point(StringToFixed(lp_a), StringToFixed(lp_b)), 270.0);
+        }
+
+        go_ce0Air = UnitLastCreated();
+        UnitClearSelection(1);
+        UnitSelect(go_ce0Air, 1, true);
+        GhostOps_Ce0_Write("j", "EMEDIVAC made at " + lp_a + "," + lp_b);
+        return true;
+    }
+
+    if (lp_cmd == "emedcargo") {
+        GhostOps_Ce0_Write("j", "EMEDCARGO cargo " + IntToString(UnitGroupCount(UnitCargoGroup(go_ce0Air), c_unitCountAlive)) + " at " + GhostOps_Ce0_Pt(UnitGetPosition(go_ce0Air)));
+        return true;
+    }
+
+    if (lp_cmd == "esq4") {
+        // esq4: the four marines of the raid squad (marked by egather): alive / dead, life, at which point, on the ship or not; the ship: life and place
+        lv_t = "ESQ4";
+        lv_c = 0;
+        lv_i = 0;
+        while (lv_i < 4) {
+            lv_u = go_ce0Sq[lv_i];
+            if (lv_u == null) {
+                lv_t = lv_t + " [none]";
+            }
+            else if (!UnitIsAlive(lv_u)) {
+                lv_t = lv_t + " [dead]";
+            }
+            else {
+                lv_c += 1;
+                lv_t = lv_t + " [life " + FixedToString(UnitGetPropertyFixed(lv_u, c_unitPropLife, c_unitPropCurrent), 0) + " at " + GhostOps_Ce0_Pt(UnitGetPosition(lv_u)) + "]";
+            }
+
+            lv_i += 1;
+        }
+
+        lv_t = lv_t + " alive " + IntToString(lv_c);
+        if (go_eShipMade && UnitIsAlive(go_eShip)) {
+            lv_t = lv_t + " | ship life " + FixedToString(UnitGetPropertyFixed(go_eShip, c_unitPropLife, c_unitPropCurrent), 0) + " at " + GhostOps_Ce0_Pt(UnitGetPosition(go_eShip)) + " cargo " + IntToString(UnitGroupCount(UnitCargoGroup(go_eShip), c_unitCountAlive)) + " inZone " + IntToString(BoolToInt(GhostOps_Epi_InZone(UnitGetPosition(go_eShip))));
+        }
+        else {
+            lv_t = lv_t + " | ship lost";
+        }
+
+        GhostOps_Ce0_Write("j", lv_t);
         return true;
     }
 

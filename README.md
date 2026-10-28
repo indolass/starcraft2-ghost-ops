@@ -263,4 +263,4 @@ Revision 2 (`epidemic_free_r2`, card "Эпидемия — Тест: беспл�
 
 - `python tools/prebuild.py [--status-only]` builds, checks and installs the CURRENT maps of the three playable missions in advance and prints the time of every stage; a map that is up to date is skipped. The launcher shows "Готова к запуску" / "Нужна сборка" on the mission card.
 - "Мастерская миссий" (button in the launcher): variants of Hour X, Evacuation and Epidemic with a full snapshot of the settings; free tests only, the real campaign is never touched. Checks: `python tools/workshop_window_check.py OUTDIR` (real window), `python tools/workshop_run_check.py MISSION` (real build and start; run it through `tools/test_queue.py` like every game start).
-- Revisions: Hour X `defence_r5`, Evacuation `sniper_next_r5`, Epidemic `epidemic_free_r7` (free tests `*_free*`); all numbers are experimental, see `docs/MISSION_ROADMAP.md`.
+- Revisions: Hour X `defence_r5`, Evacuation `sniper_next_r5`, Epidemic `epidemic_free_r8` (free tests `*_free*`); all numbers are experimental, see `docs/MISSION_ROADMAP.md`.

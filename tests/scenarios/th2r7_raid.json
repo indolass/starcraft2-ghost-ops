@@ -576,7 +576,7 @@
   {
    "op": "expect",
    "regex": "cargo 4",
-   "note": "all four Marines were loaded with the real key L and clicks"
+   "note": "cargo 4 at the end: some Marines were boarded by real L + click (see the retry records of the result), the rest by the SCRIPTED fallback eshipfill: this check does not prove that all four boarded by clicks"
   },
   {
    "op": "burst",

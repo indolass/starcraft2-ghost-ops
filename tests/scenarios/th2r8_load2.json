@@ -1,0 +1,410 @@
+{
+ "name": "th2r8_load2",
+ "mission": "thanson02",
+ "preset": "epidemic_free_r8_ce0_dev",
+ "why": "r8: the boarding of the Hercules with real clicks: a group at the base, unload with D, boarding again; no scripted loading",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "cmd",
+   "text": "eshipnow",
+   "wait": 2.0
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "cmd",
+   "text": "egather 78 104",
+   "wait": 2.0
+  },
+  {
+   "op": "cmd",
+   "text": "eselshipq",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "burst",
+   "file": "b0_ready.png",
+   "n": 1,
+   "gap": 0
+  },
+  {
+   "op": "key",
+   "keys": [
+    "L"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "move",
+   "x": 284,
+   "y": 302
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "click",
+   "x": 284,
+   "y": 302
+  },
+  {
+   "op": "sleep",
+   "s": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "L"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "move",
+   "x": 284,
+   "y": 454
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "click",
+   "x": 284,
+   "y": 454
+  },
+  {
+   "op": "sleep",
+   "s": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "L"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "move",
+   "x": 744,
+   "y": 302
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "click",
+   "x": 744,
+   "y": 302
+  },
+  {
+   "op": "sleep",
+   "s": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "L"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "move",
+   "x": 744,
+   "y": 454
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "click",
+   "x": 744,
+   "y": 454
+  },
+  {
+   "op": "sleep",
+   "s": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 5
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ESQUAD",
+   "cmd": "esquad 78 104",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "cargo 4",
+   "note": "REAL clicks: a group of four loaded at the base (L + click on each, no scripted loading)"
+  },
+  {
+   "op": "burst",
+   "file": "b1_loaded.png",
+   "n": 2,
+   "gap": 0.5
+  },
+  {
+   "op": "cmd",
+   "text": "ecamship",
+   "wait": 1.5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "D"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.7
+  },
+  {
+   "op": "click",
+   "x": 514,
+   "y": 378
+  },
+  {
+   "op": "sleep",
+   "s": 10
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ESQUAD",
+   "cmd": "esquad 78 104",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "cargo 0",
+   "note": "REAL keys: unloaded with D + click"
+  },
+  {
+   "op": "burst",
+   "file": "b2_unloaded.png",
+   "n": 2,
+   "gap": 0.5
+  },
+  {
+   "op": "cmd",
+   "text": "egather 78 104",
+   "wait": 2.0
+  },
+  {
+   "op": "cmd",
+   "text": "eselshipq",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "key",
+   "keys": [
+    "L"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "move",
+   "x": 284,
+   "y": 302
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "click",
+   "x": 284,
+   "y": 302
+  },
+  {
+   "op": "sleep",
+   "s": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "L"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "move",
+   "x": 284,
+   "y": 454
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "click",
+   "x": 284,
+   "y": 454
+  },
+  {
+   "op": "sleep",
+   "s": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "L"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "move",
+   "x": 744,
+   "y": 302
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "click",
+   "x": 744,
+   "y": 302
+  },
+  {
+   "op": "sleep",
+   "s": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "L"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "move",
+   "x": 744,
+   "y": 454
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "click",
+   "x": 744,
+   "y": 454
+  },
+  {
+   "op": "sleep",
+   "s": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 5
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ESQUAD",
+   "cmd": "esquad 78 104",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "cargo 4",
+   "note": "REAL clicks: boarded again after the unload, no scripted loading (the four marines were placed again by a probe: preparation)"
+  },
+  {
+   "op": "burst",
+   "file": "b3_reloaded.png",
+   "n": 2,
+   "gap": 0.5
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

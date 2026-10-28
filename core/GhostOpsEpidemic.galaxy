@@ -71,6 +71,7 @@ int go_eZoneN;
 fixed[24] go_eZoneX;
 fixed[24] go_eZoneY;
 bool go_bdOn;                   // revision 7: the barrel drop of the Hercules
+bool go_bdNightRefill;          // revisions 7: the barrels are also refilled when the ship appears again at a new night (the old rule); revision 8: only the first issue at the first appearance and the return to the supply zone
 int go_bdMax;                   // barrels of one flight
 fixed go_bdFall;                // seconds from the release to the impact (the flight time of the missile mover); a barrel that has not arrived 2.5 s later than that explodes anyway (a lost missile never keeps a slot)
 void GhostOps_ApplyEpidemicConfig ();
@@ -1036,7 +1037,7 @@ void GhostOps_Epi_ShipOpen () {
     }
 
     UnitAbilityEnable(go_eShip, GhostOps_Epi_ShipAbil(), true);
-    if (go_bdOn) {
+    if (go_bdOn && go_bdNightRefill) {
         GhostOps_Epi_BarrelsRefill(true);
     }
 

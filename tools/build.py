@@ -1868,6 +1868,8 @@ def validate_epidemic(cfg):
         else:
             for k, lo, hi in (('range', 0.5, 12), ('fall_seconds', 0.3, 15), ('flight_height', 1, 12)):
                 num(bd, k, lo, hi, 'barrels')
+            if 'refill_on_night' in bd and not isinstance(bd['refill_on_night'], bool):
+                errs.append('epidemic.barrels.refill_on_night must be boolean (revision 8: false = the barrels come back only by a return to the supply zone)')
             if not (isinstance(bd.get('count'), int) and not isinstance(bd.get('count'), bool) and 1 <= bd['count'] <= 4):
                 errs.append('epidemic.barrels.count must be an integer 1..4 (barrels of one flight; restored in the supply zone)')
             if not (isinstance(bd.get('enabled'), bool) and isinstance(bd.get('hotkey'), str) and len(bd['hotkey']) == 1 and bd['hotkey'].isupper() and bd['hotkey'].isalpha()):
@@ -1930,7 +1932,7 @@ def gen_epidemic(cfg):
             lines.append('    go_eZoneY[%d] = %.3f;' % (i, q[1]))
     bd = e.get('barrels') or {}
     if bd.get('enabled'):
-        lines += ['    go_bdOn = true;', '    go_bdMax = %d;' % bd['count'], '    go_bdFall = %.3f;' % bd['fall_seconds']]
+        lines += ['    go_bdOn = true;', '    go_bdMax = %d;' % bd['count'], '    go_bdFall = %.3f;' % bd['fall_seconds'], '    go_bdNightRefill = %s;' % b(bd.get('refill_on_night', True))]
     lines += ['    go_eShipOn = %s;' % b(tr['enabled']), '    go_eShipFirstNight = %d;' % tr['first_night'], '    go_eDock = Point(%.4f, %.4f);' % (tr['dock'][0], tr['dock'][1]),
               '    go_eDockR = %.2f;' % tr['dock_radius'], '    go_eWarnSec = %.1f;' % tr['warn_seconds'],
               '    go_eHudX = %d;' % e['hud']['offset_x'], '    go_eHudY = %d;' % e['hud']['offset_y'], '    go_eHudW = %d;' % e['hud']['width'], '    go_eHudH = %d;' % e['hud']['height'], '}', '']

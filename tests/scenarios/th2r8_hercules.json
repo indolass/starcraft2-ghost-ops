@@ -1,0 +1,135 @@
+{
+ "name": "th2r8_hercules",
+ "mission": "thanson02",
+ "preset": "epidemic_free_r7_ce0_dev",
+ "why": "r8 control experiment: do the posted clicks board a plain stock Hercules?",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "cmd",
+   "text": "egather 78 104",
+   "wait": 2.0
+  },
+  {
+   "op": "cmd",
+   "text": "emedivac 78 x",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "burst",
+   "file": "h0_plain_hercules.png",
+   "n": 2,
+   "gap": 0.5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "L"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "move",
+   "x": 284,
+   "y": 302
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "click",
+   "x": 284,
+   "y": 302
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "burst",
+   "file": "h1_0_after.png",
+   "n": 1,
+   "gap": 0
+  },
+  {
+   "op": "sleep",
+   "s": 6
+  },
+  {
+   "op": "key",
+   "keys": [
+    "L"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "move",
+   "x": 284,
+   "y": 454
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "click",
+   "x": 284,
+   "y": 454
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "burst",
+   "file": "h1_1_after.png",
+   "n": 1,
+   "gap": 0
+  },
+  {
+   "op": "sleep",
+   "s": 6
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EMEDCARGO",
+   "cmd": "emedcargo",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "EMEDCARGO",
+   "note": "CONTROL: a plain stock Hercules (not our ship), L + click on two marines"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

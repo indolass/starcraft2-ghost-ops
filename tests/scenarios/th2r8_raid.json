@@ -1,0 +1,888 @@
+{
+ "name": "th2r8_raid",
+ "mission": "thanson02",
+ "preset": "epidemic_free_r8_raid_dev",
+ "why": "r8: ONE short night raid with ordinary vulnerability of the squad and the natural infested: boarding (real clicks) -> flight -> two barrels -> unload -> attack the hut -> boarding again -> flight home; losses recorded, victory not required; the only preparation: the ship appears, the four marines are placed at known places at the base and before the re-boarding, the squad is selected by a probe for the attack",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "cmd",
+   "text": "eshipnow",
+   "wait": 2.0
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "cmd",
+   "text": "egather 78 104",
+   "wait": 2.0
+  },
+  {
+   "op": "cmd",
+   "text": "eselshipq",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ESQ4",
+   "cmd": "esq4",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "ESQ4",
+   "note": "START: four Marines at the base, ship empty (PREPARATION: the marines were placed around the ship by a probe)"
+  },
+  {
+   "op": "burst",
+   "file": "x0_base.png",
+   "n": 2,
+   "gap": 0.5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "L"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "move",
+   "x": 284,
+   "y": 302
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "click",
+   "x": 284,
+   "y": 302
+  },
+  {
+   "op": "sleep",
+   "s": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "L"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "move",
+   "x": 284,
+   "y": 454
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "click",
+   "x": 284,
+   "y": 454
+  },
+  {
+   "op": "sleep",
+   "s": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "L"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "move",
+   "x": 744,
+   "y": 302
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "click",
+   "x": 744,
+   "y": 302
+  },
+  {
+   "op": "sleep",
+   "s": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "L"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "move",
+   "x": 744,
+   "y": 454
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "click",
+   "x": 744,
+   "y": 454
+  },
+  {
+   "op": "sleep",
+   "s": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 5
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ESQ4",
+   "cmd": "esq4",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "ESQ4",
+   "note": "BOARDING with real L + click (no scripted loading): the cargo is in the line"
+  },
+  {
+   "op": "burst",
+   "file": "x1_loaded.png",
+   "n": 2,
+   "gap": 0.5
+  },
+  {
+   "op": "retry",
+   "steps": [
+    {
+     "op": "cmd",
+     "text": "ecam 105 92",
+     "wait": 1.0
+    },
+    {
+     "op": "key",
+     "keys": [
+      "M"
+     ]
+    },
+    {
+     "op": "sleep",
+     "s": 0.7
+    },
+    {
+     "op": "click",
+     "x": 512,
+     "y": 330
+    }
+   ],
+   "check": "esq4",
+   "grep": "ship life [0-9]+ at 10[0-9][.][0-9],9[0-9][.][0-9]",
+   "tries": 3,
+   "wait": 14
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ESQ4",
+   "cmd": "esq4",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "ESQ4",
+   "note": "FLIGHT: the ship over the site"
+  },
+  {
+   "op": "retry",
+   "steps": [
+    {
+     "op": "cmd",
+     "text": "ecam 105 92",
+     "wait": 1.0
+    },
+    {
+     "op": "key",
+     "keys": [
+      "B"
+     ]
+    },
+    {
+     "op": "sleep",
+     "s": 0.7
+    },
+    {
+     "op": "click",
+     "x": 512,
+     "y": 330
+    }
+   ],
+   "check": "ebar",
+   "grep": "drops 1",
+   "tries": 3,
+   "wait": 5
+  },
+  {
+   "op": "burst",
+   "file": "x2_barrel1.png",
+   "n": 3,
+   "gap": 0.4
+  },
+  {
+   "op": "retry",
+   "steps": [
+    {
+     "op": "cmd",
+     "text": "ecam 105 92",
+     "wait": 1.0
+    },
+    {
+     "op": "key",
+     "keys": [
+      "B"
+     ]
+    },
+    {
+     "op": "sleep",
+     "s": 0.7
+    },
+    {
+     "op": "click",
+     "x": 512,
+     "y": 360
+    }
+   ],
+   "check": "ebar",
+   "grep": "drops 2",
+   "tries": 3,
+   "wait": 5
+  },
+  {
+   "op": "burst",
+   "file": "x3_barrel2.png",
+   "n": 3,
+   "gap": 0.4
+  },
+  {
+   "op": "sleep",
+   "s": 4
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "EBAR",
+   "note": "BARRELS: two dropped (the line has the counters)"
+  },
+  {
+   "op": "retry",
+   "steps": [
+    {
+     "op": "cmd",
+     "text": "ecamship",
+     "wait": 1.0
+    },
+    {
+     "op": "key",
+     "keys": [
+      "D"
+     ]
+    },
+    {
+     "op": "sleep",
+     "s": 0.7
+    },
+    {
+     "op": "click",
+     "x": 514,
+     "y": 378
+    }
+   ],
+   "check": "esq4",
+   "grep": "cargo 0",
+   "tries": 3,
+   "wait": 8
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ESQ4",
+   "cmd": "esq4",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "ESQ4",
+   "note": "LANDING: the squad on the ground, natural infested around (nothing removed, nobody invulnerable)"
+  },
+  {
+   "op": "burst",
+   "file": "x4_landed.png",
+   "n": 2,
+   "gap": 0.5
+  },
+  {
+   "op": "cmd",
+   "text": "eselsq 105 92",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "ecam 105 92",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "key",
+   "keys": [
+    "A"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.7
+  },
+  {
+   "op": "click",
+   "x": 707,
+   "y": 257
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "burst",
+   "file": "x5_attack.png",
+   "n": 3,
+   "gap": 2.0
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ESQ4",
+   "cmd": "esq4",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "ESQ4",
+   "note": "ATTACK +20 s: squad and ship"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ETGT",
+   "cmd": "etgt 109 95",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "ETGT",
+   "note": "target (hut) +20 s"
+  },
+  {
+   "op": "burst",
+   "file": "x6_attack_0.png",
+   "n": 1,
+   "gap": 0
+  },
+  {
+   "op": "sleep",
+   "s": 14
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ESQ4",
+   "cmd": "esq4",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "ESQ4",
+   "note": "ATTACK +40 s: squad and ship"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ETGT",
+   "cmd": "etgt 109 95",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "ETGT",
+   "note": "target (hut) +40 s"
+  },
+  {
+   "op": "burst",
+   "file": "x6_attack_1.png",
+   "n": 1,
+   "gap": 0
+  },
+  {
+   "op": "sleep",
+   "s": 14
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ESQ4",
+   "cmd": "esq4",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "ESQ4",
+   "note": "ATTACK +60 s: squad and ship"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ETGT",
+   "cmd": "etgt 109 95",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "ETGT",
+   "note": "target (hut) +60 s"
+  },
+  {
+   "op": "burst",
+   "file": "x6_attack_2.png",
+   "n": 1,
+   "gap": 0
+  },
+  {
+   "op": "sleep",
+   "s": 14
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ESQ4",
+   "cmd": "esq4",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "ESQ4",
+   "note": "ATTACK +80 s: squad and ship"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ETGT",
+   "cmd": "etgt 109 95",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "ETGT",
+   "note": "target (hut) +80 s"
+  },
+  {
+   "op": "burst",
+   "file": "x6_attack_3.png",
+   "n": 1,
+   "gap": 0
+  },
+  {
+   "op": "sleep",
+   "s": 14
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ESQ4",
+   "cmd": "esq4",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "ESQ4",
+   "note": "ATTACK +100 s: squad and ship"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ETGT",
+   "cmd": "etgt 109 95",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "ETGT",
+   "note": "target (hut) +100 s"
+  },
+  {
+   "op": "burst",
+   "file": "x6_attack_4.png",
+   "n": 1,
+   "gap": 0
+  },
+  {
+   "op": "sleep",
+   "s": 14
+  },
+  {
+   "op": "cmd",
+   "text": "egather 105 92",
+   "wait": 2.0
+  },
+  {
+   "op": "cmd",
+   "text": "eselshipq",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "burst",
+   "file": "x7_regroup.png",
+   "n": 2,
+   "gap": 0.5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "L"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "move",
+   "x": 284,
+   "y": 302
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "click",
+   "x": 284,
+   "y": 302
+  },
+  {
+   "op": "sleep",
+   "s": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "L"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "move",
+   "x": 284,
+   "y": 454
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "click",
+   "x": 284,
+   "y": 454
+  },
+  {
+   "op": "sleep",
+   "s": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "L"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "move",
+   "x": 744,
+   "y": 302
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "click",
+   "x": 744,
+   "y": 302
+  },
+  {
+   "op": "sleep",
+   "s": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "L"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "move",
+   "x": 744,
+   "y": 454
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "click",
+   "x": 744,
+   "y": 454
+  },
+  {
+   "op": "sleep",
+   "s": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 5
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ESQ4",
+   "cmd": "esq4",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "ESQ4",
+   "note": "RE-BOARDING with real L + click: the cargo is in the line"
+  },
+  {
+   "op": "burst",
+   "file": "x8_reloaded.png",
+   "n": 2,
+   "gap": 0.5
+  },
+  {
+   "op": "retry",
+   "steps": [
+    {
+     "op": "cmd",
+     "text": "ecam 78 104",
+     "wait": 1.5
+    },
+    {
+     "op": "key",
+     "keys": [
+      "M"
+     ]
+    },
+    {
+     "op": "sleep",
+     "s": 0.7
+    },
+    {
+     "op": "click",
+     "x": 512,
+     "y": 330
+    }
+   ],
+   "check": "esq4",
+   "grep": "inZone 1",
+   "tries": 3,
+   "wait": 22
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ESQ4",
+   "cmd": "esq4",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "ESQ4",
+   "note": "HOME: the ship in the supply zone, the cargo, the losses"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "EBAR",
+   "note": "barrels after the return"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ETGT",
+   "cmd": "etgt 109 95",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "ETGT",
+   "note": "target at the end"
+  },
+  {
+   "op": "burst",
+   "file": "x9_home.png",
+   "n": 2,
+   "gap": 0.5
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

@@ -1,0 +1,343 @@
+{
+ "name": "th2r7_raid2",
+ "mission": "thanson02",
+ "preset": "epidemic_free_r7_ce0_dev",
+ "why": "Epidemic r7 night raid, exploration 2: unload, selection box, attack the target",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "cmd",
+   "text": "ebsite 105 92",
+   "wait": 2.0
+  },
+  {
+   "op": "cmd",
+   "text": "eaa",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "cmd",
+   "text": "eaakill",
+   "wait": 1.5
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EAAC",
+   "cmd": "eaac",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "spore crawlers alive 0",
+   "note": "PREPARATION (scripted): the anti-air of the route was destroyed in advance"
+  },
+  {
+   "op": "cmd",
+   "text": "eshipnow",
+   "wait": 2.0
+  },
+  {
+   "op": "cmd",
+   "text": "eshipload 16",
+   "wait": 2.0
+  },
+  {
+   "op": "sleep",
+   "s": 26
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ESQUAD",
+   "cmd": "esquad 105 92",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "cargo 16",
+   "note": "PREPARATION (scripted): sixteen Marines are loaded"
+  },
+  {
+   "op": "cmd",
+   "text": "eselship",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 1.5
+  },
+  {
+   "op": "burst",
+   "file": "g0_loaded.png",
+   "n": 2,
+   "gap": 0.5
+  },
+  {
+   "op": "cmd",
+   "text": "ecam 105 92",
+   "wait": 1.5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "M"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.7
+  },
+  {
+   "op": "click",
+   "x": 512,
+   "y": 330
+  },
+  {
+   "op": "sleep",
+   "s": 14
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ESQUAD",
+   "cmd": "esquad 105 92",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "inZone 0",
+   "note": "the ship flew out of the base zone to the site"
+  },
+  {
+   "op": "burst",
+   "file": "g1_over_site.png",
+   "n": 3,
+   "gap": 0.5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "B"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.7
+  },
+  {
+   "op": "click",
+   "x": 512,
+   "y": 330
+  },
+  {
+   "op": "sleep",
+   "s": 4
+  },
+  {
+   "op": "burst",
+   "file": "g2_blast1.png",
+   "n": 3,
+   "gap": 0.4
+  },
+  {
+   "op": "key",
+   "keys": [
+    "B"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.7
+  },
+  {
+   "op": "click",
+   "x": 512,
+   "y": 360
+  },
+  {
+   "op": "sleep",
+   "s": 4
+  },
+  {
+   "op": "burst",
+   "file": "g3_blast2.png",
+   "n": 3,
+   "gap": 0.4
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBSITEC",
+   "cmd": "ebsitec",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "alive 0",
+   "note": "the barrels cleared the site"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "left 0",
+   "note": "both barrels spent"
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ETGT",
+   "cmd": "etgt 107 89",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "ETGT",
+   "note": "the target structure before the attack"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "D"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.7
+  },
+  {
+   "op": "click",
+   "x": 512,
+   "y": 440
+  },
+  {
+   "op": "sleep",
+   "s": 10
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ESQUAD",
+   "cmd": "esquad 105 92",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "cargo 0",
+   "note": "the ship was unloaded with the real key D and a click"
+  },
+  {
+   "op": "burst",
+   "file": "g4_unloaded.png",
+   "n": 3,
+   "gap": 0.5
+  },
+  {
+   "op": "drag",
+   "x1": 330,
+   "y1": 330,
+   "x2": 700,
+   "y2": 560
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "burst",
+   "file": "g5_selected.png",
+   "n": 2,
+   "gap": 0.5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "A"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.7
+  },
+  {
+   "op": "click",
+   "x": 707,
+   "y": 257
+  },
+  {
+   "op": "sleep",
+   "s": 30
+  },
+  {
+   "op": "burst",
+   "file": "g6_attack.png",
+   "n": 3,
+   "gap": 0.8
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ETGT",
+   "cmd": "etgt 107 89",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "ETGT",
+   "note": "the target after the attack"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

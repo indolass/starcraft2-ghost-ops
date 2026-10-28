@@ -68,7 +68,7 @@ class Config(unittest.TestCase):
 
     def test_card_shows_the_mode_and_the_composition(self):
         names = [p['name'] for p in launcher_core.profiles_of('thanson02')]
-        self.assertEqual(names, ['epidemic_free', 'epidemic_free_r2', 'epidemic_free_r3', 'epidemic_free_r4', 'epidemic_free_r5', 'epidemic_free_r6', 'epidemic_free_r7'])
+        self.assertEqual(names, ['epidemic_free', 'epidemic_free_r2', 'epidemic_free_r3', 'epidemic_free_r4', 'epidemic_free_r5', 'epidemic_free_r6', 'epidemic_free_r7', 'epidemic_free_r8'])
         card = next(p for p in launcher_core.profiles_of('thanson02') if p['name'] == 'epidemic_free_r2')
         self.assertIn('Свободный тест', card['card'])
         nm, st = self.cfg['hanson']['free_squad']['marines'], self.cfg['epidemic']['stock_marines']
@@ -244,6 +244,37 @@ class Revision7(unittest.TestCase):
         self.assertTrue(self.cfg()['operatives'].get('ghost_permanent_cloak') is not None)
 
 
+class Revision8(unittest.TestCase):
+    """Revision 8 = revision 7 with one correction: the barrels are not refilled by the mere start of a new night."""
+
+    def cfg(self, name):
+        return build.resolve_config(ADAPTER, name)[0]
+
+    def test_only_the_refill_rule_differs_from_revision_7(self):
+        c7, c8 = self.cfg('epidemic_free_r7'), self.cfg('epidemic_free_r8')
+        self.assertEqual(build.validate_config(c8), [])
+        b7, b8 = dict(c7['epidemic']['barrels']), dict(c8['epidemic']['barrels'])
+        self.assertNotIn('refill_on_night', b7)  # the issued revision 7 keeps its settings (its map is protected and is never rebuilt)
+        self.assertIs(b8.pop('refill_on_night'), False)
+        self.assertEqual(b7, b8)
+        for k in ('supply', 'truck', 'fuel', 'transport'):
+            self.assertEqual(c7['epidemic'][k], c8['epidemic'][k], k)
+        self.assertFalse(c8['panel']['enabled'])
+
+    def test_generated_switch_and_module_guard(self):
+        self.assertIn('go_bdNightRefill = false;', build.gen_epidemic(self.cfg('epidemic_free_r8')))
+        self.assertIn('go_bdNightRefill = true;', build.gen_epidemic(self.cfg('epidemic_free_r7')))
+        e = open(os.path.join(ROOT, 'core', 'GhostOpsEpidemic.galaxy'), encoding='utf-8').read()
+        flat = ' '.join(e.split())
+        self.assertIn('if (go_bdOn && go_bdNightRefill) { GhostOps_Epi_BarrelsRefill(true); }', flat)  # no refill at the start of a night in revision 8
+        self.assertEqual(e.count('GhostOps_Epi_BarrelsRefill(false);'), 1)  # the only other refill is the return to the supply zone
+
+    def test_switch_is_validated(self):
+        c = self.cfg('epidemic_free_r8')
+        c['epidemic']['barrels']['refill_on_night'] = 'no'
+        self.assertTrue(any('refill_on_night' in x for x in build.validate_epidemic(c)))
+
+
 class TruckRevision6(unittest.TestCase):
     """Revision 6: the gas truck stands in Area 7 and is taken only by a close approach; the older revisions keep their old settings."""
 
@@ -270,7 +301,7 @@ class TruckRevision6(unittest.TestCase):
         self.assertIn('Газовоз в Area 7', c6['card'])
         self.assertIn('Захват только при близком подходе', c6['card'])
         self.assertIn('Газовоз в Area 7', ' '.join(c6['details']))
-        self.assertEqual(launcher_core.default_profile('thanson02'), 'epidemic_free_r7')  # revision 7 is the current one for the Owner; revision 6 stays as an older version
+        self.assertEqual(launcher_core.default_profile('thanson02'), 'epidemic_free_r8')  # revision 8 is the current one for the Owner; 7 (issued, protected) and 6 stay as older versions
         self.assertIn('прежняя', cards['epidemic_free_r5']['label'])
 
     def test_close_capture_needs_a_small_radius(self):

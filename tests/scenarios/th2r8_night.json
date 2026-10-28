@@ -1,0 +1,233 @@
+{
+ "name": "th2r8_night",
+ "mission": "thanson02",
+ "preset": "epidemic_free_r8_cycle_dev",
+ "why": "r8: the new night does not refill the barrels: spent outside the zone, day -> night 2 with save / load, only the return refills (scripted orders and placement are preparation)",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "cmd",
+   "text": "eshipnow",
+   "wait": 2.0
+  },
+  {
+   "op": "cmd",
+   "text": "eshipat 100 135",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "inZone 0",
+   "note": "the ship is outside the base zone"
+  },
+  {
+   "op": "expect",
+   "regex": "left 2",
+   "note": "two barrels issued at the first appearance"
+  },
+  {
+   "op": "cmd",
+   "text": "ebdrop 100 135",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 2.5
+  },
+  {
+   "op": "cmd",
+   "text": "ebdrop 100 138",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 8
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "left 0 drops 2",
+   "note": "both barrels spent outside the zone"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "eclock",
+   "grep": "night 0/1",
+   "every": 8,
+   "timeout": 200
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "left 0",
+   "note": "day 2: still empty (the day does not refill)"
+  },
+  {
+   "op": "save",
+   "name": "CE0_TH2R8_N1"
+  },
+  {
+   "op": "load",
+   "name": "CE0_TH2R8_N1"
+  },
+  {
+   "op": "sleep",
+   "s": 6
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "left 0",
+   "note": "after a load before the new night: still empty, nothing issued"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "cmd": "eclock",
+   "grep": "night 1/2",
+   "every": 6,
+   "timeout": 200
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "left 0",
+   "note": "night 2 has begun: the ship is outside, the barrels are NOT refilled by the new night"
+  },
+  {
+   "op": "expect",
+   "regex": "inZone 0",
+   "note": "still outside"
+  },
+  {
+   "op": "save",
+   "name": "CE0_TH2R8_N2"
+  },
+  {
+   "op": "load",
+   "name": "CE0_TH2R8_N2"
+  },
+  {
+   "op": "sleep",
+   "s": 6
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "left 0",
+   "note": "after a load in the new night: still empty"
+  },
+  {
+   "op": "cmd",
+   "text": "eshipat 78 104",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "inZone 1",
+   "note": "back in the supply zone"
+  },
+  {
+   "op": "expect",
+   "regex": "left 2",
+   "note": "the return refills the barrels"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}
