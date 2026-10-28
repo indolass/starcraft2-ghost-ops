@@ -10,9 +10,11 @@ Steps (every one is bounded; nothing loops forever):
   cmd TEXT [wait]            a probe command typed into the game chat
   sleep S
   expect_def REGEX [count]   like expect, over the log bank of the defence module (exact number of matching lines with count)
+  drag X1 Y1 X2 Y2           posted left-button drag (the selection box of the player)
   click X Y                  posted left click into OUR window (client coordinates)
   move X Y                   posted mouse-move into OUR window (client coordinates)
   until GREP [cmd] [every] [timeout]   repeat `cmd` until the regexp GREP appears in the journal lines after the last mark (fails the scenario on timeout)
+  retry STEPS CHECK GREP     repeat a real-input action until the probe line CHECK matches GREP (up to `tries`)
   mark                       remember the end of the journal (later `expect` / `until` look only after it)
   expect REGEX [absent]      the regexp must (or, with absent, must not) match a journal line after the mark; the matching lines go to the result
   save NAME / load NAME      the real save / load menu of the game (layout of the 1024x768 test window)
@@ -118,6 +120,10 @@ class Scenario:
         sc2_ui.click(ce0_session.load_state()['pid'], s['x'], s['y'])
         self.record('click', x=s['x'], y=s['y'])
 
+    def op_drag(self, s):
+        sc2_ui.drag(ce0_session.load_state()['pid'], s['x1'], s['y1'], s['x2'], s['y2'])
+        self.record('drag', x1=s['x1'], y1=s['y1'], x2=s['x2'], y2=s['y2'])
+
     def op_rclick(self, s):
         sc2_ui.rclick(ce0_session.load_state()['pid'], s['x'], s['y'])
         self.record('rclick', x=s['x'], y=s['y'])
@@ -143,6 +149,27 @@ class Scenario:
         rows = self.rows()
         self.mark_n = max([n for n, _ in rows] or [0])
         self.record('mark', n=self.mark_n)
+
+    def op_retry(self, s):
+        """A real-input action that can be spoilt by something outside it (the original scenario pans the camera at the start of a night wave: a click then lands on another place): the sub-steps are done, the probe `check` is asked
+        and, when its line does not match `grep`, the whole action is repeated (up to `tries`). Every attempt is recorded: the result says how many were needed."""
+        rx = re.compile(s['grep'])
+        for attempt in range(1, int(s.get('tries', 3)) + 1):
+            for st in s['steps']:
+                getattr(self, 'op_' + st['op'])(st)
+            time.sleep(s.get('wait', 6))
+            self.op_mark({})
+            end = time.time() + s.get('timeout', 24)
+            while time.time() < end:
+                self.chat(s['check'], 1.0)
+                hits = [t for _, t in self.after_mark() if rx.search(t)]
+                if hits:
+                    self.record('retry', check=s['check'], grep=s['grep'], ok=True, attempts=attempt, line=hits[-1])
+                    return
+                time.sleep(s.get('every', 4))
+            self.record('retry_attempt_failed', check=s['check'], grep=s['grep'], attempt=attempt)
+        self.ok = False
+        self.record('retry', check=s['check'], grep=s['grep'], ok=False, attempts=int(s.get('tries', 3)))
 
     def op_until(self, s):
         end = time.time() + s.get('timeout', 120)

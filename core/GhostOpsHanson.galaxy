@@ -692,6 +692,24 @@ bool GhostOps_Hanson_ContCreated (bool lp_testConds, bool lp_runActions) {
     return true;
 }
 
+// The blast of a container at a place (the effects are created by the unit lp_src): the one blast of the mod, used by the container that died from a Ghost shot and by the barrel dropped from a Hercules.
+void GhostOps_Hanson_ContBlast (unit lp_src, point lp_pos) {
+    go_hContBlasts += 1;
+    UnitCreateEffectPoint(lp_src, "GhostOpsCBlast", lp_pos);
+    if (go_hContStrBonus) {
+        UnitCreateEffectPoint(lp_src, "GhostOpsCBlastStr", lp_pos);
+    }
+
+    if (PlayerDifficulty(1) >= 3) {
+        if (go_hContFriendHard > 0.0) {
+            UnitCreateEffectPoint(lp_src, "GhostOpsCBlastOwnHard", lp_pos);
+        }
+    }
+    else if (go_hContFriendOther > 0.0) {
+        UnitCreateEffectPoint(lp_src, "GhostOpsCBlastOwnOther", lp_pos);
+    }
+}
+
 // The detonation: a container that died from the shot of a Ghost explodes (nothing else makes it explode: no proximity, no timer, no other killer). The blast is two search
 // effects created at its place; the explosion pictures are actors on the first one (they draw only).
 bool GhostOps_Hanson_ContDied (bool lp_testConds, bool lp_runActions) {
@@ -716,21 +734,7 @@ bool GhostOps_Hanson_ContDied (bool lp_testConds, bool lp_runActions) {
     lv_k = EventUnitDamageSourceUnit();
     lv_pos = UnitGetPosition(lv_u);
     if ((lv_k != null) && ((UnitGetOwner(lv_k) == 1) || (UnitGetOwner(lv_k) == 4))) {
-        go_hContBlasts += 1;
-        UnitCreateEffectPoint(lv_k, "GhostOpsCBlast", lv_pos);
-        if (go_hContStrBonus) {
-            UnitCreateEffectPoint(lv_k, "GhostOpsCBlastStr", lv_pos);
-        }
-
-        if (PlayerDifficulty(1) >= 3) {
-            if (go_hContFriendHard > 0.0) {
-                UnitCreateEffectPoint(lv_k, "GhostOpsCBlastOwnHard", lv_pos);
-            }
-        }
-        else if (go_hContFriendOther > 0.0) {
-            UnitCreateEffectPoint(lv_k, "GhostOpsCBlastOwnOther", lv_pos);
-        }
-
+        GhostOps_Hanson_ContBlast(lv_k, lv_pos);
         GhostOps_Hanson_Log("container exploded by a hit of " + UnitGetType(lv_k) + " at (" + FixedToString(PointGetX(lv_pos), 1) + ", " + FixedToString(PointGetY(lv_pos), 1) + "), blasts " + IntToString(go_hContBlasts));
     }
     else {

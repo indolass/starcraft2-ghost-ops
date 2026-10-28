@@ -65,7 +65,7 @@ def main(argv):
             return 0
 
         def status(self, mission, preset, game_dir=None):
-            return 'needs_build' if (mission, preset) == ('thanson02', 'epidemic_free_r6') else 'ready'
+            return 'needs_build' if (mission, preset) == ('thanson02', 'epidemic_free_r7') else 'ready'
 
         def build_hash(self, mission, preset):
             return 'abc123def456'
@@ -210,7 +210,7 @@ def main(argv):
     text = app.copy_info()
     clip = app.clipboard_get()
     check('copy: the text lands in the clipboard', clip == text)
-    check('copy: mission, version, mode, profile, map, build and the last real launch', all(x in text for x in ('Эпидемия', 'Версия 6', 'Свободный тест', 'epidemic_free_r6', '.SC2Map', 'Последний запуск', 'traynor01')), text.replace('\n', ' | '))
+    check('copy: mission, version, mode, profile, map, build and the last real launch', all(x in text for x in ('Эпидемия', 'Версия 7', 'Свободный тест', 'epidemic_free_r7', '.SC2Map', 'Последний запуск', 'traynor01')), text.replace('\n', ' | '))
     check('copy: the last launch is the real one (not the current choice of the window)', 'hard' in text and 'Сложность: Сложный' in text.split('Последний запуск')[1])
 
     # 8. details closed by default, the technical path is behind them
@@ -218,7 +218,7 @@ def main(argv):
     app.toggle_details()
     pump(0.3)
     tech = app.tech_text.cget('text')
-    check('details open: the technical profile, the map path and the build are inside', 'Профиль: epidemic_free_r6' in tech and 'Карта:' in tech and mapped(app.details), tech.replace('\n', ' | '))
+    check('details open: the technical profile, the map path and the build are inside', 'Профиль: epidemic_free_r7' in tech and 'Карта:' in tech and mapped(app.details), tech.replace('\n', ' | '))
     app.scroll._parent_canvas.yview_moveto(0.5)
     pump(0.4)
     shot('03_details_open')

@@ -61,7 +61,7 @@ class CurrentVersion(unittest.TestCase):
 
     def test_current_versions_of_today(self):
         self.assertEqual({m: lc.current_revision(m) for m in MISSIONS},
-                         {'traynor01': 1, 'traynor02': 2, 'thanson01': 6, 'thanson02': 6, 'traynor03': 6, 'ttychus01': 1})
+                         {'traynor01': 1, 'traynor02': 2, 'thanson01': 6, 'thanson02': 7, 'traynor03': 6, 'ttychus01': 1})
 
     def test_free_test_and_campaign_profiles_of_one_revision_are_one_version(self):
         r6 = lc.revision_by_number('traynor03', 6)
@@ -169,8 +169,8 @@ class OperationsAndRecords(unittest.TestCase):
             self.assertIn('Ошибка подготовки', lc.build_state_text(None, s.last_error_for('thanson02', 'epidemic_free_r6')))
 
     def test_test_info_names_version_mode_profile_map(self):
-        text = lc.test_info('thanson02', 6, 'free', 'epidemic_free_r6', None, r'E:\Games\StarCraft II', False, 'abc')
-        for part in ('Эпидемия', 'Версия 6 (текущая для проверки)', 'Свободный тест', 'epidemic_free_r6', 'GhostOps_THanson02_epidemic_free_r6.SC2Map', 'Сборка: abc'):
+        text = lc.test_info('thanson02', 7, 'free', 'epidemic_free_r7', None, r'E:\Games\StarCraft II', False, 'abc')
+        for part in ('Эпидемия', 'Версия 7 (текущая для проверки)', 'Свободный тест', 'epidemic_free_r7', 'GhostOps_THanson02_epidemic_free_r7.SC2Map', 'Сборка: abc'):
             self.assertIn(part, text)
         arch = lc.test_info('thanson02', 4, 'free', 'epidemic_free_r4', None)
         self.assertIn('(архив)', arch)

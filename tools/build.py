@@ -1776,7 +1776,7 @@ def gen_hanson(cfg):
 
 EPI_TEXT_PREFIX = 'Param/Value/GhostOpsE_'
 EPI_TEXT_KEYS = ('SwannName', 'TychusName', 'HansonName', 'L_GAS', 'L_TRUCK', 'L_CAPTURE', 'L_BASE', 'L_SHIP', 'L_PROT', 'MsgTruckLost', 'MsgTruckSeen', 'MsgTruckCaptured', 'MsgShipHere', 'MsgShipLost', 'MsgDawn',
-                 'HudSel', 'HudMin', 'HudAll', 'HudDry', 'HudTruck', 'HudTruckFree', 'HudTruckLost', 'ProtDay', 'ProtNight', 'ObjTruckTitle', 'ObjTruckText', 'NoFuelName', 'NoFuelDesc')
+                 'HudSel', 'HudMin', 'HudAll', 'HudDry', 'HudTruck', 'HudTruckFree', 'HudTruckLost', 'ProtDay', 'ProtNight', 'ObjTruckTitle', 'ObjTruckText', 'NoFuelName', 'NoFuelDesc', 'HudBarrels', 'MsgBarrelDropped', 'MsgBarrelsRestocked')
 
 
 def validate_epidemic(cfg):
@@ -1854,6 +1854,33 @@ def validate_epidemic(cfg):
         errs.append('epidemic.transport.dock must be [x, y]')
     for k, lo, hi in (('offset_x', 0, 800), ('offset_y', 0, 800), ('width', 100, 900), ('height', 20, 200)):
         num(e['hud'], k, lo, hi, 'hud')
+    if 'supply' in e:
+        sp = e['supply']
+        poly = sp.get('polygon') if isinstance(sp, dict) else None
+        if not (isinstance(sp, dict) and isinstance(sp.get('enabled'), bool)):
+            errs.append('epidemic.supply must be {"enabled": bool, "polygon": [[x, y], ...]}')
+        elif sp['enabled'] and not (isinstance(poly, list) and 3 <= len(poly) <= 24 and all(isinstance(q, list) and len(q) == 2 and all(_num(v) and 0 <= v <= 400 for v in q) for q in poly)):
+            errs.append('epidemic.supply.polygon must be 3..24 points [x, y] (the perimeter of the original base: no fuel is spent inside, the tanks refill up to the available limit)')
+    if 'barrels' in e:
+        bd = e['barrels']
+        if not isinstance(bd, dict):
+            errs.append('epidemic.barrels must be an object')
+        else:
+            for k, lo, hi in (('range', 0.5, 12), ('fall_seconds', 0.3, 15), ('flight_height', 1, 12)):
+                num(bd, k, lo, hi, 'barrels')
+            if not (isinstance(bd.get('count'), int) and not isinstance(bd.get('count'), bool) and 1 <= bd['count'] <= 4):
+                errs.append('epidemic.barrels.count must be an integer 1..4 (barrels of one flight; restored in the supply zone)')
+            if not (isinstance(bd.get('enabled'), bool) and isinstance(bd.get('hotkey'), str) and len(bd['hotkey']) == 1 and bd['hotkey'].isupper() and bd['hotkey'].isalpha()):
+                errs.append('epidemic.barrels needs enabled (bool) and hotkey (one capital letter)')
+            if not all(isinstance(bd.get(k), int) and not isinstance(bd.get(k), bool) for k in ('card_row', 'card_col')) or not (0 <= bd.get('card_row', -1) <= 2 and 0 <= bd.get('card_col', -1) <= 4):
+                errs.append('epidemic.barrels.card_row / card_col must be a card cell (row 0..2, column 0..4)')
+            btx = bd.get('texts')
+            if not (isinstance(btx, dict) and set(btx) == {'Name', 'Tip'} and all(isinstance(v, dict) and all(isinstance(v.get(l), str) and v[l] for l in ('ru', 'en')) for v in btx.values())):
+                errs.append('epidemic.barrels.texts must be {Name, Tip} with ru and en texts')
+            if bd.get('enabled') and not (e['transport'].get('enabled') and e['transport'].get('unit') == 'Hercules'):
+                errs.append('epidemic.barrels needs the Hercules transport (epidemic.transport.unit)')
+            if bd.get('enabled') and not ((cfg.get('hanson') or {}).get('containers') or {}).get('enabled'):
+                errs.append('epidemic.barrels reuses the container blast: it needs hanson.containers.enabled')
     texts = e.get('texts')
     if not isinstance(texts, dict) or set(texts) != set(EPI_TEXT_KEYS):
         errs.append('epidemic.texts must have exactly the keys %s' % (EPI_TEXT_KEYS,))
@@ -1893,6 +1920,17 @@ def gen_epidemic(cfg):
         lines.append('    go_eProtType[%d] = "%s";' % (i, name))
     if tr.get('unit') and tr['unit'] != 'Medivac':
         lines.append('    go_eShipType = "%s";' % tr['unit'])
+    sp = e.get('supply') or {}
+    if sp.get('enabled'):
+        # the supply zone: the perimeter of the original base as a polygon (ray casting in the module); without it the old circle `base` is the base
+        lines.append('    go_eZoneOn = true;')
+        lines.append('    go_eZoneN = %d;' % len(sp['polygon']))
+        for i, q in enumerate(sp['polygon']):
+            lines.append('    go_eZoneX[%d] = %.3f;' % (i, q[0]))
+            lines.append('    go_eZoneY[%d] = %.3f;' % (i, q[1]))
+    bd = e.get('barrels') or {}
+    if bd.get('enabled'):
+        lines += ['    go_bdOn = true;', '    go_bdMax = %d;' % bd['count'], '    go_bdFall = %.3f;' % bd['fall_seconds']]
     lines += ['    go_eShipOn = %s;' % b(tr['enabled']), '    go_eShipFirstNight = %d;' % tr['first_night'], '    go_eDock = Point(%.4f, %.4f);' % (tr['dock'][0], tr['dock'][1]),
               '    go_eDockR = %.2f;' % tr['dock_radius'], '    go_eWarnSec = %.1f;' % tr['warn_seconds'],
               '    go_eHudX = %d;' % e['hud']['offset_x'], '    go_eHudY = %d;' % e['hud']['offset_y'], '    go_eHudW = %d;' % e['hud']['width'], '    go_eHudH = %d;' % e['hud']['height'], '}', '']
@@ -1924,7 +1962,57 @@ def epidemic_fragments(e):
         # the turrets of the player (kits) get the manual ground salvo; the build cost is already zeroed by the kit data
         for name, frag in salvo_fragments(e['salvo'], with_cost=False).items():
             frags[name] = frags.get(name, '') + frag
+    if (e.get('barrels') or {}).get('enabled'):
+        for name, frag in barrel_fragments(e['barrels']).items():
+            frags[name] = frags.get(name, '') + frag
     return frags
+
+
+def barrel_fragments(bd):
+    """The barrel drop of the Hercules (epidemic.barrels): the ability (range of the drop, the charges of the flight, the pointer with the blast circle of the container), the button on the Hercules card and the
+    FALLING barrel: a missile (Launch Missile effect, a Ballistic missile mover, a missile actor with the model of the container). Measured: a missile launched by an ability effect with no action actor started on the
+    GROUND under the ship and rolled to the point; the launch point of a missile is chosen by the ACTION ACTOR (the stock bile of the Ravager launches from a site with a local offset): the action actor of the barrel
+    launches it from the centre of the ship model (SOpAttachCenter = the hull height). The mover: Ballistic with the flight time of the config and the gravity that makes the fall straight (g = 2 h / T^2: no hop),
+    the arrival test is 3D (a nearly vertical fall). The explosion is made by the game logic when the missile ARRIVES: the impact effect is used (an event of the module), never the end of an animation."""
+    g = lambda v: '%g' % v  # noqa: E731
+    nl = chr(10)
+    bs = chr(92)
+    icon = 'Assets' + bs + 'Textures' + bs + 'btn-upgrade-terran-infernalpreigniter.dds'
+    grav = 2.0 * bd['flight_height'] / (bd['fall_seconds'] ** 2)
+    return {
+        'UnitData.xml': nl.join([
+            '    <CUnit id="Hercules">', '        <AbilArray Link="GhostOpsDropBarrel"/>', '        <CardLayouts index="0">',
+            '            <LayoutButtons Face="GhostOpsDropBarrel" Type="AbilCmd" AbilCmd="GhostOpsDropBarrel,Execute" Row="%d" Column="%d"/>' % (bd['card_row'], bd['card_col']), '        </CardLayouts>', '    </CUnit>',
+            '    <CUnit id="GhostOpsBarrelMissile" parent="MISSILE">', '        <Mover value="GhostOpsBarrelMover"/>', '        <EditorCategories value="ObjectType:Projectile,ObjectFamily:Melee"/>', '    </CUnit>', '']),
+        'MoverData.xml': nl.join(['    <CMoverMissile id="GhostOpsBarrelMover">', '        <MotionPhases>', '            <RotationActorType value="Upright"/>', '            <Driver value="Ballistic"/>',
+                                  '            <Acceleration value="-1"/>', '            <FlightTime value="%s"/>' % g(bd['fall_seconds']), '            <Gravity value="%s"/>' % ('%.4f' % grav),
+                                  '            <ArrivalTestType value="3D"/>', '            <YawPitchRoll value="MAX"/>', '        </MotionPhases>', '    </CMoverMissile>', '']),
+        'ModelData.xml': nl.join(['    <CModel id="GhostOpsBarrelMissile" parent="GasCanister">', '        <Model value="Assets' + bs + 'Buildings' + bs + 'Resources' + bs + 'GasCanister' + bs + 'GasCanister.m3"/>', '    </CModel>', '']),
+        'ActorData.xml': nl.join([
+            '    <CActorMissile id="GhostOpsBarrelMissile" parent="GenericAttackMissile" unitName="GhostOpsBarrelMissile"/>',
+            # the action actor of the launch effect: it chooses WHERE the missile starts (the centre of the ship model: the hull height)
+            '    <CActorAction id="GhostOpsBarrelDrop" parent="GenericAttack" effectImpact="GhostOpsBarrelImpact" effectLaunch="GhostOpsBarrelLaunch">', '        <LaunchSiteOps Ops="SOpAttachCenter"/>',
+            '        <Missile value="GhostOpsBarrelMissile"/>', '    </CActorAction>',
+            '    <CActorModel id="GhostOpsDropCursorModel" parent="TerranCursorModel" abil="GhostOpsDropBarrel"/>',
+            '    <CActorSplat id="GhostOpsDropCursorSplat" parent="TerranCursorSplat" abil="GhostOpsDropBarrel"/>',
+            '    <CActorRange id="GhostOpsDropRange" parent="RangeAbil" abil="GhostOpsDropBarrel"/>', '']),
+        'AbilData.xml': nl.join([
+            '    <CAbilEffectTarget id="GhostOpsDropBarrel">', '        <EditorCategories value="Race:Terran,AbilityorEffectType:Units"/>', '        <Effect index="0" value="GhostOpsBarrelLaunch"/>',
+            '        <Range value="%s"/>' % g(bd['range']), '        <Arc value="360"/>', '        <CastIntroTime value="0"/>', '        <TargetFilters value=""/>',
+            # the pointer shows the blast circle of the container (the existing search effect of the container)
+            '        <CursorEffect value="GhostOpsContainerArea"/>',
+            # the barrels of one flight are the charges of the ability (the button shows how many are left); they never come back by time, only by the supply zone (the module)
+            '        <Cost index="0">', '            <Charge>', '                <CountMax value="%d"/>' % bd['count'], '                <CountStart value="%d"/>' % bd['count'], '                <CountUse value="1"/>',
+            '                <Link value="Abil/GhostOpsDropBarrel"/>', '                <Location value="Unit"/>', '                <TimeUse value="100000"/>', '            </Charge>', '        </Cost>',
+            '        <CmdButtonArray index="Execute" DefaultButtonFace="GhostOpsDropBarrel"/>', '    </CAbilEffectTarget>', '']),
+        'ButtonData.xml': nl.join(['    <CButton id="GhostOpsDropBarrel">', '        <Icon value="%s"/>' % icon, '        <AlertIcon value="%s"/>' % icon, '        <Hotkey value="Button/Hotkey/GhostOpsDropBarrel"/>',
+                                   '        <EditorCategories value="Race:Terran"/>', '    </CButton>', '']),
+        # the missile has NO damage in the data: the impact effect only marks the arrival (the module makes the explosion of the existing container when it is used)
+        'EffectData.xml': nl.join(['    <CEffectLaunchMissile id="GhostOpsBarrelLaunch">', '        <EditorCategories value="Race:Terran"/>', '        <ImpactEffect value="GhostOpsBarrelImpact"/>',
+                                   '        <ImpactLocation Value="TargetPoint"/>', '        <LaunchLocation Value="CasterUnit"/>', '        <AmmoUnit value="GhostOpsBarrelMissile"/>', '    </CEffectLaunchMissile>',
+                                   '    <CEffectEnumArea id="GhostOpsBarrelImpact">', '        <EditorCategories value="Race:Terran"/>', '        <LaunchLocation Value="TargetPoint"/>', '        <ImpactLocation Value="TargetPoint"/>',
+                                   '        <AreaArray Radius="0.5"/>', '        <SearchFilters value="Ground;Missile,Dead,Hidden"/>', '    </CEffectEnumArea>', '']),
+    }
 
 
 # ---- TTychus01 "Grab and run" (config key "tychus"; core/GhostOpsTychus.galaxy) ----------------------------------------------------------
@@ -2536,6 +2624,12 @@ def text_entries(cfg):
                 out.setdefault(loc, []).append((EPI_TEXT_PREFIX + k, ep['texts'][k][lang]))
             out.setdefault(loc, []).append(('Behavior/Name/GhostOpsNoFuel', ep['texts']['NoFuelName'][lang]))
             out.setdefault(loc, []).append(('Behavior/Description/GhostOpsNoFuel', ep['texts']['NoFuelDesc'][lang]))
+            ebd = ep.get('barrels')
+            if ebd and ebd.get('enabled'):
+                fillb = lambda v: v.replace('{count}', '%g' % ebd['count']).replace('{range}', '%g' % ebd['range'])  # noqa: E731
+                out.setdefault(loc, []).append(('Button/Name/GhostOpsDropBarrel', fillb(ebd['texts']['Name'][lang])))
+                out.setdefault(loc, []).append(('Button/Tooltip/GhostOpsDropBarrel', fillb(ebd['texts']['Tip'][lang])))
+                out.setdefault(loc, []).append(('Button/Hotkey/GhostOpsDropBarrel', ebd['hotkey']))
             if ep.get('salvo'):
                 esv = ep['salvo']
                 out.setdefault(loc, []).append(('Button/Name/GhostOpsTurretSalvo', salvo_text(esv['texts']['Name'][lang], esv)))

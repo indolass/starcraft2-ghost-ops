@@ -1,0 +1,49 @@
+{
+ "name": "th2r7_geom",
+ "mission": "thanson02",
+ "preset": "epidemic_free_r6_ce0_dev",
+ "why": "measurement of the original base geometry (supply zone) and its structures; no game balance involved",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 10
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "cmd",
+   "text": "ebasemap",
+   "wait": 6.0
+  },
+  {
+   "op": "cmd",
+   "text": "ebasestr",
+   "wait": 3.0
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "expect",
+   "regex": "EBM 62 "
+  },
+  {
+   "op": "expect",
+   "regex": "EBS player1"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

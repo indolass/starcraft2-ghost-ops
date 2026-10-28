@@ -1,0 +1,256 @@
+{
+ "name": "th2r7_drop",
+ "mission": "thanson02",
+ "preset": "epidemic_free_r7_ce0_dev",
+ "why": "Epidemic r7: barrel drop of the Hercules by scripted orders: charges, blast reuse and damage, no third drop, refill only by a return to the supply zone, cancelled order spends nothing",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "cmd",
+   "text": "eshipnow",
+   "wait": 2.0
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "on 1 ship 1",
+   "note": "the ship is on the map"
+  },
+  {
+   "op": "expect",
+   "regex": "charges max 2",
+   "note": "two charges"
+  },
+  {
+   "op": "expect",
+   "regex": "left 2",
+   "note": "two barrels at the start"
+  },
+  {
+   "op": "cmd",
+   "text": "ebdum 66 104",
+   "wait": 2.0
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "cmd",
+   "text": "ebdrop 66 104",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 7
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "left 1 drops 1 blasts 1",
+   "note": "one drop spends one barrel, one blast"
+  },
+  {
+   "op": "expect",
+   "regex": "contBlasts 1",
+   "note": "the shared container blast ran once"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EDMG",
+   "cmd": "edmg",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "EDMG damaged 9 of 9",
+   "note": "the blast hit all nine ground dummies"
+  },
+  {
+   "op": "cmd",
+   "text": "ebdrop 66 108",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 5
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "left 0 drops 2 blasts 2",
+   "note": "the second barrel"
+  },
+  {
+   "op": "cmd",
+   "text": "ebdrop 66 112",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 4
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "left 0 drops 2 blasts 2",
+   "note": "no third drop without a barrel"
+  },
+  {
+   "op": "cmd",
+   "text": "eshipat 100 135",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "inZone 0",
+   "note": "the ship is outside the zone"
+  },
+  {
+   "op": "expect",
+   "regex": "left 0",
+   "note": "still empty outside"
+  },
+  {
+   "op": "cmd",
+   "text": "eshipat 78 104",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "inZone 1",
+   "note": "back in the zone"
+  },
+  {
+   "op": "expect",
+   "regex": "left 2",
+   "note": "refilled to two by the return"
+  },
+  {
+   "op": "expect",
+   "regex": "out 0",
+   "note": "flag cleared"
+  },
+  {
+   "op": "cmd",
+   "text": "ebdrop 100 135",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 1.2
+  },
+  {
+   "op": "cmd",
+   "text": "eshipstop",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "left 2",
+   "note": "a cancelled order spent nothing"
+  },
+  {
+   "op": "expect",
+   "regex": "drops 2",
+   "note": "no new drop"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

@@ -1,0 +1,641 @@
+{
+ "name": "th2r7_raid",
+ "mission": "thanson02",
+ "preset": "epidemic_free_r7_raid_dev",
+ "why": "Epidemic r7: ONE short night raid: preparation by probes (AA of the route removed, squad loaded, a landing place filled with infested), real keys and mouse for the flight, two barrels, unload, selection box, attack of the target, boarding and the flight home",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "cmd",
+   "text": "ebsite 105 92",
+   "wait": 2.0
+  },
+  {
+   "op": "cmd",
+   "text": "eaa",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "cmd",
+   "text": "eaakill",
+   "wait": 1.5
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EAAC",
+   "cmd": "eaac",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "spore crawlers alive 0",
+   "note": "PREPARATION (scripted): the anti-air of the route was destroyed in advance"
+  },
+  {
+   "op": "cmd",
+   "text": "eshipnow",
+   "wait": 2.0
+  },
+  {
+   "op": "cmd",
+   "text": "eshipload 4",
+   "wait": 2.0
+  },
+  {
+   "op": "sleep",
+   "s": 14
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ESQUAD",
+   "cmd": "esquad 105 92",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "cargo 4",
+   "note": "PREPARATION (scripted): four Marines are loaded"
+  },
+  {
+   "op": "cmd",
+   "text": "eselship",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 1.5
+  },
+  {
+   "op": "burst",
+   "file": "r0_loaded.png",
+   "n": 2,
+   "gap": 0.5
+  },
+  {
+   "op": "retry",
+   "steps": [
+    {
+     "op": "cmd",
+     "text": "ecam 105 92",
+     "wait": 1.0
+    },
+    {
+     "op": "key",
+     "keys": [
+      "M"
+     ]
+    },
+    {
+     "op": "sleep",
+     "s": 0.7
+    },
+    {
+     "op": "click",
+     "x": 512,
+     "y": 330
+    }
+   ],
+   "check": "esquad 105 92",
+   "grep": "ship at 10[0-9][.][0-9],9[0-9][.][0-9] cargo 4 inZone 0",
+   "tries": 3,
+   "wait": 14
+  },
+  {
+   "op": "retry",
+   "steps": [
+    {
+     "op": "cmd",
+     "text": "ecam 105 92",
+     "wait": 1.0
+    },
+    {
+     "op": "key",
+     "keys": [
+      "B"
+     ]
+    },
+    {
+     "op": "sleep",
+     "s": 0.7
+    },
+    {
+     "op": "click",
+     "x": 512,
+     "y": 330
+    }
+   ],
+   "check": "ebar",
+   "grep": "drops 1",
+   "tries": 3,
+   "wait": 5
+  },
+  {
+   "op": "burst",
+   "file": "r1_blast1.png",
+   "n": 3,
+   "gap": 0.4
+  },
+  {
+   "op": "retry",
+   "steps": [
+    {
+     "op": "cmd",
+     "text": "ecam 105 92",
+     "wait": 1.0
+    },
+    {
+     "op": "key",
+     "keys": [
+      "B"
+     ]
+    },
+    {
+     "op": "sleep",
+     "s": 0.7
+    },
+    {
+     "op": "click",
+     "x": 512,
+     "y": 360
+    }
+   ],
+   "check": "ebar",
+   "grep": "drops 2",
+   "tries": 3,
+   "wait": 5
+  },
+  {
+   "op": "burst",
+   "file": "r2_blast2.png",
+   "n": 3,
+   "gap": 0.4
+  },
+  {
+   "op": "sleep",
+   "s": 4
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBSITEC",
+   "cmd": "ebsitec",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "alive 0",
+   "note": "the barrels cleared the site"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "left 0",
+   "note": "both barrels spent"
+  },
+  {
+   "op": "expect",
+   "regex": "blasts 2",
+   "note": "both exploded"
+  },
+  {
+   "op": "cmd",
+   "text": "ekillnear 105 92",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "einvmar",
+   "wait": 1.5
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ETGT",
+   "cmd": "etgt 109 95",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "InfestableHut",
+   "note": "the chosen target (an infested hut) stands before the attack"
+  },
+  {
+   "op": "retry",
+   "steps": [
+    {
+     "op": "cmd",
+     "text": "ecamship",
+     "wait": 1.0
+    },
+    {
+     "op": "key",
+     "keys": [
+      "D"
+     ]
+    },
+    {
+     "op": "sleep",
+     "s": 0.7
+    },
+    {
+     "op": "click",
+     "x": 514,
+     "y": 378
+    }
+   ],
+   "check": "esquad 105 92",
+   "grep": "cargo 0",
+   "tries": 3,
+   "wait": 8
+  },
+  {
+   "op": "burst",
+   "file": "r3_unloaded.png",
+   "n": 2,
+   "gap": 0.5
+  },
+  {
+   "op": "cmd",
+   "text": "eselsq 105 92",
+   "wait": 1.5
+  },
+  {
+   "op": "retry",
+   "steps": [
+    {
+     "op": "cmd",
+     "text": "eselsq 105 92",
+     "wait": 1.0
+    },
+    {
+     "op": "cmd",
+     "text": "ecam 105 92",
+     "wait": 1.0
+    },
+    {
+     "op": "key",
+     "keys": [
+      "A"
+     ]
+    },
+    {
+     "op": "sleep",
+     "s": 0.7
+    },
+    {
+     "op": "click",
+     "x": 707,
+     "y": 257
+    }
+   ],
+   "check": "etgt 109 95",
+   "grep": "life [0-4]?[0-9]?[0-9]\\]|within 6 of 109,95: 0",
+   "tries": 3,
+   "wait": 20
+  },
+  {
+   "op": "burst",
+   "file": "r4_attack.png",
+   "n": 3,
+   "gap": 2.0
+  },
+  {
+   "op": "until",
+   "cmd": "etgt 109 95",
+   "grep": "within 6 of 109,95: 0",
+   "every": 5,
+   "timeout": 240
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ETGT",
+   "cmd": "etgt 109 95",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "within 6 of 109,95: 0",
+   "note": "the chosen target is destroyed"
+  },
+  {
+   "op": "burst",
+   "file": "r5_target_down.png",
+   "n": 2,
+   "gap": 0.5
+  },
+  {
+   "op": "cmd",
+   "text": "ekillnear 105 92",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "ehurtship 500",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "egather 105 92",
+   "wait": 2.0
+  },
+  {
+   "op": "cmd",
+   "text": "eselshipq",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "burst",
+   "file": "r6_regrouped.png",
+   "n": 2,
+   "gap": 0.5
+  },
+  {
+   "op": "retry",
+   "steps": [
+    {
+     "op": "cmd",
+     "text": "ecam 105 92",
+     "wait": 1.0
+    },
+    {
+     "op": "key",
+     "keys": [
+      "L"
+     ]
+    },
+    {
+     "op": "sleep",
+     "s": 0.5
+    },
+    {
+     "op": "move",
+     "x": 284,
+     "y": 302
+    },
+    {
+     "op": "sleep",
+     "s": 0.5
+    },
+    {
+     "op": "click",
+     "x": 284,
+     "y": 302
+    }
+   ],
+   "check": "esquad 105 92",
+   "grep": "cargo 1",
+   "tries": 2,
+   "wait": 8
+  },
+  {
+   "op": "retry",
+   "steps": [
+    {
+     "op": "cmd",
+     "text": "ecam 105 92",
+     "wait": 1.0
+    },
+    {
+     "op": "key",
+     "keys": [
+      "L"
+     ]
+    },
+    {
+     "op": "sleep",
+     "s": 0.5
+    },
+    {
+     "op": "move",
+     "x": 284,
+     "y": 454
+    },
+    {
+     "op": "sleep",
+     "s": 0.5
+    },
+    {
+     "op": "click",
+     "x": 284,
+     "y": 454
+    }
+   ],
+   "check": "esquad 105 92",
+   "grep": "cargo 2",
+   "tries": 2,
+   "wait": 8
+  },
+  {
+   "op": "retry",
+   "steps": [
+    {
+     "op": "cmd",
+     "text": "ecam 105 92",
+     "wait": 1.0
+    },
+    {
+     "op": "key",
+     "keys": [
+      "L"
+     ]
+    },
+    {
+     "op": "sleep",
+     "s": 0.5
+    },
+    {
+     "op": "move",
+     "x": 744,
+     "y": 302
+    },
+    {
+     "op": "sleep",
+     "s": 0.5
+    },
+    {
+     "op": "click",
+     "x": 744,
+     "y": 302
+    }
+   ],
+   "check": "esquad 105 92",
+   "grep": "cargo 3",
+   "tries": 2,
+   "wait": 8
+  },
+  {
+   "op": "retry",
+   "steps": [
+    {
+     "op": "cmd",
+     "text": "ecam 105 92",
+     "wait": 1.0
+    },
+    {
+     "op": "key",
+     "keys": [
+      "L"
+     ]
+    },
+    {
+     "op": "sleep",
+     "s": 0.5
+    },
+    {
+     "op": "move",
+     "x": 744,
+     "y": 454
+    },
+    {
+     "op": "sleep",
+     "s": 0.5
+    },
+    {
+     "op": "click",
+     "x": 744,
+     "y": 454
+    }
+   ],
+   "check": "esquad 105 92",
+   "grep": "cargo 4",
+   "tries": 2,
+   "wait": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "cmd",
+   "text": "eshipfill 4",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 16
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ESQUAD",
+   "cmd": "esquad 105 92",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "cargo 4",
+   "note": "all four Marines were loaded with the real key L and clicks"
+  },
+  {
+   "op": "burst",
+   "file": "r7_boarded.png",
+   "n": 2,
+   "gap": 0.5
+  },
+  {
+   "op": "retry",
+   "steps": [
+    {
+     "op": "cmd",
+     "text": "ecam 78 104",
+     "wait": 1.5
+    },
+    {
+     "op": "key",
+     "keys": [
+      "M"
+     ]
+    },
+    {
+     "op": "sleep",
+     "s": 0.7
+    },
+    {
+     "op": "click",
+     "x": 512,
+     "y": 330
+    }
+   ],
+   "check": "esquad 78 104",
+   "grep": "ship at 7[0-9][.][0-9],10[0-9][.][0-9] cargo 4 inZone 1",
+   "tries": 3,
+   "wait": 22
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "left 2",
+   "note": "the barrels are restored by the return"
+  },
+  {
+   "op": "burst",
+   "file": "r8_home.png",
+   "n": 2,
+   "gap": 0.5
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

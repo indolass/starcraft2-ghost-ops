@@ -1,0 +1,273 @@
+{
+ "name": "th2r7_zone",
+ "mission": "thanson02",
+ "preset": "epidemic_free_r7_ce0_dev",
+ "why": "Epidemic r7: the supply zone: the original base inside, borders, an empty hellion moves and refills inside, fuel is spent outside, the tank limit rises when the truck is in the zone",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EZC",
+   "cmd": "ezonechk",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "of [0-9]+ units of the player 0 outside",
+   "note": "every unit of the player at the start (and the structures) is inside the zone"
+  },
+  {
+   "op": "expect",
+   "regex": "dock 1 base 1",
+   "note": "the dock and the Command Center are inside"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EZONE",
+   "cmd": "ezone 49 100",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "in 0",
+   "note": "west of the border"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EZONE",
+   "cmd": "ezone 51 100",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "in 1",
+   "note": "east of the border"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EZONE",
+   "cmd": "ezone 75 125",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "in 0",
+   "note": "north of the border"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EZONE",
+   "cmd": "ezone 75 120",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "in 1",
+   "note": "the sensor tower side is inside"
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EFI \\[",
+   "cmd": "efuelinfo",
+   "every": 8,
+   "timeout": 300
+  },
+  {
+   "op": "expect",
+   "regex": "EFI",
+   "note": "the hellions of the intro are on the map"
+  },
+  {
+   "op": "cmd",
+   "text": "efuel 0",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 8
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EFI",
+   "cmd": "efuelinfo",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "EFI \\[[0-9.]+ dry 0 zone 1",
+   "note": "an empty hellion inside the zone is not stopped and refills"
+  },
+  {
+   "op": "cmd",
+   "text": "egoh 66 104",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 14
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EFI",
+   "cmd": "efuelinfo",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "dry 0 zone 1",
+   "note": "after driving across the base: still not dry, inside"
+  },
+  {
+   "op": "cmd",
+   "text": "ehinv",
+   "wait": 1.0
+  },
+  {
+   "op": "cmd",
+   "text": "egoh 94 112",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 18
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EFI",
+   "cmd": "efuelinfo",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "EFI \\[(4[0-9]|5[0-4])\\.[0-9] dry 0 zone 0",
+   "note": "just outside the east border: the fuel is spent outside (a few cells), not dry"
+  },
+  {
+   "op": "cmd",
+   "text": "egoh 72 104",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 16
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EFI",
+   "cmd": "efuelinfo",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "EFI \\[54\\.9 dry 0 zone 1",
+   "note": "back inside: no more spending, refilled up to the poor limit (45% before the truck returns)"
+  },
+  {
+   "op": "cmd",
+   "text": "etruckown",
+   "wait": 1.0
+  },
+  {
+   "op": "cmd",
+   "text": "etruckat 70 98",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "ESTAT",
+   "cmd": "estat",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "stage 4",
+   "note": "the truck in the zone: good fuel at the base"
+  },
+  {
+   "op": "cmd",
+   "text": "efuel 0",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 14
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EFI",
+   "cmd": "efuelinfo",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "EFI \\[122\\.0 dry 0 zone 1",
+   "note": "after the return of the truck an empty hellion refills in the zone up to the FULL tank"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

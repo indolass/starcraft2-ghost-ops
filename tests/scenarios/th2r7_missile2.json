@@ -1,0 +1,93 @@
+{
+ "name": "th2r7_missile2",
+ "mission": "thanson02",
+ "preset": "epidemic_free_r7_slow_dev",
+ "why": "Epidemic r7: the barrel missile, slow fall: a drop to the side of the ship: 18 frames every 0.5 s from the release (the arc from the hull to the ground)",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "cmd",
+   "text": "eshipnow",
+   "wait": 2.0
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "left 2",
+   "note": "two barrels"
+  },
+  {
+   "op": "cmd",
+   "text": "eselship",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "key",
+   "keys": [
+    "B"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "click",
+   "x": 330,
+   "y": 430
+  },
+  {
+   "op": "burst",
+   "file": "m2_arc.png",
+   "n": 18,
+   "gap": 0.5
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "blasts 1",
+   "note": "exploded"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

@@ -1,0 +1,121 @@
+{
+ "name": "th2r7_loadflight",
+ "mission": "thanson02",
+ "preset": "epidemic_free_r7_slow_dev",
+ "why": "diagnosis: load of a save made with the barrel missile in flight: does the game recover (a loading screen was seen)",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "cmd",
+   "text": "eshipnow",
+   "wait": 2.0
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "left 2",
+   "note": "two barrels"
+  },
+  {
+   "op": "cmd",
+   "text": "ebdrop 66 104",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 8
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "air 1",
+   "note": "the barrel is in the air"
+  },
+  {
+   "op": "save",
+   "name": "CE0_TH2R7_L1"
+  },
+  {
+   "op": "load",
+   "name": "CE0_TH2R7_L1"
+  },
+  {
+   "op": "sleep",
+   "s": 5
+  },
+  {
+   "op": "burst",
+   "file": "l1_a.png",
+   "n": 1,
+   "gap": 0
+  },
+  {
+   "op": "sleep",
+   "s": 20
+  },
+  {
+   "op": "burst",
+   "file": "l1_b.png",
+   "n": 1,
+   "gap": 0
+  },
+  {
+   "op": "sleep",
+   "s": 40
+  },
+  {
+   "op": "burst",
+   "file": "l1_c.png",
+   "n": 1,
+   "gap": 0
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 90
+  },
+  {
+   "op": "expect",
+   "regex": "drops 1",
+   "note": "the game answers after the load in flight"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

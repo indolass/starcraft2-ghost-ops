@@ -1,0 +1,39 @@
+{
+ "name": "th2r7_cal",
+ "mission": "thanson02",
+ "preset": "epidemic_free_r7_ce0_dev",
+ "why": "screen calibration: four marines at known world offsets around the camera centre",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "cmd",
+   "text": "egather 66 100",
+   "wait": 2.0
+  },
+  {
+   "op": "sleep",
+   "s": 4
+  },
+  {
+   "op": "burst",
+   "file": "cal1.png",
+   "n": 3,
+   "gap": 0.5
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

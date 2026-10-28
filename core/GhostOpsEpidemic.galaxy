@@ -11,6 +11,9 @@
 //   * DAY / NIGHT: hooks of the original cycle: a few big infested structures are protected by day (damage shield, labelled, explained once by Hanson) and vulnerable by night; the
 //     Ghosts have a free cloak by day and a limited one by night; ONE night transport (stock Medivac) comes at night, must be kept alive and leaves after the dawn;
 //   * a compact HUD (fuel of the selected hellions, the truck stock).
+// Revision 7 adds: the SUPPLY ZONE (the perimeter of the original base as a polygon: inside it the movement of a hellion costs no fuel and an empty hellion refills up to the available
+// limit; the same zone is "the base" of the truck and of the Hercules) and the BARREL DROP of the Hercules (a button with two charges: the ship flies to the point, a barrel falls, the existing
+// container blast explodes at the impact; the charges come back only in the supply zone).
 // Everything that is saved is a global of this module (units, counters, scene flags); a load restores the state, dialogs and text tags are rebuilt by the load handler.
 //==================================================================================================
 bool go_eEnabled;
@@ -63,7 +66,15 @@ int go_eHudW;
 int go_eHudH;
 fixed go_eDevDay;                // development only (epidemic.dev_cycle): a shorter day / night so that a short scenario crosses the transitions
 fixed go_eDevNight;
+bool go_eZoneOn;                // revision 7: the base is a polygon (the perimeter of the original base); without it the circle go_eBase / go_eBaseR
+int go_eZoneN;
+fixed[24] go_eZoneX;
+fixed[24] go_eZoneY;
+bool go_bdOn;                   // revision 7: the barrel drop of the Hercules
+int go_bdMax;                   // barrels of one flight
+fixed go_bdFall;                // seconds from the release to the impact (the flight time of the missile mover); a barrel that has not arrived 2.5 s later than that explodes anyway (a lost missile never keeps a slot)
 void GhostOps_ApplyEpidemicConfig ();
+int GhostOps_Epi_BarrelsLeft ();
 
 // ---- saved state
 int go_eStage;                  // 0 start, 1 first dry hellion far from the base seen, 2 the truck was announced, 3 captured, 4 brought to the base (good fuel at the base)
@@ -98,6 +109,20 @@ int go_eHudL2;
 trigger go_eTickTrig;
 trigger go_eLoadTrig;
 trigger go_eAttackTrig;
+unit[4] go_bdSrc;               // the barrels in the air: the ship, the falling dummy, the point, the moment of the impact (saved with the game: a load neither repeats nor loses an explosion)
+int go_bdSeq;                   // the order of the drops: the impacts are told apart by it (the first drop lands first: the same flight time)
+int[4] go_bdNo;
+trigger go_bdImpTrig;
+point[4] go_bdPos;
+fixed[4] go_bdAt;
+bool[4] go_bdLive;
+bool go_bdOut;                  // the ship has been outside the supply zone since its last drop or refill: only a RETURN refills the barrels
+int go_bdDrops;
+int go_bdBlasts;
+int go_bdRefills;
+int go_eHudL3;
+trigger go_bdCastTrig;
+trigger go_bdTickTrig;
 
 void GhostOps_Epi_Log (string lp_text) {
     if (!go_eDebug) {
@@ -244,21 +269,69 @@ void GhostOps_Epi_Scene (int lp_id) {
 }
 
 //--------------------------------------------------------------------------------------------------
+// The base: the supply zone (a polygon, ray casting) or, in the earlier revisions, the circle go_eBase / go_eBaseR
+//--------------------------------------------------------------------------------------------------
+bool GhostOps_Epi_InZone (point lp_p) {
+    int lv_i;
+    int lv_j;
+    bool lv_in;
+    fixed lv_x;
+    fixed lv_y;
+
+    if (!go_eZoneOn) {
+        return DistanceBetweenPoints(lp_p, go_eBase) <= go_eBaseR;
+    }
+
+    lv_x = PointGetX(lp_p);
+    lv_y = PointGetY(lp_p);
+    lv_in = false;
+    lv_j = go_eZoneN - 1;
+    lv_i = 0;
+    while (lv_i < go_eZoneN) {
+        if ((go_eZoneY[lv_i] > lv_y) != (go_eZoneY[lv_j] > lv_y)) {
+            if (lv_x < ((((go_eZoneX[lv_j] - go_eZoneX[lv_i]) * (lv_y - go_eZoneY[lv_i])) / (go_eZoneY[lv_j] - go_eZoneY[lv_i])) + go_eZoneX[lv_i])) {
+                lv_in = !lv_in;
+            }
+        }
+
+        lv_j = lv_i;
+        lv_i += 1;
+    }
+
+    return lv_in;
+}
+
+//--------------------------------------------------------------------------------------------------
 // HUD
 //--------------------------------------------------------------------------------------------------
 void GhostOps_Epi_CreateHud () {
+    int lv_h;
+
+    lv_h = go_eHudH / 2;
+    if (go_bdOn) {
+        lv_h = go_eHudH / 3;
+    }
+
     DialogCreate(go_eHudW, go_eHudH, c_anchorTopLeft, go_eHudX, go_eHudY, false);
     go_eHud = DialogLastCreated();
     DialogControlCreate(go_eHud, c_triggerControlTypeLabel);
     go_eHudL1 = DialogControlLastCreated();
-    DialogControlSetSize(go_eHudL1, PlayerGroupAll(), go_eHudW, go_eHudH / 2);
+    DialogControlSetSize(go_eHudL1, PlayerGroupAll(), go_eHudW, lv_h);
     DialogControlSetPosition(go_eHudL1, PlayerGroupAll(), c_anchorTopLeft, 0, 0);
     DialogControlSetPropertyAsString(go_eHudL1, c_triggerControlPropertyStyle, PlayerGroupAll(), "AlertItem");
     DialogControlCreate(go_eHud, c_triggerControlTypeLabel);
     go_eHudL2 = DialogControlLastCreated();
-    DialogControlSetSize(go_eHudL2, PlayerGroupAll(), go_eHudW, go_eHudH / 2);
-    DialogControlSetPosition(go_eHudL2, PlayerGroupAll(), c_anchorTopLeft, 0, go_eHudH / 2);
+    DialogControlSetSize(go_eHudL2, PlayerGroupAll(), go_eHudW, lv_h);
+    DialogControlSetPosition(go_eHudL2, PlayerGroupAll(), c_anchorTopLeft, 0, lv_h);
     DialogControlSetPropertyAsString(go_eHudL2, c_triggerControlPropertyStyle, PlayerGroupAll(), "AlertItem");
+    if (go_bdOn) {
+        DialogControlCreate(go_eHud, c_triggerControlTypeLabel);
+        go_eHudL3 = DialogControlLastCreated();
+        DialogControlSetSize(go_eHudL3, PlayerGroupAll(), go_eHudW, lv_h);
+        DialogControlSetPosition(go_eHudL3, PlayerGroupAll(), c_anchorTopLeft, 0, lv_h * 2);
+        DialogControlSetPropertyAsString(go_eHudL3, c_triggerControlPropertyStyle, PlayerGroupAll(), "AlertItem");
+    }
+
     DialogSetVisible(go_eHud, PlayerGroupAll(), true);
 }
 
@@ -271,6 +344,7 @@ void GhostOps_Epi_UpdateHud () {
     fixed lv_e;
     text lv_a;
     text lv_b;
+    text lv_c;
 
     if (go_eHud == c_invalidDialogId) {
         return;
@@ -325,6 +399,15 @@ void GhostOps_Epi_UpdateHud () {
 
     DialogControlSetPropertyAsText(go_eHudL1, c_triggerControlPropertyText, PlayerGroupAll(), lv_a);
     DialogControlSetPropertyAsText(go_eHudL2, c_triggerControlPropertyText, PlayerGroupAll(), lv_b);
+    if (go_bdOn) {
+        // the barrels of the Hercules: only while the ship is on the map (by night); the number of charges is also on the button
+        lv_c = StringToText("");
+        if (go_eShipMade && !go_eShipDead && !go_eShipAway && UnitIsAlive(go_eShip)) {
+            lv_c = StringExternal("Param/Value/GhostOpsE_HudBarrels") + StringToText(": ") + IntToText(GhostOps_Epi_BarrelsLeft()) + StringToText(" / ") + IntToText(go_bdMax);
+        }
+
+        DialogControlSetPropertyAsText(go_eHudL3, c_triggerControlPropertyText, PlayerGroupAll(), lv_c);
+    }
 }
 
 //--------------------------------------------------------------------------------------------------
@@ -417,7 +500,12 @@ void GhostOps_Epi_Fuel (fixed lp_dt) {
             }
 
             lv_e = UnitGetPropertyFixed(lv_u, c_unitPropEnergy, c_unitPropCurrent);
-            lv_atBase = (DistanceBetweenPoints(lv_p, go_eBase) <= go_eBaseR);
+            lv_atBase = GhostOps_Epi_InZone(lv_p);
+            if (go_eZoneOn && lv_atBase) {
+                // the supply zone: driving inside the base costs no fuel
+                lv_d = 0.0;
+            }
+
             lv_e = lv_e - (lv_d * go_ePerCell);
             // the base: local gas fills the tank up to the quality of the day (poor, later good)
             lv_t = GhostOps_Epi_BaseTarget();
@@ -579,7 +667,7 @@ void GhostOps_Epi_Truck (fixed lp_dt) {
     }
 
     // back at the base: the local fuel becomes good (once), and the truck can be refilled for the gas of the map
-    if (DistanceBetweenPoints(UnitGetPosition(go_eTruck), go_eBase) <= go_eBaseR) {
+    if (GhostOps_Epi_InZone(UnitGetPosition(go_eTruck))) {
         if (go_eStage < 4) {
             go_eStage = 4;
             GhostOps_Epi_Log("truck at the base: good fuel prepared");
@@ -616,6 +704,170 @@ void GhostOps_Epi_Truck (fixed lp_dt) {
 void GhostOps_Epi_Mark () {
     if ((go_eStage >= 2) && (go_eStage < 3) && !go_eTruckLost && UnitIsAlive(go_eTruck)) {
         MinimapPing(PlayerGroupSingle(1), UnitGetPosition(go_eTruck), 2.5, Color(100.00, 80.00, 0.00));
+    }
+}
+
+//--------------------------------------------------------------------------------------------------
+// The barrel drop of the Hercules (revision 7). The ability (data) makes the falling picture and takes one charge when the cast really happens (a cancelled order spends nothing); the module notes the
+// barrel and, when it reaches the ground, makes the blast of the existing container (GhostOps_Hanson_ContBlast: the same damage, radius and rules). The charges come back only when the ship
+// returns to the supply zone. Everything the module keeps (the barrels in the air, the flag) is a saved global: a load neither repeats a blast nor gives a charge.
+//--------------------------------------------------------------------------------------------------
+int GhostOps_Epi_BarrelsLeft () {
+    if (!go_bdOn || !go_eShipMade || !UnitIsAlive(go_eShip)) {
+        return 0;
+    }
+
+    return FixedToInt(UnitAbilityChargeInfo(go_eShip, AbilityCommand("GhostOpsDropBarrel", 0), c_unitAbilChargeCountLeft) + 0.5);
+}
+
+void GhostOps_Epi_BarrelsRefill (bool lp_quiet) {
+    int lv_i;
+
+    if (!go_bdOn || !go_eShipMade || !UnitIsAlive(go_eShip)) {
+        return;
+    }
+
+    // one reset restores ONE charge: repeat until the stock of the flight is full
+    lv_i = 0;
+    while ((lv_i < 6) && (GhostOps_Epi_BarrelsLeft() < go_bdMax)) {
+        UnitAbilityReset(go_eShip, AbilityCommand("GhostOpsDropBarrel", 0), c_spendLocationUnit);
+        lv_i += 1;
+    }
+
+    go_bdOut = false;
+    go_bdRefills += 1;
+    if (!lp_quiet) {
+        UIDisplayMessage(PlayerGroupAll(), c_messageAreaDirective, StringExternal("Param/Value/GhostOpsE_MsgBarrelsRestocked"));
+    }
+
+    GhostOps_Epi_Log("barrels refilled: " + IntToString(GhostOps_Epi_BarrelsLeft()) + " of " + IntToString(go_bdMax));
+}
+
+bool GhostOps_Epi_DropCast (bool lp_testConds, bool lp_runActions) {
+    unit lv_s;
+    point lv_t;
+    int lv_i;
+    int lv_slot;
+    fixed lv_r;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    lv_s = EventUnit();
+    lv_t = EventUnitTargetPoint();
+    if (lv_s == null) {
+        return true;
+    }
+
+    lv_slot = -1;
+    lv_i = 0;
+    while ((lv_i < 4) && (lv_slot < 0)) {
+        if (!go_bdLive[lv_i]) {
+            lv_slot = lv_i;
+        }
+
+        lv_i += 1;
+    }
+
+    if (lv_slot < 0) {
+        GhostOps_Epi_Log("barrel drop: no free slot");
+        return true;
+    }
+
+    lv_r = DistanceBetweenPoints(UnitGetPosition(lv_s), lv_t);
+    // the missile itself was launched by the ability (data); the module only notes the barrel: where it will land and who dropped it; the explosion comes when the missile arrives (GhostOps_Epi_DropImpact)
+    go_bdSeq += 1;
+    go_bdNo[lv_slot] = go_bdSeq;
+    go_bdSrc[lv_slot] = lv_s;
+    go_bdPos[lv_slot] = lv_t;
+    go_bdAt[lv_slot] = GameGetMissionTime() + go_bdFall + 2.5;
+    go_bdLive[lv_slot] = true;
+    go_bdDrops += 1;
+    go_bdOut = !GhostOps_Epi_InZone(UnitGetPosition(lv_s));
+    UIDisplayMessage(PlayerGroupAll(), c_messageAreaDirective, StringExternal("Param/Value/GhostOpsE_MsgBarrelDropped"));
+    GhostOps_Epi_Log("barrel released at (" + FixedToString(PointGetX(lv_t), 1) + ", " + FixedToString(PointGetY(lv_t), 1) + ") from " + FixedToString(lv_r, 1) + ", left " + IntToString(GhostOps_Epi_BarrelsLeft()));
+    return true;
+}
+
+// the explosion of slot lp_i (the existing container blast at the point where the barrel lands)
+void GhostOps_Epi_DropBlast (int lp_i, string lp_why) {
+    unit lv_src;
+
+    go_bdLive[lp_i] = false;
+    lv_src = go_bdSrc[lp_i];
+    if (!UnitIsAlive(lv_src)) {
+        // the ship was shot down while the barrel was falling: the barrel still explodes (a unit of the player makes the blast)
+        lv_src = UnitGroupUnit(UnitGroup(null, 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), 1);
+    }
+
+    if (lv_src != null) {
+        GhostOps_Hanson_ContBlast(lv_src, go_bdPos[lp_i]);
+        go_bdBlasts += 1;
+        GhostOps_Epi_Log("barrel exploded (" + lp_why + ") at (" + FixedToString(PointGetX(go_bdPos[lp_i]), 1) + ", " + FixedToString(PointGetY(go_bdPos[lp_i]), 1) + "), blasts " + IntToString(go_bdBlasts));
+    }
+}
+
+// the missile ARRIVED (its impact effect is used): the first barrel in the air lands (the same flight time for every barrel: they land in the order of the drops)
+bool GhostOps_Epi_DropImpact (bool lp_testConds, bool lp_runActions) {
+    int lv_i;
+    int lv_best;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    lv_best = -1;
+    lv_i = 0;
+    while (lv_i < 4) {
+        if (go_bdLive[lv_i] && ((lv_best < 0) || (go_bdNo[lv_i] < go_bdNo[lv_best]))) {
+            lv_best = lv_i;
+        }
+
+        lv_i += 1;
+    }
+
+    if (lv_best >= 0) {
+        GhostOps_Epi_DropBlast(lv_best, "arrival");
+    }
+
+    return true;
+}
+
+// safety: a barrel whose arrival was never reported (a lost missile) explodes late instead of keeping its slot
+bool GhostOps_Epi_DropTick (bool lp_testConds, bool lp_runActions) {
+    int lv_i;
+
+    if (!lp_runActions) {
+        return true;
+    }
+
+    lv_i = 0;
+    while (lv_i < 4) {
+        if (go_bdLive[lv_i] && (GameGetMissionTime() >= go_bdAt[lv_i])) {
+            GhostOps_Epi_DropBlast(lv_i, "late");
+        }
+
+        lv_i += 1;
+    }
+
+    return true;
+}
+
+// every tick: the ship outside the supply zone is "out"; back inside it refills the barrels of the flight
+void GhostOps_Epi_BarrelUpdate () {
+    bool lv_in;
+
+    if (!go_bdOn || !go_eShipMade || go_eShipDead || go_eShipAway || !UnitIsAlive(go_eShip)) {
+        return;
+    }
+
+    lv_in = GhostOps_Epi_InZone(UnitGetPosition(go_eShip));
+    if (!lv_in) {
+        go_bdOut = true;
+    }
+    else if (go_bdOut && (GhostOps_Epi_BarrelsLeft() < go_bdMax)) {
+        GhostOps_Epi_BarrelsRefill(false);
     }
 }
 
@@ -784,6 +1036,10 @@ void GhostOps_Epi_ShipOpen () {
     }
 
     UnitAbilityEnable(go_eShip, GhostOps_Epi_ShipAbil(), true);
+    if (go_bdOn) {
+        GhostOps_Epi_BarrelsRefill(true);
+    }
+
     UIDisplayMessage(PlayerGroupAll(), c_messageAreaDirective, StringExternal("Param/Value/GhostOpsE_MsgShipHere"));
     GhostOps_Epi_Scene(4);
 }
@@ -890,6 +1146,7 @@ bool GhostOps_Epi_Tick (bool lp_testConds, bool lp_runActions) {
     GhostOps_Epi_Fuel(lv_dt);
     GhostOps_Epi_Truck(lv_dt);
     GhostOps_Epi_Ship();
+    GhostOps_Epi_BarrelUpdate();
     GhostOps_Epi_ProtTags();
     if ((go_eTickN % 2) == 0) {
         GhostOps_Epi_UpdateHud();
@@ -944,5 +1201,15 @@ void GhostOps_Epi_Start () {
     TriggerAddEventTimePeriodic(go_eTickTrig, 0.25, c_timeGame);
     go_eLoadTrig = TriggerCreate("GhostOps_Epi_OnLoad");
     TriggerAddEventLoadGameDone(go_eLoadTrig);
+    if (go_bdOn) {
+        go_bdCastTrig = TriggerCreate("GhostOps_Epi_DropCast");
+        // the Complete stage: the Execute stage fires when the order STARTS (before the ship has flown to the point and before the charge is paid); Complete = the barrel is really released
+        TriggerAddEventUnitAbility(go_bdCastTrig, null, AbilityCommand("GhostOpsDropBarrel", 0), c_unitAbilStageComplete, false);
+        go_bdImpTrig = TriggerCreate("GhostOps_Epi_DropImpact");
+        TriggerAddEventPlayerEffectUsed(go_bdImpTrig, 1, "GhostOpsBarrelImpact");
+        go_bdTickTrig = TriggerCreate("GhostOps_Epi_DropTick");
+        TriggerAddEventTimePeriodic(go_bdTickTrig, 0.1, c_timeGame);
+    }
+
     GhostOps_Epi_Log("started: base fuel poor " + FixedToString(go_eFillPoor, 2) + ", tank " + FixedToString(go_eTank, 0));
 }

@@ -1,0 +1,104 @@
+{
+ "name": "th2r7_missile",
+ "mission": "thanson02",
+ "preset": "epidemic_free_r7_slow_dev",
+ "why": "Epidemic r7: the barrel missile, slow fall: one drop UNDER the ship, 14 frames every 0.45 s from the release; the explosion must be started by the arrival of the missile (not by the late timer)",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "cmd",
+   "text": "eshipnow",
+   "wait": 2.0
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "left 2",
+   "note": "two barrels"
+  },
+  {
+   "op": "cmd",
+   "text": "eselship",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "key",
+   "keys": [
+    "B"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "click",
+   "x": 514,
+   "y": 378
+  },
+  {
+   "op": "burst",
+   "file": "m1_release.png",
+   "n": 14,
+   "gap": 0.45
+  },
+  {
+   "op": "sleep",
+   "s": 4
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "blasts 1",
+   "note": "exploded"
+  },
+  {
+   "op": "expect_def",
+   "bank": "GhostOpsDevEpi",
+   "regex": "barrel exploded \\(arrival\\)"
+  },
+  {
+   "op": "expect_def",
+   "bank": "GhostOpsDevEpi",
+   "regex": "barrel exploded \\(late\\)",
+   "count": 0
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

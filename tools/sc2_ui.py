@@ -23,7 +23,7 @@ WM_RBUTTONDOWN, WM_RBUTTONUP = 0x204, 0x205
 SWP_NOMOVE, SWP_NOSIZE, SWP_NOACTIVATE = 0x2, 0x1, 0x10
 HWND_TOP, HWND_BOTTOM = 0, 1
 VK = {'F10': 0x79, 'ESC': 0x1B, 'ENTER': 0x0D, 'UP': 0x26, 'DOWN': 0x28, 'LEFT': 0x25, 'RIGHT': 0x27, 'TAB': 0x09, 'F9': 0x78, 'F11': 0x7A,
-      'CTRL': 0x11, 'SPACE': 0x20, 'BACK': 0x08, 'F5': 0x74, 'F6': 0x75, 'PAUSE': 0x13}
+      'CTRL': 0x11, 'SPACE': 0x20, 'BACK': 0x08, 'F2': 0x71, 'F3': 0x72, 'F5': 0x74, 'F6': 0x75, 'PAUSE': 0x13}
 
 
 def window(pid):
@@ -80,6 +80,19 @@ def click(pid, x, y):
     user32.PostMessageW(hwnd, WM_LBUTTONDOWN, 1, lp)
     time.sleep(0.08)
     user32.PostMessageW(hwnd, WM_LBUTTONUP, 0, lp)
+
+
+def drag(pid, x1, y1, x2, y2, steps=8):
+    """A posted drag with the left button (client coordinates): the selection box of the player."""
+    hwnd = window(pid)[0]
+    user32.PostMessageW(hwnd, WM_MOUSEMOVE, 0, (y1 << 16) | (x1 & 0xFFFF))
+    time.sleep(0.1)
+    user32.PostMessageW(hwnd, WM_LBUTTONDOWN, 1, (y1 << 16) | (x1 & 0xFFFF))
+    for i in range(1, steps + 1):
+        x, y = x1 + (x2 - x1) * i // steps, y1 + (y2 - y1) * i // steps
+        user32.PostMessageW(hwnd, WM_MOUSEMOVE, 1, (y << 16) | (x & 0xFFFF))
+        time.sleep(0.06)
+    user32.PostMessageW(hwnd, WM_LBUTTONUP, 0, (y2 << 16) | (x2 & 0xFFFF))
 
 
 def rclick(pid, x, y):

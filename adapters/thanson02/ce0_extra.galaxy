@@ -134,6 +134,87 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
         return true;
     }
 
+    if (lp_cmd == "ebasemap") {
+        // ebasemap: the real geometry of the original base (measurement of the supply zone): rows y = 120 .. 62 (step 2), x = 40 .. 112 (step 2): '#' not passable, '.' passable and connected with the Command Center, 'o' passable but cut off
+        lv_j = 120;
+        while (lv_j >= 62) {
+            lv_t = "EBM " + IntToString(lv_j) + " ";
+            lv_i = 40;
+            while (lv_i <= 112) {
+                lv_p = Point(IntToFixed(lv_i), IntToFixed(lv_j));
+                if (!PointPathingPassable(lv_p)) {
+                    lv_t = lv_t + "#";
+                }
+                else if (PointPathingIsConnected(lv_p, go_eBase)) {
+                    lv_t = lv_t + ".";
+                }
+                else {
+                    lv_t = lv_t + "o";
+                }
+
+                lv_i += 2;
+            }
+
+            GhostOps_Ce0_Write("j", lv_t);
+            lv_j -= 2;
+        }
+
+        return true;
+    }
+
+    if (lp_cmd == "ebasestr") {
+        // ebasestr: every structure of the player (1) and of the neutral player 0 / 4 in the area x 40..112, y 62..120: type and position
+        lv_g = UnitGroup(null, 1, RegionRect(40.0, 62.0, 112.0, 120.0), UnitFilter((1 << c_targetFilterStructure), 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+        lv_n = UnitGroupCount(lv_g, c_unitCountAll);
+        lv_t = "EBS player1 " + IntToString(lv_n) + ":";
+        lv_i = 1;
+        while (lv_i <= lv_n) {
+            lv_u = UnitGroupUnit(lv_g, lv_i);
+            lv_t = lv_t + " " + UnitGetType(lv_u) + "@" + GhostOps_Ce0_Pt(UnitGetPosition(lv_u));
+            if ((lv_i % 6) == 0) {
+                GhostOps_Ce0_Write("j", lv_t);
+                lv_t = "EBS +";
+            }
+
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", lv_t);
+        lv_g = UnitGroup(null, 4, RegionRect(40.0, 62.0, 112.0, 120.0), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+        lv_n = UnitGroupCount(lv_g, c_unitCountAll);
+        lv_t = "EBS player4 " + IntToString(lv_n) + ":";
+        lv_i = 1;
+        while (lv_i <= lv_n) {
+            lv_u = UnitGroupUnit(lv_g, lv_i);
+            lv_t = lv_t + " " + UnitGetType(lv_u) + "@" + GhostOps_Ce0_Pt(UnitGetPosition(lv_u));
+            if ((lv_i % 6) == 0) {
+                GhostOps_Ce0_Write("j", lv_t);
+                lv_t = "EBS +";
+            }
+
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", lv_t);
+        lv_g = UnitGroup(null, 3, RegionRect(40.0, 62.0, 112.0, 120.0), UnitFilter((1 << c_targetFilterStructure), 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+        lv_n = UnitGroupCount(lv_g, c_unitCountAll);
+        lv_t = "EBS enemy structures " + IntToString(lv_n) + ":";
+        lv_i = 1;
+        while (lv_i <= lv_n) {
+            lv_u = UnitGroupUnit(lv_g, lv_i);
+            lv_t = lv_t + " " + UnitGetType(lv_u) + "@" + GhostOps_Ce0_Pt(UnitGetPosition(lv_u));
+            if ((lv_i % 6) == 0) {
+                GhostOps_Ce0_Write("j", lv_t);
+                lv_t = "EBS +";
+            }
+
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
     if (lp_cmd == "egrid") {
         // egrid <y0>: one row (y0) of the grid x = 56..136 step 4: "x:cost" for passable points, cost relative to the base
         lv_t = "EGRID y=" + lp_a;
@@ -327,6 +408,31 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
             }
 
             GhostOps_Ce0_Write("j", "ESHIPLOAD ordered " + IntToString(lv_c));
+        }
+
+        return true;
+    }
+
+    if (lp_cmd == "eshipfill") {
+        // eshipfill <n>: scenario fallback of a boarding that the real clicks did not finish: marines near the ship are loaded (the stock Load order, scripted) until the cargo holds n; nothing is done when it already does
+        if (go_eShipMade && UnitIsAlive(go_eShip)) {
+            lv_c = StringToInt(lp_a) - UnitGroupCount(UnitCargoGroup(go_eShip), c_unitCountAlive);
+            lv_g = UnitGroup("Marine", 1, RegionCircle(UnitGetPosition(go_eShip), 30.0), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+            lv_n = UnitGroupCount(lv_g, c_unitCountAll);
+            lv_i = 1;
+            while ((lv_i <= lv_n) && (lv_c > 0)) {
+                lv_u = UnitGroupUnit(lv_g, lv_i);
+                if (!UnitIsAlive(lv_u)) {
+                    lv_i += 1;
+                }
+                else {
+                    UnitIssueOrder(go_eShip, OrderTargetingUnit(AbilityCommand(GhostOps_Epi_ShipAbil(), 0), lv_u), c_orderQueueAddToEnd);
+                    lv_c -= 1;
+                    lv_i += 1;
+                }
+            }
+
+            GhostOps_Ce0_Write("j", "ESHIPFILL ordered, cargo was " + IntToString(UnitGroupCount(UnitCargoGroup(go_eShip), c_unitCountAlive)));
         }
 
         return true;
@@ -724,6 +830,450 @@ bool GhostOps_Ce0_MissionCmd (string lp_cmd, string lp_a, string lp_b) {
 
         UnitGroupLoopEnd();
         GhostOps_Ce0_Write("j", "ELOADB orders given to " + IntToString(lv_c) + " Marines");
+        return true;
+    }
+
+    if (lp_cmd == "ezone") {
+        // ezone <x> <y>: is the point inside the supply zone
+        GhostOps_Ce0_Write("j", "EZONE " + lp_a + "," + lp_b + " in " + IntToString(BoolToInt(GhostOps_Epi_InZone(Point(StringToFixed(lp_a), StringToFixed(lp_b))))) + " zoneOn " + IntToString(BoolToInt(go_eZoneOn)));
+        return true;
+    }
+
+    if (lp_cmd == "ezonechk") {
+        // ezonechk: every structure of the player and every hellion / marine / ghost / scv / firebat / medic of the player: inside the supply zone or not (the zone must hold the whole original base)
+        lv_t = "EZC outside:";
+        lv_c = 0;
+        lv_g = UnitGroup(null, 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+        lv_n = UnitGroupCount(lv_g, c_unitCountAll);
+        lv_i = 1;
+        while (lv_i <= lv_n) {
+            lv_u = UnitGroupUnit(lv_g, lv_i);
+            if (!GhostOps_Epi_InZone(UnitGetPosition(lv_u))) {
+                lv_c += 1;
+                if (lv_c <= 12) {
+                    lv_t = lv_t + " " + UnitGetType(lv_u) + "@" + GhostOps_Ce0_Pt(UnitGetPosition(lv_u));
+                }
+            }
+
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", lv_t + " | of " + IntToString(lv_n) + " units of the player " + IntToString(lv_c) + " outside | dock " + IntToString(BoolToInt(GhostOps_Epi_InZone(go_eDock))) + " base " + IntToString(BoolToInt(GhostOps_Epi_InZone(go_eBase))));
+        return true;
+    }
+
+    if (lp_cmd == "ebar") {
+        // ebar: the barrels of the Hercules: charges (max / use / left / regen), the saved counters, the barrels in the air
+        lv_t = "EBAR on " + IntToString(BoolToInt(go_bdOn)) + " ship " + IntToString(BoolToInt(go_eShipMade && UnitIsAlive(go_eShip)));
+        if (go_eShipMade && UnitIsAlive(go_eShip)) {
+            lv_t = lv_t + " at " + GhostOps_Ce0_Pt(UnitGetPosition(go_eShip)) + " inZone " + IntToString(BoolToInt(GhostOps_Epi_InZone(UnitGetPosition(go_eShip)))) + " hidden " + IntToString(BoolToInt(UnitTestState(go_eShip, c_unitStateHidden)));
+            lv_t = lv_t + " charges max " + FixedToString(UnitAbilityChargeInfo(go_eShip, AbilityCommand("GhostOpsDropBarrel", 0), c_unitAbilChargeCountMax), 1) + " use " + FixedToString(UnitAbilityChargeInfo(go_eShip, AbilityCommand("GhostOpsDropBarrel", 0), c_unitAbilChargeCountUse), 1)
+                + " left " + FixedToString(UnitAbilityChargeInfo(go_eShip, AbilityCommand("GhostOpsDropBarrel", 0), c_unitAbilChargeCountLeft), 1) + " regenLeft " + FixedToString(UnitAbilityChargeInfo(go_eShip, AbilityCommand("GhostOpsDropBarrel", 0), c_unitAbilChargeRegenLeft), 1);
+        }
+
+        lv_t = lv_t + " | left " + IntToString(GhostOps_Epi_BarrelsLeft()) + " drops " + IntToString(go_bdDrops) + " blasts " + IntToString(go_bdBlasts) + " refills " + IntToString(go_bdRefills) + " out " + IntToString(BoolToInt(go_bdOut)) + " air";
+        lv_i = 0;
+        while (lv_i < 4) {
+            lv_t = lv_t + " " + IntToString(BoolToInt(go_bdLive[lv_i]));
+            lv_i += 1;
+        }
+
+        lv_i = 0;
+        while (lv_i < 4) {
+            if (go_bdLive[lv_i]) {
+                lv_t = lv_t + " | barrel" + IntToString(lv_i) + " no " + IntToString(go_bdNo[lv_i]) + " lands at " + GhostOps_Ce0_Pt(go_bdPos[lv_i]);
+            }
+
+            lv_i += 1;
+        }
+
+        lv_t = lv_t + " contBlasts " + IntToString(go_hContBlasts);
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "ebdrop") {
+        // ebdrop <x> <y>: the ship is ORDERED (scripted order) to drop a barrel at the point
+        if (go_eShipMade && UnitIsAlive(go_eShip)) {
+            UnitIssueOrder(go_eShip, OrderTargetingPoint(AbilityCommand("GhostOpsDropBarrel", 0), Point(StringToFixed(lp_a), StringToFixed(lp_b))), c_orderQueueReplace);
+            GhostOps_Ce0_Write("j", "EBDROP ordered at " + lp_a + "," + lp_b + " orders " + IntToString(UnitOrderCount(go_eShip)));
+        }
+
+        return true;
+    }
+
+    if (lp_cmd == "eshipat") {
+        // eshipat <x> <y>: the ship is put at the point (scenario preparation, not a control check)
+        if (go_eShipMade && UnitIsAlive(go_eShip)) {
+            UnitSetPosition(go_eShip, Point(StringToFixed(lp_a), StringToFixed(lp_b)), false);
+            GhostOps_Ce0_Write("j", "ESHIPAT put at " + lp_a + "," + lp_b);
+        }
+
+        return true;
+    }
+
+    if (lp_cmd == "ekillnear") {
+        // ekillnear <x> <y>: scenario preparation: the free enemy fighters (player 3, not structures) within 18 cells of the point are removed: the natural night infested of the area are not part of this control check
+        lv_c = 0;
+        lv_g = UnitGroup(null, 3, RegionCircle(Point(StringToFixed(lp_a), StringToFixed(lp_b)), 18.0), UnitFilter(0, 0, (1 << c_targetFilterStructure) | (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32))), 0);
+        UnitGroupLoopBegin(lv_g);
+        while (UnitGroupLoopCurrent() != null) {
+            UnitKill(UnitGroupLoopCurrent());
+            lv_c += 1;
+            UnitGroupLoopStep();
+        }
+
+        UnitGroupLoopEnd();
+        GhostOps_Ce0_Write("j", "EKILLNEAR removed " + IntToString(lv_c));
+        return true;
+    }
+
+    if (lp_cmd == "enear") {
+        // enear <x> <y>: every enemy / neutral unit and structure within 12 cells of the point (type, position, life)
+        lv_t = "ENEAR within 12 of " + lp_a + "," + lp_b + ":";
+        lv_i = 2;
+        while (lv_i <= 4) {
+            lv_g = UnitGroup(null, lv_i, RegionCircle(Point(StringToFixed(lp_a), StringToFixed(lp_b)), 12.0), UnitFilter(0, 0, (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32))), 0);
+            lv_n = UnitGroupCount(lv_g, c_unitCountAlive);
+            lv_j = 1;
+            while ((lv_j <= lv_n) && (lv_j <= 16)) {
+                lv_u = UnitGroupUnit(lv_g, lv_j);
+                lv_t = lv_t + " p" + IntToString(lv_i) + ":" + UnitGetType(lv_u) + "@" + GhostOps_Ce0_Pt(UnitGetPosition(lv_u));
+                lv_j += 1;
+            }
+
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "einvmar") {
+        // einvmar: scenario preparation of a control check: the Marines of the player are invulnerable (the squad must survive the swarm at the site so that the boarding and the flight home can be checked)
+        lv_g = UnitGroup("Marine", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+        UnitGroupLoopBegin(lv_g);
+        while (UnitGroupLoopCurrent() != null) {
+            UnitSetState(UnitGroupLoopCurrent(), c_unitStateInvulnerable, true);
+            UnitGroupLoopStep();
+        }
+
+        UnitGroupLoopEnd();
+        GhostOps_Ce0_Write("j", "EINVMAR marines invulnerable " + IntToString(UnitGroupCount(lv_g, c_unitCountAlive)));
+        return true;
+    }
+
+    if (lp_cmd == "egather") {
+        // egather <x> <y>: scenario preparation: four Marines of the player (those within 25 cells of the point) stand at (x-5,y+2) (x-5,y-2) (x+5,y+2) (x+5,y-2) and the camera is on (x,y); on the screen the point (x,y) is at client (514, 378), 46 px per cell in x and 38 px per cell in y (measured with th2r7_cal)
+        lv_p = Point(StringToFixed(lp_a), StringToFixed(lp_b));
+        lv_g = UnitGroup("Marine", 1, RegionCircle(lv_p, 25.0), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+        lv_i = 1;
+        while (lv_i <= 4) {
+            lv_u = UnitGroupUnit(lv_g, lv_i);
+            if (lv_i == 1) {
+                UnitSetPosition(lv_u, PointWithOffset(lv_p, -5.0, 2.0), false);
+            }
+            else if (lv_i == 2) {
+                UnitSetPosition(lv_u, PointWithOffset(lv_p, -5.0, -2.0), false);
+            }
+            else if (lv_i == 3) {
+                UnitSetPosition(lv_u, PointWithOffset(lv_p, 5.0, 2.0), false);
+            }
+            else {
+                UnitSetPosition(lv_u, PointWithOffset(lv_p, 5.0, -2.0), false);
+            }
+
+            UnitIssueOrder(lv_u, Order(AbilityCommand("stop", 0)), c_orderQueueReplace);
+            lv_i += 1;
+        }
+
+        CameraPan(1, lv_p, 0.0, -1.0, 10.0, false);
+        GhostOps_Ce0_Write("j", "EGATHER found " + IntToString(UnitGroupCount(lv_g, c_unitCountAlive)) + " marines; four marines around " + lp_a + "," + lp_b);
+        return true;
+    }
+
+    if (lp_cmd == "eselshipq") {
+        // eselshipq: only the ship is selected (the camera does not move)
+        if (go_eShipMade && UnitIsAlive(go_eShip)) {
+            UnitClearSelection(1);
+            UnitSelect(go_eShip, 1, true);
+            GhostOps_Ce0_Write("j", "ESELSHIPQ ship selected at " + GhostOps_Ce0_Pt(UnitGetPosition(go_eShip)));
+        }
+
+        return true;
+    }
+
+    if (lp_cmd == "ecamship") {
+        // ecamship: the camera on the ship (the player scrolls to it; no selection change)
+        if (go_eShipMade && UnitIsAlive(go_eShip)) {
+            CameraPan(1, UnitGetPosition(go_eShip), 0.0, -1.0, 10.0, false);
+            GhostOps_Ce0_Write("j", "ECAMSHIP camera at " + GhostOps_Ce0_Pt(UnitGetPosition(go_eShip)));
+        }
+
+        return true;
+    }
+
+    if (lp_cmd == "eselship") {
+        // eselship: the ship is selected and the camera is on it (scenario preparation; the casting itself is done with real keys)
+        if (go_eShipMade && UnitIsAlive(go_eShip)) {
+            UnitClearSelection(1);
+            UnitSelect(go_eShip, 1, true);
+            CameraPan(1, UnitGetPosition(go_eShip), 0.0, -1.0, 10.0, false);
+            GhostOps_Ce0_Write("j", "ESELSHIP selected at " + GhostOps_Ce0_Pt(UnitGetPosition(go_eShip)));
+        }
+
+        return true;
+    }
+
+    if (lp_cmd == "ehinv") {
+        // ehinv: the hellions become invulnerable (scenario preparation of the fuel checks: the enemy outside the base must not kill the test units)
+        lv_i = 0;
+        while (lv_i < go_eHellN) {
+            if (UnitIsAlive(go_eHell[lv_i])) {
+                UnitSetState(go_eHell[lv_i], c_unitStateInvulnerable, true);
+            }
+
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", "EHINV hellions invulnerable");
+        return true;
+    }
+
+    if (lp_cmd == "efuelinfo") {
+        // efuelinfo: the fuel of every hellion with its position and whether it is inside the zone
+        lv_t = "EFI";
+        lv_i = 0;
+        while (lv_i < go_eHellN) {
+            if (UnitIsAlive(go_eHell[lv_i])) {
+                lv_t = lv_t + " [" + FixedToString(UnitGetPropertyFixed(go_eHell[lv_i], c_unitPropEnergy, c_unitPropCurrent), 1) + " dry " + IntToString(BoolToInt(go_eHellDry[lv_i])) + " zone " + IntToString(BoolToInt(GhostOps_Epi_InZone(UnitGetPosition(go_eHell[lv_i])))) + " at " + GhostOps_Ce0_Pt(UnitGetPosition(go_eHell[lv_i])) + "]";
+            }
+
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "ebdum") {
+        // ebdum <x> <y>: a 3x3 grid of paused enemy Ultralisks at the absolute point (the aim of a dropped barrel); edmg reads the damage
+        go_ce0Aim = Point(StringToFixed(lp_a), StringToFixed(lp_b));
+        go_ce0DumN = 0;
+        lv_i = -1;
+        while (lv_i <= 1) {
+            lv_j = -1;
+            while (lv_j <= 1) {
+                UnitCreate(1, "Ultralisk", c_unitCreateIgnorePlacement, 3, PointWithOffset(go_ce0Aim, 1.4 * IntToFixed(lv_i), 1.4 * IntToFixed(lv_j)), 270.0);
+                go_ce0Dum[go_ce0DumN] = UnitLastCreated();
+                go_ce0DumLife[go_ce0DumN] = UnitGetPropertyFixed(UnitLastCreated(), c_unitPropLife, c_unitPropCurrent);
+                libNtve_gf_PauseUnit(UnitLastCreated(), true);
+                go_ce0DumN += 1;
+                lv_j += 1;
+            }
+
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", "EBDUM " + IntToString(go_ce0DumN) + " dummies at " + lp_a + "," + lp_b);
+        return true;
+    }
+
+    if (lp_cmd == "eshipstop") {
+        if (go_eShipMade && UnitIsAlive(go_eShip)) {
+            UnitIssueOrder(go_eShip, Order(AbilityCommand("stop", 0)), c_orderQueueReplace);
+            GhostOps_Ce0_Write("j", "ESHIPSTOP stop ordered, orders " + IntToString(UnitOrderCount(go_eShip)));
+        }
+
+        return true;
+    }
+
+    if (lp_cmd == "eshipnow") {
+        // eshipnow: the night transport arrives now (scenario preparation: the arrival is the normal one, only the wait for the second night is skipped)
+        if (go_eShipOn) {
+            go_eNightOpen = true;
+            go_eWarned = false;
+            go_eWarnAt = GameGetMissionTime() + 100000.0;
+            GhostOps_Epi_ShipOpen();
+            GhostOps_Ce0_Write("j", "ESHIPNOW the transport is on the map");
+        }
+
+        return true;
+    }
+
+    if (lp_cmd == "etruckown") {
+        // etruckown: the truck becomes the player's (scenario preparation of a fuel check; the real capture is checked in th2r6_truck)
+        if (UnitIsAlive(go_eTruck)) {
+            UnitSetOwner(go_eTruck, 1, true);
+            go_eStage = 3;
+            GhostOps_Ce0_Write("j", "ETRUCKOWN truck is the player's, stage 3");
+        }
+
+        return true;
+    }
+
+    if (lp_cmd == "etruckat") {
+        if (UnitIsAlive(go_eTruck)) {
+            UnitSetPosition(go_eTruck, Point(StringToFixed(lp_a), StringToFixed(lp_b)), false);
+            GhostOps_Ce0_Write("j", "ETRUCKAT put at " + lp_a + "," + lp_b);
+        }
+
+        return true;
+    }
+
+    if (lp_cmd == "etrnear") {
+        // etrnear: what the map has around the truck place (enemy / neutral units and structures within 16 cells), counted by type
+        lv_t = "ETRNEAR within 16 of the truck:";
+        lv_i = 2;
+        while (lv_i <= 4) {
+            lv_g = UnitGroup(null, lv_i, RegionCircle(UnitGetPosition(go_eTruck), 16.0), UnitFilter(0, 0, (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32))), 0);
+            lv_n = UnitGroupCount(lv_g, c_unitCountAlive);
+            lv_j = 1;
+            while ((lv_j <= lv_n) && (lv_j <= 14)) {
+                lv_u = UnitGroupUnit(lv_g, lv_j);
+                if (lv_u != go_eTruck) {
+                    lv_t = lv_t + " p" + IntToString(lv_i) + ":" + UnitGetType(lv_u) + "@" + GhostOps_Ce0_Pt(UnitGetPosition(lv_u));
+                }
+
+                lv_j += 1;
+            }
+
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "ehealtruck") {
+        if (UnitIsAlive(go_eTruck)) {
+            UnitSetPropertyFixed(go_eTruck, c_unitPropLife, UnitGetPropertyFixed(go_eTruck, c_unitPropLifeMax, c_unitPropCurrent));
+            GhostOps_Ce0_Write("j", "EHEALTRUCK life " + FixedToString(UnitGetPropertyFixed(go_eTruck, c_unitPropLife, c_unitPropCurrent), 0));
+        }
+
+        return true;
+    }
+
+    if (lp_cmd == "ekillzerg") {
+        // ekillzerg: the free enemy fighters (player 3, not structures) within 22 cells of the truck are removed (the end of the vulnerability test)
+        lv_c = 0;
+        lv_g = UnitGroup(null, 3, RegionCircle(UnitGetPosition(go_eTruck), 22.0), UnitFilter(0, 0, (1 << c_targetFilterStructure) | (1 << c_targetFilterMissile), (1 << (c_targetFilterDead - 32))), 0);
+        UnitGroupLoopBegin(lv_g);
+        while (UnitGroupLoopCurrent() != null) {
+            UnitKill(UnitGroupLoopCurrent());
+            lv_c += 1;
+            UnitGroupLoopStep();
+        }
+
+        UnitGroupLoopEnd();
+        GhostOps_Ce0_Write("j", "EKILLZERG removed " + IntToString(lv_c));
+        return true;
+    }
+
+    if (lp_cmd == "ebsite") {
+        // ebsite <x> <y>: scenario preparation of a landing site: 12 paused enemy infested Terrans (player 3) in a ring of radius 2.5 around the point; ebsitec counts the living ones
+        go_ce0Aim = Point(StringToFixed(lp_a), StringToFixed(lp_b));
+        go_ce0DumN = 0;
+        lv_i = 0;
+        while (lv_i < 12) {
+            UnitCreate(1, "InfestedTerranCampaign", c_unitCreateIgnorePlacement, 3, PointWithOffsetPolar(go_ce0Aim, 2.5, IntToFixed(lv_i) * 30.0), 270.0);
+            go_ce0Dum[go_ce0DumN] = UnitLastCreated();
+            libNtve_gf_PauseUnit(UnitLastCreated(), true);
+            go_ce0DumN += 1;
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", "EBSITE 12 paused infested at " + lp_a + "," + lp_b);
+        return true;
+    }
+
+    if (lp_cmd == "ebsitec") {
+        lv_c = 0;
+        lv_n = 0;
+        while (lv_n < go_ce0DumN) {
+            if (UnitIsAlive(go_ce0Dum[lv_n])) {
+                lv_c += 1;
+            }
+
+            lv_n += 1;
+        }
+
+        GhostOps_Ce0_Write("j", "EBSITEC alive " + IntToString(lv_c) + " of " + IntToString(go_ce0DumN));
+        return true;
+    }
+
+    if (lp_cmd == "eaa") {
+        // eaa: scenario preparation of the anti-air of the route: two enemy Spore Crawlers (they shoot air); eaakill removes them (the "AA of the route destroyed in advance" step); eaac counts the living enemy Spore Crawlers
+        UnitCreate(1, "SporeCrawler", c_unitCreateIgnorePlacement, 3, Point(94.0, 99.0), 270.0);
+        UnitCreate(1, "SporeCrawler", c_unitCreateIgnorePlacement, 3, Point(100.0, 96.0), 270.0);
+        GhostOps_Ce0_Write("j", "EAA 2 spore crawlers created on the route");
+        return true;
+    }
+
+    if (lp_cmd == "eaakill") {
+        lv_g = UnitGroup("SporeCrawler", 3, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+        lv_c = UnitGroupCount(lv_g, c_unitCountAlive);
+        UnitGroupLoopBegin(lv_g);
+        while (UnitGroupLoopCurrent() != null) {
+            UnitKill(UnitGroupLoopCurrent());
+            UnitGroupLoopStep();
+        }
+
+        UnitGroupLoopEnd();
+        GhostOps_Ce0_Write("j", "EAAKILL removed " + IntToString(lv_c));
+        return true;
+    }
+
+    if (lp_cmd == "eaac") {
+        GhostOps_Ce0_Write("j", "EAAC enemy spore crawlers alive " + IntToString(UnitGroupCount(UnitGroup("SporeCrawler", 3, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0), c_unitCountAlive)));
+        return true;
+    }
+
+    if (lp_cmd == "etgt") {
+        // etgt <x> <y>: the enemy structure nearest to the point (the raid target): type, position, life
+        lv_g = UnitGroup(null, 3, RegionCircle(Point(StringToFixed(lp_a), StringToFixed(lp_b)), 6.0), UnitFilter((1 << c_targetFilterStructure), 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+        lv_n = UnitGroupCount(lv_g, c_unitCountAlive);
+        lv_t = "ETGT structures within 6 of " + lp_a + "," + lp_b + ": " + IntToString(lv_n);
+        lv_i = 1;
+        while ((lv_i <= lv_n) && (lv_i <= 4)) {
+            lv_u = UnitGroupUnit(lv_g, lv_i);
+            lv_t = lv_t + " [" + UnitGetType(lv_u) + "@" + GhostOps_Ce0_Pt(UnitGetPosition(lv_u)) + " life " + FixedToString(UnitGetPropertyFixed(lv_u, c_unitPropLife, c_unitPropCurrent), 0) + "]";
+            lv_i += 1;
+        }
+
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "esquad") {
+        // esquad <x> <y>: the marines of the player: how many are within 8 of the point, how many are on the ship, how many in all
+        lv_g = UnitGroup("Marine", 1, RegionEntireMap(), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+        lv_c = 0;
+        lv_n = UnitGroupCount(lv_g, c_unitCountAlive);
+        lv_g = UnitGroup("Marine", 1, RegionCircle(Point(StringToFixed(lp_a), StringToFixed(lp_b)), 8.0), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+        lv_c = UnitGroupCount(lv_g, c_unitCountAlive);
+        lv_t = "ESQUAD marines " + IntToString(lv_n) + " within 8 of " + lp_a + "," + lp_b + ": " + IntToString(lv_c);
+        if (go_eShipMade && UnitIsAlive(go_eShip)) {
+            lv_t = lv_t + " | ship at " + GhostOps_Ce0_Pt(UnitGetPosition(go_eShip)) + " cargo " + IntToString(UnitGroupCount(UnitCargoGroup(go_eShip), c_unitCountAlive)) + " inZone " + IntToString(BoolToInt(GhostOps_Epi_InZone(UnitGetPosition(go_eShip)))) + " life " + FixedToString(UnitGetPropertyFixed(go_eShip, c_unitPropLife, c_unitPropCurrent), 0);
+        }
+
+        GhostOps_Ce0_Write("j", lv_t);
+        return true;
+    }
+
+    if (lp_cmd == "eselsq") {
+        // eselsq <x> <y>: selects the marines within 8 of the point and puts the camera there (scenario preparation of the selection; the orders are given with the keys and the mouse)
+        UnitClearSelection(1);
+        lv_g = UnitGroup("Marine", 1, RegionCircle(Point(StringToFixed(lp_a), StringToFixed(lp_b)), 8.0), UnitFilter(0, 0, 0, (1 << (c_targetFilterDead - 32))), 0);
+        UnitGroupLoopBegin(lv_g);
+        while (UnitGroupLoopCurrent() != null) {
+            UnitSelect(UnitGroupLoopCurrent(), 1, true);
+            UnitGroupLoopStep();
+        }
+
+        UnitGroupLoopEnd();
+        CameraPan(1, Point(StringToFixed(lp_a), StringToFixed(lp_b)), 0.0, -1.0, 10.0, false);
+        GhostOps_Ce0_Write("j", "ESELSQ selected " + IntToString(UnitGroupCount(lv_g, c_unitCountAlive)));
         return true;
     }
 

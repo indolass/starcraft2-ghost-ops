@@ -1,0 +1,237 @@
+{
+ "name": "th2r7_dropsave",
+ "mission": "thanson02",
+ "preset": "epidemic_free_r7_slow_dev",
+ "why": "Epidemic r7: save / load with a partial barrel stock and during the fall of a barrel (slow fall profile): one explosion, no extra charge",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "cmd",
+   "text": "eshipnow",
+   "wait": 2.0
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "left 2",
+   "note": "two barrels"
+  },
+  {
+   "op": "cmd",
+   "text": "ebdrop 66 104",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 16
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "left 1 drops 1 blasts 1",
+   "note": "one barrel spent and exploded"
+  },
+  {
+   "op": "save",
+   "name": "CE0_TH2R7_B1"
+  },
+  {
+   "op": "burst",
+   "file": "b_after_save.png",
+   "n": 2,
+   "gap": 0.5
+  },
+  {
+   "op": "load",
+   "name": "CE0_TH2R7_B1"
+  },
+  {
+   "op": "sleep",
+   "s": 4
+  },
+  {
+   "op": "burst",
+   "file": "b_after_load.png",
+   "n": 2,
+   "gap": 0.5
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "left 1 drops 1 blasts 1",
+   "note": "after a load with a partial stock: still one left, no new blast, no extra charge"
+  },
+  {
+   "op": "cmd",
+   "text": "ebdum 66 104",
+   "wait": 2.0
+  },
+  {
+   "op": "cmd",
+   "text": "ebdrop 66 104",
+   "wait": 1.0
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "left 0 drops 2 blasts 1",
+   "note": "the barrel is in the air: spent, not yet exploded"
+  },
+  {
+   "op": "save",
+   "name": "CE0_TH2R7_B2"
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "left 0",
+   "note": "still empty"
+  },
+  {
+   "op": "burst",
+   "file": "b2_after_save.png",
+   "n": 2,
+   "gap": 0.5
+  },
+  {
+   "op": "load",
+   "name": "CE0_TH2R7_B2"
+  },
+  {
+   "op": "sleep",
+   "s": 3
+  },
+  {
+   "op": "burst",
+   "file": "b2_after_load.png",
+   "n": 3,
+   "gap": 1.0
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "drops 2",
+   "note": "the drop count is as saved"
+  },
+  {
+   "op": "expect",
+   "regex": "left 0",
+   "note": "no extra charge by the load"
+  },
+  {
+   "op": "sleep",
+   "s": 14
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "left 0 drops 2 blasts 2",
+   "note": "after the load the barrel explodes exactly once"
+  },
+  {
+   "op": "sleep",
+   "s": 4
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "blasts 2",
+   "note": "no repeated blast"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}

@@ -1,0 +1,315 @@
+{
+ "name": "th2r7_dropkeys",
+ "mission": "thanson02",
+ "preset": "epidemic_free_r7_slow_dev",
+ "why": "Epidemic r7: the barrel drop with REAL keys (B) and mouse click, near and after a flight to a far point: release at the ship, fall, blast; cancel with Esc and Stop; slow fall profile for the pictures",
+ "steps": [
+  {
+   "op": "start"
+  },
+  {
+   "op": "wait_snap",
+   "settle": 8
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "cmd",
+   "text": "eshipnow",
+   "wait": 2.0
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "left 2",
+   "note": "two barrels"
+  },
+  {
+   "op": "cmd",
+   "text": "ebdum 66 104",
+   "wait": 1.5
+  },
+  {
+   "op": "cmd",
+   "text": "eselship",
+   "wait": 1.5
+  },
+  {
+   "op": "sleep",
+   "s": 2
+  },
+  {
+   "op": "burst",
+   "file": "k0_selected.png",
+   "n": 2,
+   "gap": 0.5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "B"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "move",
+   "x": 400,
+   "y": 440
+  },
+  {
+   "op": "sleep",
+   "s": 0.6
+  },
+  {
+   "op": "burst",
+   "file": "k1_pointer.png",
+   "n": 2,
+   "gap": 0.4
+  },
+  {
+   "op": "click",
+   "x": 400,
+   "y": 440
+  },
+  {
+   "op": "sleep",
+   "s": 0.5
+  },
+  {
+   "op": "burst",
+   "file": "k2_release.png",
+   "n": 4,
+   "gap": 0.6
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "bomb0 at",
+   "note": "the falling barrel is a unit in the air: its height is logged"
+  },
+  {
+   "op": "burst",
+   "file": "k3_fall.png",
+   "n": 4,
+   "gap": 1.0
+  },
+  {
+   "op": "burst",
+   "file": "k4_blast.png",
+   "n": 4,
+   "gap": 1.0
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "drops 1",
+   "note": "the real hotkey + click made one drop"
+  },
+  {
+   "op": "expect",
+   "regex": "left 1",
+   "note": "one barrel spent"
+  },
+  {
+   "op": "expect",
+   "regex": "blasts 1",
+   "note": "the barrel exploded"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "B"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 1
+  },
+  {
+   "op": "key",
+   "keys": [
+    "ESC"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 1.5
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "left 1",
+   "note": "pointer cancelled with Esc: nothing spent"
+  },
+  {
+   "op": "expect",
+   "regex": "drops 1",
+   "note": "no new drop"
+  },
+  {
+   "op": "key",
+   "keys": [
+    "B"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.8
+  },
+  {
+   "op": "click",
+   "x": 880,
+   "y": 200
+  },
+  {
+   "op": "sleep",
+   "s": 1.2
+  },
+  {
+   "op": "key",
+   "keys": [
+    "S"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 2.5
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "left 1",
+   "note": "an order stopped before the drop spends nothing"
+  },
+  {
+   "op": "expect",
+   "regex": "drops 1",
+   "note": "no new drop after Stop"
+  },
+  {
+   "op": "cmd",
+   "text": "ecam 105 92",
+   "wait": 1.5
+  },
+  {
+   "op": "key",
+   "keys": [
+    "B"
+   ]
+  },
+  {
+   "op": "sleep",
+   "s": 0.7
+  },
+  {
+   "op": "click",
+   "x": 512,
+   "y": 330
+  },
+  {
+   "op": "until",
+   "cmd": "ebar",
+   "grep": "drops 2",
+   "every": 1.5,
+   "timeout": 60
+  },
+  {
+   "op": "burst",
+   "file": "k5_far_release.png",
+   "n": 4,
+   "gap": 0.8
+  },
+  {
+   "op": "burst",
+   "file": "k6_far_fall.png",
+   "n": 4,
+   "gap": 1.0
+  },
+  {
+   "op": "burst",
+   "file": "k7_far_blast.png",
+   "n": 4,
+   "gap": 1.0
+  },
+  {
+   "op": "mark"
+  },
+  {
+   "op": "until",
+   "grep": "EBAR",
+   "cmd": "ebar",
+   "every": 3,
+   "timeout": 100
+  },
+  {
+   "op": "expect",
+   "regex": "left 0",
+   "note": "two barrels spent"
+  },
+  {
+   "op": "expect",
+   "regex": "blasts 2",
+   "note": "both exploded"
+  },
+  {
+   "op": "expect",
+   "regex": "inZone 0",
+   "note": "the ship flew out of the base zone to the far point"
+  },
+  {
+   "op": "stop"
+  }
+ ]
+}
